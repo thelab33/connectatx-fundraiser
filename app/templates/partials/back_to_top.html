@@ -1,48 +1,26 @@
-<!-- back_to_top.html partial — Elite SaaS Polish -->
-<button
-  id="back-to-top"
-  class="fixed bottom-6 right-6 z-[99] p-3 rounded-full bg-yellow-400 text-black text-2xl shadow-2xl ring-2 ring-yellow-300 transition-all duration-300 hover:bg-yellow-300 hover:scale-110 focus:outline-none focus-visible:ring-4 focus-visible:ring-yellow-400 opacity-0 pointer-events-none"
-  aria-label="Back to top"
-  type="button"
-  tabindex="0"
->
-  <span aria-hidden="true">↑</span>
-  <span class="sr-only">Scroll to top</span>
-</button>
+<!-- back_to_top.html — Elite SaaS Polish -->
+<a id="back-to-top"
+   href="#top"
+   aria-label="Back to top"
+   class="fixed left-4 md:left-6 z-[55] hidden md:inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-sm font-semibold text-yellow-200
+          border border-white/15 shadow-2xl transition-opacity duration-200"
+   style="bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);"
+   data-sticky-cta>
+  ⬆️ <span class="sr-only">Back to top</span>
+</a>
 
-<script>
-  // Show/hide logic on scroll, focus support, accessibility
-  (function() {
-    const btn = document.getElementById('back-to-top');
-    let visible = false;
-    window.addEventListener('scroll', () => {
-      if (window.scrollY > 350 && !visible) {
-        btn.style.opacity = '1';
-        btn.style.pointerEvents = 'auto';
-        visible = true;
-      } else if (window.scrollY <= 350 && visible) {
-        btn.style.opacity = '0';
-        btn.style.pointerEvents = 'none';
-        visible = false;
-      }
-    });
-    btn.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        window.scrollTo({top: 0, behavior: 'smooth'});
-      }
-    });
-  })();
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  const btn = document.getElementById('back-to-top'); if (!btn || btn.__init) return; btn.__init = true;
+  const showAt = 320;
+  const sync = () => { const on = (scrollY || document.documentElement.scrollTop || 0) > showAt; btn.style.display = on ? 'inline-flex' : 'none'; };
+  addEventListener('scroll', sync, { passive:true }); sync();
+})();
 </script>
 
 <style>
-  #back-to-top {
-    box-shadow: 0 4px 32px 0 rgba(251,191,36,0.18), 0 2px 8px 0 #0003;
-    /* Subtle bounce animation on show */
-    transition: opacity 0.28s cubic-bezier(.4,0,.2,1), transform 0.22s;
-  }
-  #back-to-top:active {
-    transform: scale(0.95);
-  }
+  #back-to-top { will-change: opacity, transform; }
+  #back-to-top:active { transform: scale(.97); }
+  @media (prefers-reduced-motion: reduce){ #back-to-top{ transition: none !important; } }
 </style>
 

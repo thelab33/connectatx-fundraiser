@@ -1,140 +1,169 @@
-{% from "macros/ui.html" import render_button %}
-{% from "macros/progress.html" import progress_meter %}
-{% from "macros/confetti.html" import launch_confetti %}
+{# ==========================================================
+   FundChamps — Elite Header (PaaS-Ready, Premium, Hardened)
+   Self-contained: HTML + Scoped CSS + JS
+   ========================================================== #}
+
+{# ---------- Safe Fallbacks ---------- #}
+{% set _hdr_id             = header_id if header_id is defined and header_id else 'site-header' %}
+{% set team_name           = team.team_name if team and team.team_name is defined else 'Connect ATX Elite' %}
+{% set _logo               = (team.logo if team and team.logo else 'images/logo.webp') %}
+{% set asset_version       = asset_version|default(None) %}
+{% if _logo.startswith('http') %}
+  {% set logoSrc = _logo %}
+{% else %}
+  {% if asset_version %}
+    {% set logoSrc = url_for('static', filename=_logo.lstrip('/'), v=asset_version) %}
+  {% else %}
+    {% set logoSrc = url_for('static', filename=_logo.lstrip('/')) %}
+  {% endif %}
+{% endif %}
+{% set funds_raised        = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraising_goal    = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set raw_pct             = (funds_raised / fundraising_goal * 100 if fundraising_goal else 0) | round(1) %}
+{% set pct                 = 0 if raw_pct < 0 else (100 if raw_pct > 100 else raw_pct) %}
+{% set has_announcement    = (announcement and announcement.visible) if announcement is defined else False %}
+{% set fundraising_deadline= fundraising_deadline if fundraising_deadline is defined else None %}
+{% set deadline_iso        = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
+{% set brand_color         = (team.theme_color if team and team.theme_color is defined and team.theme_color else '#facc15') %}
+
+{# ---------- Configurable URLs ---------- #}
+{% set stats_url                = stats_url|default('/api/stats') %}
+{% set home_url                 = home_url|default('/') %}
+{% set announcement_partial_url = announcement_partial_url|default(None) %}
+{% set tenant_slug              = tenant_slug|default(team.slug if team and team.slug is defined else 'default') %}
 
 <header
-  id="site-header"
-  class="sticky top-0 z-50 bg-black/90 backdrop-blur-xl shadow-2xl border-b border-yellow-400/20 transition-all duration-300"
-  x-data="{ mobileOpen: false }"
-  @keydown.window.escape="mobileOpen = false"
-  itemscope itemtype="https://schema.org/Organization"
-  itemprop="brand"
+  id="{{ _hdr_id }}"
   role="banner"
+  class="sticky top-0 z-50 border-b transition-all bg-black/80 border-[color:var(--fc-brand-200)]"
+  data-stats-url="{{ stats_url }}"
+  data-tenant="{{ tenant_slug }}"
+  style="
+    --fc-brand: {{ brand_color }};
+    --fc-brand-100: color-mix(in srgb, {{ brand_color }} 28%, transparent);
+    --fc-brand-200: color-mix(in srgb, {{ brand_color }} 18%, transparent);
+    --fc-brand-300: color-mix(in srgb, {{ brand_color }} 40%, black);
+    --fc-brand-text: #111827;
+  "
+  data-analytics="header"
 >
-  {# === Live Sponsor Ticker === #}
-  {% include "partials/header_sponsor_ticker.html" ignore missing %}
+  <style>
+    #{{ _hdr_id }} { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    #{{ _hdr_id }}.is-shrunk { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+    #{{ _hdr_id }} .shrinkable { transition: transform .2s ease, opacity .2s ease; }
+    #{{ _hdr_id }}.is-shrunk .shrinkable { transform: scale(.96); opacity:.96; }
+    #{{ _hdr_id }} .announce { background: linear-gradient(90deg, var(--fc-brand), #fef08a); color: var(--fc-brand-text); }
+    #{{ _hdr_id }} .announce a { text-decoration: underline; }
+    #{{ _hdr_id }} .mini-meter { height: .5rem; border-radius: 9999px; overflow: hidden; }
+    #{{ _hdr_id }} .mini-bg { background: rgba(255,255,255,.06); }
+    #{{ _hdr_id }} .mini-bar { width:0%; background: linear-gradient(90deg,#fde68a,var(--fc-brand),#f59e0b); transition: width .8s cubic-bezier(.22,1,.36,1); }
+    #{{ _hdr_id }}-mobile { position: fixed; inset: 0; background: rgba(0,0,0,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    #{{ _hdr_id }}-mobile[hidden] { display: none; }
+    #{{ _hdr_id }}-mobile a { font-weight: 600; }
+    #{{ _hdr_id }} #hdr-raised,#{{ _hdr_id }} #hdr-goal,#{{ _hdr_id }} #hdr-pct { font-variant-numeric: tabular-nums; }
+    #{{ _hdr_id }}.save-data { backdrop-filter:none; -webkit-backdrop-filter:none; }
+    #{{ _hdr_id }}.save-data .shrinkable,#{{ _hdr_id }}.save-data .mini-bar { transition: none !important; }
+    @media (prefers-reduced-motion: reduce){ #{{ _hdr_id }} .shrinkable,#{{ _hdr_id }} .mini-bar { transition:none!important } }
+  </style>
 
-  {# === Announcement Bar (dynamic, e.g. for promo/updates) === #}
-  {% if announcement and announcement.visible %}
-    <div
-      id="announcement-bar"
-      class="flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold bg-gradient-to-r from-yellow-500 to-yellow-100 text-black shadow-inner border-b border-yellow-400/30"
-      hx-get="{{ url_for('main.announcement_partial') }}"
-      hx-trigger="every 5m"
-      hx-swap="outerHTML"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      <span>{{ announcement.message|safe }}</span>
-      {% if announcement.cta and announcement.cta_url %}
-        <a
-          href="{{ announcement.cta_url }}"
-          class="underline font-bold hover:no-underline focus-visible:ring-2 ring-black rounded transition-colors duration-200"
-          target="_blank"
-          rel="noopener noreferrer"
-        >{{ announcement.cta }}</a>
-      {% endif %}
-      <button
-        @click="$el.parentElement.remove()"
-        aria-label="Close announcement"
-        class="ml-2 rounded hover:bg-red-100/50 hover:text-red-700 focus-visible:ring-2 ring-red-600 text-xl leading-none px-2 py-1 select-none"
-        type="button"
-      >×</button>
-    </div>
+  <div id="{{ _hdr_id }}-sentinel" aria-hidden="true"></div>
+
+  {% if has_announcement %}
+  <div
+    id="{{ _hdr_id }}-announcement"
+    class="announce flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold border-b"
+    style="border-color: var(--fc-brand-200)"
+    role="status" aria-live="polite" aria-atomic="true"
+    data-key="{{ (announcement.id if announcement and announcement.id else (announcement.message|default('announcement')|string)) }}"
+    {% if announcement_partial_url %}hx-get="{{ announcement_partial_url }}" hx-trigger="every 5m" hx-swap="outerHTML"{% endif %}
+  >
+    <span class="line-clamp-2">{{ announcement.message|safe }}</span>
+    {% if announcement.cta and announcement.cta_url %}
+      <a href="{{ announcement.cta_url }}" target="_blank" rel="noopener noreferrer">{{ announcement.cta }}</a>
+    {% endif %}
+    <button type="button" class="ml-2 px-2 py-1 rounded hover:bg-black/10 transition" aria-label="Close announcement" data-close-announcement>×</button>
+  </div>
   {% endif %}
 
-  {# === Fundraising Countdown Bar === #}
   {% if fundraising_deadline %}
-    <div
-      class="text-xs font-bold bg-yellow-800 text-yellow-100 py-1 text-center animate-pulse tracking-wide border-b border-yellow-400/10"
-      aria-live="polite"
-      aria-atomic="true"
-      role="region"
-      aria-label="Fundraising deadline countdown"
-    >
-      ⏰ <span id="header-countdown">{{ fundraising_deadline|countdown }}</span> left — help us reach our goal!
-    </div>
+  <div class="flex items-center justify-center text-sm font-semibold tracking-wide shadow text-black py-1"
+       style="background: var(--fc-brand);" role="region" aria-label="Fundraising deadline countdown" aria-live="polite" aria-atomic="true">
+    ⏰ <span id="{{ _hdr_id }}-countdown" class="ml-1" data-deadline="{{ deadline_iso }}"></span>
+    <span class="ml-1">left — help us reach our goal!</span>
+  </div>
   {% endif %}
 
-  {# === Main Nav & Progress === #}
-  <div class="max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap items-center justify-between px-4 md:px-6 py-3 gap-x-4 gap-y-3">
-    <a
-      href="{{ url_for('main.home') }}"
-      class="flex items-center gap-2 flex-shrink-0 group focus-visible:ring-2 ring-yellow-300 rounded-lg"
-    >
-      <img
-        src="{{ logo_src }}"
-        alt="{{ (team.team_name if team and team.team_name else 'Connect ATX Elite') ~ ' logo' }}"
-        class="h-10 w-10 md:h-11 md:w-11 rounded-full ring-2 ring-yellow-300 shadow-md bg-white transition-transform duration-300 group-hover:scale-110"
-        loading="eager"
-        decoding="async"
-        onerror="this.onerror=null;this.src='/static/images/logo.webp';"
-        itemprop="logo"
-      />
-      <span class="text-xl md:text-2xl font-extrabold bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-50 bg-clip-text text-transparent drop-shadow">
-        {{ team.team_name or 'Connect ATX Elite' }}
-      </span>
+  {# ───────── Main Row ───────── #}
+  <div class="flex flex-wrap items-center justify-between gap-4 py-3 px-4 lg:px-8">
+    <a href="{{ home_url }}" class="flex items-center gap-3 font-bold text-xl shrinkable" aria-label="{{ team_name }} home" data-analytics="logo">
+      <img src="{{ logoSrc }}" alt="{{ team_name }} logo" class="h-12 w-12 rounded-xl ring-1 ring-white/10" loading="eager" decoding="async" />
+      <span class="hidden sm:inline text-[color:var(--fc-brand)] drop-shadow">{{ team_name }}</span>
     </a>
-    <nav class="hidden lg:flex items-center gap-5 text-zinc-200 font-semibold ml-6" aria-label="Primary navigation">
-      {% for id, label in [('mission','Mission'),('tiers','Sponsorship Tiers'),('program-stats-calendar','Schedule')] %}
-        <a
-          href="#{{ id }}"
-          class="relative px-3 py-1 rounded hover:text-yellow-300 focus-visible:ring-2 ring-yellow-400 transition-colors group"
-        >
-          {{ label }}
-          <span class="absolute bottom-0 left-0 h-0.5 w-full bg-yellow-300 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
-        </a>
-      {% endfor %}
+
+    {# ✅ Correct primary nav with final anchors/classes #}
+    <nav class="hidden md:flex items-center gap-6 text-sm" aria-label="Primary">
+      <a href="#mission"  class="hover:text-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60">Mission</a>
+      <a href="#tiers"    class="hover:text-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60">Sponsorship Tiers</a>
+      <a href="#schedule" class="hover:text-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60">Schedule</a>
     </nav>
-    <div class="ml-auto lg:ml-6 flex flex-col items-start justify-center min-w-[11rem] shrink-0" aria-label="Fundraising progress" role="region">
-      {% set raised = funds_raised or 4200 %}
-      {% set goal = fundraising_goal or 10000 %}
-      {% set pct = (raised / goal * 100) | round(1) %}
-      <div class="flex items-baseline gap-1">
-        <span class="text-yellow-400 font-extrabold text-lg">${{ raised | comma }}</span>
-        <span class="text-yellow-100 text-xs">/ ${{ goal | comma }}</span>
-        <span class="ml-1 text-yellow-300 text-xs font-black">({{ pct }}%)</span>
-      </div>
-      <div class="w-44 mt-1 h-2 bg-zinc-700 rounded-full overflow-hidden">
-        <div class="h-full bg-gradient-to-r from-yellow-500 to-yellow-300 transition-all duration-500 ease-out" style="width: {{ pct }}%;"></div>
-      </div>
-    </div>
-    <div class="flex gap-2 ml-4 flex-wrap justify-end">
-      {{ render_button('💸 Donate', '#donate', extra_classes='min-w-[7rem] bg-zinc-900 text-yellow-300 border border-yellow-400 font-bold hover:scale-105 transition-transform ring-1 ring-yellow-400/70', attrs={ "data_modal": "donation_modal" }) }}
-      {{ render_button('🌟 Sponsor', '#tiers', extra_classes='min-w-[7rem] bg-zinc-900 text-yellow-200 border border-yellow-400 font-bold hover:opacity-90 ring-1 ring-yellow-400/60') }}
-      {{ render_button('🏆 VIP Sponsor', '#tiers', extra_classes='min-w-[8rem] bg-black text-yellow-100 border border-yellow-400 font-bold shadow animate-pulse hover:scale-105 ring-2 ring-yellow-400/80') }}
+
+    {# ✅ CTA cluster exactly as requested #}
+    <div class="flex items-center gap-2">
+      <a href="#donate" class="btn btn--primary hidden" data-open-donate-modal>Donate</a>
+      <a href="#tiers" class="rounded-xl px-3 py-2 bg-yellow-400/90 text-zinc-900 font-semibold hover:bg-yellow-300">Sponsor</a>
+      <a href="#sponsors" class="rounded-xl px-3 py-2 bg-white/10 ring-1 ring-white/15 hover:bg-white/15">VIP Sponsor</a>
+
+      <button id="{{ _hdr_id }}-theme" class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5" aria-label="Toggle theme" type="button">🌙</button>
+      <button id="{{ _hdr_id }}-toggle" class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl" aria-expanded="false" aria-controls="{{ _hdr_id }}-mobile" aria-label="Open mobile menu" type="button">☰</button>
     </div>
   </div>
-  <div class="hidden lg:block text-center py-1 text-xs italic text-yellow-200/80 tracking-wide drop-shadow border-t border-yellow-400/10" aria-label="Trust and credibility statement">
+
+  {# Mini Fundraising Meter #}
+  <div class="px-4 lg:px-8 pb-3">
+    <div class="mini-meter mini-bg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct|int }}" aria-label="Fundraising progress">
+      <div id="hdr-meter" class="mini-bar" style="width: {{ pct }}%"></div>
+    </div>
+    <div class="mt-1 flex items-center justify-between text-[11px] text-yellow-200/85">
+      <span id="hdr-raised">${{ '{:,.0f}'.format(funds_raised) }}</span>
+      <span><span id="hdr-pct">{{ (pct | round(0)) | int }}</span>% • Goal <span id="hdr-goal">${{ '{:,.0f}'.format(fundraising_goal) }}</span></span>
+    </div>
+    <span id="hdr-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(funds_raised) }} of ${{ '{:,.0f}'.format(fundraising_goal) }} ({{ pct | round(0) }}%)</span>
+  </div>
+
+  <div class="text-center text-xs py-1 px-3 text-yellow-300 bg-zinc-900/90 border-t" style="border-color: var(--fc-brand-200)"
+       role="note" aria-label="Program accolades">
     🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold Certified · Austin, TX · Est. 2023
   </div>
-  {# === Mobile Menu (A11y & animated) === #}
-  <nav
-    id="mobile-menu"
-    x-show="mobileOpen"
-    x-transition:enter="transition ease-out duration-200"
-    x-transition:enter-start="opacity-0 scale-90"
-    x-transition:enter-end="opacity-100 scale-100"
-    x-transition:leave="transition ease-in duration-100"
-    x-transition:leave-start="opacity-100 scale-100"
-    x-transition:leave-end="opacity-0 scale-90"
-    class="fixed inset-0 bg-black/95 backdrop-blur flex flex-col items-center justify-center gap-6 lg:hidden z-[60]"
-    aria-label="Mobile navigation menu"
-    role="menu"
-  >
-    <button @click="mobileOpen = false" aria-label="Close menu" class="absolute top-5 right-5 text-4xl text-yellow-300 hover:text-red-500 focus-visible:ring-2 ring-red-400 rounded" type="button">×</button>
-    {% for id, label in [('mission','Mission'),('tiers','Sponsorship Tiers'),('program-stats-calendar','Schedule')] %}
-      <a href="#{{ id }}" @click="mobileOpen = false" class="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent hover:scale-105 transition-transform duration-200" tabindex="0" role="menuitem">{{ label }}</a>
-    {% endfor %}
-    <div class="flex flex-col gap-2 mt-4 w-full items-center">
-      {{ render_button('🌟 Sponsor Now', '#tiers', size='lg', extra_classes='w-60 bg-gradient-to-r from-yellow-400 to-yellow-200 text-black') }}
-      {{ render_button('💸 Donate', '#donate', size='lg', extra_classes='w-60 bg-yellow-400 text-black') }}
+
+  {# Mobile Menu (anchors aligned) #}
+  <nav id="{{ _hdr_id }}-mobile" hidden aria-label="Mobile" role="menu">
+    <div class="absolute top-4 right-4">
+      <button type="button" id="{{ _hdr_id }}-close" class="text-3xl text-yellow-300 px-2 py-1 rounded hover:bg-yellow-300/10" aria-label="Close menu">×</button>
+    </div>
+    <div class="h-full w-full flex flex-col gap-8 items-center justify-center font-semibold text-lg px-8">
+      <a href="#mission"  role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Mission</a>
+      <a href="#tiers"    role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Sponsorship Tiers</a>
+      <a href="#schedule" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Schedule</a>
+      <div class="flex flex-col gap-4 mt-2 w-full max-w-xs">
+        <a href="#tiers" class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
+           style="background: linear-gradient(90deg, var(--fc-brand), #fde68a)">🌟 Sponsor Now</a>
+        <button class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
+                style="background: var(--fc-brand)" data-open-donate-modal>💸 Donate</button>
+      </div>
     </div>
   </nav>
 </header>
 
-<a href="#donate" class="fixed bottom-6 right-6 bg-yellow-400 px-6 py-3 rounded-full shadow-2xl animate-bounce lg:hidden font-bold text-black text-lg focus-visible:ring-4 ring-yellow-700 z-[99]" aria-label="Quick Donate">💸 Quick Donate</a>
-
-{% if confetti_triggered %}{{ launch_confetti() }}{% endif %}
+{# Floating Quick Donate #}
+<a href="#donate"
+   class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
+   data-open-donate-modal data-analytics="cta:quick-donate"
+   aria-label="Quick donate button"
+   hidden></a>
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+  if (!document.body.hasAttribute('data-no-float')) {
+    const f = document.querySelector('[data-analytics="cta:quick-donate"]');
+    if (f) { f.hidden = false; f.textContent = '💸 Quick Donate'; }
+  }
+</script>
 

@@ -1,15 +1,459 @@
-(()=>{"use strict";let r={throttle(e,t=120){let o=0,n=null;return(...s)=>{let l=Date.now(),d=t-(l-o);d<=0?(o=l,e(...s)):n||(n=setTimeout(()=>{n=null,o=Date.now(),e(...s)},d))}},sanitize(e=""){return String(e).replace(/[&<>"']/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"})[t])},toNumber(e="0"){return parseFloat(String(e).replace(/[^0-9.]/g,""))||0}},i={io:null,dom:{},cacheDom(){this.dom={backToTop:document.getElementById("backToTop"),hamburger:document.getElementById("hamburger"),mobileMenu:document.getElementById("mobile-menu"),progressBar:document.querySelector("#hero-meter-bar > div, .progress-bar"),progressPercent:document.getElementById("hero-meter-percent"),emojiMilestone:document.getElementById("emoji-milestone"),fundsRaised:document.getElementById("funds-raised")||document.getElementById("funds-raised-meter"),fundsGoal:document.getElementById("funds-goal")||document.getElementById("funds-goal-meter"),vipToast:document.getElementById("vip-toast"),sponsorModal:document.getElementById("sponsor-spotlight-modal")||document.getElementById("sponsor-spotlight-modal-footer"),sponsorNameEl:document.getElementById("sponsor-name")||document.getElementById("sponsor-name-footer"),amountEl:document.getElementById("donation-amount")||document.getElementById("hero-donation-amount"),impactEl:document.getElementById("impact-message")||document.getElementById("hero-impact-message"),heroHeading:document.getElementById("hero-heading"),donationTicker:null,sponsorLeaderboard:document.getElementById("sponsor-leaderboard-main")}},init(){this.cacheDom(),this.setupHeroHeading(),this.setupSocket(),this.bindEvents(),this.setupScrollAnimations(),this.updateProgressMeter(),this.setupVIPToast(),this.setupHeroQuotes(),this.setupLiveImpactPreview()},setupHeroHeading(){let e=this.dom.heroHeading;e&&(e.style.opacity="1",e.style.visibility="visible",e.style.transition="none",e.style.animation="none",e.style.color="#facc15",e.style.textShadow="0 0 8px #facc15cc, 0 4px 12px rgba(250, 204, 21, 0.5)")},setupSocket(){try{if(!window.io){console.warn("\u26A0\uFE0F Socket.IO not available \u2013 real-time features disabled.");return}this.io=window.io(),this.io.on("new_donation",this.handleNewDonation.bind(this)),this.io.on("new_sponsor",this.handleNewSponsor.bind(this))}catch{console.warn("\u26A0\uFE0F Socket.IO not available \u2013 real-time features disabled.")}},handleNewDonation(e){if(!e)return;let t=Number(e.amount||0),o=r.sanitize(String(e.name||"Anonymous"));this.showDonationTicker(`\u{1F389} <b>$${t.toLocaleString()}</b> from <b>${o}</b> \u2013 Thank you!`),(window.launchConfetti||this.launchConfetti).call(this),this.updateProgressMeter()},handleNewSponsor(e){if(!e)return;let t=r.sanitize(String(e.name||"A Generous Donor"));this.sponsorAlert(t,"Champion Sponsor"),this.openSpotlight(t)},bindEvents(){let{backToTop:e,hamburger:t,heroHeading:o}=this.dom;e&&e.addEventListener("click",this.scrollToTop.bind(this)),t&&t.addEventListener("click",this.toggleMobileNav.bind(this)),document.addEventListener("click",n=>{let s=n.target.closest(".copy-quote");s&&this.copyQuote(s)}),window.addEventListener("scroll",r.throttle(this.revealHeadings.bind(this),120),{passive:!0}),this.revealHeadings(),o&&o.addEventListener("focus",this.setupHeroHeading.bind(this))},scrollToTop(){window.scrollTo({top:0,behavior:"smooth"})},toggleMobileNav(){let{mobileMenu:e,hamburger:t}=this.dom;if(!e||!t)return;let o=e.classList.toggle("open");t.setAttribute("aria-expanded",String(o)),document.body.style.overflow=o?"hidden":"",o&&e.querySelector('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])')?.focus()},copyQuote(e){let t=e.dataset.quote||"";if(!navigator.clipboard){alert("Copy not supported on this browser.");return}navigator.clipboard.writeText(t).then(()=>{let o=e.closest("figure,div,section")?.querySelector("#quote-status");o&&(o.textContent="Quote copied to clipboard");let n=e.textContent;e.textContent="Copied!",e.classList.add("bg-yellow-300","text-black","font-bold"),setTimeout(()=>{o&&(o.textContent=""),e.textContent=n,e.classList.remove("bg-yellow-300","text-black","font-bold")},1400)}).catch(()=>alert("Copy failed"))},revealHeadings(){document.querySelectorAll("h1, h2").forEach(e=>{!e.classList.contains("in-view")&&e.getBoundingClientRect().top<window.innerHeight-60&&(e.style.opacity="1",e.classList.add("in-view"))})},setupScrollAnimations(){if(!("IntersectionObserver"in window))return;let e=new IntersectionObserver((t,o)=>{t.forEach(n=>{n.isIntersecting&&(n.target.classList.add("in-view","animate-sparkle"),o.unobserve(n.target))})},{threshold:.4});document.querySelectorAll(".badge-glass, .prestige-badge").forEach(t=>e.observe(t))},updateProgressMeter(){let{progressBar:e,progressPercent:t,emojiMilestone:o,fundsRaised:n,fundsGoal:s}=this.dom;if(!e||!n||!s)return;let l=r.toNumber(n.textContent),d=Math.max(r.toNumber(s.textContent),1),a=Math.min(l/d*100,100).toFixed(1);setTimeout(()=>{e.style.width=`${a}%`,e.setAttribute("aria-valuenow",String(l)),e.setAttribute("aria-valuemin","0"),e.setAttribute("aria-valuemax",String(d)),t&&(t.textContent=`${a}%`),o&&(o.textContent=a>=100?"\u{1F3C6}":a>=75?"\u{1F680}":a>=50?"\u{1F525}":a>=25?"\u{1F680}":"\u{1F4A4}")},300)},setupVIPToast(){let{vipToast:e}=this.dom;e&&(sessionStorage.getItem("vipToastShown")||(e.textContent="\u{1F389} Welcome! New sponsors will be spotlighted here \u2014 you could be next!",e.classList.remove("hidden"),e.setAttribute("role","status"),e.setAttribute("aria-live","polite"),setTimeout(()=>e.classList.add("hidden"),6500),sessionStorage.setItem("vipToastShown","1")))},setupHeroQuotes(){if(!Array.isArray(window.heroQuotes)||window.heroQuotes.length===0)return;let{text:e,author:t,title:o,avatar:n}=window.heroQuotes[0],s=document.getElementById("hero-quote-text");s&&(s.innerText=e||"");let l=document.getElementById("hero-quote-author");l&&(l.innerText=t||"");let d=document.getElementById("hero-quote-title");if(d&&(d.innerText=o||""),n){let a=document.getElementById("hero-quote-avatar");a&&a.setAttribute("src",n)}},setupLiveImpactPreview(){let{amountEl:e,impactEl:t}=this.dom;if(!e||!t)return;t.setAttribute("role","status"),t.setAttribute("aria-live","polite");let o=()=>{let n=parseFloat(e.value)||0,s="";n>=150?s=`\u{1F393} Your $${n} \u2192 one week of gym time for all players!`:n>=100?s=`\u{1F3C0} Your $${n} \u2192 a full scholarship for a player!`:n>=50?s=`\u{1F455} Your $${n} \u2192 a new team jersey.`:s="\u{1F44F} Every dollar counts \u2014 thank you!",t.textContent=s,t.classList.remove("hidden")};o(),e.addEventListener("input",o,{passive:!0})},showDonationTicker(e){let t=this.dom.donationTicker;t||(t=document.createElement("div"),t.id="donation-ticker",t.className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-yellow-400/95 text-black font-bold px-7 py-3 rounded-2xl shadow-xl z-[9999] text-lg animate-bounce-in",t.setAttribute("role","status"),t.setAttribute("aria-live","polite"),document.body.appendChild(t),this.dom.donationTicker=t),t.innerHTML=e,t.classList.add("show"),setTimeout(()=>t.classList.remove("show"),4e3)},openSpotlight(e="A Generous Donor"){let{sponsorModal:t,sponsorNameEl:o}=this.dom;!t||!o||(o.innerHTML=`<span class="text-red-400 font-bold">${r.sanitize(e)}</span>`,t.classList.add("show"),t.setAttribute("aria-modal","true"),(window.launchConfetti||this.launchConfetti).call(this),setTimeout(()=>this.closeSpotlight(),4e3))},closeSpotlight(){let{sponsorModal:e}=this.dom;e&&e.classList.remove("show")},renderSponsorLeaderboard(e=[]){let t=this.dom.sponsorLeaderboard;if(t){if(e.length===0){t.innerHTML='<div class="col-span-2 text-center text-lg text-gold/80 font-semibold">Be our first sponsor! \u{1F3C6}</div>';return}t.innerHTML=e.map((o,n)=>{let s=n===0;return`
-            <div class="rounded-2xl border-4 ${s?"border-gold bg-gradient-to-r from-gold/20 via-red-700/10 to-white/10 scale-105 shadow-inner-gold animate-pulse":"border-white/20 bg-black/40"} shadow-elevated p-5 flex flex-col items-center text-center">
-              <span class="text-2xl font-extrabold ${s?"text-gold drop-shadow":"text-white/80"}">${r.sanitize(o.name)}</span>
-              <span class="text-xl font-bold mt-2 ${s?"text-red-400":"text-white/60"}">$${Number(o.amount||0).toLocaleString()}</span>
-              ${s?'<div class="prestige-badge mt-3">\u{1F3C6} Top Champion</div>':""}
-            </div>
-          `}).join("")}},sponsorAlert(e,t="Champion Sponsor"){document.querySelectorAll(".starforge-sponsor-alert")?.forEach(n=>n.remove());let o=document.createElement("div");o.className="starforge-sponsor-alert fixed bottom-4 right-4 z-[9999] flex flex-col items-end animate-bounce-in",o.setAttribute("role","status"),o.setAttribute("aria-live","polite"),o.innerHTML=`
+(() => {
+  'use strict';
+
+  // ———————— 1. Utility Methods ————————
+  const utils = {
+    /** Throttle calls to a function */
+    throttle(fn, delay = 120) {
+      let lastTime = 0,
+        timeout = null;
+      return (...args) => {
+        const now = Date.now();
+        const remain = delay - (now - lastTime);
+        if (remain <= 0) {
+          lastTime = now;
+          fn(...args);
+        } else if (!timeout) {
+          timeout = setTimeout(() => {
+            timeout = null;
+            lastTime = Date.now();
+            fn(...args);
+          }, remain);
+        }
+      };
+    },
+    sanitize(str = '') {
+      return String(str).replace(
+        /[&<>"']/g,
+        (m) =>
+          ({
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#39;',
+          })[m],
+      );
+    },
+
+    /** Coerce to number */
+    toNumber(input = '0') {
+      return parseFloat(String(input).replace(/[^0-9.]/g, '')) || 0;
+    },
+    /** Focus first focusable child */
+    focusFirst(el) {
+      if (!el) return;
+      const selector = 'a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
+      const target = el.querySelector(selector);
+      target?.focus();
+    },
+  };
+
+  // ———————— 2. App Core State & DOM ————————
+  const state = {
+    io: null, // Socket.io instance
+    dom: {}, // Cached DOM elements
+    tickerIndex: 0, // For FOMO ticker cycling
+  };
+
+  const DOM_SELECTORS = {
+    backToTop: '#backToTop',
+    hamburger: '#hamburger',
+    mobileMenu: '#mobile-menu',
+    progressBar: '#hero-meter-bar > div, .progress-bar',
+    progressPercent: '#hero-meter-percent',
+    emojiMilestone: '#emoji-milestone',
+    fundsRaised: '#funds-raised, #funds-raised-meter',
+    fundsGoal: '#funds-goal, #funds-goal-meter',
+    vipToast: '#vip-toast',
+    sponsorModal: '#sponsor-spotlight-modal, #sponsor-spotlight-modal-footer',
+    sponsorNameEl: '#sponsor-name, #sponsor-name-footer',
+    amountEl: '#donation-amount, #hero-donation-amount',
+    impactEl: '#impact-message, #hero-impact-message',
+    heroHeading: '#hero-heading',
+    sponsorLeaderboard: '#sponsor-leaderboard-main',
+    fomoTicker: '#fomo-ticker-text',
+  };
+
+  function cacheDom() {
+    // Query all and save for fast lookup
+    Object.keys(DOM_SELECTORS).forEach((key) => {
+      const sel = DOM_SELECTORS[key];
+      state.dom[key] = document.querySelector(sel);
+    });
+    // Donation ticker is dynamic, set to null initially
+    state.dom.donationTicker = null;
+  }
+
+  // ———————— 3. Main App Logic ————————
+  const app = {
+    /** One-time setup for DOM, events, sockets */
+    init() {
+      cacheDom();
+      this.setupHeroHeading();
+      this.setupSocket();
+      this.bindEvents();
+      this.setupScrollAnimations();
+      this.updateProgressMeter();
+      this.setupVIPToast();
+      this.setupHeroQuotes();
+      this.setupLiveImpactPreview();
+    },
+
+    // ================= Setup & Bindings =================
+
+    setupHeroHeading() {
+      const el = state.dom.heroHeading;
+      if (!el) return;
+      Object.assign(el.style, {
+        opacity: '1',
+        visibility: 'visible',
+        transition: 'none',
+        animation: 'none',
+        color: '#d4af37',
+        textShadow: '0 0 8px #d4af37cc, 0 4px 12px rgba(212, 175, 55, 0.35)',
+      });
+    },
+
+    setupSocket() {
+      try {
+        if (!window.io) throw new Error('No Socket.IO');
+        state.io = window.io();
+        state.io.on('new_donation', this.handleNewDonation.bind(this));
+        state.io.on('new_sponsor', this.handleNewSponsor.bind(this));
+      } catch {
+        console.warn('⚠️ Socket.IO not available – real-time features disabled.');
+      }
+    },
+
+    bindEvents() {
+      const { backToTop, hamburger, heroHeading } = state.dom;
+
+      backToTop?.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+      hamburger?.addEventListener('click', this.toggleMobileNav.bind(this));
+
+      document.addEventListener('click', (e) => {
+        const btn = e.target.closest('.copy-quote');
+        if (btn) this.copyQuote(btn);
+      });
+
+      // Only throttle scroll-bound heading reveals
+      window.addEventListener('scroll', utils.throttle(this.revealHeadings.bind(this)), {
+        passive: true,
+      });
+      this.revealHeadings();
+      heroHeading?.addEventListener('focus', this.setupHeroHeading.bind(this));
+    },
+
+    setupScrollAnimations() {
+      if (!('IntersectionObserver' in window)) return;
+      const observer = new window.IntersectionObserver(
+        (entries, obs) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('in-view', 'animate-sparkle');
+              obs.unobserve(entry.target);
+            }
+          });
+        },
+        { threshold: 0.4 },
+      );
+      document
+        .querySelectorAll('.badge-glass, .prestige-badge')
+        .forEach((el) => observer.observe(el));
+    },
+
+    setupVIPToast() {
+      const { vipToast } = state.dom;
+      if (!vipToast || sessionStorage.getItem('vipToastShown')) return;
+      vipToast.textContent =
+        '🎉 Welcome! New sponsors will be spotlighted here — you could be next!';
+      vipToast.classList.remove('hidden');
+      vipToast.setAttribute('role', 'status');
+      vipToast.setAttribute('aria-live', 'polite');
+      setTimeout(() => vipToast.classList.add('hidden'), 6500);
+      sessionStorage.setItem('vipToastShown', '1');
+    },
+
+    setupHeroQuotes() {
+      if (!Array.isArray(window.heroQuotes) || !window.heroQuotes.length) return;
+      const [q] = window.heroQuotes;
+      ['hero-quote-text', 'hero-quote-author', 'hero-quote-title'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el && q[id.replace('hero-quote-', '')])
+          el.innerText = q[id.replace('hero-quote-', '')] || '';
+      });
+      if (q.avatar) {
+        const avatarImg = document.getElementById('hero-quote-avatar');
+        avatarImg?.setAttribute('src', q.avatar);
+      }
+    },
+
+    setupLiveImpactPreview() {
+      const { amountEl, impactEl } = state.dom;
+      if (!amountEl || !impactEl) return;
+      impactEl.setAttribute('role', 'status');
+      impactEl.setAttribute('aria-live', 'polite');
+
+      const updateImpactPreview = () => {
+        const amount = parseFloat(amountEl.value) || 0;
+        let msg = '';
+        if (amount >= 150) msg = `🎓 Your $${amount} → one week of gym time for all players!`;
+        else if (amount >= 100) msg = `🏀 Your $${amount} → a full scholarship for a player!`;
+        else if (amount >= 50) msg = `👕 Your $${amount} → a new team jersey.`;
+        else msg = `👍 Every dollar counts — thank you!`;
+        impactEl.textContent = msg;
+        impactEl.classList.remove('hidden');
+      };
+      updateImpactPreview();
+      amountEl.addEventListener('input', updateImpactPreview, {
+        passive: true,
+      });
+    },
+
+    // ================= Live Updates / Real-time =================
+
+    handleNewDonation(data) {
+      if (!data) return;
+      const amount = Number(data.amount || 0);
+      const name = utils.sanitize(String(data.name || 'Anonymous'));
+      this.showDonationTicker(
+        `🎉 <b>$${amount.toLocaleString()}</b> from <b>${name}</b> – Thank you!`,
+      );
+      (window.launchConfetti || this.launchConfetti).call(this);
+      this.updateProgressMeter();
+    },
+
+    handleNewSponsor(data) {
+      if (!data) return;
+      const name = utils.sanitize(String(data.name || 'A Generous Donor'));
+      this.sponsorAlert(name, 'Champion Sponsor');
+      this.openSpotlight(name);
+    },
+
+    // ================= Widget / UI Actions =================
+
+    toggleMobileNav() {
+      const { mobileMenu, hamburger } = state.dom;
+      if (!mobileMenu || !hamburger) return;
+      const isOpen = mobileMenu.classList.toggle('open');
+      hamburger.setAttribute('aria-expanded', String(isOpen));
+      document.body.style.overflow = isOpen ? 'hidden' : '';
+      if (isOpen) utils.focusFirst(mobileMenu);
+    },
+
+    copyQuote(button) {
+      const quote = button.dataset.quote || '';
+      if (!navigator.clipboard) {
+        alert('Copy not supported on this browser.');
+        return;
+      }
+      navigator.clipboard
+        .writeText(quote)
+        .then(() => {
+          const status = button.closest('figure,div,section')?.querySelector('#quote-status');
+          if (status) status.textContent = 'Quote copied to clipboard';
+          const origText = button.textContent;
+          button.textContent = 'Copied!';
+          button.classList.add('bg-yellow-300', 'text-black', 'font-bold');
+          setTimeout(() => {
+            if (status) status.textContent = '';
+            button.textContent = origText;
+            button.classList.remove('bg-yellow-300', 'text-black', 'font-bold');
+          }, 1400);
+        })
+        .catch(() => alert('Copy failed'));
+    },
+
+    revealHeadings() {
+      document.querySelectorAll('h1, h2').forEach((el) => {
+        if (
+          !el.classList.contains('in-view') &&
+          el.getBoundingClientRect().top < window.innerHeight - 60
+        ) {
+          el.style.opacity = '1';
+          el.classList.add('in-view');
+        }
+      });
+    },
+
+    updateProgressMeter() {
+      const { progressBar, progressPercent, emojiMilestone, fundsRaised, fundsGoal } = state.dom;
+      if (!progressBar || !fundsRaised || !fundsGoal) return;
+      const raised = utils.toNumber(fundsRaised.textContent);
+      const goal = Math.max(utils.toNumber(fundsGoal.textContent), 1);
+      const percent = Math.min((raised / goal) * 100, 100).toFixed(1);
+      setTimeout(() => {
+        progressBar.style.width = `${percent}%`;
+        progressBar.setAttribute('aria-valuenow', String(raised));
+        progressBar.setAttribute('aria-valuemin', '0');
+        progressBar.setAttribute('aria-valuemax', String(goal));
+        if (progressPercent) progressPercent.textContent = `${percent}%`;
+        if (emojiMilestone) emojiMilestone.textContent = this.getMilestoneEmoji(percent);
+      }, 300);
+    },
+
+    getMilestoneEmoji(percent) {
+      percent = parseFloat(percent);
+      if (percent >= 100) return '🏆';
+      if (percent >= 75) return '🚀';
+      if (percent >= 50) return '🔥';
+      if (percent >= 25) return '🚀';
+      return '💤';
+    },
+
+    showDonationTicker(msg) {
+      let ticker = state.dom.donationTicker;
+      if (!ticker) {
+        ticker = document.createElement('div');
+        ticker.id = 'donation-ticker';
+        ticker.className =
+          'fixed bottom-8 left-1/2 -translate-x-1/2 bg-yellow-400/95 text-black font-bold px-7 py-3 rounded-2xl shadow-xl z-[9999] text-lg animate-bounce-in';
+        ticker.setAttribute('role', 'status');
+        ticker.setAttribute('aria-live', 'polite');
+        document.body.appendChild(ticker);
+        state.dom.donationTicker = ticker;
+      }
+      ticker.innerHTML = msg;
+      ticker.classList.add('show');
+      setTimeout(() => ticker.classList.remove('show'), 4000);
+    },
+
+    openSpotlight(name = 'A Generous Donor') {
+      const { sponsorModal, sponsorNameEl } = state.dom;
+      if (!sponsorModal || !sponsorNameEl) return;
+      sponsorNameEl.innerHTML = `<span class="text-red-400 font-bold">${utils.sanitize(name)}</span>`;
+      sponsorModal.classList.add('show');
+      sponsorModal.setAttribute('aria-modal', 'true');
+      (window.launchConfetti || this.launchConfetti).call(this);
+      setTimeout(() => this.closeSpotlight(), 4000);
+    },
+
+    closeSpotlight() {
+      const { sponsorModal } = state.dom;
+      sponsorModal?.classList.remove('show');
+    },
+
+    renderSponsorLeaderboard(sponsors = []) {
+      const leaderboard = state.dom.sponsorLeaderboard;
+      if (!leaderboard) return;
+      if (!sponsors.length) {
+        leaderboard.innerHTML = `<div class="col-span-2 text-center text-lg text-gold/80 font-semibold">Be our first sponsor! 🏆</div>`;
+        return;
+      }
+      leaderboard.innerHTML = sponsors
+        .map((s, i) => {
+          const isTop = i === 0;
+          return `
+          <div class="rounded-2xl border-4 ${isTop ? 'border-gold bg-gradient-to-r from-gold/20 via-red-700/10 to-white/10 scale-105 shadow-inner-gold animate-pulse' : 'border-white/20 bg-black/40'} shadow-elevated p-5 flex flex-col items-center text-center">
+            <span class="text-2xl font-extrabold ${isTop ? 'text-gold drop-shadow' : 'text-white/80'}">${utils.sanitize(s.name)}</span>
+            <span class="text-xl font-bold mt-2 ${isTop ? 'text-red-400' : 'text-white/60'}">$${Number(s.amount || 0).toLocaleString()}</span>
+            ${isTop ? `<div class="prestige-badge mt-3">🏆 Top Champion</div>` : ''}
+          </div>
+        `;
+        })
+        .join('');
+    },
+
+    sponsorAlert(name, title = 'Champion Sponsor') {
+      document.querySelectorAll('.fundchamps-sponsor-alert')?.forEach((a) => a.remove());
+      const alert = document.createElement('div');
+      alert.className =
+        'fundchamps-sponsor-alert fixed bottom-4 right-4 z-[9999] flex flex-col items-end animate-bounce-in';
+      alert.setAttribute('role', 'status');
+      alert.setAttribute('aria-live', 'polite');
+      alert.innerHTML = `
         <div class="bg-black border-4 border-gold rounded-2xl px-7 py-4 shadow-elevated flex flex-col items-center text-center">
           <img src="/static/images/logo.webp" class="w-12 h-12 mb-2 rounded-full border-2 border-gold shadow-gold-glow" alt="Logo" />
-          <span class="text-lg font-bold text-gold mb-2">\u{1F525} NEW SPONSOR ALERT! \u{1F525}</span>
-          <span class="text-white font-semibold mb-2">Thank you <b>${r.sanitize(e)}</b> for supporting the team!</span>
-          <span class="prestige-badge">${r.sanitize(t)} \u{1F3C6}</span>
+          <span class="text-lg font-bold text-gold mb-2">🔥 NEW SPONSOR ALERT! 🔥</span>
+          <span class="text-white font-semibold mb-2">Thank you <b>${utils.sanitize(name)}</b> for supporting the team!</span>
+          <span class="prestige-badge">${utils.sanitize(title)} 🏆</span>
         </div>
-      `,document.body.appendChild(o),setTimeout(()=>o.remove(),4800)},launchConfetti(){let e=["#facc15","#dc2626","#fff","#18181b"];for(let t=0;t<64;t++){let o=document.createElement("div");o.className="confetti",o.style.background=e[Math.floor(Math.random()*e.length)],o.style.left=`${Math.random()*100}vw`,o.style.animationDelay=`${Math.random()*1.5}s`,document.body.appendChild(o),setTimeout(()=>o.remove(),1800)}navigator.vibrate&&navigator.vibrate([22,16,6])}};document.addEventListener("DOMContentLoaded",()=>i.init()),window.FC={showDonationTicker:i.showDonationTicker.bind(i),openSpotlight:i.openSpotlight.bind(i),closeSpotlight:i.closeSpotlight.bind(i),renderSponsorLeaderboard:i.renderSponsorLeaderboard.bind(i),sponsorAlert:i.sponsorAlert.bind(i),launchConfetti:i.launchConfetti.bind(i)}})();var u=["Jessica J. donated $25!","Austin Bikes became a Gold Sponsor!","Coach Smith matched donations for 1 hour!","Only 3 VIP slots left for August!","Welcome to our newest sponsor: TechPros!"],c=0;function m(){let r=document.getElementById("fomo-ticker-text");r&&(r.textContent=u[c%u.length],c++)}setInterval(m,4500);window.addEventListener("DOMContentLoaded",m);
-//# sourceMappingURL=main.js.map
+      `;
+      document.body.appendChild(alert);
+      setTimeout(() => alert.remove(), 4800);
+    },
+
+    launchConfetti() {
+      const colors = ['#facc15', '#dc2626', '#fff', '#18181b'];
+      for (let i = 0; i < 64; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = `${Math.random() * 100}vw`;
+        confetti.style.animationDelay = `${Math.random() * 1.5}s`;
+        document.body.appendChild(confetti);
+        setTimeout(() => confetti.remove(), 1800);
+      }
+      if (navigator.vibrate) navigator.vibrate([22, 16, 6]);
+    },
+  };
+
+  /* Countdown (expects #header-countdown[data-deadline]) */
+  (function () {
+    const el = document.getElementById('header-countdown');
+    if (!el) return;
+    let deadline;
+    try {
+      deadline = new Date(JSON.parse(el.dataset.deadline));
+    } catch (e) {
+      return;
+    }
+    if (isNaN(deadline)) return;
+
+    function fmt(ms) {
+      const s = Math.max(0, Math.floor(ms / 1000));
+      const d = Math.floor(s / 86400),
+        h = Math.floor((s % 86400) / 3600),
+        m = Math.floor((s % 3600) / 60),
+        ss = s % 60;
+      return `${d}d ${h}h ${m}m ${ss}s`;
+    }
+    function tick() {
+      const ms = deadline - Date.now();
+      el.textContent = fmt(ms);
+      if (ms <= 0) clearInterval(tid);
+    }
+    tick();
+    const tid = setInterval(tick, 1000);
+  })();
+
+  /* Non-inline logo fallback */
+  (function () {
+    const logo = document.querySelector('#site-header img[alt$=" logo"]');
+    if (!logo) return;
+    logo.addEventListener(
+      'error',
+      () => {
+        logo.src = '/static/images/logo.webp';
+      },
+      { once: true },
+    );
+  })();
+
+  // ———————— 4. Micro-FOMO Ticker ————————
+  const tickerData = [
+    'Jessica J. donated $25!',
+    'Austin Bikes became a Gold Sponsor!',
+    'Coach Smith matched donations for 1 hour!',
+    'Only 3 VIP slots left for August!',
+    'Welcome to our newest sponsor: TechPros!',
+  ];
+
+  function updateFomoTicker() {
+    const ticker = state.dom.fomoTicker;
+    if (!ticker) return;
+    ticker.textContent = tickerData[state.tickerIndex % tickerData.length];
+    state.tickerIndex++;
+  }
+  setInterval(updateFomoTicker, 3800);
+
+  // ———————— 5. SaaS Global Exposure for Debug/Dev ————————
+  window.FundChampsApp = app; // Power move for future SaaS extensibility
+
+  document.addEventListener('DOMContentLoaded', () => {
+    app.init();
+    cacheDom();
+    updateFomoTicker();
+  });
+})();

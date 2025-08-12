@@ -1,35 +1,38 @@
-{% extends "admin_base.html" %}
-
-{% block title %}
-  Dashboard - Sponsor Admin | {{ super() }}
-{% endblock %}
-
-{% block content %}
-<h2 class="text-3xl font-extrabold mb-8 flex items-center gap-3">
+{% extends 'admin/base.html' %}} {% block title %} Dashboard - Sponsor Admin | {{ super() }} {%
+endblock %} {% block content %}
+<h2 class="mb-8 flex items-center gap-3 text-3xl font-extrabold">
   <span>🏆</span> Admin Dashboard
 </h2>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+<div class="mb-10 grid grid-cols-1 gap-6">
   {# Total Raised Card #}
-  <div class="bg-gradient-to-br from-gold via-yellow-100 to-white text-zinc-900 p-6 rounded-xl shadow-xl flex flex-col items-center">
-    <div class="text-5xl font-black animate-pulse">${{ stats.total_raised | int | round }}</div>
+  <div
+    class="from-gold flex flex-col items-center rounded-xl bg-gradient-to-br via-yellow-100 to-white p-6 text-zinc-900 shadow-xl"
+  >
+    <div class="animate-pulse text-5xl font-black">${{ stats.total_raised | int | round }}</div>
     <div class="text-lg font-semibold">Total Raised</div>
   </div>
 
   {# Sponsors Card #}
-  <div class="bg-gradient-to-br from-yellow-400 via-gold/70 to-white text-zinc-900 p-6 rounded-xl shadow-xl flex flex-col items-center">
-    <div class="text-5xl font-black animate-sparkle">{{ stats.sponsor_count }}</div>
+  <div
+    class="via-gold/70 flex flex-col items-center rounded-xl bg-gradient-to-br from-yellow-400 to-white p-6 text-zinc-900 shadow-xl"
+  >
+    <div class="animate-sparkle text-5xl font-black">{{ stats.sponsor_count }}</div>
     <div class="text-lg font-semibold">Sponsors</div>
   </div>
 
   {# Goal Card #}
-  <div class="bg-gradient-to-br from-zinc-900 via-yellow-200 to-gold text-zinc-900 p-6 rounded-xl shadow-xl flex flex-col items-center">
-    <div class="text-5xl font-black animate-slide-up">${{ stats.goal_amount }}</div>
+  <div
+    class="to-gold flex flex-col items-center rounded-xl bg-gradient-to-br from-zinc-900 via-yellow-200 p-6 text-zinc-900 shadow-xl"
+  >
+    <div class="animate-slide-up text-5xl font-black">${{ stats.goal_amount }}</div>
     <div class="text-lg font-semibold">Goal</div>
   </div>
 
   {# Pending Sponsors Card #}
-  <div class="bg-gradient-to-br from-red-300 via-yellow-100 to-gold text-zinc-900 p-6 rounded-xl shadow-xl flex flex-col items-center">
+  <div
+    class="to-gold flex flex-col items-center rounded-xl bg-gradient-to-br from-red-300 via-yellow-100 p-6 text-zinc-900 shadow-xl"
+  >
     <div class="text-5xl font-black">{{ stats.pending_sponsors }}</div>
     <div class="text-lg font-semibold">Pending Approval</div>
   </div>
@@ -37,23 +40,25 @@
 
 {# Progress Bar Section #}
 <div class="mb-10">
-  <div class="flex justify-between items-center mb-1">
-    <span class="text-sm font-medium text-gold">Progress</span>
+  <div class="mb-1 flex items-center justify-between">
+    <span class="text-gold text-sm font-medium">Progress</span>
     <span class="text-sm font-bold text-yellow-200">
       {{ ((stats.total_raised / (stats.goal_amount or 1)) * 100) | round(1) }}%
     </span>
   </div>
-  <div class="w-full bg-zinc-900 rounded-full h-4 shadow-inner overflow-hidden">
-    <div class="bg-gradient-to-r from-yellow-400 to-gold h-4 rounded-full transition-all duration-700"
-         style="width: {{ (stats.total_raised / (stats.goal_amount or 1) * 100) | round(2) }}%;"></div>
+  <div class="h-4 w-full overflow-hidden rounded-full bg-zinc-900 shadow-inner">
+    <div
+      class="to-gold h-4 rounded-full bg-gradient-to-r from-yellow-400 transition-all duration-700"
+      style="width: {{ (stats.total_raised / (stats.goal_amount or 1) * 100) | round(2) }}%;"
+    ></div>
   </div>
 </div>
 
 {# Latest Sponsors Table #}
 <section class="mb-10">
-  <h3 class="font-semibold mb-3">Latest Sponsors</h3>
+  <h3 class="mb-3 font-semibold">Latest Sponsors</h3>
   <div class="overflow-x-auto">
-    <table class="min-w-full bg-zinc-800/80 rounded-xl overflow-hidden shadow">
+    <table class="min-w-full overflow-hidden rounded-xl bg-zinc-800/80 shadow">
       <thead>
         <tr class="bg-yellow-400/90 text-zinc-900">
           <th class="p-3">Name</th>
@@ -66,24 +71,28 @@
       </thead>
       <tbody>
         {% for s in sponsors %}
-        <tr class="-b -zinc-700 hover:bg-yellow-50/10">
+        <tr class="-b -zinc-700">
           <td class="p-2 font-bold">{{ s.name }}</td>
-          <td class="p-2">{{ s.email or "-" }}</td>
-          <td class="p-2 text-gold font-bold">${{ "%.2f"|format(s.amount) }}</td>
+          <td class="p-2">{{ s.email or "-"}}</td>
+          <td class="text-gold p-2 font-bold">${{ "%.2f"|format(s.amount) }}</td>
           <td class="p-2">
             <span
-              class="px-2 py-1 rounded-full {% if s.status == 'approved' %}bg-green-200 text-green-900{% elif s.status == 'pending' %}bg-yellow-200 text-yellow-900{% else %}bg-red-200 text-red-900{% endif %}"
+              class="{% if s.status == 'approved' %}bg-green-200 text-green-900{% elif s.status == 'pending' %}bg-yellow-200 text-yellow-900{% else %}bg-red-200 text-red-900{% endif %} rounded-full px-2 py-1"
             >
               {{ s.status|capitalize }}
             </span>
           </td>
           <td class="p-2 text-xs">{{ s.created_at.strftime("%Y-%m-%d") }}</td>
           <td class="p-2">
-            {% if s.status != "approved" %}
-            <form action="{{ url_for('admin.approve_sponsor', sponsor_id=s.id) }}" method="POST" style="display: inline">
-              <button type="submit" class="bg-gold text-zinc-900 px-3 py-1 rounded hover:bg-yellow-300">
-                Approve
-              </button>
+            {% if s.status != "approved"%}
+            <form
+              action="{{ url_for('admin.approve_sponsor', sponsor_id=s.id) }}"
+              method="POST"
+              style="display: inline"
+            >
+              {{ form.hidden_tag() }}
+
+              <button type="submit" class="bg-gold rounded px-3 py-1 text-zinc-900">Approve</button>
             </form>
             {% endif %}
           </td>
@@ -100,9 +109,9 @@
 
 {# Latest Transactions Table #}
 <section>
-  <h3 class="font-semibold mb-3">Latest Transactions</h3>
+  <h3 class="mb-3 font-semibold">Latest Transactions</h3>
   <div class="overflow-x-auto">
-    <table class="min-w-full bg-zinc-800/80 rounded-xl overflow-hidden shadow">
+    <table class="min-w-full overflow-hidden rounded-xl bg-zinc-800/80 shadow">
       <thead>
         <tr class="bg-yellow-200 text-zinc-900">
           <th class="p-3">Sponsor</th>
@@ -113,9 +122,9 @@
       </thead>
       <tbody>
         {% for t in transactions %}
-        <tr class="-b -zinc-700 hover:bg-yellow-50/10">
+        <tr class="-b -zinc-700">
           <td class="p-2">{{ t.sponsor.name }}</td>
-          <td class="p-2 text-gold font-bold">${{ "%.2f"|format(t.amount) }}</td>
+          <td class="text-gold p-2 font-bold">${{ "%.2f"|format(t.amount) }}</td>
           <td class="p-2">{{ t.status }}</td>
           <td class="p-2 text-xs">{{ t.created_at.strftime("%Y-%m-%d") }}</td>
         </tr>
@@ -131,15 +140,19 @@
 
 {# Export Payouts Button #}
 <div class="mt-8 flex justify-end">
-  <a href="{{ url_for('admin.export_payouts') }}"
-     class="bg-yellow-400 text-zinc-900 px-6 py-2 rounded-lg font-bold shadow hover:bg-gold transition">
+  <a
+    href="{{ url_for('admin.export_payouts') }}"
+    class="rounded-lg bg-yellow-400 px-6 py-2 font-bold text-zinc-900 shadow transition"
+  >
     ⬇ Export Approved Payouts (CSV)
   </a>
 </div>
 
 {# Admin Pro Tip #}
-<div class="mt-10 text-xs text-zinc-500 text-center">
-  <span>⭐️ Pro tip: Get real-time sponsor alerts in Slack—ask your dev to enable <code>send_slack_new_sponsor()</code> in admin routes!</span>
+<div class="mt-10 text-center text-xs text-zinc-500">
+  <span
+    >⭐️ Pro tip: Get real-time sponsor alerts in Slack—ask your dev to enable
+    <code>send_slack_new_sponsor()</code> in admin routes!</span
+  >
 </div>
 {% endblock %}
-

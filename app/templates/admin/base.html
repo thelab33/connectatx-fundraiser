@@ -1,47 +1,33 @@
-{% extends "base.html" %}
+{% extends "base.html"%} {% block title %} Starforge Sponsor Admin | {{ super() }} {% endblock %} {%
+block hero %}
+<!-- Admin Hero Section (if needed) -->
+{% endblock %} {% block content %}
+<div class="mx-auto w-full max-w-6xl flex-1 p-6">
+  {% with messages = get_flashed_messages(with_categories=true) %} {% if messages %}
+  <ul class="mb-6">
+    {% for category, msg in messages %}
+    <li class="mb-2 animate-pulse rounded bg-yellow-200 px-4 py-2 font-bold text-zinc-900 shadow">
+      {{ msg }}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %} {% endwith %}
 
-{% block title %}
-  Starforge Sponsor Admin | {{ super() }}
-{% endblock %}
-
-{% block hero %}
-  <!-- Admin Hero Section (if needed) -->
-{% endblock %}
-
-{% block content %}
-  <div class="p-6 w-full max-w-6xl mx-auto flex-1">
-    {% with messages = get_flashed_messages(with_categories=true) %}
-      {% if messages %}
-        <ul class="mb-6">
-          {% for category, msg in messages %}
-            <li class="bg-yellow-200 text-zinc-900 font-bold py-2 px-4 rounded mb-2 animate-pulse shadow">
-              {{ msg }}
-            </li>
-          {% endfor %}
-        </ul>
-      {% endif %}
-    {% endwith %}
-
-    <!-- Admin Dashboard Content Here -->
-    {% block admin_content %}{% endblock %}
+  <!-- Admin Dashboard Content Here -->
+  {% block admin_content %}{% endblock %}
+</div>
+{% endblock %} {% block footer %}
+<footer class="-t -gold/10 mt-10 py-8 text-center text-xs text-zinc-500">
+  <div class="mb-2">
+    Built with <span class="animate-sparkle">💛</span> by
+    <b class="text-gold">Angel Rodriguez Jr</b> for the Connect ATX Elite / Starforge Team.
   </div>
+  <span class="text-[10px] tracking-wide"
+    >Starforge Admin — Championship Protocol &copy; {{ 2024 }}</span
+  >
+</footer>
+{% endblock %} {% block pre_scripts %}
+<!-- You can add any admin-specific scripts here -->
+{% endblock %} {% block post_scripts %}
+<!-- Admin-specific JS can go here -->
 {% endblock %}
-
-{% block footer %}
-  <footer class="text-center text-xs py-8 text-zinc-500 -t -gold/10 mt-10">
-    <div class="mb-2">
-      Built with <span class="animate-sparkle">💛</span> by
-      <b class="text-gold">Angel Rodriguez Jr</b> for the Connect ATX Elite / Starforge Team.
-    </div>
-    <span class="text-[10px] tracking-wide">Starforge Admin — Championship Protocol &copy; {{ 2024 }}</span>
-  </footer>
-{% endblock %}
-
-{% block pre_scripts %}
-  <!-- You can add any admin-specific scripts here -->
-{% endblock %}
-
-{% block post_scripts %}
-  <!-- Admin-specific JS can go here -->
-{% endblock %}
-

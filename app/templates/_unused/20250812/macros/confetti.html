@@ -1,5 +1,5 @@
-{# macros/confetti.html #}
-{% macro launch_confetti(sound="yes", particle_count=120, spread=80, duration=3, audio_file="cheer.mp3") %}
+{# macros/confetti.html #} {% macro launch_confetti(sound="yes", particle_count=120, spread=80,
+duration=3, audio_file="cheer.mp3") %}
 <script>
   window.launchConfetti = function() {
     // Confetti.js (canvas-confetti) integration with customizable options
@@ -15,7 +15,7 @@
     }
 
     // Play sound if enabled and available
-    {% if sound == "yes" %}
+    {% if sound == "yes"%}
     try {
       let audio = new Audio("{{ url_for('static', filename='audio/' ~ audio_file) }}");
       audio.volume = 0.5; // Adjust volume as needed
@@ -34,4 +34,3 @@
   };
 </script>
 {% endmacro %}
-

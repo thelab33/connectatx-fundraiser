@@ -1,68 +1,66 @@
-{% extends "admin/base.html" %}
-
-{% block title %}Sponsors Management | {{ super() }}{% endblock %}
-
-{% block content %}
-<h1 class="text-3xl font-extrabold mb-6">Sponsors Management</h1>
+{% extends "admin/base.html"%} {% block title %}Sponsors Management | {{ super() }}{% endblock %} {%
+block content %}
+<h1 class="mb-6 text-3xl font-extrabold">Sponsors Management</h1>
 
 {# Sponsors Table #}
-<div class="overflow-x-auto bg-zinc-800 rounded-xl shadow-lg">
-  <table class="min-w-full table-auto bg-white/5 rounded-xl">
+<div class="overflow-x-auto rounded-xl bg-zinc-800 shadow-lg">
+  <table class="min-w-full table-auto rounded-xl bg-white/5">
     <thead>
       <tr class="bg-yellow-200/70 text-zinc-900">
-        <th class="py-3 px-4">Name</th>
-        <th class="py-3 px-4">Email</th>
-        <th class="py-3 px-4">Amount</th>
-        <th class="py-3 px-4">Status</th>
-        <th class="py-3 px-4">Created</th>
-        <th class="py-3 px-4">Actions</th>
+        <th class="px-4 py-3">Name</th>
+        <th class="px-4 py-3">Email</th>
+        <th class="px-4 py-3">Amount</th>
+        <th class="px-4 py-3">Status</th>
+        <th class="px-4 py-3">Created</th>
+        <th class="px-4 py-3">Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for s in sponsors %}
-      <tr class="hover:bg-zinc-700">
-        <td class="py-2 px-4 font-bold">{{ s.name }}</td>
-        <td class="py-2 px-4">{{ s.email or '-' }}</td>
-        <td class="py-2 px-4">${{ "%.2f"|format(s.amount) }}</td>
+      <tr>
+        <td class="px-4 py-2 font-bold">{{ s.name }}</td>
+        <td class="px-4 py-2">{{ s.email or '-' }}</td>
+        <td class="px-4 py-2">${{ "%.2f"|format(s.amount) }}</td>
 
-        <td class="py-2 px-4">
+        <td class="px-4 py-2">
           <span
-            class="px-3 py-1 rounded-full {% if s.status == 'approved' %}bg-green-200 text-green-900{% elif s.status == 'pending' %}bg-yellow-100 text-yellow-900{% else %}bg-red-200 text-red-900{% endif %}"
+            class="{% if s.status == 'approved' %}bg-green-200 text-green-900{% elif s.status == 'pending' %}bg-yellow-100 text-yellow-900{% else %}bg-red-200 text-red-900{% endif %} rounded-full px-3 py-1"
           >
             {{ s.status|capitalize }}
           </span>
         </td>
 
-        <td class="py-2 px-4 text-sm">{{ s.created_at.strftime("%Y-%m-%d") }}</td>
+        <td class="px-4 py-2 text-sm">{{ s.created_at.strftime("%Y-%m-%d") }}</td>
 
-        <td class="py-2 px-4 flex gap-2">
-          {# Approve button #}
-          {% if s.status != 'approved' %}
+        <td class="flex gap-2 px-4 py-2">
+          {# Approve button #} {% if s.status != 'approved' %}
           <form
             action="{{ url_for('admin.approve_sponsor', sponsor_id=s.id) }}"
             method="post"
             class="inline"
             style="display: inline"
           >
+            {{ form.hidden_tag() }}
+
             <button
               type="submit"
-              class="btn bg-green-500 text-white px-3 py-1 rounded shadow hover:bg-green-600 transition"
+              class="btn rounded bg-green-500 px-3 py-1 text-white shadow transition"
             >
               Approve
             </button>
           </form>
-          {% endif %}
-
-          {# Delete button #}
+          {% endif %} {# Delete button #}
           <form
             action="{{ url_for('admin.delete_sponsor', sponsor_id=s.id) }}"
             method="post"
             style="display: inline"
             onsubmit="return confirm('Are you sure?');"
           >
+            {{ form.hidden_tag() }}
+
             <button
               type="submit"
-              class="btn bg-red-400 text-white px-3 py-1 rounded shadow hover:bg-red-600 transition"
+              class="btn rounded bg-red-400 px-3 py-1 text-white shadow transition"
             >
               Delete
             </button>
@@ -71,9 +69,7 @@
       </tr>
       {% else %}
       <tr>
-        <td colspan="6" class="py-8 text-center text-zinc-400">
-          No sponsors found yet.
-        </td>
+        <td colspan="6" class="py-8 text-center text-zinc-400">No sponsors found yet.</td>
       </tr>
       {% endfor %}
     </tbody>
@@ -82,12 +78,9 @@
 
 {# Back to Dashboard Link #}
 <div class="mt-4">
-  <a
-    href="{{ url_for('admin.dashboard') }}"
-    class="inline-block text-yellow-400 hover:underline"
+  <a href="{{ url_for('admin.dashboard') }}" class="inline-block text-yellow-400"
     >← Back to Dashboard</a
   >
 </div>
 
 {% endblock %}
-

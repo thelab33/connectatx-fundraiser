@@ -1,8 +1,5 @@
-<!DOCTYPE html>
+<!doctype html>
 
 {% macro badge(label, color="gold") -%}
-<span
-  class="badge bg-{{ color }} text-zinc-900 px-3 py-1 rounded-full font-bold"
-  >{{ label }}</span
->
+<span class="badge bg-{{ color }} text-zinc-900 px-3 py-1 rounded-full font-bold">{{ label }}</span>
 {%- endmacro %}

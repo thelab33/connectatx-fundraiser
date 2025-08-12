@@ -1,171 +1,457 @@
-<!-- Modern Elite Donation Form Partial -->
-<form
-  action="{{ url_for('main.donate') }}"
-  method="POST"
-  id="donation-form"
-  class="max-w-md mx-auto bg-gradient-to-br from-zinc-900 via-zinc-950 to-black/90 shadow-2xl rounded-3xl px-8 py-10 space-y-8 ring-2 ring-yellow-400/10
-         transition-all duration-400"
-  autocomplete="off"
-  novalidate
-  aria-label="Quick donation"
->
-  {{ form.hidden_tag() }} <!-- CSRF token -->
+{# ===================== FundChamps • Deluxe Donation Modal (Elite, Self-Contained) ===================== #}
+{% set vip_threshold       = (team.vip_amount if team and team.vip_amount else 500) %}
+{% set min_amount          = min_amount|default(5) %}
+{% set default_amount      = default_amount|default(50) %}
+{% set stripe_intent_url   = (safe_url_for('main.create_payment_intent') if (safe_url_for is defined and has_endpoint and has_endpoint('main.create_payment_intent')) else '/api/payments/stripe/intent') %}
+{% set paypal_order_url    = (safe_url_for('main.create_paypal_order')   if (safe_url_for is defined and has_endpoint and has_endpoint('main.create_paypal_order'))   else '/api/payments/paypal/order') %}
+{% set paypal_capture_url  = (safe_url_for('main.capture_paypal_order')  if (safe_url_for is defined and has_endpoint and has_endpoint('main.capture_paypal_order'))  else '/api/payments/paypal/capture') %}
+{% set team_name           = team.team_name if team and team.team_name else 'FundChamps' %}
+{% set csrf                = (csrf_token() if csrf_token is defined else '') %}
 
-  <!-- 💸 Donation Amount — Floating Label -->
-  <div class="relative">
-    <input
-      type="number"
-      id="donation-amount"
-      name="amount"
-      required
-      min="5"
-      max="10000"
-      step="1"
-      placeholder=" "
-      inputmode="numeric"
-      class="peer block w-full bg-zinc-900/80 text-yellow-100 placeholder-transparent rounded-2xl px-5 py-5 text-2xl font-black shadow-inner focus:ring-2 focus:ring-yellow-400 focus:outline-none transition-all duration-300"
-      aria-describedby="donation-amount-help"
-    />
-    <label
-      for="donation-amount"
-      class="absolute left-5 top-5 text-lg text-yellow-200 font-bold pointer-events-none transition-all duration-300
-             peer-placeholder-shown:top-5 peer-placeholder-shown:text-lg peer-placeholder-shown:text-yellow-200/80
-             peer-focus:-top-3 peer-focus:text-base peer-focus:text-yellow-400 peer-focus:bg-zinc-950 peer-focus:px-2 peer-focus:rounded
-             bg-transparent"
-      >Amount (USD)</label>
-    <span class="absolute right-5 top-5 text-yellow-300 text-xl font-bold select-none pointer-events-none">$</span>
-    <p id="donation-amount-help" class="text-xs text-yellow-400 mt-3 ml-1">
-      <span class="font-bold">Minimum $5</span> &mdash; every dollar goes to kids.
-    </p>
-  </div>
+<dialog id="donation-modal"
+        class="z-50 w-[92vw] max-w-2xl rounded-2xl p-0 backdrop:bg-black/70"
+        aria-modal="true" role="dialog" aria-labelledby="donate-title">
+  <div id="donate-box"
+       class="relative grid grid-cols-1 md:grid-cols-2 gap-0 overflow-hidden rounded-2xl border border-yellow-400/25 bg-zinc-950 text-zinc-100 shadow-2xl"
+       role="document" tabindex="0">
+    <!-- Left: Form -->
+    <section class="p-5 md:p-6">
+      <header class="mb-3 flex items-start justify-between">
+        <div>
+          <h3 id="donate-title" class="text-xl font-extrabold text-yellow-300">Support {{ team_name }}</h3>
+          <p class="mt-1 text-xs text-yellow-100/80">Every dollar fuels gym time, travel, and academics.</p>
+        </div>
+        <button type="button" class="rounded-lg border border-yellow-400/30 bg-black/60 px-3 py-1 text-lg hover:bg-black/70"
+                aria-label="Close donation modal" data-close>×</button>
+      </header>
 
-  <!-- 🏦 Payment Method — Card/PayPal toggles -->
-  <div>
-    <fieldset class="flex gap-3 justify-center border-none p-0 mb-1" aria-describedby="payment-method-help">
-      <legend class="sr-only">Payment Method</legend>
-      <button
-        type="button"
-        id="choose-stripe"
-        aria-pressed="true"
-        class="payment-toggle selected flex-1 flex items-center justify-center gap-2 bg-zinc-800 text-yellow-200 font-bold px-5 py-3 rounded-xl shadow transition-all hover:bg-zinc-700 focus:ring-2 focus:ring-yellow-400"
-        tabindex="0"
-      >
-        <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="3" stroke-width="2"/><path d="M7 10h.01M17 10h.01M12 15v.01"/></svg>
-        Card
-      </button>
-      <button
-        type="button"
-        id="choose-paypal"
-        aria-pressed="false"
-        class="payment-toggle flex-1 flex items-center justify-center gap-2 bg-zinc-800 text-yellow-200 font-bold px-5 py-3 rounded-xl shadow transition-all hover:bg-zinc-700 focus:ring-2 focus:ring-yellow-400"
-        tabindex="0"
-      >
-        <svg class="w-6 h-6 text-yellow-400" fill="currentColor" viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="4" /><text x="12" y="16" text-anchor="middle" font-size="8" fill="#1a202c">PP</text></svg>
-        PayPal
-      </button>
-    </fieldset>
-    <p id="payment-method-help" class="text-xs text-yellow-400 text-center mb-2">100% Secure. Choose Card or PayPal.</p>
-  </div>
+      <!-- Amount presets -->
+      <fieldset class="mb-3" aria-label="Select amount">
+        <div class="grid grid-cols-3 gap-2">
+          {% for amt in [25,50,100,250,500,1000] %}
+          <button type="button" data-amount="{{ amt }}"
+                  class="fc-amt w-full rounded-xl border border-yellow-400/20 bg-zinc-900/70 px-3 py-2 font-bold hover:bg-zinc-900">
+            ${{ '{:,.0f}'.format(amt) }}
+          </button>
+          {% endfor %}
+        </div>
+        <div class="mt-3 flex items-stretch gap-2">
+          <label for="donate-custom" class="sr-only">Custom amount</label>
+          <div class="flex flex-1 items-center rounded-xl border border-yellow-400/20 bg-zinc-900/70">
+            <span class="px-3" aria-hidden="true">$</span>
+            <input id="donate-custom" inputmode="decimal" pattern="[0-9]*" autocomplete="off"
+                   placeholder="{{ default_amount }}" class="w-full bg-transparent py-2 pr-3 outline-none"
+                   aria-describedby="donate-err" />
+          </div>
+          <label class="inline-flex items-center gap-2 whitespace-nowrap rounded-xl border border-yellow-400/20 bg-zinc-900/70 px-3">
+            <input id="donate-fee" type="checkbox" class="h-4 w-4 rounded border-yellow-400/40 bg-zinc-900" />
+            <span class="text-xs">Cover fees</span>
+          </label>
+        </div>
+        <p class="mt-1 text-xs text-zinc-400">Typical fees ~2.9% + $0.30</p>
+      </fieldset>
 
-  <!-- 🔒 Stripe Card Input -->
-  <div id="stripe-form" class="transition-all duration-300">
-    <div id="stripe-element" class="rounded-2xl bg-zinc-900/60 px-4 py-5 shadow-inner" aria-label="Credit or debit card input"></div>
-  </div>
+      <!-- Donor info -->
+      <div class="grid grid-cols-1 gap-2">
+        <label class="text-xs">
+          <span class="sr-only">Name</span>
+          <input id="donor-name" type="text" inputmode="text" autocomplete="name"
+                 class="w-full rounded-lg border border-yellow-400/20 bg-zinc-900/70 px-3 py-2 outline-none"
+                 placeholder="Your name (optional)" />
+        </label>
+        <label class="text-xs">
+          <span class="sr-only">Email</span>
+          <input id="donor-email" type="email" inputmode="email" autocomplete="email"
+                 class="w-full rounded-lg border border-yellow-400/20 bg-zinc-900/70 px-3 py-2 outline-none"
+                 placeholder="Email for receipt (optional)" />
+        </label>
+        <label class="text-xs">
+          <span class="sr-only">Message (optional)</span>
+          <input id="donor-note" type="text"
+                 class="w-full rounded-lg border border-yellow-400/20 bg-zinc-900/70 px-3 py-2 outline-none"
+                 placeholder="Add a note (optional)" />
+        </label>
+      </div>
 
-  <!-- 🟦 PayPal Button Container -->
-  <div id="paypal-form" class="hidden transition-all duration-300" aria-hidden="true">
-    <div id="paypal-button-container" class="rounded-2xl bg-zinc-900/60 px-4 py-5 shadow-inner"></div>
-  </div>
+      <!-- Payment method tabs -->
+      <nav class="mt-4 flex gap-2 text-sm" role="tablist" aria-label="Payment methods">
+        <button class="pm-tab rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
+                data-tab="card" aria-selected="true" role="tab">💳 Card</button>
+        <button class="pm-tab rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
+                data-tab="paypal" aria-selected="false" role="tab">🅿 PayPal</button>
+        <button id="prb-tab" class="pm-tab hidden rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
+                data-tab="payreq" aria-selected="false" role="tab">⚡️ Apple/Google Pay</button>
+      </nav>
 
-  <!-- 🚀 Donate Button -->
-  <div class="pt-4">
-    <button
-      type="submit"
-      id="donate-button"
-      class="w-full py-4 rounded-full text-2xl font-black bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 text-zinc-900 shadow-xl ring-2 ring-yellow-300 transition-all hover:scale-105 hover:bg-yellow-200 focus-visible:ring-4 focus-visible:ring-yellow-400 active:scale-97 disabled:opacity-60 disabled:cursor-not-allowed"
-      aria-live="polite"
-      aria-disabled="false"
-    >
-      Donate Now
-    </button>
-    <p class="text-xs text-yellow-400 text-center mt-3">Powered by <span class="font-bold">Stripe & PayPal</span></p>
+      <!-- Panels -->
+      <div class="mt-3 space-y-3">
+        <!-- Card -->
+        <div id="panel-card" role="tabpanel">
+          <div id="card-element" class="min-h-[44px] rounded-lg border border-yellow-400/20 bg-zinc-900/70 px-3 py-2"></div>
+          <button id="pay-card" type="button"
+                  class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-yellow-400 to-yellow-200 px-4 py-3 font-extrabold text-black hover:scale-[1.01]">
+            Pay <span id="pay-total-card"></span>
+          </button>
+        </div>
+
+        <!-- Pay Request (Apple/Google) -->
+        <div id="panel-payreq" class="hidden" role="tabpanel">
+          <div id="payment-request-button" class="min-h-[44px]"></div>
+          <p class="mt-2 text-xs text-zinc-400">Fast checkout via Apple Pay / Google Pay (where available).</p>
+        </div>
+
+        <!-- PayPal -->
+        <div id="panel-paypal" class="hidden" role="tabpanel">
+          <button id="pay-paypal" type="button"
+                  class="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#ffc439] px-4 py-3 font-extrabold text-black hover:brightness-95">
+            Pay with PayPal <span id="pay-total-pp"></span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Error + tiny print -->
+      <p id="donate-err" class="mt-3 min-h-[1.25rem] text-xs text-red-300" role="alert" aria-live="assertive"></p>
+      <div class="mt-2 text-[11px] leading-relaxed text-zinc-400">
+        Secure by Stripe &amp; PayPal. You’ll see the charge from “{{ team_name }}”.
+      </div>
+    </section>
+
+    <!-- Right: Summary / VIP / Success -->
+    <aside class="flex flex-col gap-3 bg-gradient-to-b from-yellow-900/20 to-transparent p-5 md:p-6">
+      <div class="rounded-2xl border border-yellow-400/20 bg-black/40 p-4">
+        <div class="flex items-center justify-between text-sm">
+          <span>Donation</span><span id="sum-base" class="font-bold">$—</span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-sm">
+          <span>Fees (if covered)</span><span id="sum-fee">$0.00</span>
+        </div>
+        <hr class="my-2 border-yellow-400/20" />
+        <div class="flex items-center justify-between text-base font-extrabold">
+          <span>Total</span><span id="sum-total" class="text-yellow-300">$—</span>
+        </div>
+        <p id="vip-badge" class="mt-2 hidden rounded-full bg-yellow-300 px-3 py-1 text-center text-xs font-black text-black">🎉 VIP Impact!</p>
+      </div>
+
+      <div class="rounded-2xl border border-yellow-400/20 bg-black/40 p-4 text-xs text-yellow-100/90">
+        💡 <strong>Where it goes:</strong> gym time, tournament travel, academic support, and gear for our student-athletes.
+      </div>
+
+      <div id="success-box" class="hidden rounded-2xl border border-green-400/25 bg-green-900/20 p-4 text-sm text-green-200">
+        <div class="font-extrabold">Thank you! 🏆</div>
+        <div>Your gift was received. You’ll get an email receipt shortly.</div>
+      </div>
+    </aside>
   </div>
-</form>
+</dialog>
 
 <style>
-/* Floating Label Modern Style */
-#donation-form label {
-  pointer-events: none;
-}
-#donation-form .peer:focus ~ label,
-#donation-form .peer:not(:placeholder-shown) ~ label {
-  top: -1.4rem !important;
-  left: 1.2rem;
-  font-size: 1rem !important;
-  color: #fbbf24 !important;
-  background: #18181b !important;
-  padding: 0 0.5em;
-  border-radius: 0.5em;
-  z-index: 2;
-}
-.payment-toggle.selected,
-.payment-toggle[aria-pressed="true"] {
-  background: linear-gradient(90deg,#fde68a,#fbbf24,#fde68a);
-  color: #262626;
-  box-shadow: 0 2px 18px 0 #fbbf2420;
-  font-weight: 800;
-  border: 2px solid #fbbf24;
-}
-.payment-toggle:not(.selected):not([aria-pressed="true"]) {
-  background: #18181b;
-  color: #fbbf24;
-  border: 1.5px solid #444;
-}
-#donation-form .peer:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px #fbbf24;
-}
-#donation-form input::-webkit-inner-spin-button,
-#donation-form input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0;}
-#donation-form input[type=number] { appearance: textfield; }
+  #donation-modal::backdrop{ background: rgba(0,0,0,.7) }
+  #donation-modal[open] #donate-box{ animation: dm-pop .22s cubic-bezier(.18,.89,.32,1.28) }
+  @keyframes dm-pop{ from{opacity:0; transform:translateY(6px) scale(.98)} to{opacity:1; transform:none} }
+  .pm-tab[data-active="true"]{ outline: 2px solid rgba(250,204,21,.6) }
 </style>
 
-<script>
-  // Toggle between Card/PayPal
-  (() => {
-    const chooseStripe = document.getElementById('choose-stripe');
-    const choosePayPal = document.getElementById('choose-paypal');
-    const stripeForm = document.getElementById('stripe-form');
-    const paypalForm = document.getElementById('paypal-form');
-    const methodField = document.getElementById('payment-method') || (() => {
-      // Fallback for hidden select if you still want to POST the value
-      let s = document.createElement('input');
-      s.type = 'hidden'; s.name = 'payment_method'; s.value = 'stripe'; s.id = 'payment-method';
-      document.getElementById('donation-form').appendChild(s); return s;
-    })();
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  const getCSRF = () => (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/)?.[1] || (document.querySelector("meta[name=\"csrf-token\"]")?.content || ""));
+  const dlg   = document.getElementById('donation-modal');
+  if (!dlg) return;
 
-    chooseStripe.addEventListener('click', () => {
-      chooseStripe.classList.add('selected');
-      chooseStripe.setAttribute('aria-pressed', 'true');
-      choosePayPal.classList.remove('selected');
-      choosePayPal.setAttribute('aria-pressed', 'false');
-      stripeForm.classList.remove('hidden');
-      paypalForm.classList.add('hidden');
-      paypalForm.setAttribute('aria-hidden', 'true');
-      methodField.value = 'stripe';
-    });
-    choosePayPal.addEventListener('click', () => {
-      choosePayPal.classList.add('selected');
-      choosePayPal.setAttribute('aria-pressed', 'true');
-      chooseStripe.classList.remove('selected');
-      chooseStripe.setAttribute('aria-pressed', 'false');
-      stripeForm.classList.add('hidden');
-      paypalForm.classList.remove('hidden');
-      paypalForm.setAttribute('aria-hidden', 'false');
-      methodField.value = 'paypal';
-    });
+  // ---- Elements
+  const box   = document.getElementById('donate-box');
+  const err   = document.getElementById('donate-err');
+  const feeCb = document.getElementById('donate-fee');
+  const nameI = document.getElementById('donor-name');
+  const mailI = document.getElementById('donor-email');
+  const noteI = document.getElementById('donor-note');
+  const custom= document.getElementById('donate-custom');
+  const payCardBtn = document.getElementById('pay-card');
+  const payPPBtn   = document.getElementById('pay-paypal');
+  const totalCard  = document.getElementById('pay-total-card');
+  const totalPP    = document.getElementById('pay-total-pp');
+  const sumBase    = document.getElementById('sum-base');
+  const sumFee     = document.getElementById('sum-fee');
+  const sumTotal   = document.getElementById('sum-total');
+  const vipBadge   = document.getElementById('vip-badge');
+  const successBox = document.getElementById('success-box');
+  const amountBtns = Array.from(dlg.querySelectorAll('.fc-amt'));
+  const prbTab     = document.getElementById('prb-tab');
+
+  // ---- Config
+  const VIP = {{ vip_threshold|int }};
+  const MIN = {{ min_amount|int }};
+  const DEFAULT_AMT = {{ default_amount|int }};
+  const ENDPOINTS = {
+    stripeIntent: "{{ stripe_intent_url }}",
+    paypalOrder : "{{ paypal_order_url }}",
+    paypalCapture: "{{ paypal_capture_url }}"
+  };
+
+  // ---- Numbers/helpers
+  const fmt = (n)=> '$' + (Math.round((+n||0)*100)/100).toLocaleString(undefined,{minimumFractionDigits:2});
+  const cents = (n)=> Math.round((+n||0)*100);
+  const feeFor = (n)=> { const pct = 0.029, fix = 0.30; return +(n*pct + fix).toFixed(2); }; // Stripe-like
+  function getAmount(){
+    const btn = amountBtns.find(b => b.classList.contains('is-on'));
+    const base = btn ? parseFloat(btn.dataset.amount) : parseFloat(custom.value || custom.placeholder || DEFAULT_AMT);
+    const valid = isFinite(base) ? Math.max(MIN, Math.floor(base)) : MIN;
+    const fee = feeCb.checked ? feeFor(valid) : 0;
+    const total = +(valid + fee).toFixed(2);
+    return { base: valid, fee, total };
+  }
+  function paint(){
+    const { base, fee, total } = getAmount();
+    sumBase.textContent = fmt(base);
+    sumFee.textContent  = fmt(fee);
+    sumTotal.textContent= fmt(total);
+    totalCard.textContent = fmt(total);
+    totalPP.textContent   = fmt(total);
+    vipBadge.classList.toggle('hidden', base < VIP);
+  }
+
+  // Amount interactions
+  amountBtns.forEach(b => b.addEventListener('click', () => {
+    amountBtns.forEach(x => x.classList.remove('is-on'));
+    b.classList.add('is-on');
+    custom.value = '';
+    paint();
+  }));
+  custom.addEventListener('input', () => {
+    amountBtns.forEach(x => x.classList.remove('is-on'));
+    paint();
+  });
+  document.getElementById('donate-fee').addEventListener('change', paint);
+
+  // Default selected
+  (function initDefault(){
+    const match = amountBtns.find(b => +b.dataset.amount === DEFAULT_AMT) || amountBtns[1] || amountBtns[0];
+    match?.classList.add('is-on');
+    custom.placeholder = String(DEFAULT_AMT);
+    paint();
   })();
 
-  // Stripe/PayPal JS integrations remain as in your script (see your Stripe setup).
+  // ---- Tabs
+  const tabs = Array.from(dlg.querySelectorAll('.pm-tab'));
+  function setTab(k){
+    tabs.forEach(t => {
+      const on = t.dataset.tab === k;
+      t.dataset.active = on ? 'true' : 'false';
+      t.setAttribute('aria-selected', String(on));
+      document.getElementById('panel-'+t.dataset.tab)?.classList.toggle('hidden', !on);
+    });
+  }
+  tabs.forEach(t => t.addEventListener('click', ()=> setTab(t.dataset.tab)));
+  setTab('card');
+
+  // ---- Modal open/close + focus trap
+  function trap(container){
+    const sel = 'a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
+    const list = ()=> Array.from(container.querySelectorAll(sel)).filter(el=>!el.disabled && el.offsetParent !== null);
+    function onKey(e){
+      if (e.key !== 'Tab') return;
+      const els = list(); if (!els.length) return;
+      const [first,last] = [els[0], els[els.length-1]];
+      if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    }
+    container.addEventListener('keydown', onKey);
+    return () => container.removeEventListener('keydown', onKey);
+  }
+  let untrap = null;
+  function openModal(prefill){
+    try { dlg.showModal?.(); } catch {}
+    if (prefill) {
+      if (prefill.amount) {
+        amountBtns.forEach(x => x.classList.remove('is-on'));
+        custom.value = String(prefill.amount);
+      }
+      if (prefill.name)  document.getElementById('donor-name').value = prefill.name;
+      if (prefill.email) document.getElementById('donor-email').value = prefill.email;
+      paint();
+    }
+    dlg.classList.remove('closed'); document.body.style.overflow = 'hidden';
+    untrap = trap(box); setTimeout(()=> box.focus(), 0);
+    window.dispatchEvent(new CustomEvent('fc:donate:open'));
+  }
+  function closeModal(){
+    dlg.classList.add('closed'); try{ dlg.close?.(); }catch{}
+    document.body.style.overflow = ''; err.textContent = '';
+    if (untrap) { untrap(); untrap = null; }
+  }
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-open-donate-modal]')) { e.preventDefault(); openModal(); }
+    if (e.target.closest('[data-close]')) { e.preventDefault(); closeModal(); }
+  });
+  dlg.addEventListener('click', (e)=>{ if (e.target === dlg) closeModal(); });
+  document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && dlg.open) closeModal(); });
+
+  // Expose global so header/hero/tiers can call it
+  window.openDonationModal = (opts)=> openModal(opts || {});
+
+  // ---- Stripe (Card + Payment Request) ----
+  let stripe, elements, card, pr, prButton;
+  const CARD_EL = document.getElementById('card-element');
+  const PRB_MOUNT = document.getElementById('payment-request-button');
+
+  async function ensureStripe(){
+    if (!window.Stripe) return null;
+    if (stripe) return stripe;
+    const { total } = getAmount();
+    const res = await fetch(ENDPOINTS.stripeIntent, {
+      method: 'POST', headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+      body: JSON.stringify({ amount: total })
+    });
+    const data = await res.json();
+    if (!res.ok || !data.client_secret || !data.publishable_key) throw new Error(data.error?.message || 'Stripe init failed');
+    stripe = Stripe(data.publishable_key);
+    elements = stripe.elements();
+    card = elements.create('card', { hidePostalCode: true });
+    card.mount(CARD_EL);
+    setupPaymentRequest();
+    return stripe;
+  }
+
+  async function createPI(){
+    const { base, fee, total } = getAmount();
+    const payload = {
+      amount: total,
+      currency: 'usd',
+      metadata: {
+        donor_name: document.getElementById('donor-name').value || '',
+        donor_email: document.getElementById('donor-email').value || '',
+        note: document.getElementById('donor-note').value || '',
+        base_amount: base,
+        fee_amount: fee
+      },
+      receipt_email: document.getElementById('donor-email').value || undefined,
+      description: `Donation to {{ team_name }}`
+    };
+    const res = await fetch(ENDPOINTS.stripeIntent, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF(), 'Idempotency-Key': cryptoRandom() },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || 'Payment failed');
+    if (!stripe) stripe = Stripe(data.publishable_key);
+    return data.client_secret;
+  }
+
+  function setBusy(on){
+    [payCardBtn, payPPBtn].forEach(b => { if (b){ b.disabled = on; b.classList.toggle('opacity-60', on); }});
+  }
+
+  payCardBtn.addEventListener('click', async () => {
+    err.textContent = '';
+    const { base, total } = getAmount();
+    if (!isFinite(total) || total < MIN) { err.textContent = `Minimum is $${MIN}.`; return; }
+    try {
+      await ensureStripe();
+      const clientSecret = await createPI();
+      const billing_details = {
+        name: document.getElementById('donor-name').value || undefined,
+        email: document.getElementById('donor-email').value || undefined
+      };
+      setBusy(true);
+      const { error: se } = await stripe.confirmCardPayment(clientSecret, {
+        payment_method: { card, billing_details }
+      });
+      setBusy(false);
+      if (se) { err.textContent = se.message || 'Card was not accepted.'; return; }
+      handleSuccess({ amount: base, total });
+    } catch (e){ setBusy(false); err.textContent = e.message || 'Something went wrong.'; }
+  });
+
+  // Payment Request (Apple/Google Pay)
+  async function setupPaymentRequest(){
+    if (!stripe || !PRB_MOUNT) return;
+    const { total } = getAmount();
+    pr = stripe.paymentRequest({
+      country: 'US', currency: 'usd', total: { label: '{{ team_name }}', amount: cents(total) },
+      requestPayerEmail: true, requestPayerName: true
+    });
+    const can = await pr.canMakePayment();
+    if (can) {
+      prbTab?.classList.remove('hidden');
+      const elementsLocal = elements || stripe.elements();
+      prButton = elementsLocal.create('paymentRequestButton', { paymentRequest: pr });
+      PRB_MOUNT.innerHTML = '';
+      prButton.mount('#payment-request-button');
+      pr.on('paymentmethod', async (ev) => {
+        try {
+          const clientSecret = await createPI();
+          const { error: se } = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions: false });
+          if (se) { ev.complete('fail'); err.textContent = se.message || 'Payment failed.'; return; }
+          ev.complete('success');
+          const { error } = await stripe.confirmCardPayment(clientSecret);
+          if (error) { err.textContent = error.message || 'Payment failed.'; return; }
+          const { base, total } = getAmount();
+          handleSuccess({ amount: base, total });
+        } catch (e) { ev.complete('fail'); err.textContent = e.message || 'Payment failed.'; }
+      });
+    }
+  }
+
+  // ---- PayPal (Orders v2)
+  payPPBtn.addEventListener('click', async () => {
+    err.textContent = '';
+    const { base, total } = getAmount();
+    if (total < MIN) { err.textContent = `Minimum is $${MIN}.`; return; }
+    try {
+      setBusy(true);
+      const r1 = await fetch(ENDPOINTS.paypalOrder, {
+        method:'POST', headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify({ amount: total })
+      });
+      const j1 = await r1.json();
+      if (!r1.ok || !j1.order_id) throw new Error('Unable to start PayPal');
+
+      const r2 = await fetch(ENDPOINTS.paypalCapture, {
+        method:'POST', headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify({ order_id: j1.order_id })
+      });
+      const j2 = await r2.json();
+      setBusy(false);
+      if (!r2.ok || String(j2.status).toUpperCase() !== 'COMPLETED') {
+        throw new Error('PayPal capture failed');
+      }
+      handleSuccess({ amount: base, total });
+    } catch (e){ setBusy(false); err.textContent = e.message || 'PayPal error.'; }
+  });
+
+  // ---- Success handling + events
+  function handleSuccess({ amount, total }){
+    try {
+      successBox.classList.remove('hidden');
+      // VIP confetti
+      if (amount >= {{ vip_threshold|int }} && typeof window.launchConfetti === 'function') {
+        window.launchConfetti({ particleCount: 180, spread: 80 });
+      }
+      // Hooks
+      window.dispatchEvent(new CustomEvent('fc:donation:success', { detail: { amount, total } }));
+      window.dispatchEvent(new CustomEvent('fc:vip', { detail: { name: (document.getElementById('donor-name').value||'VIP Supporter'), amount } }));
+      // Optimistic meter bump (raised only; header handles partial)
+      window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised: amount } }));
+      // Clear note, keep donor info for convenience
+      document.getElementById('donor-note').value = '';
+      setTimeout(() => { successBox.classList.add('hidden'); try{ dlg.close?.(); }catch{} document.body.style.overflow=''; }, 1100);
+    } catch {}
+  }
+
+  // Utility
+  function cryptoRandom(len=12){
+    const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    const out=[]; const a=new Uint8Array(len); (window.crypto||window.msCrypto).getRandomValues(a);
+    for (const n of a) out.push(chars[n%chars.length]); return out.join('');
+  }
+
+  // Pre-select when opened with { amount, tier, name, email }
+  window.addEventListener('fc:donate:open', (ev)=>{
+    const d = ev.detail || {};
+    if (d.amount) { custom.value = String(d.amount); amountBtns.forEach(x=>x.classList.remove('is-on')); paint(); }
+    if (d.name) document.getElementById('donor-name').value = d.name;
+    if (d.email) document.getElementById('donor-email').value = d.email;
+  });
+})();
 </script>
 

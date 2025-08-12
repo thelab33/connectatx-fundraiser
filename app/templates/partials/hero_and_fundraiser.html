@@ -1,186 +1,295 @@
-{% from "macros/confetti.html" import launch_confetti %}
-{% from "macros/progress.html" import progress_meter %}
+{% set teamName = (team.team_name if team and team.team_name is defined else 'Connect ATX Elite') %}
+{% set ver = asset_version|default(0) %}
 
-{# === HERO VARS === #}
-{% set team_name = team.team_name | default('Connect ATX Elite', true) %}
-{% set region = team.region | default("Austin, TX", true) %}
-{% set logo_src = team.logo if team and team.logo else 'images/team-rings.webp' %}
-{% set hero_img = team.hero_image if team and team.hero_image else 'images/connect-atx-team.jpg' %}
-{% set fallback_img = url_for('static', filename='images/connect-atx-team.jpg') %}
-{% set impact = [
-  {"v":"20+", "lbl":"Student‑Athletes"},
-  {"v":"3.5+", "lbl":"GPA Average"},
-  {"v":"100%", "lbl":"Funds to Access &amp; Education"}
-] %}
-{% set raised = stats.raised if stats is defined and stats.raised is defined else 4200 %}
-{% set goal = stats.goal if stats is defined and stats.goal is defined else 10000 %}
-{% set pct = (raised / goal * 100) | round(1) if goal else 0 %}
+{% set _logo = (team.logo if team and team.logo else 'images/logo.webp') %}
+{% set logoSrc = (_logo if '://' in _logo
+  else (url_for('static', filename=_logo.lstrip('/'), v=ver) if url_for is defined
+  else '/static/' ~ _logo.lstrip('/') ~ '?v=' ~ ver)) %}
 
-<section
-  id="hero"
-  class="relative isolate overflow-hidden w-full py-24 px-6 sm:px-12 bg-zinc-950/95 text-white min-h-[700px] flex items-center justify-center"
-  aria-labelledby="hero-heading"
-  tabindex="-1"
-  itemscope itemtype="https://schema.org/SportsTeam"
->
-  <!-- Background Img (with fallback) -->
-  <img
-    src="{{ url_for('static', filename=(hero_img if '://' not in hero_img else 'images/' ~ hero_img)) }}"
-    alt="{{ team_name }} team photo"
-    class="absolute inset-0 w-full h-full object-cover opacity-90 scale-110 animate-kenburns-smooth -z-10"
-    style="min-height: 520px; max-height: 100vh"
-    loading="eager"
-    decoding="async"
-    onerror="this.onerror=null;this.src='{{ fallback_img }}';"
-    aria-hidden="true"
-  />
+{% set _hero = (team.hero_bg if team and team.hero_bg is defined and team.hero_bg else 'images/connect-atx-team.jpg') %}
+{% set heroBg = (_hero if '://' in _hero
+  else (url_for('static', filename=_hero.lstrip('/'), v=ver) if url_for is defined
+  else '/static/' ~ _hero.lstrip('/') ~ '?v=' ~ ver)) %}
 
-  <!-- Glassmorphic Overlay -->
-  <div class="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
-    <div
-      class="glassy-hero-overlay mx-auto"
-      style="width: min(97vw, 1320px); height: min(88vw, 670px);"
-      aria-hidden="true"
-    ></div>
+{% set fundsRaised = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraisingGoal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set rawPct = (fundraisingGoal and fundsRaised / fundraisingGoal * 100) | default(0) | round(1) %}
+{% set pct = 0 if rawPct < 0 else (100 if rawPct > 100 else rawPct) %}
+{% set fundraisingDeadline = fundraising_deadline if fundraising_deadline is defined else None %}
+{% set deadlineISO = fundraisingDeadline.isoformat() if fundraisingDeadline else '' %}
+
+{% set statsUrl = stats_url|default('/api/stats') %}
+{% set socketNamespace = socket_ns|default('/donations') %}
+{% set vipThreshold = (team.vip_amount if team and team.vip_amount else 500) %}
+{% set pollIntervalMs = poll_ms|default(15000) %}
+{% set quickDonateUrl = quick_donate_url|default('#donate') %}
+{% set tiersAnchor = '#tiers' %}
+
+<section id="fc-hero"
+  class="relative isolate overflow-hidden"
+  data-stats-url="{{ statsUrl }}"
+  data-socket-ns="{{ socketNamespace }}"
+  data-vip-threshold="{{ vipThreshold }}"
+  data-poll-ms="{{ pollIntervalMs }}"
+  role="region"
+  aria-label="Fundraising Hero Section"
+  itemscope itemtype="https://schema.org/DonateAction">
+
+  <style>
+    #fc-hero .glass{backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);background:linear-gradient(180deg,rgba(24,24,27,.55),rgba(24,24,27,.75));border:1px solid rgba(250,204,21,.14);box-shadow:0 16px 60px rgba(250,204,21,.15);border-radius:1.5rem}
+    #fc-hero .meter-wrap{position:relative;height:12px;border-radius:9999px;overflow:hidden;margin-top:.5rem}
+    #fc-hero .meter-bg{position:absolute;inset:0;background:linear-gradient(90deg,rgba(63,63,70,.6),rgba(39,39,42,.6))}
+    #fc-hero .meter-bar{position:absolute;inset:0;width:0%;border-radius:9999px;background:linear-gradient(90deg,#fde68a,#facc15,#f59e0b);transition:width .9s cubic-bezier(.22,1,.36,1);will-change:width;transform:translateZ(0)}
+    #fc-hero .badge{border:1px solid rgba(250,204,21,.25);background:rgba(250,204,21,.1);font-weight:600;display:inline-flex;align-items:center;gap:.25rem}
+    #fc-hero .cta{transition:transform .15s ease,box-shadow .15s ease;font-weight:600;border-radius:9999px}
+    #fc-hero .cta:hover,#fc-hero .cta:focus-visible{transform:translateY(-1px);box-shadow:0 10px 30px rgba(250,204,21,.25);outline:none}
+    #fc-raised,#fc-goal,#fc-percent{font-variant-numeric:tabular-nums}
+    @media (min-width:640px){ #fc-hero .meter-wrap{height:8px} }
+    #fc-hero .bg-img{object-position:center var(--fc-hero-y,35%)}
+    @media (max-width:640px){ #fc-hero .bg-img{--fc-hero-y:25%} }
+    #fc-hero.save-data .meter-bar{transition:none!important}
+    #site-header.is-shrunk{backdrop-filter:blur(18px);border-bottom-color:rgba(250,204,21,.18);transition:border-color .2s ease}
+    #site-header.is-shrunk .shrinkable{transform:scale(.96);opacity:.95;transition:transform .2s ease,opacity .2s ease}
+  </style>
+
+  <div class="absolute inset-0 -z-10" aria-hidden="true">
+    <img loading="lazy" decoding="async" src="{{ heroBg }}" alt="" class="bg-img h-full w-full object-cover opacity-35" loading="eager" fetchpriority="high" decoding="async"/>
+    <div class="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-zinc-950"></div>
   </div>
 
-  <!-- Gradient Overlay -->
-  <div class="absolute inset-0 bg-gradient-to-b from-black/95 via-zinc-950/90 to-zinc-900/95 -z-5"></div>
+  <div class="mx-auto w-full max-w-6xl px-4 py-10 md:py-14">
+    <div class="glass relative rounded-3xl p-6 md:p-8">
+      <div class="flex items-center gap-4 shrinkable">
+        <img loading="lazy" decoding="async" src="{{ logoSrc }}" alt="{{ teamName }} logo" class="h-12 w-12 rounded-xl ring-1 ring-white/10" loading="eager" decoding="async"/>
+        <div class="flex flex-col">
+          <span class="text-sm text-zinc-300/90">Official Team Hub</span>
+          <h1 class="text-2xl sm:text-3xl font-black tracking-tight">{{ teamName }}</h1>
+        </div>
+        <div class="ml-auto hidden sm:flex items-center gap-2" aria-label="Badges">
+          <span class="badge px-3 py-1 text-xs text-amber-200 rounded-full"><span aria-hidden="true">⭐</span> VIP Sponsors Welcome</span>
+          <span class="badge px-3 py-1 text-xs text-amber-200 rounded-full"><span aria-hidden="true">🏆</span> Community Powered</span>
+        </div>
+      </div>
 
-  <!-- HERO CONTENT -->
-  <div class="relative z-30 flex flex-col items-center text-center max-w-4xl w-full mx-auto gap-10">
-    <!-- Logo + Title -->
-    <div class="flex flex-col items-center gap-2">
-      <img
-        src="{{ url_for('static', filename=logo_src) }}"
-        alt="{{ team_name }} logo"
-        class="h-24 w-24 sm:h-28 sm:w-28 rounded-full ring-4 ring-yellow-400/20 bg-white p-1 shadow-xl hover:scale-105 transition-transform"
-        loading="lazy"
-        decoding="async"
-      />
-      <h1
-        id="hero-heading"
-        class="mt-4 text-4xl sm:text-6xl font-extrabold tracking-tight bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-50 bg-clip-text text-transparent animate-shine drop-shadow focus:outline-none"
-        tabindex="0"
-      >
-        {{ team_name }}
-      </h1>
-      <div class="flex gap-2 items-center text-yellow-200 font-semibold text-base sm:text-lg mt-2">
-        <svg class="w-5 h-5 text-yellow-300 mr-1" fill="none" viewBox="0 0 16 16"><circle cx="8" cy="8" r="7" stroke="#facc15" stroke-width="2"/></svg>
-        <span class="tracking-wider">{{ region }}</span>
-        <span class="hidden sm:inline text-yellow-300">|</span>
-        <span class="hidden sm:inline">Family, Grit &amp; Honor — On and Off the Court</span>
+      <div class="mt-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+          <p class="text-balance text-2xl sm:text-3xl font-bold leading-tight">Fuel the season. Fund the future.</p>
+          <p class="mt-2 text-zinc-300/90 max-w-prose">Your donation powers travel, tournaments, and training for our student-athletes. Every dollar goes straight to the court.</p>
+
+          <section aria-label="Fundraising Progress" class="mt-6">
+            <div class="flex items-end justify-between gap-3">
+              <div class="text-sm text-zinc-300/90">
+                <span id="fc-raised" class="font-semibold text-white">${{ '{:,.0f}'.format(fundsRaised) }}</span>
+                <span class="text-zinc-400/90">raised</span>
+                <span class="mx-2 text-zinc-600">•</span>
+                <span class="text-zinc-400/90">Goal</span>
+                <span id="fc-goal" class="font-semibold text-white">${{ '{:,.0f}'.format(fundraisingGoal) }}</span>
+              </div>
+              <div class="text-sm text-zinc-300/90"><span id="fc-percent" class="font-semibold text-amber-300">{{ (pct | round(0)) | int }}</span>% funded</div>
+            </div>
+            <div class="meter-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct|int }}" aria-label="Fundraising progress">
+              <div class="meter-bg"></div>
+              <div id="fc-meter-bar" class="meter-bar" style="width: {{ pct }}%"></div>
+            </div>
+            <span id="fc-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(fundsRaised) }} of ${{ '{:,.0f}'.format(fundraisingGoal) }} ({{ pct | round(0) }}%)</span>
+          </section>
+
+          <div class="mt-4 flex flex-wrap items-center gap-3 text-sm text-zinc-300/90">
+            {% if fundraisingDeadline %}
+            <div class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5" role="timer" aria-live="polite" aria-atomic="true">
+              <span aria-hidden="true">⏳</span><span>Ends in:</span><span id="fc-countdown" class="font-semibold text-white">—</span>
+            </div>
+            {% endif %}
+            <div class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5"><span aria-hidden="true">📍</span><span>East Austin</span></div>
+            <div class="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-1.5"><span aria-hidden="true">🔒</span><span>Secure payments via Stripe</span></div>
+          </div>
+
+          <div class="mt-6 flex flex-wrap items-center gap-3">
+            <a href="{{ quickDonateUrl }}" data-open-donate-modal="true" role="button" itemprop="target"
+               class="cta inline-flex items-center gap-2 rounded-2xl bg-amber-400 px-5 py-3 font-semibold text-zinc-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-500">
+              <span aria-hidden="true">💛</span> <span data-cta-copy>Quick Donate</span>
+            </a>
+            <a href="{{ tiersAnchor }}"
+               class="cta inline-flex items-center gap-2 rounded-2xl border border-amber-300/40 bg-amber-300/10 px-5 py-3 font-semibold text-amber-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400">
+              <span aria-hidden="true">🏅</span> Become a Sponsor
+            </a>
+          </div>
+        </div>
+
+        <aside class="lg:col-span-1" aria-label="Latest support information">
+          <div class="rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div class="flex items-center gap-3">
+              <div class="h-10 w-10 rounded-xl bg-amber-300/20 ring-1 ring-amber-300/30 grid place-items-center" aria-hidden="true"><span>🎉</span></div>
+              <div class="text-sm">
+                <div class="text-zinc-300/90">Latest Support</div>
+                <div id="fc-latest" class="font-semibold text-white">Be our next VIP!</div>
+              </div>
+            </div>
+            <hr class="my-4 border-zinc-700/50" />
+            <ul class="space-y-2 text-sm text-zinc-300/90" aria-live="polite" aria-atomic="true">
+              <li class="flex items-center justify-between"><span>Donors</span><span id="fc-donors" class="font-semibold text-white">—</span></li>
+              <li class="flex items-center justify-between"><span>Avg gift</span><span id="fc-avg" class="font-semibold text-white">—</span></li>
+            </ul>
+          </div>
+        </aside>
       </div>
     </div>
-
-    <!-- Mission Statement -->
-    <p class="max-w-2xl text-yellow-100 font-bold text-lg sm:text-xl leading-relaxed shadow-none mt-1">
-      We’re a <span class="text-yellow-300">family-run AAU program</span> transforming East Austin youth into <span class="text-yellow-300">scholar-athletes, leaders, and community champions</span>.
-    </p>
-
-    <!-- Impact Stats -->
-    <div class="flex flex-wrap justify-center gap-6 mt-4" role="list" aria-label="Team Impact Stats">
-      {% for s in impact %}
-      <div class="min-w-[96px] rounded-xl bg-black/75 p-5 text-center shadow-lg hover:bg-yellow-300/10 hover:scale-105 transition-transform duration-300" role="listitem" tabindex="0">
-        <div class="text-3xl sm:text-4xl font-extrabold text-yellow-300 animate-shine">{{ s.v }}</div>
-        <div class="mt-1 text-xs sm:text-sm uppercase text-yellow-100 tracking-wide">{{ s.lbl }}</div>
-      </div>
-      {% endfor %}
-    </div>
-
-    <!-- Fundraising Progress Bar -->
-    <div class="w-full max-w-md bg-zinc-900/90 p-6 rounded-xl ring-1 ring-yellow-400/30 shadow-inner flex flex-col gap-1 items-center mt-2">
-      <div class="flex justify-center items-baseline gap-2 text-yellow-300 text-2xl font-black mb-2">
-        <span>${{ raised | comma }}</span>
-        <span class="text-yellow-100 text-base font-medium">/ ${{ goal | comma }}</span>
-        <span class="text-yellow-300 text-sm font-bold">({{ pct }}%)</span>
-      </div>
-      <div class="mb-2 w-full">{{ progress_meter(raised, goal, 'lg') }}</div>
-      <p class="text-xs sm:text-sm text-yellow-100 mt-1">100% of your gift funds gym time, travel, and tutoring.</p>
-    </div>
-
-    <!-- VIP CTA Button -->
-    <a
-      href="#tiers"
-      class="inline-flex items-center gap-3 px-8 py-3 rounded-full bg-black border border-yellow-400 text-yellow-200 font-bold shadow-xl hover:bg-yellow-400 hover:text-black hover:scale-105 transition-all ring-1 ring-yellow-400/80 focus-visible:ring-4 focus-visible:ring-yellow-300 animate-vip-bounce"
-      aria-label="Become a VIP Sponsor"
-    >
-      🌟 VIP Sponsor
-      <svg class="w-5 h-5 animate-sparkle" fill="none" viewBox="0 0 16 16">
-        <path d="M8 1v2M8 13v2M1 8h2M13 8h2M4.22 4.22l1.42 1.42M10.36 10.36l1.42 1.42M4.22 11.78l1.42-1.42M10.36 5.64l1.42-1.42" stroke="#fff" stroke-width="1.2" stroke-linecap="round" />
-      </svg>
-      <span class="hidden sm:inline">Secure Your Spot</span>
-    </a>
-
-    <!-- Confetti Container -->
-    <div id="hero-confetti" class="pointer-events-none select-none absolute inset-0 z-40"></div>
   </div>
-</section>
 
-<!-- Mobile Sticky Donate CTA -->
-<a
-  href="#donate"
-  class="fixed bottom-0 left-0 right-0 z-50 bg-yellow-400 text-zinc-900 py-3 px-6 flex justify-center items-center gap-4 font-extrabold text-lg uppercase tracking-wide cursor-pointer select-none md:hidden shadow-lg hover:bg-yellow-500 transition-colors duration-300 focus-visible:ring-4 focus-visible:ring-yellow-500"
-  aria-label="Donate now"
->
-  💸 Donate Now
-</a>
-
-<style>
-/* --- Glassmorphic Hero Overlay --- */
-.glassy-hero-overlay {
-  border-radius: 32px;
-  box-shadow: 0 10px 48px 0 #facc1580, 0 2px 14px 0 #fff9;
-  background: linear-gradient(120deg, rgba(250,220,100,0.16) 0%, rgba(55,48,163,0.11) 100%);
-  backdrop-filter: blur(14px) saturate(130%);
-  -webkit-backdrop-filter: blur(14px) saturate(130%);
-  border: 1.5px solid rgba(255,255,255,0.23);
-  opacity: 0.90;
-  transition: opacity 0.32s cubic-bezier(.4,0,.2,1);
-  pointer-events: none;
-}
-@media (max-width: 640px) {
-  .glassy-hero-overlay { border-radius: 16px; min-height: 320px;}
-}
-/* Animations */
-@keyframes shine {
-  0%{ background-position:-200px; }
-  100%{ background-position:200px; }
-}
-.animate-shine {
-  background-size: 200% auto;
-  animation: shine 2.5s linear infinite;
-}
-@keyframes vip-bounce {
-  0%,100% { transform: translateY(0);}
-  50% { transform: translateY(-10px);}
-}
-.animate-vip-bounce { animation: vip-bounce 1.5s infinite cubic-bezier(.75,0,.4,1.2);}
-@keyframes sparkle {
-  0%,100% { opacity: 0.85;}
-  50% { opacity: 1; filter: drop-shadow(0 0 8px #fffbe7);}
-}
-.animate-sparkle { animation: sparkle 1.2s infinite alternate;}
-@keyframes kenburns-smooth {
-  0% { transform: scale(1.05);}
-  100% { transform: scale(1.12);}
-}
-.animate-kenburns-smooth { animation: kenburns-smooth 24s linear alternate infinite;}
-</style>
-<script>
-  // Confetti if #vip in URL
-  if (window.location.hash === '#vip') {
-    import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/+esm')
-      .then(m => m.default({ particleCount: 150, spread: 100, origin: { y: 0.7 } }))
-      .catch(()=>{});
+  <script type="application/ld+json" nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+  {
+    "@context": "https://schema.org",
+    "@type": "DonateAction",
+    "name": "{{ teamName | e }} Fundraiser",
+    "target": "{{ quickDonateUrl | e }}"
   }
-  // Tooltip for sparkle icon (a11y, for screenreader users)
-  document.querySelectorAll('.animate-sparkle').forEach(el => {
-    el.setAttribute('title', '✨ Premium Opportunity');
-  });
-  // Focus hero heading on load for accessibility
-  document.addEventListener('DOMContentLoaded', () => {
-    document.getElementById('hero-heading')?.focus();
-  });
-</script>
+  </script>
+
+  <script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+  (() => {
+    if (window.__fcHeroInit) return; window.__fcHeroInit = true;
+    window.requestIdleCallback ||= (fn)=> setTimeout(fn, 1);
+
+    const root = document.getElementById('fc-hero'); if (!root) return;
+    if (navigator.connection?.saveData) root.classList.add('save-data');
+
+    const $ = (s,c=document)=>c.querySelector(s);
+    const fmt = n => '$' + (Math.round(+n || 0)).toLocaleString();
+
+    const cfg = {
+      statsUrl: root.dataset.statsUrl || '/api/stats',
+      socketNs: root.dataset.socketNs || '/donations',
+      vip: parseFloat(root.dataset.vipThreshold) || 500,
+      poll: parseInt(root.dataset.pollMs || '15000', 10)
+    };
+
+    const meterBar = $('#fc-meter-bar', root);
+    const raisedEl = $('#fc-raised', root);
+    const goalEl   = $('#fc-goal', root);
+    const pctEl    = $('#fc-percent', root);
+    const srEl     = $('#fc-sr', root);
+    const latestEl = $('#fc-latest', root);
+    const donorsEl = $('#fc-donors', root);
+    const avgEl    = $('#fc-avg', root);
+    const countdownEl = $('#fc-countdown', root);
+    const ctaCopy  = $('[data-cta-copy]', root);
+
+    let raised = parseFloat((raisedEl.textContent || '').replace(/[^0-9.]/g,'')) || 0;
+    let goal   = parseFloat((goalEl.textContent   || '').replace(/[^0-9.]/g,'')) || 10000;
+
+    function setMeter(p){
+      if (meterBar) meterBar.style.width = Math.min(100, Math.max(0, p || 0)) + '%';
+      const pbar = root.querySelector('.meter-wrap');
+      if (pbar) {
+        pbar.setAttribute('aria-valuenow', (p||0).toFixed(0));
+      }
+    }
+
+    function updateProgress(r, g){
+      const R = +r || 0, G = Math.max(0, +g || 0);
+      const P = G ? (R / G * 100) : 0;
+      raisedEl.textContent = fmt(R);
+      goalEl.textContent   = fmt(G);
+      pctEl.textContent    = Math.round(P);
+      setMeter(P);
+      if (srEl) srEl.textContent = `Raised ${fmt(R)} of ${fmt(G)} (${Math.round(P)}%)`;
+      raised = R; goal = G;
+
+      if (ctaCopy) ctaCopy.textContent = P >= 80 ? 'Finish the Goal' : (P <= 30 ? 'Kickstart the Season' : 'Quick Donate');
+      window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised: R, goal: G, percent: P } }));
+      if (P >= 100) {
+        try {
+          window.dispatchEvent(new CustomEvent('fc:goal', { detail: { source: 'hero' }}));
+          if (typeof window.launchConfetti === 'function') window.launchConfetti({ particleCount: 140, spread: 75 });
+        } catch {}
+      }
+    }
+
+    function updateSide(d){
+      if (!d) return;
+      if (latestEl && (d.latest_supporter?.name || d.latest_supporter_name)) latestEl.textContent = d.latest_supporter?.name || d.latest_supporter_name;
+      if (donorsEl && d.donor_count != null) donorsEl.textContent = d.donor_count;
+      if (avgEl    && d.avg_gift    != null) avgEl.textContent    = fmt(d.avg_gift);
+    }
+
+    {% if fundraisingDeadline %}
+    (()=>{
+      const iso = "{{ deadlineISO }}"; if (!iso || !countdownEl) return;
+      const end = new Date(iso); if (isNaN(end)) { countdownEl.textContent = '—'; return; }
+      const tick = () => {
+        const ms = end - new Date();
+        if (ms <= 0) { countdownEl.textContent = 'Ended'; clearInterval(id); return; }
+        const d = Math.floor(ms / 86400000),
+              h = Math.floor(ms % 86400000 / 3600000),
+              m = Math.floor(ms % 3600000 / 60000);
+        countdownEl.textContent = `${d}d ${h}h ${m}m`;
+      };
+      tick(); const id = setInterval(tick, 60000);
+    })();
+    {% endif %}
+
+    root.querySelectorAll('[data-open-donate-modal="true"]').forEach(btn=>{
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        window.dispatchEvent(new CustomEvent('fc:donate:open'));
+        if (typeof window.openDonationModal === 'function') { window.openDonationModal(); return; }
+        const dlg = document.getElementById('donation-modal');
+        try { dlg?.showModal?.(); } catch {}
+      });
+    });
+
+    (()=>{
+      const h = document.getElementById('site-header'); if (!h) return;
+      addEventListener('scroll', () => { if (scrollY > 35) h.classList.add('is-shrunk'); else h.classList.remove('is-shrunk'); }, { passive: true });
+    })();
+
+    const slow = !!(navigator.connection && navigator.connection.saveData);
+    let pollId = null, inflight = null;
+
+    async function fetchStats(){
+      if (document.hidden) return;
+      try {
+        inflight?.abort?.();
+        inflight = new AbortController();
+        const res = await fetch(cfg.statsUrl, { cache: 'no-store', headers: { Accept: 'application/json' }, signal: inflight.signal });
+        if (!res.ok) return;
+        const d = await res.json();
+        if (d?.funds_raised != null && d?.fundraising_goal != null) updateProgress(d.funds_raised, d.fundraising_goal);
+        updateSide(d);
+      } catch {}
+    }
+
+    function startPolling(){
+      const base = slow ? Math.max(30000, cfg.poll) : cfg.poll;
+      fetchStats();
+      clearInterval(pollId); pollId = setInterval(fetchStats, base);
+    }
+    function stopPolling(){ clearInterval(pollId); pollId = null; inflight?.abort?.(); }
+    document.addEventListener('visibilitychange', () => { if (document.hidden) stopPolling(); else startPolling(); });
+
+    (()=>{
+      if (!window.io) return;
+      try {
+        const s = io(cfg.socketNs, { transports: ['websocket','polling'] });
+        s.on('new_donation', d => {
+          if (!d) return;
+          if ((+d.amount || 0) >= cfg.vip && typeof window.launchConfetti === 'function') window.launchConfetti({ particleCount: 120, spread: 70 });
+          if (d.funds_raised != null && d.fundraising_goal != null) updateProgress(d.funds_raised, d.fundraising_goal);
+          if (d.donor_count != null) donorsEl.textContent = d.donor_count;
+          if (d.avg_gift    != null) avgEl.textContent    = fmt(d.avg_gift);
+          if (d.latest_supporter?.name) latestEl.textContent = d.latest_supporter.name;
+        });
+      } catch {}
+    })();
+
+    const start = () => { if (start._done) return; start._done = true; startPolling(); };
+    if ('IntersectionObserver' in window) new IntersectionObserver(e=>{ if (e[0]?.isIntersecting) start(); }, { threshold: .2 }).observe(root);
+    else start();
+
+    requestIdleCallback(() => {
+      const l = document.createElement('link'); l.rel = 'preload'; l.as = 'image'; l.href = '{{ heroBg }}'; document.head.appendChild(l);
+    });
+  })();
+  </script>
+</section>
 

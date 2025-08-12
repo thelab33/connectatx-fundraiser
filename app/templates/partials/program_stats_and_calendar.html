@@ -1,138 +1,199 @@
-{# =================== Elite Program Stats + Events Calendar Partial =================== #}
+{# ================= Connect ATX Elite — Stats & Calendar (SV-grid, snapped) ================= #}
+{% set brand_color    = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set events         = schedule if schedule is defined and schedule else [] %}
+{% set ics_url        = (safe_url_for('calendar.export_ics') if (safe_url_for is defined and has_endpoint and has_endpoint('calendar.export_ics')) else '/api/calendar.ics') %}
+{% set csv_url        = (safe_url_for('calendar.export_csv') if (safe_url_for is defined and has_endpoint and has_endpoint('calendar.export_csv')) else '/api/calendar.csv') %}
+{% set add_google_url = 'https://calendar.google.com/calendar/render?action=TEMPLATE' %}
+{% set tzlabel        = (current_tz if current_tz is defined else 'your local timezone') %}
 
-{% set stats = stats if stats is defined and stats else [
-    {'label': 'GPA Avg', 'value': 3.5},
-    {'label': 'Student-Athletes', 'value': 22},
-    {'label': 'Fundraising Goal ($)', 'value': 10000},
-    {'label': 'Active Sponsors', 'value': 17}
-] %}
-{% set events = events if events is defined and events else [
-    {'date': '2025-07-20', 'name': 'AAU Tournament', 'location': 'East Austin Gym', 'time': '10:00 AM', 'is_upcoming': true, 'opponent': 'All Stars', 'result': '', 'highlight': 'Opening tourney!', 'sponsor': None, 'type': 'Tournament'},
-    {'date': '2025-07-22', 'name': 'Team Practice', 'location': 'East Austin Gym', 'time': '5:00 PM', 'is_upcoming': false, 'opponent': 'Scrimmage', 'result': 'W', 'highlight': 'Strong win', 'sponsor': 'Austin Realty', 'type': 'Practice'}
-] %}
+<section id="psc"
+         class="mx-auto w-full max-w-6xl px-4 md:px-6"
+         aria-label="Program Stats & Calendar"
+         style="--fc-brand: {{ brand_color }};">
+  <style>
+    /* -------- Scoped to #psc -------- */
+    #psc * { margin-block: 0; } /* normalize inner margins */
+    #psc .grid { display: grid; gap: 14px; }
+    @media (min-width: 1024px){ #psc .grid { grid-template-columns: 1.6fr .9fr; gap: 18px; } }
 
-<section id="program-stats-events" class="relative py-16 px-4 sm:px-8 max-w-5xl mx-auto">
-  <!-- Animated Heading -->
-  <h2
-    id="program-calendar-heading"
-    class="text-3xl sm:text-4xl font-black bg-gradient-to-r from-yellow-300 via-yellow-200 to-yellow-300 bg-clip-text text-transparent animate-shine text-center mb-10 tracking-tight"
-  >
-    🗓️ Program Stats &amp; Events
-  </h2>
+    #psc .card {
+      border-radius: 1rem;
+      border: 1px solid rgba(255,255,255,.12);
+      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.35));
+      box-shadow: 0 8px 26px rgba(0,0,0,.35);
+    }
+    #psc .card--tight { padding: 14px; }
+    #psc .card--std   { padding: 16px; }
+    @media (min-width:768px){ #psc .card--std { padding: 18px; } }
 
-  <!-- EVENTS CALENDAR -->
-  <div class="bg-zinc-900/95 p-7 rounded-3xl shadow-2xl border border-yellow-400/15 animate-pop-in overflow-x-auto">
-    <table
-      class="min-w-full table-auto text-left text-sm text-zinc-100"
-      aria-describedby="program-calendar-heading"
-    >
-      <thead>
-        <tr class="bg-yellow-400 text-zinc-900 select-none">
-          <th class="px-4 py-2 rounded-tl-2xl font-bold">Date</th>
-          <th class="px-4 py-2 font-bold">Event</th>
-          <th class="px-4 py-2 font-bold">Location</th>
-          <th class="px-4 py-2 font-bold">Time</th>
-          <th class="px-4 py-2 font-bold">Result</th>
-          <th class="px-4 py-2 rounded-tr-2xl font-bold">Sponsor</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for event in events %}
-          {% set row_classes = [
-            'transition-colors',
-            event.is_upcoming and 'bg-yellow-400/10 text-yellow-200 font-bold',
-            'W' in event.result and 'bg-green-500/10 text-green-200',
-            'L' in event.result and 'bg-red-600/10 text-red-100',
-            not (event.is_upcoming or 'W' in event.result or 'L' in event.result) and 'bg-zinc-950/90'
-          ] | select | join(' ') %}
-          <tr class="{{ row_classes }}">
-            <td class="px-4 py-2 whitespace-nowrap font-mono tracking-tight">{{ event.date|replace('-', '/') }}</td>
-            <td class="px-4 py-2 font-bold">{{ event.name or event.opponent }}</td>
-            <td class="px-4 py-2">{{ event.location }}</td>
-            <td class="px-4 py-2">{{ event.time }}</td>
-            <td class="px-4 py-2" aria-label="Event result">
-              {% if 'W' in event.result %}<span class="font-bold text-green-400">🟢 Win</span>
-              {% elif 'L' in event.result %}<span class="font-bold text-red-400">🔴 Loss</span>
-              {% elif event.is_upcoming %}<span class="font-bold text-yellow-300">🟡 Upcoming</span>
-              {% else %}<span class="text-zinc-400/70">—</span>{% endif %}
-            </td>
-            <td class="px-4 py-2">
-              {% if event.sponsor %}
-                <span class="font-bold text-yellow-300/95 select-text">
-                  {{ event.sponsor }}
-                  {% if event.sponsor in ['VIP Sponsor', 'Gold’s Gym', 'Platinum Partner'] %}
-                    <span class="ml-1 text-yellow-200 bg-yellow-600/30 rounded px-2 py-0.5 text-xs align-middle font-black select-none">VIP</span>
-                  {% endif %}
-                </span>
-              {% else %}
-                <span class="text-zinc-400/60 select-none">—</span>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    <div class="mt-7 text-center">
-      <a
-        href="/calendar"
-        class="inline-block bg-yellow-400 hover:bg-yellow-300 text-zinc-900 font-bold py-2 px-6 rounded-full shadow-xl transition-all duration-300 focus-visible:ring-2 focus-visible:ring-yellow-400"
-      >
-        View Full Calendar
-      </a>
+    #psc .title { font-weight: 900; letter-spacing: .2px; }
+    #psc .pill  { display:inline-flex; align-items:center; gap:.4rem; font-size:.75rem; font-weight:800;
+                  padding:.25rem .55rem; border-radius:9999px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); }
+
+    /* table */
+    #psc table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
+    #psc thead th { text-align: left; font-size: .78rem; color: #d4d4d8; font-weight: 700; padding: 0 8px; }
+    #psc tbody tr { background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.08); }
+    #psc tbody td { padding: 10px 8px; font-size: .9rem; }
+    #psc .badge { font-size:.72rem; border:1px solid rgba(255,255,255,.18); padding:.1rem .45rem; border-radius: .6rem; }
+    #psc .ok    { color:#22c55e; }
+    #psc .warn  { color:#f59e0b; }
+    #psc .fail  { color:#ef4444; }
+
+    /* right rail */
+    #psc .rail { display:flex; flex-direction:column; gap:12px; }
+    #psc .cta { display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+                border-radius:9999px; font-weight:800; padding:.6rem 1rem; }
+    #psc .cta-primary { background:linear-gradient(90deg,#fde68a,#facc15); color:#111827; border:0; }
+    #psc .cta-ghost   { background:rgba(0,0,0,.5); color:#ffe08a; border:1px solid rgba(250,204,21,.35); }
+
+    /* sticky but snapped */
+    @media (min-width: 1024px){ #psc .sticky-rail { position: sticky; top: 88px; } }
+
+    /* utilities */
+    #psc .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
+    #psc .muted { color:#c4c4cc; font-size:.82rem; }
+  </style>
+
+  <div class="grid">
+    <!-- LEFT: Schedule / stats -->
+    <div class="card card--std" role="region" aria-label="Schedule and results">
+      <div class="row">
+        <div class="title text-yellow-300 text-lg md:text-xl flex items-center gap-2">
+          <span aria-hidden="true">🗓️</span> <span>Connect ATX Elite — Stats &amp; Calendar</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <a class="pill" href="{{ ics_url }}">+ Add .ics</a>
+          <a class="pill" href="{{ add_google_url }}" target="_blank" rel="noopener">+ Google</a>
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="row" style="margin-top:10px;">
+        <label class="sr-only" for="psc-q">Search</label>
+        <input id="psc-q" type="search" placeholder="Search events, opponents, locations…"
+               class="w-full md:w-[340px] rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-300"/>
+
+        <div class="flex items-center gap-2">
+          <select id="psc-type" class="rounded-lg border border-white/10 bg-black/40 px-2 py-2 text-sm">
+            <option value="all">All types</option>
+            <option value="practice">Practice</option>
+            <option value="tournament">Tournament</option>
+            <option value="game">Game</option>
+            <option value="other">Other</option>
+          </select>
+          <label class="pill" style="cursor:pointer">
+            <input id="psc-upcoming" type="checkbox" class="mr-1"> Upcoming only
+          </label>
+          <a class="pill" href="{{ csv_url }}">⤓ Export CSV</a>
+          <a class="pill" href="{{ ics_url }}">Export .ics</a>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div style="margin-top:12px;">
+        <table aria-describedby="psc-note">
+          <thead>
+            <tr>
+              <th>Date</th><th>Event</th><th>Location</th><th>Time</th><th>Result</th><th>Sponsor</th>
+            </tr>
+          </thead>
+          <tbody id="psc-body">
+            {% for e in events %}
+              {% set res = (e.result or '').lower() %}
+              <tr data-type="{{ (e.type or 'other')|lower }}" data-when="{{ e.date or '' }}">
+                <td>{{ e.date or '—' }}</td>
+                <td>{{ e.title or e.event or '—' }}{% if e.note %} <span class="badge">{{ e.note }}</span>{% endif %}</td>
+                <td>{{ e.location or '—' }}</td>
+                <td>{{ e.time or '—' }}</td>
+                <td>
+                  {% if 'win' in res %}<span class="ok">🟢 Win</span>
+                  {% elif 'loss' in res %}<span class="fail">🔴 Loss</span>
+                  {% else %}<span class="warn">🟡 Upcoming</span>{% endif %}
+                </td>
+                <td>{{ e.sponsor or '—' }}</td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6">Schedule coming soon — check back shortly.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        <p id="psc-note" class="muted" style="margin-top:6px;">Times shown in {{ tzlabel }}.</p>
+      </div>
     </div>
+
+    <!-- RIGHT: Slim callouts (tight padding, snapped in grid) -->
+    <aside class="rail sticky-rail">
+      <div class="card card--tight" role="note" aria-label="Fuel the Season">
+        <div class="title text-yellow-200 flex items-center gap-2">
+          <span aria-hidden="true">🏀</span> <span>Fuel the Season</span>
+        </div>
+        <p class="muted" style="margin-top:6px;">Every dollar supports travel, equipment, and academic tutoring.</p>
+
+        <div class="flex flex-col gap-2" style="margin-top:10px;">
+          <button class="cta cta-primary" type="button" data-open-donate-modal>Quick Donate</button>
+          <a class="cta cta-ghost" href="#tiers">See Tiers</a>
+        </div>
+      </div>
+
+      <div class="card card--tight" role="region" aria-label="Top supporters">
+        <div class="title text-yellow-200 flex items-center gap-2">
+          <span aria-hidden="true">🌟</span> <span>Sponsors</span>
+        </div>
+        <ul id="psc-sponsors" class="text-sm" style="margin-top:8px; list-style:none; padding:0;">
+          {% if top_sponsors is defined and top_sponsors %}
+            {% for s in top_sponsors[:4] %}
+              <li class="muted" style="margin-top:4px;">{{ s }}</li>
+            {% endfor %}
+          {% else %}
+            <li class="muted">Be our first VIP sponsor ✨</li>
+          {% endif %}
+        </ul>
+      </div>
+    </aside>
   </div>
 </section>
 
-<style>
-  .animate-shine {
-    background: linear-gradient(270deg, #fbbf24, #fde68a, #fbbf24);
-    background-size: 400% 400%;
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    animation: subtle-shine 6s ease infinite;
-  }
-  @keyframes subtle-shine {
-    0%, 100% { background-position: 0%; }
-    50% { background-position: 100%; }
-  }
-  @keyframes pop-in {
-    0% { opacity: 0; transform: scale(0.87);}
-    100% { opacity: 1; transform: scale(1);}
-  }
-  .animate-pop-in {
-    animation: pop-in 0.7s cubic-bezier(.4,1.6,.6,1) both;
-  }
-  .glassy-card {
-    backdrop-filter: blur(12px) saturate(125%);
-    -webkit-backdrop-filter: blur(12px) saturate(125%);
-    background: linear-gradient(120deg, rgba(255,255,255,0.09) 0%, rgba(250,220,100,0.11) 100%);
-    border-radius: 2rem;
-    border: 1.5px solid rgba(255,255,255,0.12);
-    box-shadow: 0 8px 28px 0 #facc1535, 0 1.5px 10px #fff2;
-  }
-</style>
-<script>
-  // Animated stat counters
-  document.querySelectorAll(".counter span[data-target]").forEach((counter) => {
-    const target = parseFloat(counter.dataset.target) || 0;
-    const isInt = Number.isInteger(target);
-    let current = 0;
-    const step = Math.max(target / 38, 1);
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  const root = document.getElementById('psc'); if (!root || root.__init) return; root.__init = true;
 
-    function animate() {
-      current += step;
-      if ((step > 0 && current >= target) || (step < 0 && current <= target)) {
-        current = target;
-      }
-      counter.textContent = isInt ? Math.round(current) : current.toFixed(1);
-      if (current !== target) {
-        requestAnimationFrame(animate);
-      }
-    }
-    animate();
-    // Re-run animation if user tabs back in (a11y/focus)
-    counter.parentNode.addEventListener('focus', animate);
+  const q = root.querySelector('#psc-q');
+  const type = root.querySelector('#psc-type');
+  const up = root.querySelector('#psc-upcoming');
+  const body = root.querySelector('#psc-body');
+
+  function rowInfo(tr){
+    const when = tr.getAttribute('data-when') || '';
+    const dt = new Date(when.replaceAll('/','-') + 'T00:00:00'); // crude but safe
+    return { when: dt, type: (tr.getAttribute('data-type')||'').toLowerCase(), text: tr.textContent.toLowerCase() };
+  }
+
+  function applyFilters(){
+    const qv = (q?.value || '').trim().toLowerCase();
+    const tv = (type?.value || 'all').toLowerCase();
+    const upcoming = up?.checked;
+
+    Array.from(body?.rows || []).forEach(tr => {
+      const info = rowInfo(tr);
+      let show = true;
+      if (qv) show = info.text.includes(qv);
+      if (show && tv !== 'all') show = info.type === tv;
+      if (show && upcoming) show = (info.when.getTime() - Date.now()) >= -86400000; // past one day hidden
+      tr.style.display = show ? '' : 'none';
+    });
+  }
+  q?.addEventListener('input', applyFilters);
+  type?.addEventListener('change', applyFilters);
+  up?.addEventListener('change', applyFilters);
+  applyFilters();
+
+  // Hook CTAs to global modal
+  root.addEventListener('click', (e)=>{
+    const btn = e.target.closest('[data-open-donate-modal]'); if (!btn) return;
+    e.preventDefault();
+    try { window.openDonationModal?.(); } catch {}
   });
+})();
 </script>
 

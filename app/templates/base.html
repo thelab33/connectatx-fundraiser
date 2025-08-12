@@ -1,191 +1,111 @@
-<!DOCTYPE html>
-<html lang="{{ lang_code|default('en', true) }}"
+{# templates/base.html — Elite, DRY, deployment-ready #}
+{% set asset_version = asset_version|default(0) %}
+{% set team_name = team.team_name if team and team.team_name is defined else 'Connect ATX Elite' %}
+{% set theme_hex  = team.theme_color|default('#facc15', true) %}
+
+<!doctype html>
+<html
+  lang="{{ lang_code|default('en', true) }}"
   data-theme="{{ theme|default('dark', true) }}"
   class="no-js scroll-smooth antialiased bg-zinc-950 text-white font-sans{% if team and team.body_class %} {{ team.body_class }}{% endif %}"
-  style="min-height: 100%;"
+  style="min-height:100%"
   itemscope itemtype="https://schema.org/WebSite"
 >
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
-  <meta name="robots" content="index,follow,max-image-preview:large" />
-  <meta name="color-scheme" content="dark light" />
-  <meta name="theme-color" content="{{ team.theme_color|default('#facc15', true) }}" />
-  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-  <link rel="canonical" href="{{ request.url_root|trim('/') }}" />
-  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest', v=asset_version) }}" />
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
 
-  <title>{% block title %}{{ team.team_name|default('Connect ATX Elite', true) }}{% endblock %}</title>
-  <meta name="description" content="{{ team.meta_description|default('Connect ATX Elite — Family-run AAU basketball building future leaders in East Austin.', true) }}" />
+    <title>{% block head_title %}{{ team_name }} — FundChamps{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}{{ team.meta_description|default('Connect ATX Elite — family-run AAU basketball in East Austin. Fuel the season; fund the future.', true) }}{% endblock %}" />
+    <link rel="canonical" href="{% block canonical_url %}{{ request.base_url }}{% endblock %}" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="{{ theme_hex }}" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ theme_hex }}" />
 
-  {# Open Graph & Twitter Cards #}
-  {% set _raw_og = team.og_image if team and team.og_image else 'images/logo.avif' %}
-  {% set ogimg = _raw_og if _raw_og.startswith('http') else url_for('static', filename=_raw_og) %}
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content="{{ team.og_title|default('Connect ATX Elite | Empowering Youth', true) }}" />
-  <meta property="og:description" content="{{ team.og_description|default('Support our basketball journey and invest in our next generation of leaders.', true) }}" />
-  <meta property="og:image" content="{{ ogimg }}" />
-  <meta property="og:url" content="{{ request.url }}" />
-  <meta property="og:site_name" content="{{ team.team_name|default('Connect ATX Elite', true) }}" />
-  <meta property="og:image:alt" content="{{ team.og_alt|default(team.og_title|default('Connect ATX Elite', true), true) }}" />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:site" content="{{ team.twitter_handle|default('@ConnectATXElite', true) }}" />
-  <meta name="twitter:title" content="{{ team.og_title|default('Connect ATX Elite | Empowering Youth', true) }}" />
-  <meta name="twitter:description" content="{{ team.og_description|default('Support our basketball journey and invest in our next generation of leaders.', true) }}" />
-  <meta name="twitter:image" content="{{ ogimg }}" />
+    {# OpenGraph / Twitter #}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="FundChamps" />
+    <meta property="og:title" content="{% block og_title %}{{ team.og_title|default(team_name ~ ' | Empowering Youth', true) }}{% endblock %}" />
+    <meta property="og:description" content="{% block og_description %}{{ team.og_description|default('Every dollar goes to tournaments, travel, gear, and academics.', true) }}{% endblock %}" />
+    <meta property="og:image" content="{{ (team.og_image if team and team.og_image else url_for('static', filename='images/connect-atx-team-mobile.jpg.webp', v=asset_version)) }}" />
+    <meta property="og:url" content="{{ request.base_url }}" />
+    <meta name="twitter:card" content="summary_large_image" />
 
-  {# Favicon & Apple Icons #}
-  <link rel="icon" type="image/png" sizes="32x32" href="{{ (team and team.favicon) and url_for('static', filename=team.favicon, v=asset_version) or url_for('static', filename='images/favicon.png', v=asset_version) }}" />
-  <link rel="apple-touch-icon" href="{{ (team and team.apple_icon) and url_for('static', filename=team.apple_icon, v=asset_version) or url_for('static', filename='images/logo.avif', v=asset_version) }}" />
-  <meta name="apple-mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    {# Performance hints #}
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin>
+    <link rel="preconnect" href="https://www.paypal.com" crossorigin>
+    <link rel="dns-prefetch" href="https://cdn.socket.io">
 
-  {# Preconnects & Prefetch for performance #}
-  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link rel="preconnect" href="https://api.stripe.com" />
-  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-  <link rel="dns-prefetch" href="https://api.stripe.com" />
+    {# CSS (async with noscript fallback) #}
+    <link rel="preload" as="style" href="{{ url_for('static', filename='css/tailwind.min.css', v=asset_version) }}" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css', v=asset_version) }}"></noscript>
 
-  {# Google Fonts - Inter #}
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" crossorigin="anonymous" />
-  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" as="style" crossorigin="anonymous" />
+    {# Small utility style: support [x-cloak] without Alpine flash #}
+    <style>[x-cloak]{display:none!important}</style>
 
-  {# Preload critical logo #}
-  <link rel="preload" href="{{ url_for('static', filename=team.logo if team and team.logo else 'images/logo.webp') }}" as="image" type="image/webp" />
+    {# Page-specific head additions/preloads #}
+    {% block head_extra %}{% endblock %}
 
-  {# Tailwind CSS Styles #}
-  <link rel="preload" href="{{ url_for('static', filename='css/tailwind.min.css', v=asset_version) }}" as="style" />
-  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css', v=asset_version) }}" media="all" />
-  {% if app_env != 'production' %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/input.css', v=asset_version) }}">
-  {% endif %}
-  {% if team and team.custom_css %}
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ team.custom_css, v=asset_version) }}">
-  {% endif %}
+    {# JS bootstrap: remove no-js, set save-data & mobile 100vh fix (CSP nonce-friendly) #}
+    <script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+      document.documentElement.classList.remove('no-js');
+      try {
+        if (navigator.connection && navigator.connection.saveData) document.documentElement.classList.add('save-data');
+        const setVh=()=>{ document.documentElement.style.setProperty('--vh', `${window.innerHeight*0.01}px`); };
+        setVh(); addEventListener('resize', setVh);
+      } catch(_) {}
+    </script>
 
-  {# JSON-LD Structured Data #}
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SportsTeam",
-    "name": "{{ team.team_name|default('Connect ATX Elite') }}",
-    "url": "{{ request.url_root }}",
-    "logo": "{{ url_for('static', filename=team.logo if team and team.logo else 'images/logo.webp') }}",
-    "sport": "Basketball",
-    "memberOf": {
-      "@type": "SportsOrganization",
-      "name": "AAU"
-    },
-    "sameAs": [
-      "{{ team.facebook or '' }}",
-      "{{ team.twitter or '' }}",
-      "{{ team.instagram or '' }}"
-    ]
-  }
-  </script>
+    {# Optional JSON-LD for SportsTeam/Org #}
+    {% if team %}
+      {% set jsonld = {
+        "@context":"https://schema.org",
+        "@type":"SportsTeam",
+        "name": team_name,
+        "sport":"Basketball",
+        "url": request.base_url,
+        "areaServed": team.region if team.region is defined else "Austin, TX"
+      } %}
+      <script type="application/ld+json" nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">{{ jsonld|tojson }}</script>
+    {% endif %}
+  </head>
 
-  {% block head_extra %}{% endblock %}
-</head>
+  <body class="min-h-screen selection:bg-yellow-300/20 selection:text-yellow-100">
+    {# Skip link for a11y #}
+    <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-black focus:text-white focus:px-3 focus:py-2">Skip to content</a>
 
-<body
-  class="bg-zinc-950 text-white font-sans antialiased min-h-screen flex flex-col{% if team and team.body_class %} {{ team.body_class }}{% endif %}"
-  role="document"
-  aria-live="polite"
-  aria-busy="false"
-  x-data="{ dark: localStorage.getItem('theme') === 'dark' }"
->
-  <script>
-    (function(d) {
-      d.documentElement.classList.remove('no-js');
-      d.documentElement.classList.add('js');
-    })(document);
-  </script>
+    {% block body_top %}
+      {# Flash + onboarding (optional, harmless if missing) #}
+      {% include 'partials/flash_and_onboarding.html' ignore missing %}
 
-  <a href="#main-content" class="sr-only focus:not-sr-only absolute top-2 left-2 bg-yellow-400 text-black font-semibold px-3 py-1 rounded-lg z-50" tabindex="0">Skip to main content</a>
+      {# Header (single source; hero/meter stay out of base) #}
+      {% include 'partials/header_and_announcement.html' %}
+    {% endblock %}
 
-  <!-- Dark Mode Toggle -->
-  <button id="dark-mode-toggle" aria-label="Toggle dark mode"
-    class="fixed bottom-6 left-6 z-50 rounded-full bg-yellow-400 p-3 shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-300"
-  >
-    <span aria-hidden="true" class="block text-lg">🌙</span>
-    <span class="sr-only">Toggle dark mode</span>
-  </button>
+    <main id="main" class="relative w-full overflow-x-hidden">
+      {% block content %}{% endblock %}
+    </main>
 
-  <!-- Page Loader Overlay -->
-  <div id="page-loader"
-    class="fixed inset-0 flex items-center justify-center bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300 z-50"
-    aria-label="Loading" aria-live="polite"
-  >
-    <svg class="animate-spin h-12 w-12 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
-      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
-    </svg>
-  </div>
+    {% include 'partials/back_to_top.html' ignore missing %}
+    {% include 'partials/footer.html' %}
 
-  {# === ANNOUNCEMENT BAR: SPONSOR TICKER (Elite, always on top) === #}
-  {% block announcement %}
-    {% include "partials/header_sponsor_ticker.html" ignore missing %}
-  {% endblock %}
-
-  {% include 'partials/header_and_announcement.html' ignore missing %}
-  {% block hero %}{% endblock %}
-
-  <main
-    id="main-content"
-    role="main"
-    tabindex="-1"
-    class="min-h-[60vh] flex flex-col gap-14 max-w-6xl w-full mx-auto px-2 sm:px-8 pt-6"
-    style="scroll-margin-top: 80px;"
-  >
-    {% block content %}{% endblock %}
-  </main>
-
-  {% include 'partials/footer.html' ignore missing %}
-
-  {# === GLOBAL MODALS: Donation Modal + Newsletter === #}
-  {% block global_modals %}
-    {% include 'partials/donation_modal.html' ignore missing %}
-    {% include 'partials/newsletter.html' ignore missing %}
-  {% endblock %}
-
-  {% block pre_scripts %}{% endblock %}
-
-  <script src="{{ url_for('static', filename='js/main.js', v=asset_version) }}" defer></script>
-
-  <script>
-    // Dark Mode Toggle and Persistence
-    (function() {
-      const btn = document.getElementById('dark-mode-toggle');
-      btn.addEventListener('click', () => {
-        const html = document.documentElement;
-        if (html.classList.contains('dark')) {
-          html.classList.remove('dark');
-          localStorage.setItem('theme', 'light');
-        } else {
-          html.classList.add('dark');
-          localStorage.setItem('theme', 'dark');
-        }
+    {# App config (exposed once; keep tiny) #}
+    <script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+      window.FC_APP = Object.freeze({
+        stripe: {{ (payments_config.stripe_enabled if payments_config is defined else true)|tojson }},
+        paypal: {{ (payments_config.paypal_enabled if payments_config is defined else true)|tojson }},
+        theme: {{ theme|default('dark', true)|tojson }},
+        version: {{ asset_version|int }}
       });
-      // Apply stored theme on load
-      if (localStorage.getItem('theme') === 'dark') {
-        document.documentElement.classList.add('dark');
-      }
-    })();
+    </script>
 
-    // Page loader control
-    window.showLoader = () => {
-      const loader = document.getElementById('page-loader');
-      loader.classList.remove('opacity-0', 'pointer-events-none');
-    };
-    window.hideLoader = () => {
-      const loader = document.getElementById('page-loader');
-      loader.classList.add('opacity-0', 'pointer-events-none');
-    };
-  </script>
+    {# Core JS (no extra UI here to avoid duplicate partials) #}
+    <script src="{{ url_for('static', filename='js/bundle.min.js', v=asset_version) }}" defer></script>
+    <script src="{{ url_for('static', filename='js/fc-header-hero.js', v=asset_version) }}" defer></script>
 
-  {% block scripts %}{% endblock %}
-  {% block post_scripts %}{% endblock %}
-</body>
+    {# Page-specific scripts #}
+    {% block scripts_extra %}{% endblock %}
+  </body>
 </html>
 

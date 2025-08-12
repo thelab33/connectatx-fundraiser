@@ -1,81 +1,119 @@
-{# ===========================
-   ELITE SPONSOR TICKER BAR
-   ===========================
-   • Accessible marquee, real FOMO copy
-   • Dynamic or static sponsors
-   • Easily extend to HTMX/Socket.IO
-   • Polished animation & responsive
-#}
+{# ============================================================
+   FundChamps — Header Sponsor Ticker (Live, CSP-safe, A11Y)
+   Expects (optional): items=[{name,amount,when,avatar}], socket_ns
+   Fallback: fetches /donations/ticker periodically
+   ============================================================ #}
+{% set socket_ns = socket_ns|default('/donations') %}
+{% set items = items if items is defined and items else [] %}
 
-<div
-  id="sponsor-ticker"
-  class="relative z-40 w-full bg-gradient-to-r from-yellow-900/90 via-yellow-800/95 to-yellow-900/80 text-yellow-100 text-xs md:text-sm py-1.5 px-4 overflow-hidden whitespace-nowrap font-bold tracking-wide shadow-md ring-2 ring-yellow-300/30 rounded-b-2xl border-b-2 border-yellow-500/30"
-  role="marquee"
-  aria-live="polite"
-  aria-atomic="true"
-  aria-label="Sponsor ticker"
->
-  <span class="mr-2 animate-pulse select-none" aria-hidden="true">🌟</span>
-  <span class="font-semibold">Thanks to our amazing sponsors:</span>
-  <span id="ticker-track" class="inline-flex items-center ml-3 gap-2">
-    {% set sponsors_list = sponsors if sponsors is defined else [
-      {"name": "Gold’s Gym", "url": "#"},
-      {"name": "Eastside Dental", "url": "#"},
-      {"name": "TechBridge Austin", "url": "#"},
-      {"name": "Coach Carter Foundation", "url": "#"}
-    ] %}
-    {% for sponsor in sponsors_list %}
-      <a
-        href="{{ sponsor.url or '#' }}"
-        class="sponsor-item mx-2 transition hover:text-yellow-400 hover:underline outline-none focus-visible:ring-2 focus-visible:ring-yellow-300 rounded"
-        target="_blank"
-        rel="noopener"
-      >{{ sponsor.name }}</a>
-      {% if not loop.last %}
-        <span aria-hidden="true" class="opacity-70 mx-1">•</span>
-      {% endif %}
-    {% endfor %}
-  </span>
-</div>
-
-<style>
-  @keyframes marquee-scroll {
-    0%   { transform: translateX(100%); }
-    100% { transform: translateX(-100%); }
-  }
-
-  #sponsor-ticker #ticker-track {
-    min-width: 100%;
-    display: inline-flex;
-    animation: marquee-scroll 17s linear infinite;
-    will-change: transform;
-  }
-
-  @media (max-width: 768px) {
-    #sponsor-ticker #ticker-track {
-      animation-duration: 24s;
+<section id="hdr-ticker"
+  class="w-full border-t border-b border-yellow-400/10 bg-black/40"
+  role="region" aria-label="Recent support ticker">
+  <style>
+    /* ----- Scoped to #hdr-ticker only ----- */
+    #hdr-ticker .rail{ overflow:hidden }
+    #hdr-ticker ul{ display:inline-flex; gap:.5rem; align-items:center; white-space:nowrap; padding:.35rem .75rem }
+    #hdr-ticker li{ display:inline-flex; align-items:center; gap:.5rem; border-radius:9999px; background:rgba(255,255,255,.06); padding:.25rem .5rem }
+    #hdr-ticker img{ height:20px; width:20px; border-radius:9999px; box-shadow:0 0 0 1px rgba(255,255,255,.12) inset }
+    /* marquee (disabled for reduced motion & Save-Data) */
+    #hdr-ticker .track.scrolling{ animation:hdr-marquee 26s linear infinite }
+    @keyframes hdr-marquee{ from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
+    @media (prefers-reduced-motion: reduce){
+      #hdr-ticker .track.scrolling{ animation:none !important }
     }
-    #sponsor-ticker {
-      font-size: 0.88rem;
-      padding-left: 0.6rem;
-      padding-right: 0.6rem;
-    }
-    .sponsor-item {
-      margin-right: 0.7rem;
-    }
+    #hdr-ticker.save-data .track.scrolling{ animation:none !important }
+  </style>
+
+  <div class="rail">
+    <!-- We duplicate the track for seamless loop when we have enough items -->
+    <div class="track" aria-live="polite" aria-atomic="false">
+      <ul id="donation-ticker" role="list">
+        {% if items and items|length > 0 %}
+          {% for it in items %}
+          <li role="listitem">
+            {% if it.avatar %}<img loading="lazy" decoding="async" src="{{ it.avatar }}" alt="" loading="lazy" decoding="async"/>{% else %}<span aria-hidden="true">🎉</span>{% endif %}
+            <span class="font-semibold text-yellow-200">{{ it.name|default('Anonymous') }}</span>
+            <span class="text-yellow-100/80">gave</span>
+            <span class="font-bold text-yellow-300" aria-label="${{ '{:,.0f}'.format(it.amount|default(0)) }} donation">${{ '{:,.0f}'.format(it.amount|default(0)) }}</span>
+            <span class="text-[11px] text-zinc-400">· {{ it.when|default('just now') }}</span>
+          </li>
+          {% endfor %}
+        {% endif %}
+      </ul>
+    </div>
+    <div class="track" aria-hidden="true"></div>
+  </div>
+</section>
+
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  const root = document.getElementById('hdr-ticker'); if (!root) return;
+  if (navigator.connection?.saveData) root.classList.add('save-data');
+
+  const list = root.querySelector('#donation-ticker');
+  const tracks = root.querySelectorAll('.track');
+  const endpoint = '/donations/ticker';
+  const ns = '{{ socket_ns }}';
+
+  // Basic sanitizer for text nodes
+  const esc = (s) => (s==null?'':String(s)).replace(/[&<>"]/g, c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+  function liTemplate(it){
+    const name = esc(it?.name || 'Anonymous');
+    const amt  = Math.round(Number(it?.amount)||0);
+    const when = esc(it?.when || 'just now');
+    const avatar = esc(it?.avatar || '');
+    return `
+      <li role="listitem">
+        ${avatar ? `<img loading="lazy" decoding="async" src="${avatar}" alt="" loading="lazy" decoding="async">` : `<span aria-hidden="true">🎉</span>`}
+        <span class="font-semibold text-yellow-200">${name}</span>
+        <span class="text-yellow-100/80">gave</span>
+        <span class="font-bold text-yellow-300" aria-label="$${amt.toLocaleString()} donation">$${amt.toLocaleString()}</span>
+        <span class="text-[11px] text-zinc-400">· ${when}</span>
+      </li>`;
   }
 
-  .sponsor-item {
-    display: inline-block;
-    white-space: nowrap;
-    margin-right: 1rem;
-    padding: 0 0.25rem;
-    transition: color 0.2s, text-decoration 0.2s;
+  function render(items){
+    if (!Array.isArray(items)) return;
+    list.innerHTML = items.map(liTemplate).join('');
+    // If enough items, enable smooth loop by cloning HTML into the second track
+    const html = list.parentElement.innerHTML;
+    const enableScroll = items.length >= 6 && !root.classList.contains('save-data') &&
+      !matchMedia('(prefers-reduced-motion: reduce)').matches;
+    tracks.forEach(t => {
+      if (t !== tracks[0]) t.innerHTML = html;
+      t.classList.toggle('scrolling', enableScroll);
+    });
   }
-</style>
 
-<script>
-  // Optional: Restart animation on sponsor list update (future HTMX)
-  // No JS needed for vanilla CSS loop, but you can extend here!
+  async function poll(){
+    try {
+      if (document.hidden) return;
+      const r = await fetch(endpoint, { headers:{'Accept':'application/json'} , cache:'no-store' });
+      if (r.ok) { const data = await r.json(); if (Array.isArray(data)) render(data); }
+    } catch { /* silent */ }
+  }
+
+  // Initial load + schedule (Save-Data → slower)
+  poll();
+  const interval = navigator.connection?.saveData ? 45000 : 15000;
+  setInterval(poll, interval);
+
+  // Socket.IO live push (optional)
+  if (window.io) {
+    try {
+      const socket = io(ns, { transports: ['websocket','polling'] });
+      socket.on('new_donation', (d) => {
+        if (!d) return;
+        const node = document.createElement('template');
+        node.innerHTML = liTemplate(d).trim();
+        const el = node.content.firstElementChild;
+        list.prepend(el);
+        // keep list from growing forever
+        while (list.children.length > 30) list.lastElementChild?.remove();
+      });
+    } catch(_) {}
+  }
+})();
 </script>
 

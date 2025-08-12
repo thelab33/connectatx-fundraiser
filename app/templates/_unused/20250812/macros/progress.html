@@ -1,23 +1,14 @@
-{# macros/progress.html — Defines the progress_meter macro #}
-{% macro progress_meter(raised, goal, size="md") -%}
-  {# ── Safe float conversion and clamping ── #}
-  {%- set _goal = goal | float if goal else 0.0 -%}
-  {%- set _raised = raised | float if raised else 0.0 -%}
-  {%- set _pct = 0.0 if _goal == 0.0 else (_raised / _goal * 100.0) -%}
-  {%- set _pct = (_pct if _pct >= 0.0 else 0.0) -%}
-  {%- set _pct = (_pct if _pct <= 100.0 else 100.0) -%}
-  {%- set pct_f = '%.1f' % _pct -%}
-  {%- set raised_display = '{:,}'.format(raised | int) -%}
+{# macros/progress.html — Defines the progress_meter macro #} {% macro progress_meter(raised, goal,
+size="md") -%} {# ── Safe float conversion and clamping ── #} {%- set _goal = goal | float if goal
+else 0.0 -%} {%- set _raised = raised | float if raised else 0.0 -%} {%- set _pct = 0.0 if _goal ==
+0.0 else (_raised / _goal * 100.0) -%} {%- set _pct = (_pct if _pct >= 0.0 else 0.0) -%} {%- set
+_pct = (_pct if _pct <= 100.0 else 100.0) -%} {%- set pct_f = '%.1f' % _pct -%} {%- set
+raised_display = '{:,}'.format(raised | int) -%} {# ── Tailwind size presets ── #} {%- set sizes = {
+"sm": "max-w-[7.5rem] h-2 text-[10px] py-0.5", "md": "max-w-xs h-3 text-[11px] py-1", "lg":
+"max-w-sm h-4 text-xs py-2" } -%}
 
-  {# ── Tailwind size presets ── #}
-  {%- set sizes = {
-    "sm": "max-w-[7.5rem] h-2 text-[10px] py-0.5",
-    "md": "max-w-xs h-3 text-[11px] py-1",
-    "lg": "max-w-sm h-4 text-xs py-2"
-  } -%}
-
-  <div
-    x-data="{
+<div
+  x-data="{
       pct: {{ '%.2f' % _pct }},
       init() {
         if (this.$refs.bar) {
@@ -30,30 +21,33 @@
         }
       }
     }"
-    x-init="init()"
-    role="progressbar"
-    aria-label="Fundraising progress"
-    aria-valuemin="0"
-    aria-valuemax="100"
-    aria-valuenow="{{ pct_f }}"
-    aria-valuetext="{{ pct_f }} percent"
-    class="relative w-full {{ sizes.get(size, sizes['md']) }} select-none"
+  x-init="init()"
+  role="progressbar"
+  aria-label="Fundraising progress"
+  aria-valuemin="0"
+  aria-valuemax="100"
+  aria-valuenow="{{ pct_f }}"
+  aria-valuetext="{{ pct_f }} percent"
+  class="relative w-full {{ sizes.get(size, sizes['md']) }} select-none"
+>
+  <!-- Progress rail -->
+  <div
+    class="w-full overflow-hidden rounded-full bg-zinc-800/70 shadow-inner"
+    style="height: inherit"
   >
-    <!-- Progress rail -->
-    <div class="w-full bg-zinc-800/70 rounded-full overflow-hidden shadow-inner" style="height: inherit;">
-      <div
-        x-ref="bar"
-        class="h-full w-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-300 transition-all duration-700 ease-out"
-        style="min-width: 6px;"
-      ></div>
-    </div>
-
-    <!-- Label -->
-    <div class="absolute inset-0 flex items-center justify-center font-bold leading-none pointer-events-none" style="font-size: inherit;">
-      <span class="text-yellow-300 drop-shadow">
-        ${{ raised_display }} • {{ pct_f }}%
-      </span>
-    </div>
+    <div
+      x-ref="bar"
+      class="h-full w-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-300 transition-all duration-700 ease-out"
+      style="min-width: 6px"
+    ></div>
   </div>
-{%- endmacro %}
 
+  <!-- Label -->
+  <div
+    class="pointer-events-none absolute inset-0 flex items-center justify-center font-bold leading-none"
+    style="font-size: inherit"
+  >
+    <span class="text-yellow-300 drop-shadow"> ${{ raised_display }} • {{ pct_f }}% </span>
+  </div>
+</div>
+{%- endmacro %}
