@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Donate · {{ team.team_name|default('Connect ATX Elite', true) }}{% endblock %}
+
+{% block hero %}
+  <section class="mx-auto w-full max-w-4xl px-4 md:px-6 pt-8 pb-4" role="region" aria-label="Donate">
+    <h1 class="text-2xl md:text-3xl font-extrabold text-yellow-300">Support {{ team.team_name|default('Connect ATX Elite', true) }}</h1>
+    <p class="mt-2 text-yellow-100/80">Your gift powers gym time, travel, and academics.</p>
+  </section>
+{% endblock %}
+
+{% block content %}
+  <main id="main" class="mx-auto w-full max-w-4xl px-4 md:px-6 pb-12" role="main" tabindex="-1">
+    <p class="text-sm text-zinc-400">Opening secure donation modal…</p>
+    <noscript>
+      <p class="mt-2 text-yellow-200">Please enable JavaScript to donate online.</p>
+    </noscript>
+  </main>
+{% endblock %}
+
+{# base.html already includes the donation modal partial in block global_modals #}
+
+{% block post_scripts %}
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+  // Open the modal as soon as the page is ready
+  (window.requestAnimationFrame || setTimeout)(function () {
+    if (window.openDonationModal) window.openDonationModal();
+  }, 0);
+</script>
+{% endblock %}

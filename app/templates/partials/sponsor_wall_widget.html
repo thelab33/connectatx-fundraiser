@@ -1,0 +1,274 @@
+{# =========================================
+   FundChamps — Sponsor Wall (Elite, SaaS-ready)
+   - Self-contained (scoped CSS + JS)
+   - Tier chips, live counts, search, empty state
+   - CSP-safe (nonce), ARIA, keyboard nav
+   - “Match” -> window.openDonationModal / fc:donate:open
+   ========================================= #}
+
+{# ---------- Safe Context Fallbacks ---------- #}
+{% set team_name     = team.team_name if team and team.team_name else 'Connect ATX Elite' %}
+{% set brand_color   = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set asset_version = asset_version|default(None) %}
+
+{# Accept either `sponsors` or `sponsors_list` in context #}
+{% set _src = sponsors if sponsors is defined and sponsors else (sponsors_list if sponsors_list is defined else []) %}
+{% set sponsors_list = _src if _src else [] %}
+
+{# Demo seed if empty #}
+{% if sponsors_list|length == 0 %}
+  {% set sponsors_list = [
+    {"name":"ESPN","logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg","url":"https://espn.com","amount":5000,"tier":"Platinum"},
+    {"name":"H-E-B","logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/HEB_logo.svg","url":"https://heb.com","amount":2500,"tier":"Gold"},
+    {"name":"NIKE","logo":"https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg","url":"https://nike.com","amount":1500,"tier":"Silver"}
+  ] %}
+{% endif %}
+
+{# Default tier set/order (used for chips) #}
+{% set default_tiers = ['Platinum','Gold','Silver','Bronze','Community'] %}
+
+<section id="sponsor-wall"
+         class="mx-auto w-full max-w-6xl px-4 md:px-6"
+         role="region"
+         aria-labelledby="sponsor-wall-heading"
+         data-brand-color="{{ brand_color }}"
+>
+  <style>
+    /* ---- Scoped to #sponsor-wall only ---- */
+    #sponsor-wall .chips button{
+      border:1px solid color-mix(in srgb, {{ brand_color }} 35%, transparent);
+      background:color-mix(in srgb, {{ brand_color }} 12%, transparent);
+      padding:.35rem .7rem;border-radius:9999px;font-weight:700;
+      transition:transform .15s ease, background-color .15s ease, border-color .15s ease;
+      outline: none;
+    }
+    #sponsor-wall .chips button:focus-visible{
+      box-shadow:0 0 0 3px color-mix(in srgb, {{ brand_color }} 45%, transparent);
+    }
+    #sponsor-wall .chips button[aria-pressed="true"]{
+      background:color-mix(in srgb, {{ brand_color }} 60%, #fff); color:#111
+    }
+    #sponsor-wall .chips .count{
+      font-weight:800; font-size:.7rem; opacity:.85; margin-left:.35rem
+    }
+    #sponsor-wall .card{
+      background:rgba(15,15,15,.72);
+      border:1px solid color-mix(in srgb, {{ brand_color }} 18%, transparent);
+      border-radius:1rem;
+      box-shadow:0 10px 36px rgba(250,204,21,.12);
+      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+    }
+    #sponsor-wall .card:hover{
+      transform:translateY(-2px);
+      box-shadow:0 16px 46px rgba(250,204,21,.18);
+      border-color: color-mix(in srgb, {{ brand_color }} 30%, transparent);
+    }
+    #sponsor-wall .logo{
+      height:36px;width:auto;background:#fff;
+      padding:.35rem .6rem;border-radius:.5rem;
+      box-shadow:inset 0 0 0 1px rgba(0,0,0,.06)
+    }
+    #sponsor-wall .badge{
+      border:1px solid color-mix(in srgb, {{ brand_color }} 35%, transparent);
+      background:color-mix(in srgb, {{ brand_color }} 12%, transparent);
+      border-radius:9999px;
+      padding:.1rem .5rem;
+    }
+    #sponsor-wall .empty{
+      border:1px dashed color-mix(in srgb, {{ brand_color }} 35%, transparent);
+      background:color-mix(in srgb, {{ brand_color }} 8%, transparent);
+      border-radius:1rem;
+    }
+    @media (prefers-reduced-motion:reduce){
+      #sponsor-wall .fade{transition:none!important}
+    }
+  </style>
+
+  <h2 id="sponsor-wall-heading" class="text-center text-xl font-black text-yellow-300 mb-3">
+    Our Sponsors
+  </h2>
+
+  <!-- Controls: Search + Chips -->
+  <div class="mb-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 justify-between">
+    <label class="sr-only" for="sponsor-search">Search sponsors</label>
+    <input id="sponsor-search" type="search" inputmode="search" autocomplete="off"
+           placeholder="Search sponsors…"
+           class="w-full sm:w-80 rounded-xl border border-yellow-400/30 bg-black/40 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-yellow-300/60"
+           aria-describedby="sponsor-search-help"
+    />
+    <div id="sponsor-search-help" class="sr-only">Type to filter sponsors by name.</div>
+
+    <nav class="chips flex flex-wrap items-center gap-2" role="toolbar" aria-label="Filter sponsors by tier">
+      <button type="button" class="fade" data-tier="all" aria-pressed="true">All <span class="count">0</span></button>
+      {% for t in default_tiers %}
+        <button type="button" class="fade" data-tier="{{ t|lower }}">{{ t }} <span class="count">0</span></button>
+      {% endfor %}
+    </nav>
+  </div>
+
+  <!-- Grid -->
+  <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-5"
+      role="list" aria-live="polite" aria-atomic="true">
+    {% for s in sponsors_list|sort(attribute='amount', reverse=True) %}
+      {% set tier = (s.tier or 'Community') %}
+      <li class="card p-4 flex flex-col gap-3 fade"
+          data-tier="{{ tier|lower }}"
+          data-name="{{ (s.name or '')|lower }}"
+          data-amount="{{ s.amount or 0 }}"
+      >
+        <div class="flex items-center gap-3">
+          <img loading="lazy" decoding="async" class="logo"
+               src="{{ s.logo or (url_for('static', filename='images/logo.webp', v=asset_version) if asset_version else url_for('static','images/logo.webp')) }}"
+               alt="{{ s.name }} logo" loading="lazy" decoding="async" />
+          <div class="min-w-0">
+            <div class="font-extrabold text-yellow-200 leading-tight truncate">{{ s.name }}</div>
+            <div class="inline-flex items-center gap-2 text-[11px] text-yellow-100/80">
+              <span class="badge">{{ tier }}</span>
+              {% if s.amount %}<span>${{ '{:,.0f}'.format(s.amount) }}</span>{% endif %}
+            </div>
+          </div>
+        </div>
+        {% if s.url %}
+          <div class="mt-auto flex items-center gap-2">
+            <a href="{{ s.url }}" rel="noopener sponsored" target="_blank"
+               class="inline-flex items-center justify-center rounded-lg bg-yellow-300 px-3 py-1.5 text-sm font-black text-black">Visit</a>
+            <button type="button"
+                    class="inline-flex items-center justify-center rounded-lg border border-yellow-400/60 bg-yellow-300/10 px-3 py-1.5 text-sm font-bold text-yellow-200"
+                    data-open-donate-modal
+                    data-tier="{{ tier|lower }}"
+                    data-amount="{{ (s.amount and (s.amount/10)|int) or 100 }}">
+              Match
+            </button>
+          </div>
+        {% else %}
+          <div class="mt-auto">
+            <button type="button"
+                    class="inline-flex items-center justify-center rounded-lg border border-yellow-400/60 bg-yellow-300/10 px-3 py-1.5 text-sm font-bold text-yellow-200"
+                    data-open-donate-modal
+                    data-tier="{{ tier|lower }}"
+                    data-amount="{{ (s.amount and (s.amount/10)|int) or 100 }}">
+              Match
+            </button>
+          </div>
+        {% endif %}
+      </li>
+    {% endfor %}
+  </ul>
+
+  <!-- Empty state (hidden until needed) -->
+  <div id="sponsor-empty" class="empty hidden mt-4 p-6 text-sm text-yellow-100/80 text-center">
+    No sponsors match your filters. Try “All” or clear search.
+  </div>
+</section>
+
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  const root = document.getElementById('sponsor-wall');
+  if (!root || root.__init) return; root.__init = true;
+
+  const chips = root.querySelectorAll('.chips [data-tier]');
+  const cards = Array.from(root.querySelectorAll('[data-tier]:not(.chips [data-tier])'));
+  const search = root.querySelector('#sponsor-search');
+  const empty = root.querySelector('#sponsor-empty');
+
+  // Helper: apply filters (tier + search)
+  let currentTier = 'all', currentQuery = '';
+  function applyFilters(){
+    const q = currentQuery.trim().toLowerCase();
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+      const matchTier = (currentTier === 'all') || (card.dataset.tier === currentTier);
+      const matchName = !q || (card.dataset.name?.includes(q));
+      const on = matchTier && matchName;
+      card.style.display = on ? '' : 'none';
+      if (on) visibleCount++;
+    });
+
+    empty.classList.toggle('hidden', visibleCount > 0);
+    updateChipCounts(); // keep counts in sync with search filters
+  }
+
+  function setTier(val){
+    currentTier = val;
+    chips.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.tier === val)));
+    applyFilters();
+  }
+
+  // Live counts per tier (respects current search query)
+  function updateChipCounts(){
+    // All
+    const visible = cards.filter(c => c.style.display !== 'none').length;
+    const allBtn = root.querySelector('.chips [data-tier="all"] .count');
+    if (allBtn) allBtn.textContent = String(visible);
+
+    // Per tier (computed on currently visible OR name-filtered set)
+    const counts = {};
+    cards.forEach(c => {
+      const tier = c.dataset.tier || 'community';
+      const nameOK = !currentQuery || c.dataset.name?.includes(currentQuery);
+      if (nameOK && (c.style.display === '' || currentTier === 'all')) {
+        counts[tier] = (counts[tier] || 0) + 1;
+      }
+    });
+    root.querySelectorAll('.chips [data-tier]:not([data-tier="all"]) .count').forEach(span => {
+      const t = span.closest('[data-tier]').dataset.tier;
+      span.textContent = String(counts[t] || 0);
+    });
+  }
+
+  // Init counts (before any filter)
+  updateChipCounts();
+
+  // Chip clicks + keyboard (← →)
+  chips.forEach(btn => {
+    btn.addEventListener('click', () => setTier(btn.dataset.tier));
+    btn.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      const list = Array.from(chips);
+      const i = list.indexOf(btn);
+      const next = e.key === 'ArrowRight' ? (i+1) % list.length : (i-1+list.length) % list.length;
+      list[next].focus();
+    });
+  });
+
+  // Search input
+  if (search){
+    search.addEventListener('input', (e) => { currentQuery = e.target.value || ''; applyFilters(); });
+  }
+
+  // "Match" buttons -> donate modal + optional confetti for higher tiers
+  root.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-open-donate-modal]');
+    if (!btn) return;
+    e.preventDefault();
+
+    const amt  = parseInt(btn.getAttribute('data-amount') || '0', 10) || undefined;
+    const tier = (btn.getAttribute('data-tier') || '').toLowerCase();
+
+    // Prefer your global modal; fall back to custom event
+    if (typeof window.openDonationModal === 'function') {
+      window.openDonationModal({ amount: amt });
+    } else {
+      window.dispatchEvent(new CustomEvent('fc:donate:open', { detail:{ amount: amt }}));
+    }
+
+    // Gentle confetti for Platinum/Gold if a confetti lib exists
+    if ((tier === 'platinum' || tier === 'gold') && typeof window.confetti === 'function') {
+      window.confetti({ particleCount: 60, spread: 55, origin: { y: 0.7 } });
+    } else {
+      // Or broadcast for your Socket/HTMX hooks
+      window.dispatchEvent(new CustomEvent('fc:confetti'));
+    }
+  });
+
+  // Intersection fade-in polish
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) e.target.style.opacity = 1; });
+    }, { threshold: 0.1 });
+    cards.forEach(c => { c.style.opacity = 0; io.observe(c); });
+  }
+})();
+</script>
+

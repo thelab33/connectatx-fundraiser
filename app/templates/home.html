@@ -1,0 +1,60 @@
+{# app/templates/home.html #}
+{% extends "base.html" %}
+
+{% block head_title %}{{ (team.team_name if team and team.team_name else 'Connect ATX Elite') }} — Official Team Hub{% endblock %}
+{% block meta_description %}Fuel tournaments, travel, gear, and academics for our student-athletes. Every dollar matters.{% endblock %}
+
+{% block content %}
+
+  {# ── HERO (self-contained) ── #}
+  <section id="hero" class="scroll-mt-28">
+    {% include 'partials/hero_and_fundraiser.html' %}
+  </section>
+
+  {# ── SINGLE progress bar (thin) + optional allocation bar ── #}
+  <section id="progress" class="scroll-mt-28">
+    {% include 'partials/fundraiser_meter.html' %}
+    {% include 'partials/funds_allocation_bar.html' ignore missing %}
+  </section>
+
+  {# ── SCHEDULE / STATS ── #}
+  <section id="schedule" class="mt-10 scroll-mt-28">
+    {% include 'partials/program_stats_and_calendar.html' %}
+  </section>
+
+  {# ── SPONSORSHIP TIERS ── #}
+  <section id="tiers" class="mt-12 md:mt-16 scroll-mt-28">
+    {% include 'partials/tiers.html' %}
+  </section>
+
+  {# ── SPONSORS HUB + WALL WIDGET ── #}
+  <section id="sponsors" class="mt-12 md:mt-16 scroll-mt-28">
+    {% include 'partials/sponsors_hub.html' ignore missing %}
+    {% include 'partials/sponsor_wall_widget.html' ignore missing %}
+  </section>
+
+  {# ── ABOUT / MISSION ── #}
+  <section id="mission" class="mt-12 md:mt-16 scroll-mt-28">
+    {% include 'partials/about_section.html' %}
+  </section>
+
+  {# ── IMPACT MODULES (Buckets live in digital_hub; coaches/lockers optional) ── #}
+  <section id="impact" class="mt-12 md:mt-16 scroll-mt-28">
+    {% include 'partials/digital_hub.html' %}
+    {% include 'partials/impact_coaches.html' ignore missing %}
+    {% include 'partials/impact_lockers.html' ignore missing %}
+  </section>
+
+  {# ── NEWSLETTER / COMMUNITY ── #}
+  <section id="newsletter" class="mt-12 md:mt-16 scroll-mt-28">
+    {% include 'partials/newsletter.html' ignore missing %}
+  </section>
+
+  {# Layout accents, if you want them near footer #}
+  {% include 'partials/layout_bands.html' ignore missing %}
+
+  {# Donation modal if used anywhere on page #}
+  {% include 'partials/donation_modal.html' ignore missing %}
+
+{% endblock %}
+

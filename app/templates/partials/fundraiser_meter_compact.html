@@ -1,0 +1,9 @@
+{% set raised=(funds_raised|default(0))|float %}
+{% set goal=(fundraising_goal|default(10000))|float %}
+{% set pct=(goal and (raised/goal*100) or 0)|round(1) %}
+<div id="fundraiser-meter" class="mx-auto w-full max-w-6xl px-4 md:px-6 -mt-3">
+  <div class="h-2 rounded-full bg-white/10 overflow-hidden ring-1 ring-white/5">
+    <div class="h-full" style="width: {{ pct }}%; background: linear-gradient(90deg, #fde68a, {{ team.theme_color|default("#facc15") }});"></div>
+  </div>
+  <p class="sr-only">Raised {{ raised|money }} of {{ goal|money }} ({{ pct }}%)</p>
+</div>

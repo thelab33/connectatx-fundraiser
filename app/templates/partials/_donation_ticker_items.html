@@ -1,0 +1,19 @@
+{# ========= FundChamps • Donation Ticker Items (ARIA-friendly) ========= #}
+{% set items = items if items is defined and items else [
+  {"sponsor_name":"Anonymous", "amount":50,  "when":"just now"},
+  {"sponsor_name":"J. Rivera", "amount":100, "when":"2m ago"},
+  {"sponsor_name":"K. Lee",    "amount":250, "when":"10m ago"}
+] %}
+
+{% for it in items %}
+{% set display_name = it.name if it.name is defined and it.name else it.sponsor_name if it.sponsor_name is defined and it.sponsor_name else "Anonymous" %}
+<li role="listitem" class="inline-flex items-center gap-2 rounded-full bg-white/5 px-3 py-1.5">
+  <span aria-hidden="true">🎉</span>
+  <span class="font-semibold text-yellow-200">{{ display_name }}</span>
+  <span class="text-yellow-100/80">gave</span>
+  <span class="font-bold text-yellow-300" aria-label="${{ '{:,.0f}'.format(it.amount|default(0)) }} donation">
+    ${{ '{:,.0f}'.format(it.amount|default(0)) }}
+  </span>
+  <span class="text-xs text-zinc-400">· {{ it.when|default('just now') }}</span>
+</li>
+{% endfor %}

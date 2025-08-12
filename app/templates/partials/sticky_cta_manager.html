@@ -1,0 +1,32 @@
+{# Sticky CTA Manager — reserves space + keeps CTAs from overlapping #}
+<div id="fc-sticky-reserve" aria-hidden="true" style="height:0"></div>
+
+<style nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+  :root{ --fc-sticky-h: 0px; --fc-safe-bottom: env(safe-area-inset-bottom, 0px); }
+  /* Reserve bottom padding for fixed CTAs (mobile esp.) */
+  main{ padding-bottom: calc(var(--fc-sticky-h, 0px) + var(--fc-safe-bottom)); }
+  /* Utility: fade when hidden */
+  .fc-sticky-hide{ opacity:.0 !important; pointer-events:none !important; transform: translateY(6px); }
+</style>
+
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  const R = document.getElementById('fc-sticky-reserve');
+  if (!R) return;
+  function measure(){
+    const list = [...document.querySelectorAll('[data-sticky-cta]')].filter(el => {
+      const cs = getComputedStyle(el);
+      return cs.position === 'fixed' && cs.display !== 'none' && el.offsetParent !== null;
+    });
+    const h = Math.ceil(list.reduce((m,el)=>Math.max(m, el.getBoundingClientRect().height), 0));
+    document.documentElement.style.setProperty('--fc-sticky-h', (h||0) + 'px');
+    R.style.height = `calc(var(--fc-sticky-h,0px) + var(--fc-safe-bottom))`;
+  }
+  measure();
+  addEventListener('resize', measure, { passive:true });
+  addEventListener('orientationchange', measure);
+  // Recompute when CTAs toggle
+  ['fc:donate:open','fc:donate:close'].forEach(ev=>addEventListener(ev, measure));
+})();
+</script>
+
