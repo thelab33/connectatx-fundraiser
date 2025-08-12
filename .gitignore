@@ -13,19 +13,3 @@ web-frontend/node_modules/
 node_modules/
 app/data/
 app/data/app.db
-app/static/js/bundle*.js
-app/static/js/*.min.js
-app/static/js/vendor/
-
-
-# fundchamps hard ignore
-.env*
-node_modules/
-*.map
-__pycache__/
-*.pyc
-*.bak*
-app/templates/_unused/
-app/static/_unused/
-app/data/*.db
-pa11y-report.html
