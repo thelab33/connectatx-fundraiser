@@ -1,0 +1,129 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% extends "base.html" %}
+
+{# ==== Context & Fallbacks ==== #}
+{% set _team = team if team is defined and team else none %}
+{% set TEAM_NAME = (_team.team_name if _team and _team.team_name else "Connect ATX Elite") %}
+
+{% block title %}{{ _("Home") }} · {{ TEAM_NAME }}{% endblock %}
+
+{# ================= HERO ================= #}
+{% block hero %}
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+
+  {# Slim fundraising meter — ultra-compact, directly below hero #}
+  <section id="hero-slim-meter"
+           class="mx-auto w-full max-w-6xl px-4 md:px-6 -mt-2"
+           role="region"
+           aria-label="{{ _('Fundraising progress') }}">
+    {% set meter_compact = true %}
+    {% include "partials/meter_strip.html" ignore missing with context %}
+    {% include "partials/fundraiser_meter.html" ignore missing with context %}
+  </section>
+
+  {# Trust bar (premium preferred, fallback basic) #}
+  {% include "partials/funds_allocation_bar_premium.html" ignore missing with context %}
+  {% include "partials/funds_allocation_bar.html" ignore missing with context %}
+
+  {# Sponsor ticker (optional) #}
+  {% include "partials/sponsor_ticker.html" ignore missing with context %}
+{% endblock %}
+
+{# ================ CONTENT ================ #}
+{% block content %}
+<main id="main" role="main" tabindex="-1" aria-label="{{ _('Main content') }}">
+
+  {# Sponsorship tiers #}
+  <section id="tiers" class="fc-band fc-band--plain scroll-mt-24"
+           aria-labelledby="tiers-h" role="region" tabindex="-1">
+    <h2 id="tiers-h" class="sr-only">{{ _("Sponsorship Tiers") }}</h2>
+    {% include "partials/tiers.html" ignore missing with context %}
+  </section>
+
+  {# Stats & calendar #}
+  <section id="program-stats-calendar" class="fc-band fc-band--alt scroll-mt-24"
+           aria-labelledby="psc-h" role="region" tabindex="-1">
+    <h2 id="psc-h" class="sr-only">{{ _("Program Stats & Schedule") }}</h2>
+    {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
+  </section>
+
+  {# Impact lockers #}
+  <section id="impact-lockers" class="fc-band fc-band--tint scroll-mt-24"
+           aria-labelledby="il-h" role="region" tabindex="-1">
+    <h2 id="il-h" class="sr-only">{{ _("Impact Lockers") }}</h2>
+    {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+    {% include "partials/impact_lockers.html" ignore missing with context %}
+  </section>
+
+  {# Sponsors hub #}
+  <section id="sponsors" class="fc-band fc-band--plain scroll-mt-24"
+           aria-labelledby="ss-h" role="region" tabindex="-1">
+    <h2 id="ss-h" class="sr-only">{{ _("Thanks to Our Sponsors") }}</h2>
+    {% set show_spotlight = true %}
+    {% set show_inline_wall = true %}
+    {% set show_floating = true %}
+    {% set spotlight_slots = 4 %}
+    {% include "partials/sponsors_hub.html" ignore missing with context %}
+    {% include "partials/sponsor_spotlight_widget.html" ignore missing with context %}
+    {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
+    {% include "partials/sponsor_wall.html" ignore missing with context %}
+  </section>
+
+  {# About & mission #}
+  <section id="about" class="fc-band fc-band--alt scroll-mt-24"
+           aria-labelledby="about-h" role="region" tabindex="-1">
+    <h2 id="about-h" class="sr-only">{{ _("About the Program") }}</h2>
+    {% include "partials/about_section.html" ignore missing with context %}
+    {% include "partials/impact_challenge_coaches_premium.html" ignore missing with context %}
+  </section>
+
+  {# Digital hub & newsletter #}
+  <section id="connect" class="fc-band fc-band--tint scroll-mt-24"
+           aria-labelledby="connect-h" role="region" tabindex="-1">
+    <h2 id="connect-h" class="sr-only">{{ _("Follow & Stay in the Loop") }}</h2>
+    {% include "partials/digital_hub.html" ignore missing with context %}
+    <div class="mt-4 flex justify-center">
+      <a href="#"
+         class="rounded-xl bg-yellow-400/90 px-4 py-2 font-bold text-black hover:bg-yellow-400"
+         data-modal-open="newsletter-modal">📬 {{ _("Join the Newsletter") }}</a>
+    </div>
+  </section>
+
+</main>
+
+<style nonce="{{ NONCE }}">
+  /* Slim meter refinement */
+  #hero-slim-meter #hero-meter-bar,
+  #hero-slim-meter .progress-bar {
+    height: 6px !important;
+  }
+  #hero-slim-meter .meter-shell,
+  #hero-slim-meter .progress-shell {
+    padding: 0 !important;
+    border-radius: 9999px !important;
+  }
+  #hero-slim-meter [data-meter-label] {
+    font-size: 0.75rem !important;
+    opacity: 0.8 !important;
+  }
+</style>
+{% endblock %}
+
+{# ================= SCRIPTS ================= #}
+{% block scripts %}
+  {{ super() }}
+  <script nonce="{{ NONCE }}">
+    document.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-modal-open="newsletter-modal"]');
+      if (!btn) return;
+      e.preventDefault();
+      if (typeof window.openNewsletterModal === 'function') {
+        window.openNewsletterModal();
+      } else {
+        const el = document.getElementById('newsletter-modal');
+        el?.showModal?.() || el?.classList?.remove('hidden');
+      }
+    }, { passive: false });
+  </script>
+{% endblock %}
+

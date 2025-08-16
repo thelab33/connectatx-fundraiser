@@ -1,153 +1,162 @@
-import os
+# app/config/config.py
+from __future__ import annotations
+
+"""
+Starforge / FundChamps – Flask configuration
+
+Use from your factory like:
+    app.config.from_object("app.config.config.DevelopmentConfig")
+or via env:
+    FLASK_CONFIG=app.config.config.ProductionConfig
+"""
+
 import json
+import logging
+import os
 from datetime import timedelta
-from typing import Final, Dict, Type
+from pathlib import Path
+from typing import Final
 
-# ────────────── Directory Constants ──────────────
-BASE_DIR: Final = os.path.abspath(os.path.dirname(__file__))
 
-# ────────────── Env Helpers (blank-safe) ──────────────
-def _raw(key: str) -> str | None:
-    """Return trimmed env var or None if missing/blank."""
-    val = os.getenv(key)
-    if val is None:
-        return None
-    val = str(val).strip()
-    return val or None
+# ── Helpers ──────────────────────────────────────────────────────────────────
+def _bool(key: str, default: bool | str = False) -> bool:
+    val = str(os.getenv(key, default)).strip().lower()
+    return val in {"1", "true", "yes", "on"}
 
-def _str(key: str, default: str) -> str:
-    val = _raw(key)
-    return default if val is None else val
-
-def _bool(key: str, default: bool = False) -> bool:
-    val = _raw(key)
-    if val is None:
-        return bool(default)
-    return val.lower() in {"1", "true", "yes", "y", "on"}
-
-def _int(key: str, default: int) -> int:
-    val = _raw(key)
-    if val is None:
-        return int(default)
+def _int(key: str, default: int | str) -> int:
     try:
-        return int(val)
-    except (ValueError, TypeError):
-        # In production: fail fast. In non-prod: fall back to default.
-        if _str("FLASK_ENV", "production").lower() == "production":
-            raise RuntimeError(f"Env var {key} must be integer, got: {os.getenv(key)}")
-        return int(default)
+        return int(os.getenv(key, default))
+    except Exception:
+        raise RuntimeError(f"⚠️ Env var {key} must be an integer, got: {os.getenv(key)!r}")
 
-def _masked(val: str | None, keep: int = 4) -> str | None:
-    """Mask secrets for console output."""
-    if not val:
-        return val
-    s = str(val)
-    if len(s) <= 8:
-        return "••••"
-    return f"{s[:keep]}…{'•' * (len(s) - keep - 1)}"
+def _sqlite_uri(base_dir: Path) -> str:
+    data_dir = base_dir / "app" / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{data_dir/'app.db'}"
 
-def _export_config(cls) -> dict:
-    out = {k: v for k, v in cls.__dict__.items() if k.isupper()}
-    for k in ("SECRET_KEY", "STRIPE_SECRET_KEY", "STRIPE_PUBLIC_KEY", "MAIL_PASSWORD"):
-        if k in out:
-            out[k] = _masked(out[k])
-    return out
 
-# ────────────── Base Config ──────────────
+# ── Paths ────────────────────────────────────────────────────────────────────
+# …/repo-root/app/config/config.py  -> parents[2] == repo root
+BASE_DIR: Final[Path] = Path(__file__).resolve().parents[2]
+
+
+# ── Base Config (shared) ─────────────────────────────────────────────────────
 class BaseConfig:
-    SECRET_KEY: str = _str("SECRET_KEY", "change-me-before-prod")
-    ENV: Final[str] = _str("FLASK_ENV", "production")
-    DEBUG: bool = _bool("DEBUG", False)
-    LOG_LEVEL: Final[str] = _str("LOG_LEVEL", "INFO").upper()
+    # Flask
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-override-me")
+    ENV = os.getenv("ENV") or os.getenv("FLASK_ENV") or "development"
+    DEBUG = False
+    TESTING = False
 
-    PERMANENT_SESSION_LIFETIME: timedelta = timedelta(days=7)
+    # Sessions
+    SESSION_COOKIE_SECURE = _bool("SESSION_COOKIE_SECURE", False)
+    PERMANENT_SESSION_LIFETIME = timedelta(days=7)
 
-    SQLALCHEMY_TRACK_MODIFICATIONS: bool = False
-    SQLALCHEMY_DATABASE_URI: str = _str(
-        "DATABASE_URL",
-        f"sqlite:///{BASE_DIR}/app/data/app.db",
-    )
+    # Flask JSON defaults (factory also sets these, but harmless here)
+    JSON_SORT_KEYS = False
+    JSONIFY_PRETTYPRINT_REGULAR = False
+
+    # SQLAlchemy
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    SQLALCHEMY_ECHO = _bool("SQLALCHEMY_ECHO", False)
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        "pool_pre_ping": True,
+    }
+
+    # Mail (Flask-Mail)
+    MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.example.com")
+    MAIL_PORT = _int("MAIL_PORT", 587)
+    MAIL_USE_TLS = _bool("MAIL_USE_TLS", True)
+    MAIL_USERNAME = os.getenv("MAIL_USERNAME")
+    MAIL_PASSWORD = os.getenv("MAIL_PASSWORD")
+    MAIL_DEFAULT_SENDER = os.getenv("MAIL_DEFAULT_SENDER", "noreply@example.com")
+    # Alias used elsewhere in your code:
+    DEFAULT_MAIL_SENDER = MAIL_DEFAULT_SENDER
 
     # Payments
-    STRIPE_SECRET_KEY: str | None = _raw("STRIPE_SECRET_KEY")
-    STRIPE_PUBLIC_KEY: str | None = _raw("STRIPE_PUBLIC_KEY")
+    STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+    STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+    STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+    PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
+    PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
 
-    # Mail
-    MAIL_SERVER: str = _str("MAIL_SERVER", "smtp.example.com")
-    MAIL_PORT: int = _int("MAIL_PORT", 587)
-    MAIL_USE_TLS: bool = _bool("MAIL_USE_TLS", True)
-    MAIL_USERNAME: str | None = _raw("MAIL_USERNAME")
-    MAIL_PASSWORD: str | None = _raw("MAIL_PASSWORD")
-    MAIL_DEFAULT_SENDER: str = _str("MAIL_DEFAULT_SENDER", "noreply@connectatxelite.com")
-    MAIL_SUPPRESS_SEND: bool = _bool("MAIL_SUPPRESS_SEND", False)  # handy for local
+    # CORS / Socket
+    CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
+    PRIMARY_ORIGIN = os.getenv("PRIMARY_ORIGIN", "https://connect-atx-elite.com")
+    SOCKET_ASYNC_MODE = os.getenv("SOCKET_ASYNC_MODE", "threading")  # matches your SocketIO init
 
-    # Brand
-    FEATURE_DARK_MODE: bool = _bool("FEATURE_DARK_MODE", True)
-    BRAND_NAME: str = _str("BRAND_NAME", "Connect ATX Elite")
-    BRAND_TAGLINE: str = _str(
-        "BRAND_TAGLINE",
-        "Family-run AAU basketball building future leaders in East Austin.",
-    )
-    PRIMARY_COLOR: str = _str("PRIMARY_COLOR", "#facc15")
+    # Cache / Redis (optional)
+    REDIS_URL = os.getenv("REDIS_URL")
+    CACHE_TYPE = os.getenv("CACHE_TYPE", "simple")
+    CACHE_REDIS_URL = os.getenv("CACHE_REDIS_URL", REDIS_URL)
+
+    # Feature Flags
+    FEATURE_CONFETTI = _bool("FEATURE_CONFETTI", True)
+    FEATURE_DARK_MODE = _bool("FEATURE_DARK_MODE", False)
+    FEATURE_AI_THANK_YOU = _bool("FEATURE_AI_THANK_YOU", False)
+
+    # Logging
+    LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+    WERKZEUG_LOG_LEVEL = os.getenv("WERKZEUG_LOG_LEVEL", "WARNING")
 
     @classmethod
     def init_app(cls, app):
-        """Attach config to Flask app & set up logging."""
-        import logging
-        logging.basicConfig(
-            level=cls.LOG_LEVEL,
-            format="[%(asctime)s] %(levelname)s in %(module)s: %(message)s",
-        )
-        if _bool("PRINT_CONFIG", False):
-            app.logger.info(f"Loaded config: {cls.__name__}")
-            print(json.dumps(_export_config(cls), indent=2))
+        # Basic logging config
+        if not logging.getLogger().handlers:
+            logging.basicConfig(
+                level=cls.LOG_LEVEL,
+                format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+            )
+        # Ensure alias consistency for email helpers
+        app.config.setdefault("DEFAULT_MAIL_SENDER", app.config.get("MAIL_DEFAULT_SENDER"))
 
+        # Optionally print config at boot
+        if _bool("PRINT_CONFIG_AT_BOOT", False):
+            printable = {k: v for k, v in app.config.items() if k.isupper()}
+            print("🔧 Loaded Config:", cls.__name__)
+            print(json.dumps(printable, indent=2, default=str))
+
+
+# ── Environments ─────────────────────────────────────────────────────────────
 class DevelopmentConfig(BaseConfig):
     ENV = "development"
     DEBUG = True
-    # default to not actually sending emails in dev unless overridden
-    MAIL_SUPPRESS_SEND: bool = _bool("MAIL_SUPPRESS_SEND", True)
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or _sqlite_uri(BASE_DIR)
+
 
 class TestingConfig(BaseConfig):
     ENV = "testing"
-    TESTING = True  # type: ignore[attr-defined]
-    DEBUG = True
-    SQLALCHEMY_DATABASE_URI = _str(
-        "DATABASE_URL",
-        f"sqlite:///{BASE_DIR}/app/data/app.db",
-    )
-    MAIL_SUPPRESS_SEND: bool = True
+    TESTING = True
+    DEBUG = False
+    WTF_CSRF_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"
+
 
 class ProductionConfig(BaseConfig):
     ENV = "production"
     DEBUG = False
     SESSION_COOKIE_SECURE = True
-
-    REQUIRED_VARS: Final[tuple[str, ...]] = (
-        "SECRET_KEY",
-        "STRIPE_SECRET_KEY",
-        "STRIPE_PUBLIC_KEY",
-        "MAIL_SERVER",
-        "MAIL_USERNAME",
-        "MAIL_PASSWORD",
-    )
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL") or _sqlite_uri(BASE_DIR)
 
     @classmethod
     def init_app(cls, app):
         super().init_app(app)
-        missing = [v for v in cls.REQUIRED_VARS if not _raw(v)]
-        if missing:
-            raise RuntimeError(f"Missing required environment vars: {', '.join(missing)}")
+        # Be helpful but not blocking for day-one launch:
+        missing_warn = []
+        if not app.config.get("SECRET_KEY") or app.config.get("SECRET_KEY") == "dev-secret-override-me":
+            missing_warn.append("SECRET_KEY")
+        if not app.config.get("STRIPE_SECRET_KEY"):
+            missing_warn.append("STRIPE_SECRET_KEY")
+        if not app.config.get("STRIPE_WEBHOOK_SECRET"):
+            missing_warn.append("STRIPE_WEBHOOK_SECRET")
+        if missing_warn:
+            app.logger.warning("⚠️ Missing recommended env vars for production: %s", ", ".join(missing_warn))
 
-config_map: Dict[str, Type[BaseConfig]] = {
+
+# ── Mapping for factories / CLIs ─────────────────────────────────────────────
+config_by_name = {
     "development": DevelopmentConfig,
     "testing": TestingConfig,
     "production": ProductionConfig,
 }
-
-def get_config() -> Type[BaseConfig]:
-    """Return the config class for current FLASK_ENV."""
-    return config_map.get(_str("FLASK_ENV", "production"), ProductionConfig)
-
-config = get_config()
 

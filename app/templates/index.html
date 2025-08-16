@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+
+{# ==== Context & Fallbacks ==== #}
+{% set _team = team if team is defined and team else none %}
+{% set TEAM_NAME = (_team.team_name if _team and _team.team_name else "Connect ATX Elite") %}
+{# Support both csp_nonce() and NONCE #}
+{% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
+{% set brand_color = (_team.theme_color if _team and _team.theme_color else '#facc15') %}
+{% set asset_version = asset_version|default(None) %}
+
+{# page <title> — matches base.html's block name #}
+{% block head_title %}{{ _("Home") }} · {{ TEAM_NAME }}{% endblock %}
+
+{# ===== OPTIONAL TOP (header, flash, sticky CTAs) ===== #}
+{% block body_top %}
+  {# Prefer premium onboarding, fall back quietly #}
+  {% include "partials/flash_and_onboarding_premium.html" ignore missing %}
+  {% include "partials/flash_and_onboarding.html" ignore missing %}
+
+  {% include "partials/header_and_announcement.html" ignore missing %}
+  {% include "partials/sticky_cta_manager.html" ignore missing %}
+{% endblock %}
+
+{# ===== HERO (above content) ===== #}
+{% block hero %}
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+
+  {# Trust / allocation bar (render if present) #}
+  {% include "partials/funds_allocation_bar_premium.html" ignore missing with context %}
+
+  {# Sponsor ticker (header_sponsor_ticker.html) #}
+  {% include "partials/header_sponsor_ticker.html" ignore missing with context %}
+{% endblock %}
+
+{# ===== CONTENT (sections only; base.html already provides <main id="app">) ===== #}
+{% block content %}
+  {# Global section band utilities (keeps styles centralized) #}
+  {% include "partials/layout_bands.html" ignore missing %}
+
+  {# Sponsorship tiers #}
+  <section data-ui="home-tiers" id="tiers" class="fc-band fc-band--plain scroll-mt-24"
+           aria-labelledby="tiers-h" role="region">
+    <h2 id="tiers-h" class="sr-only">{{ _("Sponsorship Tiers") }}</h2>
+    {% include "partials/tiers.html" ignore missing with context %}
+  </section>
+
+  {# Stats & calendar #}
+  <section data-ui="home-program-stats-calendar" id="program-stats-calendar"
+           class="fc-band fc-band--alt scroll-mt-24" aria-labelledby="psc-h" role="region">
+    <h2 id="psc-h" class="sr-only">{{ _("Program Stats & Schedule") }}</h2>
+    {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
+  </section>
+
+  {# Impact lockers — prefer premium; JS guard prevents double-render if both exist #}
+  <section data-ui="home-impact-lockers" id="impact-lockers-band"
+           class="fc-band fc-band--tint scroll-mt-24" aria-labelledby="il-h" role="region">
+    <h2 id="il-h" class="sr-only">{{ _("Impact Lockers") }}</h2>
+
+    {% set use_premium_lockers = use_premium_lockers if use_premium_lockers is defined else true %}
+    {% if use_premium_lockers %}
+      {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+    {% else %}
+      {% include "partials/impact_lockers.html" ignore missing with context %}
+    {% endif %}
+
+    {# Fallback include (kept "hidden" and auto-removed if premium rendered) #}
+    <div data-il-fallback hidden>
+      {% include "partials/impact_lockers.html" ignore missing with context %}
+    </div>
+  </section>
+
+  {# Sponsors — unified hub to avoid duplication #}
+  <section data-ui="home-sponsors" id="sponsors"
+           class="fc-band fc-band--plain scroll-mt-24" aria-labelledby="ss-h" aria-describedby="ss-desc" role="region">
+    <h2 id="ss-h" class="sr-only">{{ _("Thanks to Our Sponsors") }}</h2>
+    <p id="ss-desc" class="sr-only">{{ _("Our community thrives thanks to these amazing supporters.") }}</p>
+
+    {% set show_spotlight = (show_spotlight if show_spotlight is defined else true) %}
+    {% set show_inline_wall = (show_inline_wall if show_inline_wall is defined else true) %}
+    {% set show_floating = (show_floating if show_floating is defined else true) %}
+    {% set spotlight_slots = (spotlight_slots if spotlight_slots is defined else 4) %}
+
+    {# Use the new unified hub (exists in your repo). No legacy widgets to avoid dupes. #}
+    {% include "partials/sponsors_hub.html" ignore missing with context %}
+  </section>
+
+  {# About & coaches #}
+  <section data-ui="home-about" id="about"
+           class="fc-band fc-band--alt scroll-mt-24" aria-labelledby="about-h" role="region">
+    <h2 id="about-h" class="sr-only">{{ _("About the Program") }}</h2>
+    {% include "partials/about_section.html" ignore missing with context %}
+    {% include "partials/impact_challenge_coaches_premium.html" ignore missing with context %}
+  </section>
+
+  {# Connect & newsletter (replaces old digital_hub) #}
+  <section data-ui="home-connect" id="connect"
+           class="fc-band fc-band--tint scroll-mt-24" aria-labelledby="connect-h" role="region">
+    <h2 id="connect-h" class="sr-only">{{ _("Follow & Stay in the Loop") }}</h2>
+
+    {# Your existing newsletter partial (form/modal/cta, depending on implementation) #}
+    {% include "partials/newsletter.html" ignore missing with context %}
+
+    {# Optional extras: concierge or back-to-top #}
+    {% include "partials/ai_concierge.html" ignore missing with context %}
+    {% include "partials/back_to_top.html" ignore missing %}
+
+    <div class="mt-4 flex justify-center">
+      <a href="#"
+         class="rounded-xl bg-yellow-400/90 px-4 py-2 font-bold text-black hover:bg-yellow-400"
+         data-modal-open="newsletter-modal">📬 {{ _("Join the Newsletter") }}</a>
+    </div>
+  </section>
+{% endblock %}
+
+{# ===== Footer slot ===== #}
+{% block footer %}
+  {% include "partials/footer.html" ignore missing with context %}
+{% endblock %}
+
+{# ===== Page-level scripts — CSP-safe with csp_nonce() or NONCE ===== #}
+{% block scripts_extra %}
+  <script nonce="{{ __nonce }}">
+  (function () {
+    /* ===== Newsletter modal trigger ===== */
+    document.addEventListener('click', function (e) {
+      const btn = e.target && e.target.closest('[data-modal-open="newsletter-modal"]');
+      if (!btn) return;
+      e.preventDefault();
+      try {
+        if (typeof window.openNewsletterModal === 'function') window.openNewsletterModal();
+        else document.getElementById('newsletter-modal')?.showModal?.();
+      } catch (_) {}
+    }, { passive: true });
+
+    /* ===== Prevent Impact Lockers double-render if both partials exist ===== */
+    (function () {
+      const band = document.getElementById('impact-lockers-band');
+      if (!band) return;
+      const premium = band.querySelector('#impact-lockers, [id^="impact-lockers"]');
+      const fb = band.querySelector('[data-il-fallback]');
+      if (premium && fb) fb.remove();
+    })();
+
+    /* ===== Smooth in-page anchor scrolling (scroll-margin handled by layout_bands) ===== */
+    document.addEventListener('click', function (e) {
+      const a = e.target.closest('a[href^="#"]');
+      if (!a) return;
+      const id = a.getAttribute('href').slice(1);
+      if (!id) return;
+      const el = document.getElementById(id);
+      if (!el) return;
+      e.preventDefault();
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      history.replaceState(null, '', '#' + id);
+    });
+
+    /* ===== Light analytics hooks (optional) ===== */
+    window.addEventListener('fundchamps:donate', function (ev) {
+      try { window.dataLayer && window.dataLayer.push({ event: 'fc_donate', detail: ev.detail }); } catch (_){}
+    });
+    window.addEventListener('fc:vip', function (ev) {
+      try { window.dataLayer && window.dataLayer.push({ event: 'fc_vip', detail: ev.detail }); } catch (_){}
+    });
+
+    /* ===== Optional: Section reveal (IntersectionObserver) ===== */
+    try {
+      const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) return;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((en) => {
+          if (en.isIntersecting) {
+            en.target.style.transition = 'transform .5s cubic-bezier(.2,.8,.2,1), opacity .5s ease';
+            en.target.style.transform = 'none';
+            en.target.style.opacity = '1';
+            io.unobserve(en.target);
+          }
+        });
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+      document.querySelectorAll('[data-ui^="home-"]').forEach((el) => {
+        el.style.transform = 'translateY(8px)';
+        el.style.opacity = '0';
+        io.observe(el);
+      });
+    } catch (_) {}
+
+    /* ===== JSON-LD: Sports Team (basic) ===== */
+    try {
+      const data = {
+        "@context":"https://schema.org",
+        "@type":"SportsTeam",
+        "name": {{ TEAM_NAME|tojson }},
+        "sport": "Basketball",
+        "url": document.location.origin,
+        "brand": { "@type":"Brand", "name": {{ TEAM_NAME|tojson }} },
+        "memberOf": { "@type":"SportsOrganization", "name":"FundChamps" }
+      };
+      const s = document.createElement('script');
+      s.type = 'application/ld+json';
+      s.text = JSON.stringify(data);
+      s.setAttribute('nonce', {{ __nonce|tojson }});
+      document.head.appendChild(s);
+    } catch (_) {}
+  })();
+  </script>
+{% endblock %}
+

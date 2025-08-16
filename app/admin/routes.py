@@ -1,7 +1,6 @@
-# app/admin/routes.py
-
 from flask import (
-    Blueprint, render_template, request, redirect, url_for, flash, jsonify, Response, current_app
+    Blueprint, render_template, request, redirect,
+    url_for, flash, jsonify, Response, current_app
 )
 from sqlalchemy import func
 import csv
@@ -13,15 +12,16 @@ from app.models import Sponsor, Transaction, CampaignGoal, Example, db
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 api = Blueprint("api", __name__, url_prefix="/api")
 
+
 # ───────────────────────────────
 # 🧭 ADMIN DASHBOARD
 # ───────────────────────────────
-
 @admin.route("/")
 def dashboard():
     sponsors = Sponsor.query.order_by(Sponsor.created_at.desc()).limit(10).all()
     transactions = Transaction.query.order_by(Transaction.created_at.desc()).limit(10).all()
     goal = CampaignGoal.query.filter_by(active=True).first()
+
     stats = {
         "total_raised": db.session.query(func.sum(Sponsor.amount)).scalar() or 0,
         "sponsor_count": Sponsor.query.count(),
@@ -29,21 +29,27 @@ def dashboard():
         "approved_sponsors": Sponsor.query.filter_by(status='approved').count(),
         "goal_amount": goal.amount if goal else 0,
     }
-    return render_template("admin/dashboard.html", sponsors=sponsors, transactions=transactions, goal=goal, stats=stats)
+    return render_template(
+        "admin/dashboard.html",
+        sponsors=sponsors,
+        transactions=transactions,
+        goal=goal,
+        stats=stats
+    )
 
 
 # ───────────────────────────────
 # 👥 SPONSOR MANAGEMENT
 # ───────────────────────────────
-
 @admin.route("/sponsors")
-def sponsors():
-    q = request.args.get('q')
+def sponsors_list():
+    q = request.args.get("q")
     query = Sponsor.query.filter_by(deleted=False)
     if q:
-        query = query.filter(Sponsor.name.ilike(f'%{q}%'))
+        query = query.filter(Sponsor.name.ilike(f"%{q}%"))
     sponsors = query.order_by(Sponsor.created_at.desc()).all()
     return render_template("admin/sponsors.html", sponsors=sponsors)
+
 
 @admin.route("/sponsors/approve/<int:sponsor_id>", methods=["POST"])
 def approve_sponsor(sponsor_id):
@@ -52,11 +58,11 @@ def approve_sponsor(sponsor_id):
     db.session.commit()
     flash(f"Sponsor '{sponsor.name}' approved!", "success")
 
-    # ✅ Optional Slack notification
     if current_app.config.get("SLACK_WEBHOOK_URL"):
         send_slack_alert(f"🎉 New Sponsor Approved: *{sponsor.name}* (${sponsor.amount:.2f})")
 
-    return redirect(url_for("admin.sponsors"))
+    return redirect(url_for("admin.sponsors_list"))
+
 
 @admin.route("/sponsors/delete/<int:sponsor_id>", methods=["POST"])
 def delete_sponsor(sponsor_id):
@@ -64,13 +70,12 @@ def delete_sponsor(sponsor_id):
     sponsor.deleted = True
     db.session.commit()
     flash(f"Sponsor '{sponsor.name}' deleted.", "warning")
-    return redirect(url_for("admin.sponsors"))
+    return redirect(url_for("admin.sponsors_list"))
 
 
 # ───────────────────────────────
 # 💸 EXPORT PAYOUTS CSV
 # ───────────────────────────────
-
 @admin.route("/payouts/export")
 def export_payouts():
     sponsors = Sponsor.query.filter_by(status='approved', deleted=False).all()
@@ -97,7 +102,6 @@ def export_payouts():
 # ───────────────────────────────
 # 🎯 CAMPAIGN GOAL MANAGEMENT
 # ───────────────────────────────
-
 @admin.route("/goals", methods=["GET", "POST"])
 def goals():
     goal = CampaignGoal.query.filter_by(active=True).first()
@@ -117,9 +121,8 @@ def goals():
 # ───────────────────────────────
 # 💳 TRANSACTIONS
 # ───────────────────────────────
-
 @admin.route("/transactions")
-def transactions():
+def transactions_list():
     txs = Transaction.query.order_by(Transaction.created_at.desc()).all()
     return render_template("admin/transactions.html", transactions=txs)
 
@@ -127,7 +130,6 @@ def transactions():
 # ───────────────────────────────
 # 🔔 SLACK ALERT UTILITY
 # ───────────────────────────────
-
 def send_slack_alert(message: str):
     webhook = current_app.config.get("SLACK_WEBHOOK_URL")
     if webhook:
@@ -140,7 +142,6 @@ def send_slack_alert(message: str):
 # ───────────────────────────────
 # 🧪 EXAMPLE SOFT DELETE / RESTORE API
 # ───────────────────────────────
-
 @api.route("/example/<uuid>/delete", methods=["POST"])
 def example_soft_delete(uuid):
     ex = Example.by_uuid(uuid)
@@ -149,6 +150,7 @@ def example_soft_delete(uuid):
     ex.soft_delete()
     db.session.commit()
     return jsonify({"message": f"{ex.name} soft-deleted."})
+
 
 @api.route("/example/<uuid>/restore", methods=["POST"])
 def example_restore(uuid):
@@ -163,17 +165,8 @@ def example_restore(uuid):
 # ───────────────────────────────
 # 🌐 PUBLIC/INTERNAL APIs (JSON)
 # ───────────────────────────────
-
 @api.route("/sponsors/approved")
 def api_approved_sponsors():
     sponsors = Sponsor.query.filter_by(status='approved', deleted=False).all()
     return jsonify([s.as_dict() for s in sponsors])
-
-
-# 🔥 Starforge: extend with...
-# - Email/SMS templates
-# - Logs & audit history
-# - Socket.IO for real-time alerts
-# - JSON APIs for sponsors, goals, payouts, etc.
-# - Admin moderation for SMS/AI responses
 

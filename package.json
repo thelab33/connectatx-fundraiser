@@ -54,9 +54,10 @@
     "@tailwindcss/typography": "^0.5.16",
     "autoprefixer": "^10.4.21",
     "browser-sync": "^2.29.3",
+    "chalk": "^4.1.2",
     "cross-env": "^10.0.0",
     "cssnano": "^7.1.0",
-    "esbuild": "^0.25.8",
+    "esbuild": "^0.25.9",
     "eslint": "^9.33.0",
     "eslint-plugin-tailwindcss": "^3.18.2",
     "globals": "^16.3.0",
@@ -76,11 +77,29 @@
     "stylelint-config-tailwindcss": "^1.0.0",
     "stylelint-declaration-block-no-ignored-properties": "^2.8.0",
     "stylelint-order": "^7.0.0",
-    "tailwindcss": "^3.4.17",
+    "tailwindcss": "^3.4.4",
     "tailwindcss-animate": "^1.0.7"
   },
   "dependencies": {
     "motion": "^12.23.12",
     "socket.io-client": "^4.8.1"
-  }
+  },
+  "name": "connectatx-fundraiser",
+  "version": "1.0.0",
+  "description": "Production-ready Flask app for Connect ATX Elite, featuring: - Modular app factory pattern - SQLAlchemy ORM & migrations - Flask-SocketIO for realtime - TailwindCSS & modular partials - Clean blueprints for API, SMS, and more",
+  "main": ".eslintrc.js",
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/thelab33/connectatx-fundraiser.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/thelab33/connectatx-fundraiser/issues"
+  },
+  "homepage": "https://github.com/thelab33/connectatx-fundraiser#readme"
 }

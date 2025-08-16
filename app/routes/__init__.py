@@ -1,139 +1,124 @@
-# app/boot/blueprints.py
 from __future__ import annotations
 
-import os
+"""
+FundChamps / Starforge — Blueprint Loader
+- Safely loads & registers blueprints with env-based overrides
+- Falls back to a working homepage if 'main' blueprint is missing
+"""
+
 import logging
+import os
 from dataclasses import dataclass
 from importlib import import_module
-from typing import Optional, Iterable, Mapping, Dict
+from typing import Optional
 
 from flask import Blueprint, Flask
 
-# Optional CLI group import (fail silently)
-try:  # pragma: no cover
+# ─── Optional CLI Group ──────────────────────────────────────────────────────
+try:
     from app.cli import starforge  # type: ignore
-except Exception:  # pragma: no cover
+except Exception:
     starforge = None  # type: ignore
 
 log = logging.getLogger(__name__)
 
 
+# ─── Blueprint Spec Definition ──────────────────────────────────────────────
 @dataclass(frozen=True)
 class BlueprintSpec:
-    """
-    Declarative blueprint spec.
+    alias: str       # Short name used in env controls/logs
+    module: str      # Dotted import path
+    attr: str        # Attribute name of Blueprint in module
+    prefix: Optional[str]  # Default URL prefix (None = root)
 
-    alias: short name used in DISABLE_BPS and logs (e.g., "main", "api").
-    module: dotted import path to the module that exposes the attribute.
-    attr: attribute name inside the module (the Blueprint instance).
-    prefix: desired url_prefix when registering; None = no prefix.
-    """
-    alias: str
-    module: str
-    attr: str
-    prefix: Optional[str]
+
+# ─── Helpers ────────────────────────────────────────────────────────────────
+def _env_prefix_override(alias: str, default: Optional[str]) -> Optional[str]:
+    """Allow URL prefix override via env: BP_PREFIX__API=/v2"""
+    return os.getenv(f"BP_PREFIX__{alias.upper()}", default)
 
 
 def _import_bp(spec: BlueprintSpec) -> Optional[Blueprint]:
-    """
-    Attempt to import a Blueprint by module and attribute name.
-    Returns None if anything goes wrong.
-    """
+    """Import a Blueprint; return None if fails or attr not a Blueprint."""
     try:
         mod = import_module(spec.module)
         bp = getattr(mod, spec.attr, None)
         if not isinstance(bp, Blueprint):
-            log.warning("Module '%s' loaded but attribute '%s' is not a Blueprint (got %r)",
-                        spec.module, spec.attr, type(bp).__name__ if bp is not None else None)
+            log.warning(
+                "Module '%s' loaded but '%s' is not a Blueprint (got %r)",
+                spec.module, spec.attr, type(bp).__name__ if bp else None
+            )
             return None
         return bp
-    except Exception:
-        # Keep imports resilient; we'll log at INFO and continue gracefully.
-        log.info("⏭️  Could not import %s.%s; skipping.", spec.module, spec.attr, exc_info=False)
+    except Exception as exc:
+        log.warning("⏭️  Could not import %s.%s: %s", spec.module, spec.attr, exc)
         return None
 
 
 def _parse_disabled_env(env_value: Optional[str]) -> set[str]:
-    """
-    Parse DISABLE_BPS into a normalized set of aliases.
-    Example: DISABLE_BPS="api, sms" -> {"api","sms"}.
-    """
-    if not env_value:
-        return set()
-    return {part.strip().lower() for part in env_value.split(",") if part.strip()}
+    """Parse DISABLE_BPS into a set of aliases."""
+    return {p.strip().lower() for p in env_value.split(",") if p.strip()} if env_value else set()
 
 
 def _safe_register(app: Flask, *, alias: str, bp: Blueprint, prefix: Optional[str]) -> bool:
-    """
-    Register a blueprint if not disabled or already present.
-    Returns True if registered, False if skipped.
-    """
-    disabled = getattr(app, "_fc_disabled_bps", set())  # cached on app
-    if alias in disabled:
+    """Register a blueprint unless disabled/already present."""
+    if alias in getattr(app, "_fc_disabled_bps", set()):
         app.logger.info("⏭️  Disabled via env: %s", alias)
         return False
-
-    # Already registered?
     if bp.name in app.blueprints:
         app.logger.info("⏭️  Already registered: %s", bp.name)
         return False
 
-    # For "main" we prefer no prefix (root), to avoid accidental '//' URLs.
-    url_prefix = None if alias == "main" else (getattr(bp, "url_prefix", None) or prefix)
-
+    url_prefix = None if alias == "main" else _env_prefix_override(alias, bp.url_prefix or prefix)
     try:
         app.register_blueprint(bp, url_prefix=url_prefix)
         app.logger.info("🧩 Registered blueprint: %-10s → %s", alias, url_prefix or "/")
         return True
     except Exception as exc:
-        app.logger.warning("⚠️  Failed to register '%s': %s", alias, exc, exc_info=True)
+        app.logger.error("⚠️  Failed to register '%s': %s", alias, exc, exc_info=True)
         return False
 
 
 def _route_summary(app: Flask) -> None:
-    """Log a concise route map when DEBUG is on."""
+    """Log all routes when DEBUG is enabled."""
     if not app.debug:
         return
     try:
         bps = ", ".join(sorted(app.blueprints.keys())) or "—"
         app.logger.info("📦 Blueprints: %s", bps)
-
-        lines: list[str] = []
-        for rule in sorted(app.url_map.iter_rules(),
-                           key=lambda r: (str(r.rule), r.endpoint)):
-            methods = ",".join(sorted(
-                m for m in rule.methods
-                if m in {"GET", "POST", "PUT", "PATCH", "DELETE"}
-            ))
-            lines.append(f"  {rule.rule:<35} {methods:<18} → {rule.endpoint}")
-
+        lines = []
+        for rule in sorted(app.url_map.iter_rules(), key=lambda r: (str(r.rule), r.endpoint)):
+            methods = ",".join(sorted(m for m in rule.methods if m in {"GET", "POST", "PUT", "PATCH", "DELETE"}))
+            lines.append(f"{rule.rule:<40} {methods:<12} → {rule.endpoint}")
         if lines:
             app.logger.info("🔗 Routes:\n%s", "\n".join(lines))
     except Exception:
         app.logger.debug("Could not render route summary", exc_info=True)
 
 
-# Fallback blueprint if "main" is missing
+# ─── Fallback Blueprint ─────────────────────────────────────────────────────
 fallback_bp = Blueprint("fallback", __name__)
 
 @fallback_bp.get("/")
 def _default_root() -> str:
-    return "✅ FundChamps backend is running. (No main homepage registered yet.)"
+    return (
+        "✅ FundChamps backend is running.<br>"
+        "<strong>Main homepage not registered.</strong>"
+    )
 
 
+# ─── Public API ─────────────────────────────────────────────────────────────
 def register_blueprints(app: Flask) -> None:
     """
-    Register CLI commands and available blueprints safely.
-
-    Env controls:
-      DISABLE_BPS=api,sms       # comma-separated aliases to skip
-
-    Known aliases: main, api, sms, stripe, webhooks, fallback
+    Register CLI commands & blueprints with env overrides.
+    Env:
+      DISABLE_BPS=api,sms
+      BP_PREFIX__API=/v2
     """
-    # Cache disabled aliases on the app for quick checks
-    app._fc_disabled_bps = _parse_disabled_env(os.getenv("DISABLE_BPS"))  # type: ignore[attr-defined]
+    # Cache disabled aliases
+    app._fc_disabled_bps = _parse_disabled_env(os.getenv("DISABLE_BPS"))
 
-    # Optional CLI registration
+    # CLI group
     if starforge:
         try:
             app.cli.add_command(starforge)
@@ -141,32 +126,27 @@ def register_blueprints(app: Flask) -> None:
         except Exception as exc:
             app.logger.warning("⚠️  Could not register CLI group 'starforge': %s", exc)
 
-    # Declarative blueprint registry
     specs: list[BlueprintSpec] = [
-        BlueprintSpec(alias="main",     module="app.routes.main",          attr="main_bp",     prefix=None),
-        BlueprintSpec(alias="api",      module="app.routes.api",           attr="api_bp",      prefix="/api"),
-        BlueprintSpec(alias="sms",      module="app.routes.sms",           attr="sms_bp",      prefix="/sms"),
-        BlueprintSpec(alias="stripe",   module="app.routes.stripe_routes", attr="stripe_bp",   prefix="/stripe"),
-        BlueprintSpec(alias="webhooks", module="app.routes.webhooks",      attr="webhook_bp",  prefix="/webhooks"),
+        BlueprintSpec("main",      "app.routes.main",           "main_bp",    None),
+        BlueprintSpec("api",       "app.routes.api",            "api_bp",     "/api"),
+        BlueprintSpec("sms",       "app.routes.sms",            "sms_bp",     "/sms"),
+        BlueprintSpec("stripe",    "app.routes.stripe_routes",  "stripe_bp",  "/stripe"),
+        BlueprintSpec("webhooks",  "app.routes.webhooks",       "webhook_bp", "/webhooks"),
+        BlueprintSpec("donations", "app.routes.donations",      "bp",         "/donations"),
+        BlueprintSpec("donations", "app.blueprints.donations",  "bp",         "/donations"),
     ]
 
-    registered_any = False
     found_main = False
-
     for spec in specs:
         bp = _import_bp(spec)
-        if bp is None:
-            app.logger.info("⏭️  %s not found; skipping.", spec.alias)
+        if not bp:
             continue
-        ok = _safe_register(app, alias=spec.alias, bp=bp, prefix=spec.prefix)
-        registered_any = registered_any or ok
-        if spec.alias == "main" and ok:
+        if _safe_register(app, alias=spec.alias, bp=bp, prefix=spec.prefix) and spec.alias == "main":
             found_main = True
 
-    # Ensure fallback if no main blueprint is registered
-    if not found_main and "fallback" not in app._fc_disabled_bps:  # type: ignore[attr-defined]
+    if not found_main and "fallback" not in app._fc_disabled_bps:
         _safe_register(app, alias="fallback", bp=fallback_bp, prefix=None)
 
     _route_summary(app)
-    app.logger.info("✅ Blueprints & CLI registration complete.")
+    app.logger.info("✅ Blueprint registration complete.")
 

@@ -1,184 +1,268 @@
-{# ================================
-   FundChamps • About + Testimonials + Story (Elite)
-   - Self-contained, mobile-first, CSP-safe
-   - Matches Sponsors Hub styling + brand var
-   - A11Y: roles, aria, keyboard traps, reduced-motion
-   - Contracts: window.openDonationModal(), fc:donate:open
-   ================================ #}
-
+<section data-ui=""${name//_/ -}"" class="block">
+{# ====================== FundChamps • About + Mission (SV Premium, Self-Contained) ====================== #}
 {# ---- Vars & Fallbacks ---- #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set player_team   = team.team_name if team and team.team_name is defined else "Connect ATX Elite" %}
 {% set team_league   = team.league if team and team.league is defined else "AAU" %}
 {% set team_region   = team.region if team and team.region is defined else "Austin, TX" %}
+{# Hardened: prefer founder_lastname; fallback to founderlastname; final default "Smith" #}
 {% set founder_last  = (
   team.founder_lastname if team and team.founder_lastname is defined and team.founder_lastname
   else (team.founderlastname if team and team.founderlastname is defined and team.founderlastname else "Smith")
 ) %}
 
-{% set img_src_raw      = team.img if team and team.img else 'images/fallback.jpg' %}
-{% set img_src          = img_src_raw if '://' in img_src_raw else (url_for('static', filename=img_src_raw) if url_for is defined else '/' ~ img_src_raw.lstrip('/')) %}
-{% set video_src_raw    = team.story_video if team and team.story_video else 'videos/story.mp4' %}
-{% set video_src        = video_src_raw if '://' in video_src_raw else (url_for('static', filename=video_src_raw) if url_for is defined else '/' ~ video_src_raw.lstrip('/')) %}
-{% set video_poster_raw = team.story_poster if team and team.story_poster else 'images/video_poster.jpg' %}
-{% set video_poster     = video_poster_raw if '://' in video_poster_raw else (url_for('static', filename=video_poster_raw) if url_for is defined else '/' ~ video_poster_raw.lstrip('/')) %}
-{% set kvue_url         = team.kvue_url if team and team.kvue_url else 'https://www.kvue.com/' %}
-{% set youtube_id       = team.youtube_id if team and team.youtube_id else 'dQw4w9WgXcQ' %}
-{% set brand_color      = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set img_src_raw   = team.img if team and team.img else 'images/fallback.jpg' %}
+{% set img_src       = img_src_raw if '://' in img_src_raw else (url_for('static', filename=img_src_raw) if url_for is defined else '/static/' ~ img_src_raw) %}
 
-{% set about_text   = (about.text if about and about.text else "We’re a family-powered AAU program in Austin, TX building skills, confidence, and character.") %}
-{% set mission_text = (mission.text if mission and mission.text else "") %}
+{% set rings_img     = (url_for('static', filename='images/team-rings.webp') if url_for is defined else '/static/images/team-rings.webp') %}
+
+{% set video_src_raw    = team.story_video if team and team.story_video else 'videos/story.mp4' %}
+{% set video_src        = video_src_raw if '://' in video_src_raw else (url_for('static', filename=video_src_raw) if url_for is defined else '/static/' ~ video_src_raw) %}
+{% set video_poster_raw = team.story_poster if team and team.story_poster else 'images/video_poster.jpg' %}
+{% set video_poster     = video_poster_raw if '://' in video_poster_raw else (url_for('static', filename=video_poster_raw) if url_for is defined else '/static/' ~ video_poster_raw) %}
+
+{% set kvue_url   = team.kvue_url if team and team.kvue_url else 'https://www.kvue.com/' %}
+{% set youtube_id = team.youtube_id if team and team.youtube_id else 'dQw4w9GgXcQ' %}
+
 {% set testimonials = testimonials if testimonials is defined and testimonials else [
-  {"quote":"Winning felt amazing — but being part of a team that believes in you matters most.","author": player_team ~ " Player, Class of 2030"},
-  {"quote":"I never thought my child would love both books and basketball this much.","author":"Happy Parent"},
-  {"quote":"The coaches and families here really care. My son found his tribe.","author":"Team Parent"}
+  {"quote": "Winning felt amazing — but it’s being part of a team that believes in you that means the most.", "author": player_team ~ " Player, Class of 2030"},
+  {"quote": "I never thought my child would love both books and basketball this much.", "author": "Happy Parent"},
+  {"quote": "The coaches and families here really care. My son found his tribe.", "author": "Team Parent"}
 ] %}
 
-<section id="about-premium"
-  class="relative overflow-hidden bg-zinc-950/95 py-12 md:py-16 text-white"
+{% set impact = impact if impact is defined and impact else [
+  {'label': 'Players Enrolled',      'value': 16},
+  {'label': 'Honor Roll Scholars',   'value': 11},
+  {'label': 'Tournaments Played',    'value': 12},
+  {'label': 'Years Running',         'value': 3}
+] %}
+
+{# Brand color (sync with header/hero) #}
+{% set brand_color = (team.theme_color if team and team.theme_color is defined and team.theme_color else '#facc15') %}
+
+<section
+  id="mission"
+  class="relative overflow-hidden bg-zinc-950/95 py-20 text-white md:py-32"
   itemscope itemtype="https://schema.org/SportsTeam"
-  aria-labelledby="aboutp-heading" tabindex="-1"
-  style="--fc-brand: {{ brand_color }};">
-  <style>
-    /* ===== Scope: #about-premium ===== */
-    #about-premium .card{
-      background:rgba(15,15,15,.72);
-      border:1px solid color-mix(in srgb, var(--fc-brand) 18%, transparent);
-      border-radius:1rem;
-      box-shadow:0 10px 36px rgba(250,204,21,.12);
-      transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  aria-labelledby="about-heading"
+  tabindex="-1"
+  style="
+    --fc-brand: {{ brand_color }};
+    --fc-brand-100: color-mix(in srgb, {{ brand_color }} 28%, transparent);
+    --fc-brand-200: color-mix(in srgb, {{ brand_color }} 18%, transparent);
+    --fc-brand-300: color-mix(in srgb, {{ brand_color }} 40%, black);
+  "
+  data-analytics="about-mission"
+>
+  <style nonce="{{ NONCE }}">
+    /* ===== Scoped Styles (SV Premium, no bleed) ===== */
+    #mission .glass-card{
+      background:
+        linear-gradient(180deg, rgba(12,12,13,.60), rgba(12,12,13,.82)),
+        linear-gradient(125deg, color-mix(in srgb, var(--fc-brand) 8%, transparent), rgba(255,255,255,.03));
+      border:1px solid color-mix(in srgb, var(--fc-brand) 22%, transparent);
+      box-shadow: 0 18px 60px color-mix(in srgb, var(--fc-brand) 16%, transparent), inset 0 0 40px color-mix(in srgb, var(--fc-brand) 7%, transparent);
+      border-radius: 1.5rem;
+      transition: box-shadow .45s ease, transform .25s ease, background .45s ease;
     }
-    #about-premium .card:hover{ transform:translateY(-1px); box-shadow:0 16px 46px rgba(250,204,21,.18); border-color:color-mix(in srgb, var(--fc-brand) 30%, transparent) }
-    #about-premium .pill{ background:color-mix(in srgb, var(--fc-brand) 14%, transparent); border:1px solid color-mix(in srgb, var(--fc-brand) 24%, transparent); border-radius:9999px; padding:.1rem .55rem; font-weight:700 }
-    #about-premium .cta{ transition:transform .15s ease, box-shadow .15s ease }
-    #about-premium .cta:hover{ transform:translateY(-1px); box-shadow:0 10px 28px color-mix(in srgb, var(--fc-brand) 22%, transparent) }
-    #about-premium .soft{ background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02)) }
-    #about-premium [data-slide].hidden{ display:none }
-    #about-premium [data-tab][aria-selected="true"]{ background:color-mix(in srgb, var(--fc-brand) 55%, #fff); color:#111 }
-    #about-premium .stat{ background:color-mix(in srgb, var(--fc-brand) 10%, transparent); border:1px solid color-mix(in srgb, var(--fc-brand) 20%, transparent) }
-    #about-premium::before{
-      content:""; position:absolute; inset:auto -12% -30% auto; width:52rem; height:52rem; border-radius:9999px;
-      background:radial-gradient(closest-side, color-mix(in srgb, var(--fc-brand) 12%, transparent), transparent 62%);
-      filter:blur(22px); opacity:.28; pointer-events:none;
+    #mission .glass-card:hover{ transform: translateY(-2px); box-shadow: 0 22px 80px color-mix(in srgb, var(--fc-brand) 22%, transparent); }
+
+    #mission .pill{background: color-mix(in srgb, var(--fc-brand) 14%, transparent); border:1px solid color-mix(in srgb, var(--fc-brand) 25%, transparent)}
+    #mission .cta{transition:transform .15s ease,box-shadow .15s ease}
+    #mission .cta:hover{transform:translateY(-1px);box-shadow:0 10px 30px color-mix(in srgb, var(--fc-brand) 25%, transparent)}
+
+    /* Ambient glow background to match hero/header */
+    #mission .ambient-glow{ position:absolute; inset:0; pointer-events:none;
+      background: radial-gradient(75% 85% at 50% 0%, color-mix(in srgb, var(--fc-brand) 12%, transparent), transparent 60%);
+      opacity: var(--missionGlow, .55);
+      transition: opacity .25s ease;
+      animation: missionGlowPulse 10s ease-in-out infinite;
     }
-    @media (prefers-reduced-motion: reduce){ #about-premium .cta{transition:none} }
+    @keyframes missionGlowPulse { 0%,100%{ filter:saturate(95%);} 50%{ filter:saturate(120%);} }
+
+    /* Typography & utilities */
+    #mission h2{ font-size: clamp(1.75rem, 1.2vw + 1.25rem, 2.5rem); line-height: 1.1; }
+    #mission .lead{ font-size: clamp(1rem, 1.1vw + .6rem, 1.35rem); }
+
+    /* Testimonial carousel */
+    #mission [data-slide].hidden{display:none}
+    #mission [data-dot][aria-current="true"]{ background: color-mix(in srgb, var(--fc-brand) 70%, #fde68a); border-color: #fde68a; }
+
+    /* Video modal */
+    #mission dialog{border:none;border-radius:1rem}
+    #mission dialog::backdrop{background:rgba(0,0,0,.9)}
+    #mission [data-tab][aria-selected="true"]{background: color-mix(in srgb, var(--fc-brand) 55%, #fde68a); color:#111}
+
+    /* Decorative Watermarks */
+    #mission .wm{position:absolute;border-radius:9999px;object-fit:cover;pointer-events:none;filter:blur(2px);opacity:.12}
+
+    /* Reduced motion */
+    @media (prefers-reduced-motion: reduce){
+      #mission .cta, #mission .ambient-glow { transition:none !important; animation:none !important; }
+    }
   </style>
 
   <meta itemprop="name" content="{{ player_team }}">
   <meta itemprop="areaServed" content="{{ team_region }}">
   <meta itemprop="memberOf" content="{{ team_league }}">
 
-  <div class="relative z-10 mx-auto w-full max-w-6xl px-4 md:px-6 grid grid-cols-1 gap-6 md:gap-8 lg:grid-cols-2">
-    <!-- LEFT: About + micro-stats -->
-    <article class="card soft p-6 md:p-8" aria-labelledby="aboutp-heading">
-      <header class="mb-4 flex items-start gap-3">
-        <img loading="lazy" decoding="async" src="{{ img_src }}" alt="{{ player_team }} watermark"
-             class="h-9 w-9 rounded-xl ring-1 ring-white/10 object-cover" loading="lazy" decoding="async" />
-        <div class="flex-1">
-          <h2 id="aboutp-heading" class="text-2xl sm:text-3xl font-black tracking-tight text-yellow-300" itemprop="description">
-            About {{ player_team }}
-          </h2>
-          <ul class="mt-1 flex flex-wrap gap-1.5 text-[11px] font-semibold text-amber-200" aria-label="Team attributes">
-            <li class="pill">AAU • {{ team_league }}</li>
-            <li class="pill">{{ team_region }}</li>
-            <li class="pill">Community Powered</li>
-          </ul>
-        </div>
-      </header>
+  <!-- Background ambient glow -->
+  <div class="ambient-glow" aria-hidden="true"></div>
 
-      <div class="space-y-3 text-zinc-200/95">
-        <p class="leading-relaxed">
-          <strong class="font-black text-yellow-300">{{ player_team }}</strong> is a
-          <span class="font-semibold text-amber-300">family movement</span> in
-          <span class="font-semibold text-yellow-200">{{ team_region }}</span>, building
-          teamwork, respect, and championship character.
-        </p>
-        <p class="leading-relaxed">{{ about_text }}</p>
-        {% if mission_text %}<p class="leading-relaxed">{{ mission_text }}</p>{% endif %}
-        <p class="leading-relaxed">
-          Founded by the <strong class="text-yellow-200">{{ founder_last }}</strong> family,
-          our <strong class="text-yellow-100">{{ team_league }}</strong> program grew into a thriving community.
-        </p>
-      </div>
+  <!-- Decorative Watermarks -->
+  <img src="{{ img_src }}" alt="" class="wm left-8 top-6 h-40 w-40" loading="lazy" decoding="async" />
+  <img src="{{ img_src }}" alt="" class="wm bottom-2 right-12 h-32 w-32 opacity-10" loading="lazy" decoding="async" />
 
-      {# Micro impact stats (edit/override via context) #}
-      {% set impact_stats = impact_stats if impact_stats is defined and impact_stats else [
-        {"label":"Players Served","value":16},
-        {"label":"Honor Roll Students","value":11},
-        {"label":"Tournaments/Year","value":12},
-        {"label":"Championship Rings","value":3}
-      ] %}
-      <ul class="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {% for s in impact_stats %}
-          <li class="stat rounded-xl px-3 py-2 text-center">
-            <div class="text-xl font-extrabold text-yellow-300">{{ s.value }}</div>
-            <div class="text-[11px] font-semibold text-yellow-100/80">{{ s.label }}</div>
-          </li>
-        {% endfor %}
+  <!-- ===== Top: About + Testimonials ===== -->
+  <div class="relative z-10 mx-auto grid w-full max-w-6xl grid-cols-1 gap-10 lg:grid-cols-2">
+    <!-- About -->
+    <article class="glass-card p-8 md:p-12" aria-labelledby="about-heading">
+      <h2 id="about-heading" class="mb-6 font-black tracking-tight text-yellow-400">
+        About {{ player_team }} — Our Mission &amp; Voices
+      </h2>
+
+      <ul class="mb-5 flex flex-wrap gap-3 text-sm font-bold text-yellow-200" aria-label="Team attributes">
+        <li class="pill rounded-full px-3 py-1">{{ player_team }}</li>
+        <li class="pill rounded-full px-3 py-1">{{ team_league }} Proud</li>
+        <li class="pill rounded-full px-3 py-1">Community Powered</li>
       </ul>
 
-      <div class="mt-5 flex flex-wrap gap-2">
+      <p class="mb-3 lead">
+        <strong class="font-black text-yellow-300">{{ player_team }}</strong>
+        isn’t just a team — it’s a <span class="font-bold text-amber-400">family movement</span> in
+        <span class="font-bold text-yellow-300">{{ team_region }}</span> where kids and parents find a second home.
+        We build <span class="font-bold text-amber-200">teamwork</span>, <span class="font-bold text-yellow-200">respect</span>,
+        and <span class="font-black text-yellow-200">championship character</span> for life.
+      </p>
+
+      <p class="mb-6 text-zinc-200">
+        Founded by the <strong class="text-yellow-200">{{ founder_last }}</strong> family, our
+        <strong class="text-yellow-100">{{ team_league }}</strong> program began as a dad’s dream for his son — and grew into a thriving community.
+        Coaches, volunteers, and sponsors shape every student’s journey. Every child matters here.
+      </p>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <a href="#"
+           class="cta inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 px-7 py-3 text-base sm:text-lg font-extrabold text-black shadow-lg focus-visible:ring-4 focus-visible:ring-yellow-300"
+           data-modal-open="story-modal" aria-haspopup="dialog" aria-controls="story-modal" aria-expanded="false"
+           data-analytics="about:watch-story">
+          ▶️ Watch Our Story
+        </a>
         <button type="button"
-                class="cta inline-flex items-center gap-2 rounded-full bg-yellow-300 px-5 py-2.5 text-sm sm:text-base font-extrabold text-black"
-                data-modal-open="story-modal" aria-haspopup="dialog" aria-controls="story-modal" aria-expanded="false">
-          ▶ Watch Our Story
-        </button>
-        <button type="button"
-                class="cta inline-flex items-center gap-2 rounded-full border border-yellow-400/60 bg-yellow-300/10 px-5 py-2.5 text-sm font-bold text-yellow-200"
-                data-open-donate-modal>
-          💛 Quick Donate
+                class="cta inline-flex items-center gap-2 rounded-full border border-yellow-300/40 bg-yellow-300/10 px-5 py-3 font-semibold text-yellow-200"
+                data-copy="#about-heading" aria-label="Copy section link" data-analytics="about:share">
+          🔗 Share
         </button>
       </div>
     </article>
 
-    <!-- RIGHT: Testimonials (carousel) -->
-    <section class="card p-6 md:p-7" aria-label="Testimonials">
-      <h3 class="mb-3 text-lg font-bold text-yellow-300">What Families Say</h3>
-      <div id="aboutp-carousel" data-carousel data-interval="6500"
-           aria-live="polite" aria-atomic="true" aria-roledescription="carousel">
+    <!-- Testimonials -->
+    <section class="glass-card p-7" aria-label="Testimonials">
+      <h3 class="mb-5 text-xl font-bold text-yellow-300">💬 What Families Say</h3>
+
+      <div id="testimonial-carousel" data-carousel data-interval="6000" aria-live="polite" aria-atomic="true">
         <div class="relative" data-slides>
           {% for t in testimonials %}
           <figure class="{% if not loop.first %}hidden{% endif %}" data-slide data-index="{{ loop.index0 }}">
-            <blockquote class="mb-2 text-[15px] sm:text-base italic text-yellow-100">“{{ t.quote }}”</blockquote>
-            <figcaption class="text-xs font-semibold text-yellow-200">{{ t.author }}</figcaption>
+            <blockquote class="mb-2 text-lg italic text-yellow-100">“{{ t.quote }}”</blockquote>
+            <figcaption class="text-sm font-semibold text-yellow-200">{{ t.author }}</figcaption>
+            <img src="{{ rings_img }}" alt="" aria-hidden="true" class="mt-3 h-8 w-8 opacity-80" loading="lazy" decoding="async" />
           </figure>
           {% endfor %}
         </div>
 
-        <nav class="mt-3 flex gap-1.5" aria-label="Select testimonial" data-dots>
+        <nav class="mt-3 flex gap-2" aria-label="Select testimonial" data-dots>
           {% for i in range(testimonials|length) %}
-          <button class="h-2.5 w-2.5 rounded-full border border-yellow-300/50 bg-yellow-300/30 hover:bg-yellow-300/60 focus:bg-yellow-300"
+          <button class="h-3 w-3 rounded-full border-2 border-yellow-200/60 bg-yellow-400/40 hover:bg-yellow-400 focus:bg-yellow-400"
                   type="button" data-dot data-idx="{{ i }}" aria-current="{{ 'true' if i == 0 else 'false' }}"
                   aria-label="Show testimonial {{ i + 1 }}"></button>
           {% endfor %}
         </nav>
 
         <div class="mt-4 flex items-center gap-3">
-          <button class="text-[11px] text-yellow-200 underline-offset-2 hover:underline" type="button" data-copy="#aboutp-carousel">
-            Copy quote
-          </button>
-          <span class="hidden text-[11px] text-green-300" data-toast role="status" aria-live="polite">Copied!</span>
+          <button class="text-xs text-yellow-200 hover:underline" type="button" data-copy="#testimonial-carousel" data-analytics="about:copy-quote">Copy Quote</button>
+          <span class="hidden text-xs text-green-300" data-toast>Copied!</span>
         </div>
       </div>
     </section>
   </div>
 
-  <!-- Story Modal -->
+  <!-- ===== Middle: Impact (animated counters) ===== -->
+  <div class="relative z-10 mx-auto mt-16 w-full max-w-6xl">
+    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+      {% for s in impact %}
+      <div class="glass-card p-6 text-center" tabindex="0" aria-label="{{ s.value }} {{ s.label }}">
+        <div class="text-3xl font-extrabold text-yellow-400">
+          <span class="count" data-target="{{ s.value }}">0</span>
+        </div>
+        <p class="mt-1 text-sm font-semibold text-zinc-300">{{ s.label }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- ===== Bottom: Challenge & Coaches ===== -->
+  <div class="relative z-10 mx-auto mt-16 grid w-full max-w-6xl grid-cols-1 items-start gap-10 lg:grid-cols-2">
+    <!-- Challenge -->
+    <section class="glass-card p-8" aria-labelledby="challenge-title">
+      <h3 id="challenge-title" class="mb-3 text-2xl font-bold text-yellow-300">The Challenge We Face</h3>
+      <p class="text-zinc-300 text-base sm:text-lg leading-relaxed">
+        We struggle with consistent gym space and the high cost of tournament travel. These barriers strain our volunteer
+        coaches and parents — limiting our kids’ growth and success together.
+      </p>
+      <h4 class="mt-6 text-xl font-semibold text-yellow-200">The Impact You Can Make</h4>
+      <ul class="mt-2 list-inside list-disc text-zinc-200 space-y-1 text-base sm:text-lg">
+        <li>Secure consistent gym space</li>
+        <li>Support tournament travel</li>
+        <li>Provide gear &amp; team meals</li>
+        <li>Fund academic programs</li>
+      </ul>
+      <p class="mt-4 text-base sm:text-lg font-semibold text-zinc-100">
+        With your help, we give these young athletes the foundation to become confident leaders.
+      </p>
+      <button
+        type="button"
+        class="mt-6 inline-flex items-center justify-center rounded-full bg-yellow-400 px-5 py-2.5 font-bold text-black focus-visible:ring-4 focus-visible:ring-yellow-300"
+        data-open-donate-modal
+        data-analytics="about:donate"
+        aria-label="Open donation modal">
+        Donate Now
+      </button>
+    </section>
+
+    <!-- Coaches (static, lightweight) -->
+    <section class="glass-card p-8" aria-label="Coaches">
+      <h3 class="mb-4 text-2xl font-bold text-yellow-300">Coaches</h3>
+      <div class="flex flex-wrap justify-start gap-5">
+        {% for coach in ['Rodriguez','Smith','Taylor'] %}
+        <div class="coach-card group w-40 cursor-pointer rounded-xl bg-zinc-800/70 p-4 shadow-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400">
+          <img alt="Coach {{ coach }}" decoding="async" loading="lazy" class="mb-3 h-32 w-32 rounded-full object-cover"
+               src="{{ (url_for('static', filename='images/coaches/' ~ coach|lower ~ '.jpg') if url_for is defined else '/static/images/coaches/' ~ coach|lower ~ '.jpg') }}">
+          <span class="block text-lg font-semibold text-yellow-400">Coach {{ coach }}</span>
+          <span class="text-sm text-zinc-400">Assistant Coach</span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== Story Modal (Tabs: Video | KVUE | YouTube) ===== -->
   <dialog id="story-modal" class="z-50 p-0 shadow-2xl" aria-modal="true" aria-labelledby="story-title" role="dialog">
-    <div id="story-box" class="relative mx-auto max-w-2xl w-[92vw] sm:w-auto rounded-xl bg-zinc-900 p-5 sm:p-6 shadow-2xl" role="document" tabindex="0">
-      <button class="absolute right-2.5 top-2.5 rounded-full bg-black/40 px-2.5 py-1.5 text-2xl text-yellow-300 hover:bg-yellow-300/15 focus:outline-none"
+    <div id="story-box" class="relative mx-auto flex max-w-2xl flex-col gap-5 rounded-2xl bg-zinc-900 p-6 shadow-2xl sm:p-8" role="document" tabindex="0">
+      <button class="absolute right-3 top-3 rounded-full bg-black/50 px-3 py-2 text-3xl text-yellow-300 hover:bg-yellow-300/20 focus:outline-none"
               aria-label="Close story modal" type="button" data-modal-close>×</button>
-      <h2 id="story-title" class="text-xl font-bold text-yellow-300">Our Story</h2>
+      <h2 id="story-title" class="text-2xl font-bold text-yellow-400">Our Story: On &amp; Off the Court</h2>
 
       {% set tabs = [
-        {'id': 'myvideo', 'label': '🎥 Video'},
-        {'id': 'kvue',    'label': '📺 KVUE'},
+        {'id': 'myvideo', 'label': '🎥 Team Video'},
+        {'id': 'kvue',    'label': '📺 KVUE News'},
         {'id': 'yt',      'label': '🏀 YouTube'}
       ] %}
 
-      <nav class="mt-3 flex gap-2" aria-label="Video sources" role="tablist" data-tabs>
+      <nav class="flex gap-3" aria-label="Video sources" role="tablist" data-tabs>
         {% for t in tabs %}
         <button id="tab-{{ t.id }}"
-                class="rounded-full bg-yellow-300/15 px-3 py-1.5 text-sm font-semibold text-yellow-200 hover:bg-yellow-300/35 focus:bg-yellow-300 focus:text-black"
+                class="rounded-full bg-yellow-300/20 px-4 py-2 font-semibold text-yellow-200 transition hover:bg-yellow-300/40 focus:bg-yellow-400 focus:text-black"
                 data-tab data-panel="panel-{{ t.id }}" role="tab" aria-controls="panel-{{ t.id }}"
                 aria-selected="{{ 'true' if loop.first else 'false' }}" {% if not loop.first %}tabindex="-1"{% endif %}
                 type="button">{{ t.label }}</button>
@@ -186,110 +270,181 @@
       </nav>
 
       {% for t in tabs %}
-      <div id="panel-{{ t.id }}" role="tabpanel" class="{% if not loop.first %}hidden{% endif %} mt-3" aria-labelledby="tab-{{ t.id }}" tabindex="0" data-panel>
+      <div id="panel-{{ t.id }}" role="tabpanel" class="{% if not loop.first %}hidden{% endif %} mt-4"
+           aria-labelledby="tab-{{ t.id }}" tabindex="0" data-panel data-lazy>
         {% if t.id == 'myvideo' %}
-          <video controls preload="metadata" poster="{{ video_poster }}" class="w-full rounded-lg">
+          <video controls preload="none" poster="{{ video_poster }}" class="w-full rounded-lg shadow">
             <source src="{{ video_src }}" type="video/mp4" />
             Sorry, your browser doesn’t support embedded videos.
           </video>
         {% elif t.id == 'kvue' %}
-          <iframe data-src="{{ kvue_url|e }}" class="h-64 w-full rounded" allowfullscreen loading="lazy"
-                  sandbox="allow-same-origin allow-scripts allow-popups allow-presentation" referrerpolicy="no-referrer"></iframe>
+          <div data-embed="iframe" data-src="{{ kvue_url }}" class="h-72 w-full rounded shadow grid place-items-center text-sm text-zinc-400 bg-black/30">
+            <span>Loading KVUE…</span>
+          </div>
         {% else %}
-          <iframe data-src="https://www.youtube-nocookie.com/embed/{{ youtube_id|e }}" class="h-64 w-full rounded"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                  allowfullscreen loading="lazy" sandbox="allow-same-origin allow-scripts allow-popups allow-presentation"
-                  referrerpolicy="no-referrer"></iframe>
+          <div data-embed="iframe" data-src="https://www.youtube-nocookie.com/embed/{{ youtube_id }}" class="h-72 w-full rounded shadow grid place-items-center text-sm text-zinc-400 bg-black/30">
+            <span>Loading YouTube…</span>
+          </div>
         {% endif %}
       </div>
       {% endfor %}
+
+      <p class="mt-2 text-center text-sm font-bold text-yellow-200">
+        <strong>{{ player_team }}</strong> &nbsp;|&nbsp; Family-run · Community-powered · Champions rising
+      </p>
     </div>
   </dialog>
 </section>
 
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
-(() => {
-  const root = document.getElementById('about-premium'); if(!root || root.__init) return; root.__init = true;
-  const html = document.documentElement;
+<script nonce="{{ NONCE }}">
+/* ===== About + Mission: scoped logic (CSP-safe) ===== */
+(function(){
+  const root = document.getElementById('mission'); if(!root || root.__init) return; root.__init = true;
+  const $ = (s,c=document)=>c.querySelector(s); const $$=(s,c=document)=>Array.from(c.querySelectorAll(s));
 
-  // ---------- Modal open/close + focus trap ----------
+  // Drive ambient glow with scroll (cohesive with header/hero)
+  function setGlow(){
+    const max=140, y=window.scrollY||0, o=0.35 + Math.min(y,max)/(max*2);
+    root.style.setProperty('--missionGlow', o.toFixed(2));
+  }
+  setGlow(); window.addEventListener('scroll', setGlow, { passive:true });
+
+  // ---- Modal (native <dialog>) + focus trap ----
   document.addEventListener('click', (e) => {
-    const openBtn = e.target.closest('[data-modal-open]'); if (openBtn) {
+    const openBtn = e.target.closest('[data-modal-open]');
+    if (openBtn) {
       e.preventDefault();
-      const dlg = document.getElementById(openBtn.getAttribute('data-modal-open'));
-      if (dlg){ (dlg.showModal ? dlg.showModal() : dlg.setAttribute('open','')); openBtn.setAttribute('aria-expanded','true'); trap(dlg); html.classList.add('overflow-hidden'); }
+      const id = openBtn.getAttribute('data-modal-open');
+      const dlg = document.getElementById(id);
+      if (dlg?.showModal) { dlg.showModal(); trapFocus(dlg); }
+      window.dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'modal_open', area:'about', id } }));
     }
-    const closeBtn = e.target.closest('[data-modal-close]'); if (closeBtn) { closeBtn.closest('dialog')?.close(); }
+    const closeBtn = e.target.closest('[data-modal-close]');
+    if (closeBtn) { e.preventDefault(); const d=closeBtn.closest('dialog'); d?.close(); }
   });
   root.querySelectorAll('dialog').forEach(dlg=>{
-    dlg.addEventListener('click', e=>{ const box = dlg.querySelector('#story-box'); if (box && !box.contains(e.target)) dlg.close(); });
-    dlg.addEventListener('close', ()=>{ html.classList.remove('overflow-hidden'); root.querySelector('[data-modal-open="'+dlg.id+'"]')?.setAttribute('aria-expanded','false'); });
+    dlg.addEventListener('click', (e)=>{ const box = dlg.querySelector('#story-box'); if(box && !box.contains(e.target)) dlg.close(); });
   });
-  function trap(el){
-    const els = el.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
-    const first = els[0], last = els[els.length-1];
-    el.addEventListener('keydown', onKey);
+  function trapFocus(container){
+    const f = container.querySelectorAll('a,button,input,textarea,select,details,[tabindex]:not([tabindex="-1"])');
+    const first = f[0], last = f[f.length-1];
     function onKey(e){
-      if (e.key==='Tab'){
-        if (e.shiftKey && document.activeElement===first){ e.preventDefault(); last?.focus(); }
-        else if (!e.shiftKey && document.activeElement===last){ e.preventDefault(); first?.focus(); }
-      }
-      if (e.key==='Escape') el.close();
+      if(e.key!=='Tab') return;
+      if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+      else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
     }
-    first?.focus({preventScroll:true});
+    container.addEventListener('keydown', onKey, {passive:false});
+    first?.focus();
   }
 
-  // ---------- Tabs (lazy-load embeds) ----------
+  // ---- Tabs + Lazy Embeds (load iframe only when tab visible) ----
   const tabsRoot = root.querySelector('[data-tabs]');
-  function activateTab(tab){
-    const box = tab.closest('#story-box') || root;
-    box.querySelectorAll('[data-tab]').forEach(t=>{const on=t===tab; t.setAttribute('aria-selected', on); t.tabIndex=on?0:-1;});
-    const id = tab.getAttribute('data-panel');
-    box.querySelectorAll('[data-panel]').forEach(p=>{
-      const show = p.id===id;
-      p.classList.toggle('hidden', !show);
-      if (show){ p.querySelectorAll('iframe[data-src]').forEach(f=>{ if(!f.src) f.src=f.dataset.src; }); }
+  if (tabsRoot) {
+    tabsRoot.addEventListener('click', (e)=>{
+      const tab = e.target.closest('[data-tab]'); if(!tab) return;
+      const box = tab.closest('#story-box') || root;
+      box.querySelectorAll('[data-tab]').forEach(t=>{
+        const selected = (t===tab); t.setAttribute('aria-selected', String(selected)); t.tabIndex = selected ? 0 : -1;
+      });
+      const panelId = tab.getAttribute('data-panel');
+      box.querySelectorAll('[data-panel]').forEach(p=>{
+        const active = (p.id === panelId); p.classList.toggle('hidden', !active);
+        if (active) lazyEmbed(p);
+      });
     });
   }
-  tabsRoot?.addEventListener('click', e=>{ const t=e.target.closest('[data-tab]'); if(t) activateTab(t); });
-  tabsRoot?.addEventListener('keydown', e=>{
-    const tabs = [...tabsRoot.querySelectorAll('[data-tab]')]; const cur = tabsRoot.querySelector('[data-tab][aria-selected="true"]'); const i=tabs.indexOf(cur);
-    if (e.key==='ArrowRight') { e.preventDefault(); activateTab(tabs[(i+1)%tabs.length]); }
-    if (e.key==='ArrowLeft')  { e.preventDefault(); activateTab(tabs[(i-1+tabs.length)%tabs.length]); }
-  });
+  function lazyEmbed(panel){
+    if (panel.dataset.loaded === '1') return;
+    const holder = panel.querySelector('[data-embed][data-src]');
+    if (!holder) return;
+    const src = holder.getAttribute('data-src');
+    const iframe = document.createElement('iframe');
+    iframe.src = src; iframe.loading = 'lazy'; iframe.allowFullscreen = true;
+    iframe.className = holder.className;
+    iframe.sandbox = 'allow-same-origin allow-scripts allow-popups allow-presentation';
+    iframe.referrerPolicy = 'no-referrer';
+    holder.replaceWith(iframe);
+    panel.dataset.loaded = '1';
+  }
+  // Preload first visible panel if any
+  const firstPanel = root.querySelector('[data-panel]:not(.hidden)');
+  if (firstPanel) lazyEmbed(firstPanel);
 
-  // ---------- Testimonials (lite carousel) ----------
-  const car = root.querySelector('[data-carousel]');
-  if (car){
-    const slides=[...car.querySelectorAll('[data-slide]')], dots=[...car.querySelectorAll('[data-dot]')], toast=car.querySelector('[data-toast]');
-    let idx=0, t=null, interval=parseInt(car.getAttribute('data-interval')||'6500',10);
-    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData;
-    const show = i => { idx=(i+slides.length)%slides.length; slides.forEach((s,k)=>s.classList.toggle('hidden',k!==idx)); dots.forEach((d,k)=>d.setAttribute('aria-current',k===idx?'true':'false')); };
-    const play = ()=>{ if(!reduced){ stop(); t=setInterval(()=>show(idx+1), interval); } };
-    const stop = ()=>{ if(t) clearInterval(t), t=null; };
+  // ---- Testimonials carousel (mouse + keyboard) ----
+  const carousel = root.querySelector('[data-carousel]');
+  if (carousel) {
+    const slides = $$('.relative [data-slide]', carousel);
+    const dots = $$('[data-dot]', carousel);
+    const toast = $('[data-toast]', carousel);
+    const interval = parseInt(carousel.getAttribute('data-interval') || '6000', 10);
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let idx = 0, timer = null;
+
+    function show(i){
+      idx = (i + slides.length) % slides.length;
+      slides.forEach((s,k)=> s.classList.toggle('hidden', k !== idx));
+      dots.forEach((d,k)=> d.setAttribute('aria-current', k === idx ? 'true' : 'false'));
+    }
+    function play(){ if (!prefersReduced) { stop(); timer = setInterval(()=> show(idx+1), interval); } }
+    function stop(){ if (timer) clearInterval(timer), timer = null; }
+
     dots.forEach(d=> d.addEventListener('click', ()=> show(parseInt(d.dataset.idx||'0',10))));
-    car.addEventListener('mouseenter', stop); car.addEventListener('mouseleave', play);
-    car.addEventListener('keydown', e=>{ if(e.key==='ArrowRight') show(idx+1); if(e.key==='ArrowLeft') show(idx-1); });
+    carousel.addEventListener('mouseenter', stop);
+    carousel.addEventListener('mouseleave', play);
+    carousel.addEventListener('keydown', (e)=>{
+      if (e.key === 'ArrowRight') { show(idx+1); }
+      else if (e.key === 'ArrowLeft') { show(idx-1); }
+    });
     show(0); play();
 
-    car.querySelector('[data-copy]')?.addEventListener('click', async ()=>{
+    const copyBtn = carousel.querySelector('[data-copy]');
+    copyBtn?.addEventListener('click', async ()=>{
       try{
-        const q=slides[idx]?.querySelector('blockquote')?.innerText?.trim()||'', a=slides[idx]?.querySelector('figcaption')?.innerText?.trim()||'';
-        await navigator.clipboard.writeText(`${q} — ${a}`);
-        toast?.classList.remove('hidden'); setTimeout(()=> toast?.classList.add('hidden'), 1100);
-      }catch(_){}
+        const active = slides[idx];
+        const quote = active?.querySelector('blockquote')?.innerText?.trim() || '';
+        const author= active?.querySelector('figcaption')?.innerText?.trim() || '';
+        await navigator.clipboard.writeText(`${quote} — ${author}`);
+        if (toast){ toast.classList.remove('hidden'); setTimeout(()=> toast.classList.add('hidden'), 1200); }
+      }catch(_){/* ignore */}
     });
   }
 
-  // ---------- Donate modal contract ----------
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-open-donate-modal]'); if (!btn) return;
+  // ---- Impact counters (once when visible) ----
+  const counters = root.querySelectorAll('.count[data-target]');
+  if (counters.length) {
+    const io = new IntersectionObserver((entries, obs)=>{
+      if(entries.some(en=>en.isIntersecting)){
+        counters.forEach(el=>{
+          const target = Math.max(0, parseInt(el.dataset.target||'0',10));
+          let n=0, step=Math.max(1, Math.ceil(target/80));
+          const id = setInterval(()=>{ n+=step; if(n>=target){n=target; clearInterval(id);} el.textContent = n; }, 20);
+        });
+        obs.disconnect();
+      }
+    },{threshold:.3});
+    io.observe(root);
+  }
+
+  // ---- Copy helper (Share) ----
+  root.addEventListener('click', async (e)=>{
+    const btn = e.target.closest('[data-copy]'); if(!btn) return;
     e.preventDefault();
-    (window.openDonationModal?.()) ?? window.dispatchEvent(new CustomEvent('fc:donate:open'));
-    if (typeof window.confetti === 'function' && !matchMedia('(prefers-reduced-motion: reduce)').matches){
-      window.confetti({ particleCount: 50, spread: 50, origin: { y: 0.7 } });
-    }
+    try{
+      const targetSel = btn.getAttribute('data-copy');
+      const el = targetSel ? document.querySelector(targetSel) : root;
+      const text = el?.innerText?.trim() || window.location.href;
+      await navigator.clipboard.writeText(text);
+      const toast = root.querySelector('[data-toast]'); if (toast){ toast.classList.remove('hidden'); setTimeout(()=> toast.classList.add('hidden'), 1200); }
+      window.dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'copy', area:'about' }}));
+    }catch(_){/* ignore */}
   });
+
+  // ---- Donate modal hook (site-wide contract) ----
+  document.querySelectorAll('[data-open-donate-modal]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.preventDefault(); (window.openDonationModal?.()) ?? window.dispatchEvent(new CustomEvent('fc:donate:open')); });
+  });
+  document.addEventListener('openDonate', ()=>{ (window.openDonationModal?.()) ?? window.dispatchEvent(new CustomEvent('fc:donate:open')); });
 })();
 </script>
 
+</section>

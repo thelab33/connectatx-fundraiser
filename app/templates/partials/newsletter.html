@@ -1,45 +1,270 @@
-{# ================= FundChamps • Newsletter Modal (Elite, Single-File, Premium) ================= #}
-{% set team_name      = team.team_name|default('Connect ATX Elite', true) %}
-{% set subscribe_url  = (safe_url_for('newsletter.subscribe') if (has_endpoint is defined and has_endpoint('newsletter.subscribe')) else '/newsletter/subscribe') %}
-{% set csrf           = (csrf_token() if csrf_token is defined else '') %}
-{# Optional extras (override from view) #}
-{% set require_consent = require_consent if require_consent is defined else false %}
-{% set privacy_url     = privacy_url if privacy_url is defined else '/privacy' %}
-{% set autoshow_ms     = autoshow_ms if autoshow_ms is defined else 0 %}
-{% set exitintent      = exitintent if exitintent is defined else true %}
-{% set cap_days        = cap_days if cap_days is defined else 7 %}
+<section data-ui=""${name//_/ -}"" class="block">
+{# ================== FundChamps — Newsletter + Coaches + Share + Badges (Prestige, Self‑Contained) ================== #}
+{# ---- Safe Defaults ---- #}
+{% set NONCE            = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set team_name        = team.team_name if team and team.team_name else 'Connect ATX Elite' %}
+{% set team_id          = team.id if team and team.id is defined else 'global' %}
+{% set team_slug        = team.slug if team and team.slug is defined else 'default' %}
+{% set brand_color      = team.theme_color if team and team.theme_color else '#facc15' %}
+{% set newsletter_url   = (safe_url_for('newsletter.subscribe') if (safe_url_for is defined and has_endpoint and has_endpoint('newsletter.subscribe')) else '/api/newsletter/subscribe') %}
+{% set share_url        = request.url if request is defined and request else (page_url if page_url is defined else '/') %}
+{% set newsletter_delay = newsletter_delay_ms|default(2200) %}
+{% set newsletter_key   = 'fc:newsletter:done:' ~ team_slug %}
+{% set coaches          = (team.coaches if team and team.coaches is defined and team.coaches else ['Rodriguez','Smith','Taylor']) %}
+{% set coach_roles      = (team.coach_roles if team and team.coach_roles is defined and team.coach_roles else {}) %}
+{% set coach_imgs_base  = (url_for('static', filename='images/coaches/') if url_for is defined else '/static/images/coaches/') %}
 
-<dialog
-  id="newsletter-modal"
-  class="w-[92vw] max-w-lg rounded-2xl bg-zinc-950/95 p-0 text-zinc-100 shadow-2xl ring-2 ring-yellow-400/30 backdrop:bg-black/60"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="newsletter-title"
-  aria-describedby="newsletter-desc"
-  data-autoshow="{{ autoshow_ms }}"
-  data-exitintent="{{ 1 if exitintent else 0 }}"
-  data-cap-days="{{ cap_days }}"
+<section
+  id="nl-coaches-share-badges"
+  class="relative bg-zinc-950 text-white"
+  style="--fc-brand: {{ brand_color }}; --fc-brand-100: color-mix(in srgb, {{ brand_color }} 28%, transparent); --fc-brand-200: color-mix(in srgb, {{ brand_color }} 18%, transparent); --fc-brand-300: color-mix(in srgb, {{ brand_color }} 40%, black);"
 >
-  <!-- … body/content exactly as in your spec … -->
-</dialog>
+  <style nonce="{{ NONCE }}">
+    /* ===== Scoped styles for Newsletter + Coaches + Share + Badges ===== */
+    #nl-coaches-share-badges .container{max-width:min(84rem,92vw);margin-inline:auto;padding:clamp(.75rem,2vw,2rem)}
+    #nl-coaches-share-badges .glass{backdrop-filter:blur(14px) saturate(130%);-webkit-backdrop-filter:blur(14px) saturate(130%);background:linear-gradient(180deg,rgba(20,20,20,.70),rgba(20,20,20,.86)),linear-gradient(125deg,var(--fc-brand-100),rgba(255,255,255,.03));border:1px solid var(--fc-brand-200);border-radius:1.25rem;box-shadow:0 18px 60px color-mix(in srgb, var(--fc-brand) 16%, transparent),inset 0 0 40px color-mix(in srgb, var(--fc-brand) 7%, transparent)}
+    #nl-coaches-share-badges .pill{background:color-mix(in srgb, var(--fc-brand) 14%, transparent);border:1px solid var(--fc-brand-200);border-radius:9999px;padding:.35rem .7rem}
+    #nl-coaches-share-badges .btn{transition:transform .15s ease, box-shadow .15s ease}
+    #nl-coaches-share-badges .btn:hover{transform:translateY(-1px);box-shadow:0 10px 30px color-mix(in srgb, var(--fc-brand) 25%, transparent)}
+    /* Newsletter modal */
+    #newsletter-popup{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.72);z-index:60}
+    #newsletter-popup.visible{display:flex}
+    #newsletter-content{outline:none}
+    /* Share buttons */
+    #social-share .icon-btn{border:1px solid var(--fc-brand-200);background:rgba(0,0,0,.45);border-radius:.75rem;padding:.5rem .75rem}
+    #social-share .icon-btn:hover{background:rgba(0,0,0,.6)}
+    /* Payment/Trust badges */
+    #trust-badges .badge{border:1px solid var(--fc-brand-200);background:rgba(255,255,255,.06);border-radius:.9rem;padding:.6rem .8rem;display:inline-flex;align-items:center;gap:.45rem}
+    @media (prefers-reduced-motion:reduce){#nl-coaches-share-badges *{transition:none!important;animation:none!important}}
+  </style>
 
-<style>
-  :root { --fc-gold:#facc15; --fc-red:#fca5a5; --fc-green:#34d399; }
-  #newsletter-modal::backdrop { background: rgba(0,0,0,.6); transition: background 200ms ease; }
-  #newsletter-modal[open] #newsletter-box { animation: fc-pop-in 220ms cubic-bezier(.18,.89,.32,1.28); }
-  @keyframes fc-pop-in { 0%{opacity:0;transform:translateY(8px) scale(.98)} 100%{opacity:1;transform:translateY(0) scale(1)} }
-  #newsletter-ball { transform-origin:50% 50%; animation: fc-float 3.6s ease-in-out infinite; }
-  @keyframes fc-float { 0%,100%{transform:translateY(0) rotate(0)} 50%{transform:translateY(-6px) rotate(3deg)} }
-  #swish-confetti:not(.opacity-0){ animation: fc-success 600ms ease-out 1; }
-  @keyframes fc-success { 0%{transform:scale(.8);opacity:0} 60%{transform:scale(1.1);opacity:1} 100%{transform:scale(1);opacity:1} }
-  #newsletter-form input[aria-invalid='true'] { outline:2px solid var(--fc-red); outline-offset:2px; }
-  @media (prefers-reduced-motion: reduce){ #newsletter-modal[open] #newsletter-box,#newsletter-ball,#swish-confetti{animation:none!important;transition:none!important} }
-</style>
+  <div class="container py-12">
+    <header class="mb-6 flex items-center gap-3">
+      <span class="inline-block h-2.5 w-2.5 rounded-full" style="background:var(--fc-brand)"></span>
+      <h2 class="text-xl font-extrabold tracking-tight text-yellow-300">Stay in the Loop • Meet the Coaches • Share the Love</h2>
+    </header>
 
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
-(() => {
-  /* … JS exactly as in your spec (HTMX→fetch fallback, UTM capture, Save-Data/respect, exit-intent,
-        frequency cap, confetti, focus trap, public open/close helpers) … */
-})();
-</script>
+    <!-- ===== Coaches ===== -->
+    <section aria-label="Coaches" class="glass p-5 sm:p-7">
+      <h3 class="mb-3 text-lg font-extrabold text-yellow-300">Coaches</h3>
+      <div class="flex flex-wrap gap-5">
+        {% for c in coaches %}
+        {% set lower = (c|lower|replace(' ', '')) %}
+        {% set role = coach_roles.get(c, 'Assistant Coach') %}
+        <article class="group w-44 cursor-pointer rounded-xl bg-zinc-900/60 p-4 ring-1 ring-white/10 transition hover:bg-zinc-900/70 focus-within:ring-yellow-300" tabindex="0">
+          <img alt="Coach {{ c }}" loading="lazy" decoding="async" class="mb-3 h-32 w-32 rounded-full object-cover mx-auto"
+               src="{{ coach_imgs_base ~ lower ~ '.jpg' }}" onerror="this.src='{{ coach_imgs_base }}placeholder.jpg'"/>
+          <h4 class="text-center text-base font-semibold text-yellow-200">Coach {{ c }}</h4>
+          <p class="text-center text-xs text-zinc-400">{{ role }}</p>
+        </article>
+        {% endfor %}
+      </div>
+    </section>
 
+    <!-- ===== Social Share ===== -->
+    <section id="social-share" aria-label="Social Share Buttons" data-share-url="{{ share_url }}" class="mt-6 glass p-5 sm:p-7">
+      <h3 class="mb-3 text-lg font-extrabold text-yellow-300">Share Our Mission</h3>
+      <p class="mb-3 text-sm text-zinc-300">Help {{ team_name }} reach more supporters — quick share links below.</p>
+      <div class="flex flex-wrap gap-2">
+        <a href="#" class="icon-btn" data-share="x" aria-label="Share on X / Twitter">🕊️ X/Twitter</a>
+        <a href="#" class="icon-btn" data-share="fb" aria-label="Share on Facebook">📘 Facebook</a>
+        <button type="button" class="icon-btn" data-copy-link aria-label="Copy link to page">🔗 Copy Link</button>
+      </div>
+    </section>
+
+    <!-- ===== Payment & Trust Badges ===== -->
+    <section id="trust-badges" aria-label="Payment and Trust Badges" class="mt-6 glass p-5 sm:p-7">
+      <h3 class="mb-3 text-lg font-extrabold text-yellow-300">Secure & Trusted</h3>
+      <div class="flex flex-wrap items-center gap-3 text-sm text-zinc-200">
+        <span class="badge" aria-label="Stripe Payments"><span>🔒</span> Stripe</span>
+        <span class="badge" aria-label="PayPal Accepted"><span>💳</span> PayPal</span>
+        <span class="badge" aria-label="SSL Encrypted"><span>🛡️</span> SSL</span>
+        <span class="badge" aria-label="PCI DSS Compliant"><span>✅</span> PCI‑DSS</span>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===== Newsletter Modal (inline) ===== -->
+  <div id="newsletter-popup"
+       class="hidden"
+       data-key="{{ newsletter_key }}"
+       data-delay="{{ newsletter_delay }}"
+       data-post="{{ newsletter_url }}"
+       data-team-id="{{ team_id }}"
+       data-team-name="{{ team_name }}">
+    <div id="newsletter-content" class="glass w-[92vw] max-w-md p-5 sm:p-7" role="dialog" aria-modal="true" aria-labelledby="nl-title" tabindex="0">
+      <div class="flex items-center justify-between">
+        <h3 id="nl-title" class="text-lg font-extrabold text-yellow-300">Join the {{ team_name }} Newsletter</h3>
+        <button id="newsletter-close" type="button" class="pill" aria-label="Close newsletter">×</button>
+      </div>
+      <p class="mt-2 text-sm text-zinc-300">Get tournament updates, sponsor spotlights, and impact stories straight to your inbox.</p>
+      <form id="newsletter-form" class="mt-4 flex items-stretch gap-2" novalidate>
+        <label for="newsletter-email" class="sr-only">Email</label>
+        <input id="newsletter-email" name="email" type="email" required autocomplete="email" placeholder="you@example.com"
+               class="w-full rounded-lg border border-[color:var(--fc-brand-200)] bg-black/40 px-3 py-2 text-sm placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-yellow-300"/>
+        <button type="submit" class="btn rounded-lg bg-yellow-400 px-4 py-2 text-sm font-bold text-black">Subscribe</button>
+      </form>
+      <p id="email-error" class="mt-2 hidden text-xs text-red-300" role="alert"></p>
+      <p id="newsletter-thankyou" class="mt-3 hidden text-sm text-emerald-300" role="status">Thank you! You're on the list. 💛</p>
+    </div>
+  </div>
+
+  <style nonce="{{ NONCE }}">
+    /* minimal helpers (scoped) */
+    #newsletter-popup.hidden{display:none}
+    #newsletter-popup.visible{display:flex}
+  </style>
+
+  <!-- ===== Component JS (CSP-safe) ===== -->
+  <script nonce="{{ NONCE }}">
+  (() => {
+    if (window.__fcNewsletterBound) return; 
+    window.__fcNewsletterBound = true;
+
+    const popup     = document.getElementById('newsletter-popup');
+    const content   = document.getElementById('newsletter-content');
+    const closeBtn  = document.getElementById('newsletter-close');
+    const form      = document.getElementById('newsletter-form');
+    const emailEl   = document.getElementById('newsletter-email');
+    const errEl     = document.getElementById('email-error');
+    const thanks    = document.getElementById('newsletter-thankyou');
+
+    const key       = popup?.dataset.key || 'fc:newsletter:done:default';
+    const delay     = parseInt(popup?.dataset.delay || '2200', 10);
+    const postUrl   = popup?.dataset.post || '/api/newsletter/subscribe';
+    const TEAM_ID   = popup?.dataset.teamId || 'global';
+    const TEAM_NAME = popup?.dataset.teamName || 'FundChamps';
+
+    const shouldShow = () => { try { return localStorage.getItem(key) !== '1'; } catch { return true; } };
+    const markDone   = () => { try { localStorage.setItem(key, '1'); } catch {} };
+
+    let lastFocus = null;
+    const open = () => {
+      lastFocus = document.activeElement;
+      popup.classList.add('visible');
+      popup.classList.remove('hidden');
+      popup.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => content?.focus(), 0);
+      bindTrap();
+    };
+    const close = (persist = true) => {
+      popup.classList.remove('visible');
+      popup.classList.add('hidden');
+      popup.style.display = 'none';
+      document.body.style.overflow = '';
+      unbindTrap();
+      if (persist) markDone();
+      lastFocus?.focus?.();
+    };
+
+    // Focus trap
+    let onKeyTrap;
+    const bindTrap = () => {
+      onKeyTrap = (e) => {
+        if (e.key === 'Escape') return close(true);
+        if (e.key !== 'Tab') return;
+        const list = Array.from(content.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])'))
+          .filter(el => !el.disabled && el.offsetParent !== null);
+        if (!list.length) return;
+        const [first, last] = [list[0], list[list.length - 1]];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+      };
+      document.addEventListener('keydown', onKeyTrap);
+    };
+    const unbindTrap = () => { document.removeEventListener('keydown', onKeyTrap); };
+
+    // Events
+    closeBtn?.addEventListener('click', () => close(true));
+    popup?.addEventListener('click', (e) => { if (!content.contains(e.target)) close(false); });
+
+    // Email validation
+    const rxEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/i;
+    const showError = (msg = 'Please enter a valid email.') => {
+      errEl.textContent = msg;
+      errEl.classList.remove('hidden');
+      emailEl?.setAttribute('aria-invalid', 'true');
+    };
+    const clearError = () => {
+      errEl.textContent = '';
+      errEl.classList.add('hidden');
+      emailEl?.removeAttribute('aria-invalid');
+    };
+
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = (emailEl?.value || '').trim();
+      clearError();
+      if (!rxEmail.test(email)) return showError('That email doesn’t look right.');
+
+      if (!navigator.onLine) return showError('You appear to be offline — try again later.');
+
+      try {
+        const resp = await fetch(postUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ email, team_id: TEAM_ID, team_name: TEAM_NAME })
+        });
+        if (resp.ok) {
+          thanks.style.display = 'block';
+          emailEl.disabled = true;
+          form.querySelector('button[type="submit"]')?.setAttribute('disabled', 'true');
+          markDone();
+          setTimeout(() => close(true), 1200);
+        } else {
+          const data = await resp.json().catch(() => ({}));
+          showError(data?.error || 'Server error. Please try again.');
+        }
+      } catch {
+        showError('Network error. Please try again.');
+      }
+    });
+
+    // Auto-show
+    try {
+      const ask = new URLSearchParams(location.search).get('join');
+      if (ask === 'newsletter') setTimeout(open, 300);
+      else if (shouldShow()) setTimeout(open, delay);
+    } catch {
+      if (shouldShow()) setTimeout(open, delay);
+    }
+
+    // Social share
+    const shareSection = document.querySelector('[aria-label="Social Share Buttons"]');
+    const baseUrl = shareSection?.dataset.shareUrl || location.href;
+    const popupShare = (url) => { window.open(url, '_blank', 'noopener,noreferrer,width=600,height=560'); };
+
+    shareSection?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-share],[data-copy-link]');
+      if (!btn) return;
+      e.preventDefault();
+
+      if (btn.hasAttribute('data-copy-link')) {
+        const txt = baseUrl;
+        navigator.clipboard?.writeText(txt).then(() => {
+          const orig = btn.textContent;
+          btn.textContent = 'Link Copied!';
+          setTimeout(() => btn.textContent = orig, 1500);
+        });
+        return;
+      }
+
+      const net = btn.getAttribute('data-share');
+      const enc = encodeURIComponent;
+      const text = `${TEAM_NAME} — support the team! 🏀`;
+      const map = {
+        x:  `https://twitter.com/intent/tweet?text=${enc(text)}&url=${enc(baseUrl)}`,
+        fb: `https://www.facebook.com/sharer/sharer.php?u=${enc(baseUrl)}`,
+      };
+      popupShare(map[net] || baseUrl);
+    });
+
+    // Public API
+    window.fcNewsletter = { open, close };
+  })();
+  </script>
+</section>
+
+</section>

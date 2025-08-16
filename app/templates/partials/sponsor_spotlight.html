@@ -1,0 +1,48 @@
+<section data-ui=""${name//_/ -}"" class="block">
+{# =============================================================================
+   app/templates/partials/sponsor_spotlight.html
+   FundChamps • Sponsor Spotlight (Wrapper)
+   - Delegates to sponsors_hub.html in "spotlight-only" mode
+   - Preserves legacy ID (#sponsor-spotlight) for CSS/tests
+   - No duplicate logic: hub owns data, sockets, rendering
+   - Back-compat shim: window.fcAddSponsorWall(payload)
+   - CSP-safe (NONCE/csp_nonce)
+   ============================================================================= #}
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
+
+{# CSP nonce #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+
+{# ---- Spotlight-only config (pass-through to the Hub) ---- #}
+{# Preserve legacy section ID so existing CSS/tests keep working #}
+{% set sponsors_hub_id = sponsors_hub_id|default('sponsor-spotlight') %}
+
+{# Map old prop name to hub prop (top-N slots) #}
+{% set spotlight_slots = spotlight_slots|default(total_slots if total_slots is defined else 4) %}
+
+{# Spotlight view only; disable wall + floating drawer #}
+{% set show_spotlight   = true  %}
+{% set show_inline_wall = false %}
+{% set show_floating    = false %}
+
+{# Render unified hub with the current context (sponsors_sorted, etc.) #}
+{% include "partials/sponsors_hub.html" ignore missing with context %}
+
+{# ---- Back-compat: global API shim ---- #}
+<script nonce="{{ NONCE }}">
+  (function(){
+    // Older code may call window.fcAddSponsorWall(payload)
+    if (!('fcAddSponsorWall' in window)) {
+      window.fcAddSponsorWall = function(payload){
+        try {
+          if (window.fcSponsorsHub && typeof window.fcSponsorsHub.add === 'function') {
+            window.fcSponsorsHub.add(payload);
+          }
+        } catch(_) {}
+      };
+    }
+  })();
+</script>
+
+</section>

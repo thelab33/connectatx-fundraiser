@@ -1,199 +1,100 @@
-{# ================= Connect ATX Elite — Stats & Calendar (SV-grid, snapped) ================= #}
-{% set brand_color    = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set events         = schedule if schedule is defined and schedule else [] %}
-{% set ics_url        = (safe_url_for('calendar.export_ics') if (safe_url_for is defined and has_endpoint and has_endpoint('calendar.export_ics')) else '/api/calendar.ics') %}
-{% set csv_url        = (safe_url_for('calendar.export_csv') if (safe_url_for is defined and has_endpoint and has_endpoint('calendar.export_csv')) else '/api/calendar.csv') %}
-{% set add_google_url = 'https://calendar.google.com/calendar/render?action=TEMPLATE' %}
-{% set tzlabel        = (current_tz if current_tz is defined else 'your local timezone') %}
+{# templates/partials/program_stats_and_calendar.html #}
+{% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
+{% set _team = team if team is defined and team else none %}
+{% set TEAM_NAME = (_team.team_name if _team and _team.team_name else "Connect ATX Elite") %}
 
-<section id="psc"
-         class="mx-auto w-full max-w-6xl px-4 md:px-6"
-         aria-label="Program Stats & Calendar"
-         style="--fc-brand: {{ brand_color }};">
-  <style>
-    /* -------- Scoped to #psc -------- */
-    #psc * { margin-block: 0; } /* normalize inner margins */
-    #psc .grid { display: grid; gap: 14px; }
-    @media (min-width: 1024px){ #psc .grid { grid-template-columns: 1.6fr .9fr; gap: 18px; } }
+{% set _record = (_team.record if _team and _team.record else {}) %}
+{% set _reg = _record.get('regional') or {} %}
+{% set _nat = _record.get('national') or {} %}
 
-    #psc .card {
-      border-radius: 1rem;
-      border: 1px solid rgba(255,255,255,.12);
-      background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(0,0,0,.35));
-      box-shadow: 0 8px 26px rgba(0,0,0,.35);
-    }
-    #psc .card--tight { padding: 14px; }
-    #psc .card--std   { padding: 16px; }
-    @media (min-width:768px){ #psc .card--std { padding: 18px; } }
+{% set _stats = (_team.impact_stats if _team and _team.impact_stats else [
+  {"label":"Players Enrolled","value":16},
+  {"label":"Honor Roll Scholars","value":11},
+  {"label":"Tournaments Played","value":12},
+  {"label":"Years Running","value":3},
+]) %}
 
-    #psc .title { font-weight: 900; letter-spacing: .2px; }
-    #psc .pill  { display:inline-flex; align-items:center; gap:.4rem; font-size:.75rem; font-weight:800;
-                  padding:.25rem .55rem; border-radius:9999px; background:rgba(0,0,0,.35); border:1px solid rgba(255,255,255,.14); }
+{% set _events = (
+  calendar_events if calendar_events is defined and calendar_events else
+  (events if events is defined and events else [])
+) %}
+{% set _events = _events[:6] if _events else [] %}
 
-    /* table */
-    #psc table { width: 100%; border-collapse: separate; border-spacing: 0 8px; }
-    #psc thead th { text-align: left; font-size: .78rem; color: #d4d4d8; font-weight: 700; padding: 0 8px; }
-    #psc tbody tr { background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.08); }
-    #psc tbody td { padding: 10px 8px; font-size: .9rem; }
-    #psc .badge { font-size:.72rem; border:1px solid rgba(255,255,255,.18); padding:.1rem .45rem; border-radius: .6rem; }
-    #psc .ok    { color:#22c55e; }
-    #psc .warn  { color:#f59e0b; }
-    #psc .fail  { color:#ef4444; }
-
-    /* right rail */
-    #psc .rail { display:flex; flex-direction:column; gap:12px; }
-    #psc .cta { display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
-                border-radius:9999px; font-weight:800; padding:.6rem 1rem; }
-    #psc .cta-primary { background:linear-gradient(90deg,#fde68a,#facc15); color:#111827; border:0; }
-    #psc .cta-ghost   { background:rgba(0,0,0,.5); color:#ffe08a; border:1px solid rgba(250,204,21,.35); }
-
-    /* sticky but snapped */
-    @media (min-width: 1024px){ #psc .sticky-rail { position: sticky; top: 88px; } }
-
-    /* utilities */
-    #psc .row { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; }
-    #psc .muted { color:#c4c4cc; font-size:.82rem; }
+<section aria-labelledby="psc-h" class="mx-auto w-full max-w-6xl px-4 md:px-6">
+  <style nonce="{{ __nonce }}">
+    #psc .card{background:rgba(15,15,18,.72);border:1px solid var(--fc-border);border-radius:1rem;
+      box-shadow:0 10px 32px rgba(250,204,21,.08)}
+    #psc .kpi{display:flex;flex-direction:column;gap:.15rem;padding:.85rem;border-radius:.85rem;
+      background:var(--fc-surface);border:1px solid var(--fc-border)}
+    #psc .kpi .v{font-weight:900;font-size:1.35rem;color:#fff;line-height:1}
+    #psc .kpi .l{font-size:.8rem;color:var(--fc-muted)}
   </style>
 
-  <div class="grid">
-    <!-- LEFT: Schedule / stats -->
-    <div class="card card--std" role="region" aria-label="Schedule and results">
-      <div class="row">
-        <div class="title text-yellow-300 text-lg md:text-xl flex items-center gap-2">
-          <span aria-hidden="true">🗓️</span> <span>Connect ATX Elite — Stats &amp; Calendar</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <a class="pill" href="{{ ics_url }}">+ Add .ics</a>
-          <a class="pill" href="{{ add_google_url }}" target="_blank" rel="noopener">+ Google</a>
-        </div>
+  <div id="psc" class="grid gap-6 md:grid-cols-2">
+    <!-- Program Stats -->
+    <article class="card p-5" aria-labelledby="stats-h">
+      <header class="mb-3">
+        <h3 id="stats-h" class="text-xl font-extrabold text-yellow-300">Program Stats</h3>
+        <p class="text-sm text-yellow-100/80">Snapshot of {{ TEAM_NAME }}’s season.</p>
+      </header>
+
+      <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        {% for s in _stats %}
+          <div class="kpi" role="group" aria-label="{{ s.label }}">
+            <dt class="l">{{ s.label }}</dt>
+            <dd class="v">{{ s.value }}</dd>
+          </div>
+        {% endfor %}
+      </dl>
+
+      <div class="mt-4 text-xs text-yellow-200/80">
+        <span class="inline-block mr-4">Regional: <strong>{{ _reg.get('wins', 0) }}–{{ _reg.get('losses', 0) }}</strong></span>
+        <span class="inline-block">National: <strong>{{ _nat.get('wins', 0) }}–{{ _nat.get('losses', 0) }}</strong></span>
       </div>
+    </article>
 
-      <!-- Filters -->
-      <div class="row" style="margin-top:10px;">
-        <label class="sr-only" for="psc-q">Search</label>
-        <input id="psc-q" type="search" placeholder="Search events, opponents, locations…"
-               class="w-full md:w-[340px] rounded-lg border border-white/10 bg-black/40 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-yellow-300"/>
-
-        <div class="flex items-center gap-2">
-          <select id="psc-type" class="rounded-lg border border-white/10 bg-black/40 px-2 py-2 text-sm">
-            <option value="all">All types</option>
-            <option value="practice">Practice</option>
-            <option value="tournament">Tournament</option>
-            <option value="game">Game</option>
-            <option value="other">Other</option>
-          </select>
-          <label class="pill" style="cursor:pointer">
-            <input id="psc-upcoming" type="checkbox" class="mr-1"> Upcoming only
-          </label>
-          <a class="pill" href="{{ csv_url }}">⤓ Export CSV</a>
-          <a class="pill" href="{{ ics_url }}">Export .ics</a>
+    <!-- Upcoming Schedule -->
+    <article class="card p-5" aria-labelledby="cal-h">
+      <header class="mb-3 flex items-center justify-between gap-3">
+        <div>
+          <h3 id="cal-h" class="text-xl font-extrabold text-yellow-300">Upcoming Schedule</h3>
+          <p class="text-sm text-yellow-100/80">Next events & games.</p>
         </div>
-      </div>
+        <a href="{{ safe_url_for('main_bp.calendar') or '#' }}"
+           class="inline-flex items-center rounded-xl bg-yellow-400 px-3 py-1.5 text-sm font-black text-black">
+          View Calendar
+        </a>
+      </header>
 
-      <!-- Table -->
-      <div style="margin-top:12px;">
-        <table aria-describedby="psc-note">
-          <thead>
-            <tr>
-              <th>Date</th><th>Event</th><th>Location</th><th>Time</th><th>Result</th><th>Sponsor</th>
-            </tr>
-          </thead>
-          <tbody id="psc-body">
-            {% for e in events %}
-              {% set res = (e.result or '').lower() %}
-              <tr data-type="{{ (e.type or 'other')|lower }}" data-when="{{ e.date or '' }}">
-                <td>{{ e.date or '—' }}</td>
-                <td>{{ e.title or e.event or '—' }}{% if e.note %} <span class="badge">{{ e.note }}</span>{% endif %}</td>
-                <td>{{ e.location or '—' }}</td>
-                <td>{{ e.time or '—' }}</td>
-                <td>
-                  {% if 'win' in res %}<span class="ok">🟢 Win</span>
-                  {% elif 'loss' in res %}<span class="fail">🔴 Loss</span>
-                  {% else %}<span class="warn">🟡 Upcoming</span>{% endif %}
-                </td>
-                <td>{{ e.sponsor or '—' }}</td>
-              </tr>
-            {% else %}
-              <tr><td colspan="6">Schedule coming soon — check back shortly.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-        <p id="psc-note" class="muted" style="margin-top:6px;">Times shown in {{ tzlabel }}.</p>
-      </div>
-    </div>
-
-    <!-- RIGHT: Slim callouts (tight padding, snapped in grid) -->
-    <aside class="rail sticky-rail">
-      <div class="card card--tight" role="note" aria-label="Fuel the Season">
-        <div class="title text-yellow-200 flex items-center gap-2">
-          <span aria-hidden="true">🏀</span> <span>Fuel the Season</span>
-        </div>
-        <p class="muted" style="margin-top:6px;">Every dollar supports travel, equipment, and academic tutoring.</p>
-
-        <div class="flex flex-col gap-2" style="margin-top:10px;">
-          <button class="cta cta-primary" type="button" data-open-donate-modal>Quick Donate</button>
-          <a class="cta cta-ghost" href="#tiers">See Tiers</a>
-        </div>
-      </div>
-
-      <div class="card card--tight" role="region" aria-label="Top supporters">
-        <div class="title text-yellow-200 flex items-center gap-2">
-          <span aria-hidden="true">🌟</span> <span>Sponsors</span>
-        </div>
-        <ul id="psc-sponsors" class="text-sm" style="margin-top:8px; list-style:none; padding:0;">
-          {% if top_sponsors is defined and top_sponsors %}
-            {% for s in top_sponsors[:4] %}
-              <li class="muted" style="margin-top:4px;">{{ s }}</li>
-            {% endfor %}
-          {% else %}
-            <li class="muted">Be our first VIP sponsor ✨</li>
-          {% endif %}
+      {% if _events %}
+        <ul class="divide-y divide-[var(--fc-border)]" role="list">
+          {% for e in _events %}
+            {% set title = e.title or e.name or 'Event' %}
+            {% set when  = e.when or e.start or e.date or '' %}
+            {% set where = e.where or e.location or '' %}
+            <li class="py-3 flex items-start gap-3">
+              <div class="rounded-lg bg-[var(--fc-surface)] px-2 py-1 text-xs font-bold text-yellow-200 shrink-0">
+                {{ (when|string)[:16] }}
+              </div>
+              <div class="min-w-0">
+                <div class="truncate font-extrabold text-yellow-100">{{ title }}</div>
+                {% if where %}<div class="text-xs text-yellow-100/75">{{ where }}</div>{% endif %}
+              </div>
+              {% if e.url %}
+                <a class="ml-auto inline-flex items-center justify-center rounded-lg border border-[var(--fc-border)] px-2 py-1 text-xs"
+                   href="{{ e.url }}" target="_blank" rel="noopener">
+                  Details
+                </a>
+              {% endif %}
+            </li>
+          {% endfor %}
         </ul>
-      </div>
-    </aside>
+      {% else %}
+        <div class="rounded-lg border border-[var(--fc-border)] bg-[var(--fc-surface)] p-4 text-sm text-yellow-100/80">
+          No events scheduled yet. Check back soon!
+        </div>
+      {% endif %}
+    </article>
   </div>
 </section>
-
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
-(() => {
-  const root = document.getElementById('psc'); if (!root || root.__init) return; root.__init = true;
-
-  const q = root.querySelector('#psc-q');
-  const type = root.querySelector('#psc-type');
-  const up = root.querySelector('#psc-upcoming');
-  const body = root.querySelector('#psc-body');
-
-  function rowInfo(tr){
-    const when = tr.getAttribute('data-when') || '';
-    const dt = new Date(when.replaceAll('/','-') + 'T00:00:00'); // crude but safe
-    return { when: dt, type: (tr.getAttribute('data-type')||'').toLowerCase(), text: tr.textContent.toLowerCase() };
-  }
-
-  function applyFilters(){
-    const qv = (q?.value || '').trim().toLowerCase();
-    const tv = (type?.value || 'all').toLowerCase();
-    const upcoming = up?.checked;
-
-    Array.from(body?.rows || []).forEach(tr => {
-      const info = rowInfo(tr);
-      let show = true;
-      if (qv) show = info.text.includes(qv);
-      if (show && tv !== 'all') show = info.type === tv;
-      if (show && upcoming) show = (info.when.getTime() - Date.now()) >= -86400000; // past one day hidden
-      tr.style.display = show ? '' : 'none';
-    });
-  }
-  q?.addEventListener('input', applyFilters);
-  type?.addEventListener('change', applyFilters);
-  up?.addEventListener('change', applyFilters);
-  applyFilters();
-
-  // Hook CTAs to global modal
-  root.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-open-donate-modal]'); if (!btn) return;
-    e.preventDefault();
-    try { window.openDonationModal?.(); } catch {}
-  });
-})();
-</script>
 

@@ -1,4 +1,6 @@
-# app/models/user.py
+"""
+User model — FundChamps SaaS authentication & role management.
+"""
 
 from __future__ import annotations
 import uuid
@@ -6,15 +8,16 @@ from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
-from app.models.mixins import TimestampMixin
+from app.models.mixins import TimestampMixin, SoftDeleteMixin
 
-class User(db.Model, UserMixin, TimestampMixin):
+
+class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
     """
     FundChamps SaaS User model:
       • Secure authentication (Flask-Login compatible)
       • Supports admin/sponsor/staff roles
       • Timestamp and soft-delete ready for audits
-      • Extensible for future multi-team/multi-tenant logic
+      • Extensible for multi-team/multi-tenant logic
     """
 
     __tablename__ = "users"
@@ -28,6 +31,7 @@ class User(db.Model, UserMixin, TimestampMixin):
         index=True,
         doc="Publicly safe unique identifier",
     )
+
     email = db.Column(
         db.String(255),
         unique=True,
@@ -35,30 +39,33 @@ class User(db.Model, UserMixin, TimestampMixin):
         index=True,
         doc="User's email address",
     )
+
     password_hash = db.Column(
         db.String(255),
         nullable=False,
-        doc="Hashed password",
+        doc="Hashed password (never store plaintext)",
     )
+
     is_admin = db.Column(
         db.Boolean,
         default=False,
         nullable=False,
         doc="Admin user flag",
     )
+
     is_active = db.Column(
         db.Boolean,
         default=True,
         nullable=False,
         doc="Account enabled/disabled (soft ban)",
     )
-    # Optional: Display Name (for UI/notifications)
+
     name = db.Column(
         db.String(120),
         nullable=True,
         doc="User's display name or full name (for dashboard/UI)",
     )
-    # Optional: Multi-tenant future
+
     team_id = db.Column(
         db.Integer,
         db.ForeignKey("teams.id", ondelete="SET NULL"),
@@ -67,8 +74,8 @@ class User(db.Model, UserMixin, TimestampMixin):
         doc="Related team/org if using multi-tenancy",
     )
 
-    # Relationships (if you have teams, etc.)
-    # team = db.relationship("Team", backref="users", lazy="select")
+    # Relationships
+    team = db.relationship("Team", backref="users", lazy="select")
 
     def __repr__(self) -> str:
         role = "Admin" if self.is_admin else "Sponsor"
@@ -97,13 +104,4 @@ class User(db.Model, UserMixin, TimestampMixin):
     def display_name(self) -> str:
         """Return a fallback-friendly display name."""
         return self.name or self.email.split('@')[0] or f"User-{self.id}"
-
-    # Optional: permissions, last login, etc.
-
-    # def has_permission(self, perm: str) -> bool:
-    #     """Check user permissions (stub for RBAC extension)."""
-    #     if self.is_admin:
-    #         return True
-    #     # Add fine-grained permission logic here as you scale.
-    #     return False
 

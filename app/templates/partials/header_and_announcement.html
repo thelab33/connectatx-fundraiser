@@ -1,22 +1,19 @@
-{# ==========================================================
-   FundChamps — Elite Header (PaaS-Ready, Premium, Hardened)
-   Self-contained: HTML + Scoped CSS + JS
-   ========================================================== #}
+{# =============================================================================
+   app/templates/partials/header_prestige.html
+   FundChamps — Elite Header (SV-Premium, Live-Synced)
+   - ui_bootstrap integrated (idempotent include)
+   - Listens to fc:funds:update (updates header mini-meter)
+   - Emits  fc:funds:update when it fetches socket/poll stats (so other partials sync)
+   - Donor fade-spotlight ticker (ingests array or single donation objects)
+   - CSP-safe, mobile-first, a11y-first
+   ============================================================================= #}
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
 
 {# ---------- Safe Fallbacks ---------- #}
-{% set _hdr_id             = header_id if header_id is defined and header_id else 'site-header' %}
+{% set NONCE               = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set team_name           = team.team_name if team and team.team_name is defined else 'Connect ATX Elite' %}
-{% set _logo               = (team.logo if team and team.logo else 'images/logo.webp') %}
-{% set asset_version       = asset_version|default(None) %}
-{% if _logo.startswith('http') %}
-  {% set logoSrc = _logo %}
-{% else %}
-  {% if asset_version %}
-    {% set logoSrc = url_for('static', filename=_logo.lstrip('/'), v=asset_version) %}
-  {% else %}
-    {% set logoSrc = url_for('static', filename=_logo.lstrip('/')) %}
-  {% endif %}
-{% endif %}
+{% set logo_src            = team.logo if team and team.logo else (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
 {% set funds_raised        = (funds_raised if funds_raised is defined else 0) | float %}
 {% set fundraising_goal    = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
 {% set raw_pct             = (funds_raised / fundraising_goal * 100 if fundraising_goal else 0) | round(1) %}
@@ -27,17 +24,24 @@
 {% set brand_color         = (team.theme_color if team and team.theme_color is defined and team.theme_color else '#facc15') %}
 
 {# ---------- Configurable URLs ---------- #}
-{% set stats_url                = stats_url|default('/api/stats') %}
-{% set home_url                 = home_url|default('/') %}
+{% set stats_url           = stats_url|default('/stats') %}
+{% set donors_url          = donors_url|default('/donors?limit=12') %}
+{% set home_url            = home_url|default('/') %}
 {% set announcement_partial_url = announcement_partial_url|default(None) %}
-{% set tenant_slug              = tenant_slug|default(team.slug if team and team.slug is defined else 'default') %}
+{% set tenant_slug         = tenant_slug|default(team.slug if team and team.slug is defined else 'default') %}
+{% set socket_ns           = socket_ns|default('/donations') %}
+{% set poll_ms             = poll_ms|default(15000) %}
 
+<section data-ui="{{ (name|default('header'))|replace('_','-') }}" class="block">
 <header
-  id="{{ _hdr_id }}"
+  id="site-header"
   role="banner"
-  class="sticky top-0 z-50 border-b transition-all bg-black/80 border-[color:var(--fc-brand-200)]"
+  class="sticky top-0 z-50 border-b transition-all bg-black/75 border-[color:var(--fc-brand-200)]"
   data-stats-url="{{ stats_url }}"
+  data-donors-url="{{ donors_url }}"
   data-tenant="{{ tenant_slug }}"
+  data-socket-ns="{{ socket_ns }}"
+  data-poll-ms="{{ poll_ms }}"
   style="
     --fc-brand: {{ brand_color }};
     --fc-brand-100: color-mix(in srgb, {{ brand_color }} 28%, transparent);
@@ -47,103 +51,188 @@
   "
   data-analytics="header"
 >
-  <style>
-    #{{ _hdr_id }} { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-    #{{ _hdr_id }}.is-shrunk { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
-    #{{ _hdr_id }} .shrinkable { transition: transform .2s ease, opacity .2s ease; }
-    #{{ _hdr_id }}.is-shrunk .shrinkable { transform: scale(.96); opacity:.96; }
-    #{{ _hdr_id }} .announce { background: linear-gradient(90deg, var(--fc-brand), #fef08a); color: var(--fc-brand-text); }
-    #{{ _hdr_id }} .announce a { text-decoration: underline; }
-    #{{ _hdr_id }} .mini-meter { height: .5rem; border-radius: 9999px; overflow: hidden; }
-    #{{ _hdr_id }} .mini-bg { background: rgba(255,255,255,.06); }
-    #{{ _hdr_id }} .mini-bar { width:0%; background: linear-gradient(90deg,#fde68a,var(--fc-brand),#f59e0b); transition: width .8s cubic-bezier(.22,1,.36,1); }
-    #{{ _hdr_id }}-mobile { position: fixed; inset: 0; background: rgba(0,0,0,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-    #{{ _hdr_id }}-mobile[hidden] { display: none; }
-    #{{ _hdr_id }}-mobile a { font-weight: 600; }
-    #{{ _hdr_id }} #hdr-raised,#{{ _hdr_id }} #hdr-goal,#{{ _hdr_id }} #hdr-pct { font-variant-numeric: tabular-nums; }
-    #{{ _hdr_id }}.save-data { backdrop-filter:none; -webkit-backdrop-filter:none; }
-    #{{ _hdr_id }}.save-data .shrinkable,#{{ _hdr_id }}.save-data .mini-bar { transition: none !important; }
-    @media (prefers-reduced-motion: reduce){ #{{ _hdr_id }} .shrinkable,#{{ _hdr_id }} .mini-bar { transition:none!important } }
+  <style nonce="{{ NONCE }}">
+    #site-header{backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+    #site-header .ambient-glow{position:absolute;inset:0;pointer-events:none;opacity:var(--hdrGlow,.55);background:radial-gradient(80% 120% at 50% -10%,color-mix(in srgb,var(--fc-brand) 20%,transparent),transparent 60%);transition:opacity .25s ease;animation:hdrGlowPulse 10s ease-in-out infinite}
+    @keyframes hdrGlowPulse{0%,100%{filter:saturate(95%)}50%{filter:saturate(120%)}}
+    #site-header.is-shrunk{backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}
+    #site-header .shrinkable{transition:transform .2s ease,opacity .2s ease}
+    #site-header.is-shrunk .shrinkable{transform:scale(.96);opacity:.96}
+
+    .announce{background:linear-gradient(90deg,var(--fc-brand),#fef08a);color:var(--fc-brand-text);transform:translateY(-6px);opacity:0;animation:annIn .35s ease forwards}
+    @keyframes annIn{to{transform:translateY(0);opacity:1}}
+    .announce a{text-decoration:underline}
+
+    .mini-wrap{width:100%}
+    .mini-meter{height:.5rem;border-radius:9999px;overflow:hidden}
+    .mini-bg{background:rgba(255,255,255,.06)}
+    .mini-bar{width:0%;background:linear-gradient(90deg,#fde68a,var(--fc-brand),#f59e0b);box-shadow:0 0 10px color-mix(in srgb,var(--fc-brand) 55%,transparent);transition:width .8s cubic-bezier(.22,1,.36,1)}
+    .milestones{display:flex;gap:.35rem;flex-wrap:wrap}
+    .milestone{padding:.2rem .45rem;border-radius:9999px;font-size:.70rem;line-height:1;border:1px dashed color-mix(in srgb,var(--fc-brand) 35%,transparent);color:rgba(255,255,255,.85);background:color-mix(in srgb,var(--fc-brand) 8%,transparent);transition:all .2s ease}
+    .milestone.unlocked{border-style:solid;background:color-mix(in srgb,var(--fc-brand) 18%,transparent);color:#fde68a;font-weight:700}
+
+    .donor-spot{display:flex;align-items:center;gap:.5rem;min-height:1.6rem;font-size:.82rem;opacity:.92}
+    .donor-spot .label{opacity:.7}
+    .donor-spot .value{font-weight:700;color:color-mix(in srgb,var(--fc-brand) 90%,white)}
+    .fade-wrap{position:relative;overflow:hidden;min-height:1.4rem}
+    .fade-item{position:absolute;inset:0;opacity:0;transform:translateY(6px);transition:opacity .45s ease,transform .45s ease;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;will-change:opacity,transform}
+    .fade-item.active{opacity:1;transform:translateY(0)}
+    .fade-item.exit{opacity:0;transform:translateY(-6px)}
+
+    nav a,.cta-btn{transition:transform .15s ease,box-shadow .15s ease,color .2s ease,opacity .2s ease}
+    nav a:hover,.cta-btn:hover{transform:translateY(-1px)}
+    .vip-pulse{animation:vipPulse 15s infinite}
+    @keyframes vipPulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 22px color-mix(in srgb,var(--fc-brand) 55%,transparent)}}
+
+    #mobile-menu{position:fixed;inset:0;background:rgba(0,0,0,.92);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+    #mobile-menu[hidden]{display:none}
+    #mobile-menu a{font-weight:600}
+
+    .trust{background:linear-gradient(90deg,rgba(255,255,255,.05),rgba(255,255,255,0)),linear-gradient(0deg,rgba(0,0,0,.35),rgba(0,0,0,.35))}
+    .seal{perspective:800px;width:165px;height:28px;position:relative}
+    .seal-inner{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.22,1,.36,1)}
+    .seal:hover .seal-inner{transform:rotateY(180deg)}
+    .seal-face{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid color-mix(in srgb,var(--fc-brand) 30%,transparent);backface-visibility:hidden;padding:.15rem .5rem;gap:.4rem;background:color-mix(in srgb,var(--fc-brand) 10%,rgba(0,0,0,.35));font-size:.78rem;font-weight:700}
+    .seal-back{transform:rotateY(180deg)}
+
+    .brand-text{font-size:clamp(1rem,.6vw + .9rem,1.35rem)}
+
+    @media (prefers-color-scheme: light){
+      #site-header{background:rgba(255,255,255,.7)}
+      .mini-bg{background:rgba(0,0,0,.06)}
+    }
+    @media (prefers-reduced-motion: reduce){
+      .shrinkable,.mini-bar,.vip-pulse,.ambient-glow,.announce,.fade-item,.seal-inner{transition:none!important;animation:none!important}
+    }
   </style>
 
-  <div id="{{ _hdr_id }}-sentinel" aria-hidden="true"></div>
+  <div class="ambient-glow" aria-hidden="true"></div>
+  <div id="fc-header-sentinel" aria-hidden="true"></div>
 
   {% if has_announcement %}
   <div
-    id="{{ _hdr_id }}-announcement"
+    id="announcement-bar"
     class="announce flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold border-b"
     style="border-color: var(--fc-brand-200)"
     role="status" aria-live="polite" aria-atomic="true"
     data-key="{{ (announcement.id if announcement and announcement.id else (announcement.message|default('announcement')|string)) }}"
-    {% if announcement_partial_url %}hx-get="{{ announcement_partial_url }}" hx-trigger="every 5m" hx-swap="outerHTML"{% endif %}
+    {% if announcement_partial_url %}
+      hx-get="{{ announcement_partial_url }}" hx-trigger="every 5m" hx-swap="outerHTML"
+    {% endif %}
   >
     <span class="line-clamp-2">{{ announcement.message|safe }}</span>
     {% if announcement.cta and announcement.cta_url %}
       <a href="{{ announcement.cta_url }}" target="_blank" rel="noopener noreferrer">{{ announcement.cta }}</a>
     {% endif %}
-    <button type="button" class="ml-2 px-2 py-1 rounded hover:bg-black/10 transition" aria-label="Close announcement" data-close-announcement>×</button>
+    <button type="button" class="ml-2 px-2 py-1 rounded hover:bg-black/10 transition"
+            aria-label="Close announcement" data-close-announcement>×</button>
   </div>
   {% endif %}
 
   {% if fundraising_deadline %}
   <div class="flex items-center justify-center text-sm font-semibold tracking-wide shadow text-black py-1"
-       style="background: var(--fc-brand);" role="region" aria-label="Fundraising deadline countdown" aria-live="polite" aria-atomic="true">
-    ⏰ <span id="{{ _hdr_id }}-countdown" class="ml-1" data-deadline="{{ deadline_iso }}"></span>
+       style="background: var(--fc-brand);"
+       role="region" aria-label="Fundraising deadline countdown" aria-live="polite" aria-atomic="true">
+    ⏰ <span id="header-countdown" class="ml-1" data-deadline="{{ deadline_iso }}"></span>
     <span class="ml-1">left — help us reach our goal!</span>
   </div>
   {% endif %}
 
-  {# ───────── Main Row ───────── #}
   <div class="flex flex-wrap items-center justify-between gap-4 py-3 px-4 lg:px-8">
-    <a href="{{ home_url }}" class="flex items-center gap-3 font-bold text-xl shrinkable" aria-label="{{ team_name }} home" data-analytics="logo">
-      <img src="{{ logoSrc }}" alt="{{ team_name }} logo" class="h-12 w-12 rounded-xl ring-1 ring-white/10" loading="eager" decoding="async" />
-      <span class="hidden sm:inline text-[color:var(--fc-brand)] drop-shadow">{{ team_name }}</span>
+    <a href="{{ home_url }}" class="flex items-center gap-3 font-bold text-xl shrinkable"
+       aria-label="{{ team_name }} home" data-analytics="logo">
+      <img src="{{ logo_src }}" alt="{{ team_name }} logo"
+           class="h-12 w-12 rounded-xl border bg-black shadow-[0_0_24px_color-mix(in_srgb,var(--fc-brand)_18%,transparent)]"
+           style="border-color: var(--fc-brand)" width="48" height="48" loading="eager" fetchpriority="high" />
+      <span class="brand-text hidden sm:inline text-[color:var(--fc-brand)] drop-shadow">{{ team_name }}</span>
     </a>
 
-    {# ✅ Correct primary nav with final anchors/classes #}
-    <nav class="hidden md:flex items-center gap-6 text-sm" aria-label="Primary">
-      <a href="#mission"  class="hover:text-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60">Mission</a>
-      <a href="#tiers"    class="hover:text-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60">Sponsorship Tiers</a>
-      <a href="#schedule" class="hover:text-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400/60">Schedule</a>
+    <nav class="hidden md:flex items-center gap-8 font-semibold" aria-label="Primary">
+      <a href="#mission" class="transition-colors hover:text-[color:var(--fc-brand)]">Mission</a>
+      <a href="#tiers" class="transition-colors hover:text-[color:var(--fc-brand)]">Sponsorship Tiers</a>
+      <a href="#program-stats-calendar" class="transition-colors hover:text-[color:var(--fc-brand)]">Schedule</a>
     </nav>
 
-    {# ✅ CTA cluster exactly as requested #}
-    <div class="flex items-center gap-2">
-      <a href="#donate" class="btn btn--primary hidden" data-open-donate-modal>Donate</a>
-      <a href="#tiers" class="rounded-xl px-3 py-2 bg-yellow-400/90 text-zinc-900 font-semibold hover:bg-yellow-300">Sponsor</a>
-      <a href="#sponsors" class="rounded-xl px-3 py-2 bg-white/10 ring-1 ring-white/15 hover:bg-white/15">VIP Sponsor</a>
+    <div class="hidden md:flex flex-col items-end gap-2 min-w-[19rem] mini-wrap"
+         role="region" aria-label="Fundraising progress">
+      <div class="flex items-baseline gap-2 text-sm">
+        <span id="hdr-raised" class="font-bold text-[color:var(--fc-brand)]">{{ '${:,.0f}'.format(funds_raised) }}</span>
+        <span class="opacity-60">/</span>
+        <span id="hdr-goal" class="opacity-80">{{ '${:,.0f}'.format(fundraising_goal) }}</span>
+        <span class="ml-2 text-xs font-semibold text-yellow-200"><span id="hdr-pct">{{ pct }}</span>%</span>
+      </div>
 
-      <button id="{{ _hdr_id }}-theme" class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5" aria-label="Toggle theme" type="button">🌙</button>
-      <button id="{{ _hdr_id }}-toggle" class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl" aria-expanded="false" aria-controls="{{ _hdr_id }}-mobile" aria-label="Open mobile menu" type="button">☰</button>
+      <div class="w-full mini-meter border mini-bg" aria-hidden="true" style="border-color: var(--fc-brand-200)">
+        <div id="hdr-meter" class="mini-bar h-full" style="width: {{ pct }}%"></div>
+      </div>
+
+      <div class="donor-spot w-full" role="region" aria-label="Recent donor" aria-live="polite">
+        <span class="label">Latest:</span>
+        <div class="fade-wrap flex-1" id="hdr-donor-wrap">
+          <div class="fade-item active" id="hdr-donor-active">
+            <span id="hdr-donor-name">Be the first to donate!</span>
+            <span id="hdr-donor-amount" class="value"></span>
+          </div>
+          <div class="fade-item" id="hdr-donor-next" aria-hidden="true"></div>
+        </div>
+      </div>
+
+      <div id="hdr-milestones" class="milestones" aria-hidden="true">
+        <span class="milestone" data-threshold="25">25%</span>
+        <span class="milestone" data-threshold="50">50%</span>
+        <span class="milestone" data-threshold="75">75%</span>
+        <span class="milestone" data-threshold="100">100%</span>
+      </div>
+
+      <div id="hdr-sr" class="sr-only" aria-live="polite"></div>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <button type="button"
+        class="cta-btn min-w-28 inline-flex items-center justify-center rounded-xl bg-zinc-900 text-[color:var(--fc-brand)] border font-bold px-4 py-2 ring-1 hover:scale-105 transition"
+        style="border-color: var(--fc-brand); box-shadow: 0 0 0 1px color-mix(in srgb, var(--fc-brand) 70%, transparent) inset;"
+        data-open-donate-modal data-analytics="cta:donate">💸 Donate</button>
+
+      <a href="#tiers" class="cta-btn min-w-28 inline-flex items-center justify-center rounded-xl bg-zinc-900 text-yellow-200 border font-bold px-4 py-2 ring-1 hover:opacity-90"
+         style="border-color: var(--fc-brand-200); box-shadow: 0 0 0 1px var(--fc-brand-200) inset;"
+         data-analytics="cta:sponsor">🌟 Sponsor</a>
+
+      <a href="#tiers" class="cta-btn vip-pulse min-w-32 inline-flex items-center justify-center rounded-xl bg-black text-yellow-100 border font-bold px-4 py-2 ring-2 hover:scale-105"
+         style="border-color: var(--fc-brand); box-shadow: 0 8px 30px color-mix(in srgb, var(--fc-brand) 25%, transparent);"
+         data-analytics="cta:vip">🏆 VIP Sponsor</a>
+
+      <button id="theme-toggle" class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5"
+              aria-label="Toggle theme" type="button">🌙</button>
+
+      <button id="mobile-toggle" class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl"
+              aria-expanded="false" aria-controls="mobile-menu" aria-label="Open mobile menu" type="button">☰</button>
     </div>
   </div>
 
-  {# Mini Fundraising Meter #}
-  <div class="px-4 lg:px-8 pb-3">
-    <div class="mini-meter mini-bg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct|int }}" aria-label="Fundraising progress">
-      <div id="hdr-meter" class="mini-bar" style="width: {{ pct }}%"></div>
+  <div class="trust flex items-center justify-center gap-4 text-xs py-1 px-3 text-yellow-300 bg-zinc-900/90 border-t"
+       style="border-color: var(--fc-brand-200)">
+    <span>🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold Certified · Austin, TX · Est. 2023</span>
+    <span aria-hidden="true">•</span>
+    <div class="seal" aria-label="Secure checkout">
+      <div class="seal-inner">
+        <div class="seal-face">
+          <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 1a5 5 0 0 1 5 5v2h1a2 2 0 0 1 2 2v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V10a2 2 0 0 1 2-2h1V6a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v2h6V6a3 3 0 0 0-3-3Z"/></svg>
+          <span>Secure • Stripe</span>
+        </div>
+        <div class="seal-face seal-back"><span>PCI DSS L1 • 3D Secure</span></div>
+      </div>
     </div>
-    <div class="mt-1 flex items-center justify-between text-[11px] text-yellow-200/85">
-      <span id="hdr-raised">${{ '{:,.0f}'.format(funds_raised) }}</span>
-      <span><span id="hdr-pct">{{ (pct | round(0)) | int }}</span>% • Goal <span id="hdr-goal">${{ '{:,.0f}'.format(fundraising_goal) }}</span></span>
-    </div>
-    <span id="hdr-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(funds_raised) }} of ${{ '{:,.0f}'.format(fundraising_goal) }} ({{ pct | round(0) }}%)</span>
   </div>
 
-  <div class="text-center text-xs py-1 px-3 text-yellow-300 bg-zinc-900/90 border-t" style="border-color: var(--fc-brand-200)"
-       role="note" aria-label="Program accolades">
-    🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold Certified · Austin, TX · Est. 2023
-  </div>
-
-  {# Mobile Menu (anchors aligned) #}
-  <nav id="{{ _hdr_id }}-mobile" hidden aria-label="Mobile" role="menu">
+  <nav id="mobile-menu" hidden aria-label="Mobile" role="menu">
     <div class="absolute top-4 right-4">
-      <button type="button" id="{{ _hdr_id }}-close" class="text-3xl text-yellow-300 px-2 py-1 rounded hover:bg-yellow-300/10" aria-label="Close menu">×</button>
+      <button type="button" id="mobile-close" class="text-3xl text-yellow-300 px-2 py-1 rounded hover:bg-yellow-300/10"
+              aria-label="Close menu">×</button>
     </div>
     <div class="h-full w-full flex flex-col gap-8 items-center justify-center font-semibold text-lg px-8">
-      <a href="#mission"  role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Mission</a>
-      <a href="#tiers"    role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Sponsorship Tiers</a>
-      <a href="#schedule" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Schedule</a>
+      <a href="#mission" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Mission</a>
+      <a href="#tiers" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Sponsorship Tiers</a>
+      <a href="#program-stats-calendar" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Schedule</a>
       <div class="flex flex-col gap-4 mt-2 w-full max-w-xs">
         <a href="#tiers" class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
            style="background: linear-gradient(90deg, var(--fc-brand), #fde68a)">🌟 Sponsor Now</a>
@@ -154,16 +243,182 @@
   </nav>
 </header>
 
-{# Floating Quick Donate #}
-<a href="#donate"
-   class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
-   data-open-donate-modal data-analytics="cta:quick-donate"
-   aria-label="Quick donate button"
-   hidden></a>
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
-  if (!document.body.hasAttribute('data-no-float')) {
-    const f = document.querySelector('[data-analytics="cta:quick-donate"]');
-    if (f) { f.hidden = false; f.textContent = '💸 Quick Donate'; }
+<a href="#donate" class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
+   data-open-donate-modal data-analytics="cta:quick-donate" aria-label="Quick donate button" hidden></a>
+
+<script nonce="{{ NONCE }}">
+(() => {
+  const FC = window.FC || {};
+  const emit = (name, detail) => window.dispatchEvent(new CustomEvent(name, { detail }));
+  const $  = (s, ctx=document)=>ctx.querySelector(s);
+  const $$ = (s, ctx=document)=>Array.from(ctx.querySelectorAll(s));
+  const nf = new Intl.NumberFormat(undefined,{maximumFractionDigits:0});
+  const money = n => '$' + nf.format(Math.round(Number(n)||0));
+
+  const floatCta = document.querySelector('[data-analytics="cta:quick-donate"]');
+  if (!document.body.hasAttribute('data-no-float') && floatCta){ floatCta.hidden=false; floatCta.textContent='💸 Quick Donate'; }
+
+  document.querySelectorAll('[data-close-announcement]').forEach(b=> b.addEventListener('click', ()=> b.closest('#announcement-bar')?.remove()));
+
+  const themeBtn = document.getElementById('theme-toggle');
+  if (themeBtn){
+    const apply = m => { document.documentElement.dataset.theme = m; try{ localStorage.setItem('fc_theme', m);}catch{} };
+    try{ const saved = localStorage.getItem('fc_theme'); if (saved) apply(saved);}catch{}
+    themeBtn.addEventListener('click', ()=> apply(document.documentElement.dataset.theme==='light'?'dark':'light'));
   }
+
+  const mobileToggle = document.getElementById('mobile-toggle');
+  const mobileMenu   = document.getElementById('mobile-menu');
+  const mobileClose  = document.getElementById('mobile-close');
+  if (mobileToggle && mobileMenu){
+    let lastFocus=null;
+    const open = ()=>{ lastFocus=document.activeElement; mobileMenu.hidden=false; document.body.style.overflow='hidden'; mobileToggle.setAttribute('aria-expanded','true'); (mobileMenu.querySelector('a,button')||mobileMenu).focus(); };
+    const close= ()=>{ mobileMenu.hidden=true; document.body.style.overflow=''; mobileToggle.setAttribute('aria-expanded','false'); lastFocus?.focus(); };
+    mobileToggle.addEventListener('click', open);
+    mobileClose?.addEventListener('click', close);
+    mobileMenu.addEventListener('click', e=>{ if (e.target===mobileMenu) close(); });
+    mobileMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click', close));
+    document.addEventListener('keydown', e=>{ if(e.key==='Escape' && !mobileMenu.hidden) close(); });
+  }
+
+  const header = document.getElementById('site-header');
+  (function(){
+    const sentinel = document.getElementById('fc-header-sentinel');
+    const glow = ()=>{ const max=140,y=scrollY||0,o=0.35+Math.min(y,max)/(max*2); header.style.setProperty('--hdrGlow', o.toFixed(2)); };
+    if ('IntersectionObserver' in window && sentinel){
+      const io = new IntersectionObserver(([en])=>{ if(!en) return; header.classList.toggle('is-shrunk', !en.isIntersecting); }, { rootMargin: '-56px 0px 0px 0px' });
+      io.observe(sentinel);
+    } else {
+      let shrunk=false; const onScroll=()=>{ const y=scrollY||0; if(!shrunk&&y>48){shrunk=true;header.classList.add('is-shrunk');} else if(shrunk&&y<=48){shrunk=false;header.classList.remove('is-shrunk');} };
+      onScroll(); addEventListener('scroll', onScroll, {passive:true});
+    }
+    glow(); addEventListener('scroll', glow, {passive:true});
+  })();
+
+  const meter = {
+    bar:   $('#hdr-meter', header),
+    pct:   $('#hdr-pct', header),
+    raised:$('#hdr-raised', header),
+    goal:  $('#hdr-goal', header),
+    sr:    $('#hdr-sr', header),
+    ms:    $('#hdr-milestones', header)
+  };
+  let _r = parseFloat((meter.raised?.textContent||'').replace(/[^0-9.-]+/g,'')) || 0;
+  let _g = parseFloat((meter.goal?.textContent||'').replace(/[^0-9.-]+/g,'')) || 10000;
+
+  const animateCountTo = (el, to, from=null, dur=700) => {
+    if (!el) return; const start=(from==null)?parseFloat((el.textContent||'').replace(/[^0-9.-]+/g,''))||0:+from;
+    const diff=+to-start, t0=performance.now();
+    const step=t=>{ const p=Math.min(1,Math.max(0,(t-t0)/dur)); const e=1-Math.pow(1-p,3); el.textContent = money(start+diff*e); if(p<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  const updateMilestones = p => { $$('.milestone', meter.ms).forEach(m=> m.classList.toggle('unlocked', p >= (+m.dataset.threshold||0)-.01)); };
+  const setMeter = (raised, goal, {broadcast=false}={}) => {
+    const r=Number(raised)||0, g=Math.max(0,Number(goal)||0), p=g?Math.min(100,Math.max(0,(r/g)*100)):0;
+    if (meter.bar) meter.bar.style.width = p.toFixed(1)+'%';
+    if (meter.pct) meter.pct.textContent = p.toFixed(1).replace(/\.0$/,'');
+    if (meter.raised) animateCountTo(meter.raised, r, _r);
+    if (meter.goal) meter.goal.textContent = money(g);
+    if (meter.sr) meter.sr.textContent = `Raised ${money(r)} of ${money(g)} (${p.toFixed(1)}%)`;
+    updateMilestones(p); _r=r; _g=g; if (broadcast) emit('fc:funds:update', { raised:r, goal:g });
+  };
+
+  const donor = {
+    wrap:  $('#hdr-donor-wrap', header),
+    active:$('#hdr-donor-active', header),
+    next:  $('#hdr-donor-next', header),
+    pause:false, queue:[]
+  };
+  const donorHTML = (name, amount) => {
+    const esc = s=>String(s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+    return `<span>${esc(name||'Anonymous')}</span>${amount!=null?` <span class="value">${money(amount)}</span>`:''}`;
+  };
+  const donorShow = item => { if(!donor.active||!donor.next) return;
+    donor.next.innerHTML = donorHTML(item?.name, item?.amount);
+    donor.next.classList.add('active'); donor.active.classList.add('exit');
+    setTimeout(()=>{ donor.active.classList.remove('active','exit'); const tmp=donor.active; donor.active=donor.next; donor.next=tmp; }, 450);
+  };
+  const donorTick = ()=>{ if(donor.pause||donor.queue.length===0) return; const it=donor.queue.shift(); donor.queue.push(it); donorShow(it); };
+  donor.wrap?.addEventListener('mouseenter', ()=> donor.pause=true);
+  donor.wrap?.addEventListener('mouseleave', ()=> donor.pause=false);
+  donor.wrap?.addEventListener('touchstart', ()=> donor.pause=true, {passive:true});
+  donor.wrap?.addEventListener('touchend', ()=> donor.pause=false);
+
+  const donorSeen = new Set();
+  const ingestDonors = (items=[]) => {
+    const add=[]; for (const it of items){ const key=(String(it.name||'Anonymous')+'|'+String(Math.round(it.amount||0))); if(donorSeen.has(key)) continue; donorSeen.add(key); add.push({name:it.name||'Anonymous',amount:(it.amount!=null?Number(it.amount):null)}); }
+    if(add.length){ donor.queue = add.concat(donor.queue); donorShow(donor.queue[0]); }
+  };
+  addEventListener('fc:donation:ingest', ev => {
+    const p = ev.detail; if (!p) return;
+    if (Array.isArray(p)) ingestDonors(p);
+    else if (p.name || p.amount!=null) ingestDonors([p]);
+  }, {passive:true});
+
+  const cfg = {
+    statsUrl: header.dataset.statsUrl || '/stats',
+    donorsUrl: header.dataset.donorsUrl || '/donors?limit=12',
+    socketNs: header.dataset.socketNs || '/donations',
+    pollMs: parseInt(header.dataset.pollMs || '15000', 10)
+  };
+
+  const setupSocket = () => {
+    const io = window.io || FC.io; if (!io) return false;
+    try {
+      const socket = window.__fcSocket || (window.__fcSocket = io(cfg.socketNs, { transports:['websocket','polling'] }));
+      socket.on('new_donation', payload => {
+        const raised = payload.funds_raised ?? payload.raised;
+        const goal   = payload.fundraising_goal ?? payload.goal;
+        setMeter(raised, goal, { broadcast:true });
+        if (payload.donor_name || payload.amount) ingestDonors([{ name: payload.donor_name, amount: payload.amount }]);
+      });
+      return true;
+    } catch { return false; }
+  };
+  const socketsOk = setupSocket();
+
+  if (!socketsOk){
+    (async function poll(){
+      try {
+        const [sres, dres] = await Promise.allSettled([
+          fetch(cfg.statsUrl,  { headers:{Accept:'application/json'}, cache:'no-store' }),
+          fetch(cfg.donorsUrl, { headers:{Accept:'application/json'}, cache:'no-store' })
+        ]);
+        if (sres.status==='fulfilled' && sres.value.ok){
+          const j = await sres.value.json();
+          setMeter(j.raised ?? j.funds_raised, j.goal ?? j.fundraising_goal, { broadcast:true });
+        }
+        if (dres.status==='fulfilled' && dres.value.ok){
+          const donors = await dres.value.json();
+          ingestDonors(Array.isArray(donors) ? donors : (donors.items||[]));
+        }
+      } catch {}
+      const slow = (navigator.connection && (navigator.connection.saveData || (navigator.connection.effectiveType||'').includes('2g')));
+      setTimeout(poll, slow ? Math.max(30000, cfg.pollMs) : cfg.pollMs);
+    })();
+  }
+
+  (function(){ const p=_g?Math.min(100,Math.max(0,(_r/_g)*100)):0; if (meter.bar) meter.bar.style.width=p.toFixed(1)+'%'; updateMilestones(p); })();
+  setInterval(donorTick, 4000);
+
+  (function(){
+    const cd = document.getElementById('header-countdown'); if (!cd?.dataset.deadline) return;
+    const dl = new Date(cd.dataset.deadline); if (isNaN(dl)) return;
+    const tick = ()=>{ const now=new Date(); let diff=Math.max(0, dl-now);
+      const d=Math.floor(diff/86400000); diff-=d*86400000;
+      const h=Math.floor(diff/3600000);  diff-=h*3600000;
+      const m=Math.floor(diff/60000);    diff-=m*60000;
+      const s=Math.floor(diff/1000);
+      cd.textContent = `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    };
+    tick(); setInterval(tick, 1000);
+  })();
+
+  addEventListener('fc:funds:update', ev=>{
+    const d = ev.detail||{}; const r = (typeof d.raised==='number')?d.raised:_r; const g = (typeof d.goal==='number')?d.goal:_g;
+    if (r!==_r || g!==_g) setMeter(r, g);
+  }, {passive:true});
+})();
 </script>
+</section>
 

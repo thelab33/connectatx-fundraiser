@@ -1,4 +1,6 @@
-# app/models/mixins.py
+"""
+Reusable SQLAlchemy mixins for timestamps and soft deletes.
+"""
 
 from datetime import datetime
 from sqlalchemy import event
@@ -7,7 +9,8 @@ from app.extensions import db
 
 class TimestampMixin:
     """
-    Adds `created_at` and `updated_at` DateTime columns and auto-updates `updated_at` before flush.
+    Adds `created_at` and `updated_at` DateTime columns.
+    Automatically updates `updated_at` before updates.
     """
 
     created_at = db.Column(
@@ -39,7 +42,7 @@ class TimestampMixin:
 
 class SoftDeleteMixin:
     """
-    Adds a soft-delete flag and helper methods to soft-delete/restore instances.
+    Adds a `deleted` flag and helper methods for soft delete/restore.
     """
 
     deleted = db.Column(
@@ -51,20 +54,20 @@ class SoftDeleteMixin:
     )
 
     def soft_delete(self, commit: bool = True) -> None:
-        """Mark this record as deleted (soft delete)."""
+        """Mark this record as deleted."""
         self.deleted = True
         if commit:
             db.session.commit()
 
     def restore(self, commit: bool = True) -> None:
-        """Unmark this record as deleted (restore)."""
+        """Restore a previously soft-deleted record."""
         self.deleted = False
         if commit:
             db.session.commit()
 
     @classmethod
     def active(cls):
-        """Query only non-deleted records."""
+        """Query only active (non-deleted) records."""
         return cls.query.filter_by(deleted=False)
 
     @classmethod
