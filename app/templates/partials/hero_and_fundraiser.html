@@ -1,15 +1,10 @@
 {# =============================================================================
    app/templates/partials/hero_and_fundraiser.html
    Prestige Hero (Glass 2.0 • Animated • CSP-safe • ui_bootstrap-integrated)
-
-   Depends on: partials/ui_bootstrap.html (utilities, CSP nonce helper, event bus)
-   Listens for: CustomEvent('fc:funds:update', {raised, goal, sponsorName})
    ============================================================================= #}
 
-{# Bring in global utilities (idempotent include) #}
 {% include "partials/ui_bootstrap.html" ignore missing with context %}
 
-{# ---------- Safe fallbacks & tokens ---------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set team_name = (team.team_name if team and team.team_name is defined else 'Connect ATX Elite') %}
 {% set theme_hex = (team.theme_color if team and team.theme_color is defined else '#f59e0b') %}
@@ -23,54 +18,49 @@
 {% set quick_donate_amounts = quick_donate_amounts if quick_donate_amounts is defined and quick_donate_amounts else [25,50,100,250] %}
 {% set stripe_publishable_key = stripe_publishable_key|default('') %}
 {% set sponsors = sponsors if sponsors is defined and sponsors else ['Austin Realty','TechNova','River BBQ','Sunrise Dental'] %}
-
-{# ---------- Endpoints (robust) ---------- #}
-{% set sponsor_list_href    = (url_for('main_bp.sponsor_list') if url_for is defined else '/sponsors') %}
-{% set become_sponsor_href  = (url_for('main_bp.become_sponsor') if url_for is defined else '/become-sponsor') %}
-
-{# ---------- Flex upgrade knobs (data-driven) ---------- #}
+{% set sponsor_list_href    = (url_for('main.sponsor_list') if url_for is defined else '/sponsors') %}
+{% set become_sponsor_href  = (url_for('main.become_sponsor') if url_for is defined else '/become-sponsor') %}
 {% set vip_thresholds = vip_thresholds if vip_thresholds is defined and vip_thresholds else [5000, 10000, 20000] %}
 {% set goal_heat_enabled = goal_heat_enabled if goal_heat_enabled is defined else true %}
 {% set ab_copy = ab_copy if ab_copy is defined and ab_copy else [
   "Your $25 covers 1 practice",
   "$25 = 1 practice pass"
 ] %}
-
-{# ---------- Derived values ---------- #}
 {% set pct_raw = (100.0 * (funds_raised / (fundraising_goal if fundraising_goal else 1))) if fundraising_goal else 0 %}
 {% set pct     = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) | round(1) %}
 
-<section id="fc-hero" class="relative overflow-clip" aria-labelledby="fc-hero-title">
+<section id="hero"
+         class="relative z-30"           {# <-- sits above page chrome, below modals #}
+         aria-labelledby="fc-hero-title"
+         style="--fc-brand: {{ theme_hex }}; isolation:isolate;"> {# new stacking context #}
+
   {# Background image + gradient mask + ambient glow #}
-  <div class="absolute inset-0">
-    <img src="{{ hero_bg }}" alt="" class="h-full w-full object-cover object-center opacity-75" loading="eager" decoding="async" />
-    <div class="absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-zinc-950" aria-hidden="true"></div>
+  <div class="absolute inset-0 -z-[1]">               {# <-- background behind all hero content #}
+    <img src="{{ hero_bg }}" alt=""
+         class="pointer-events-none h-full w-full object-cover object-center opacity-75"
+         loading="eager" decoding="async" />
+    <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-zinc-950" aria-hidden="true"></div>
     <div class="pointer-events-none absolute inset-0" aria-hidden="true"
-         style="box-shadow: 0 0 120px 40px color-mix(in oklab, {{ theme_hex }} 40%, transparent) inset;"></div>
-    {# Goal Heat overlay (opacity driven by CSS var --heat) #}
+         style="box-shadow: 0 0 120px 40px color-mix(in oklab, var(--fc-brand) 40%, transparent) inset;"></div>
     <div class="pointer-events-none absolute inset-0 heat-layer" aria-hidden="true"></div>
   </div>
 
-  <div class="relative fc-section">
-    <!-- Glass 2.0 shell -->
+  <div class="relative z-10 fc-section">               {# <-- content above bg, below overlays #}
     <div class="rounded-3xl ring-1 ring-white/10 backdrop-blur-xl bg-white/5 p-5 sm:p-8 lg:p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]">
-      <!-- Top: Title + Countdown -->
       <div class="fc-head flex-col md:flex-row gap-6">
         <div>
           <h1 id="fc-hero-title" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
             <span class="inline-block bg-clip-text text-transparent"
-                  style="background-image: linear-gradient(90deg, {{ theme_hex }}, #fff);">
+                  style="background-image: linear-gradient(90deg, var(--fc-brand), #fff);">
               {{ team_name }}
             </span>
             <span class="ml-1 opacity-90">Fundraiser</span>
           </h1>
           <p class="mt-2 text-sm sm:text-base text-zinc-200/90" id="fc-ab-copy">
-            <!-- Fallback text if JS is off -->
             Every dollar fuels travel, uniforms, and training. You’re part of the story.
           </p>
         </div>
 
-        <!-- Countdown -->
         <div class="grid grid-cols-4 gap-2 text-center select-none" role="timer" aria-live="polite">
           {% for key in ['Days','Hrs','Min','Sec'] %}
           <div class="rounded-xl bg-white/5 ring-1 ring-white/10 px-3 py-2">
@@ -81,9 +71,7 @@
         </div>
       </div>
 
-      <!-- Progress + CTAs -->
       <div class="mt-6 sm:mt-8 grid lg:grid-cols-5 gap-6">
-        <!-- Progress Card -->
         <section class="lg:col-span-3" aria-labelledby="fc-progress-title">
           <div class="rounded-2xl p-5 ring-1 ring-white/10 bg-gradient-to-br from-white/5 to-white/0">
             <h2 id="fc-progress-title" class="sr-only">Fundraising progress</h2>
@@ -103,20 +91,14 @@
               </div>
             </div>
 
-            <!-- Meter -->
             <div class="mt-4">
-              <div class="relative h-4 w-full rounded-full bg-zinc-800/80 ring-1 ring-white/10 overflow-hidden"
-                   aria-label="Fundraising progress" role="img">
-                <!-- Ambient shine -->
+              <div class="relative h-4 w-full rounded-full bg-zinc-800/80 ring-1 ring-white/10 overflow-hidden" aria-label="Fundraising progress" role="img">
                 <div class="absolute inset-0 animate-[shine_3s_linear_infinite] opacity-20 mix-blend-overlay"
                      style="background: linear-gradient(90deg, transparent, white, transparent);"></div>
-                <!-- Fill -->
-                <div id="fc-bar"
-                     class="h-full rounded-full"
-                     style="width: {{ pct }}%; background: linear-gradient(90deg, {{ theme_hex }}, #22c55e);"></div>
+                <div id="fc-bar" class="h-full rounded-full"
+                     style="width: {{ pct }}%; background: linear-gradient(90deg, var(--fc-brand), #22c55e);"></div>
               </div>
 
-              <!-- Milestones -->
               <div class="relative mt-3 flex justify-between text-[11px] text-zinc-300">
                 {% for m in [25,50,75,100] %}
                   <div class="group relative flex-1">
@@ -131,7 +113,6 @@
                 {% endfor %}
               </div>
 
-              <!-- Percent + deadline -->
               <div class="mt-3 flex items-center justify-between">
                 <div class="text-sm text-zinc-300">
                   <span class="sr-only">Progress:</span>
@@ -145,7 +126,6 @@
           </div>
         </section>
 
-        <!-- CTAs + Security Seal + Donor Ticker -->
         <aside class="lg:col-span-2" aria-labelledby="fc-quick-actions">
           <div class="rounded-2xl p-5 ring-1 ring-white/10 bg-white/5 flex flex-col gap-4">
             <h2 id="fc-quick-actions" class="sr-only">Quick actions</h2>
@@ -154,7 +134,7 @@
               {% for amt in quick_donate_amounts %}
                 <button type="button"
                         class="fc-cta tier-pulse rounded-xl px-3 py-3 text-base font-semibold ring-1 ring-white/10"
-                        style="background: {{ theme_hex }}cc"
+                        style="background: color-mix(in srgb, var(--fc-brand) 80%, transparent)"
                         data-amount="{{ amt }}"
                         aria-label="Quick donate {{ amt }} dollars">
                   ${{ amt }}
@@ -173,7 +153,6 @@
               </a>
             </div>
 
-            <!-- Security Seal Flip -->
             <div class="relative mt-1 h-12 [perspective:1000px]" aria-hidden="true">
               <div class="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-700 hover:[transform:rotateY(180deg)]">
                 <div class="absolute inset-0 grid place-items-center rounded-xl ring-1 ring-white/10 bg-white/5 [backface-visibility:hidden]">
@@ -187,7 +166,6 @@
               </div>
             </div>
 
-            <!-- Mini Sponsor/Donor Ticker -->
             <div class="relative mt-2 overflow-hidden rounded-xl ring-1 ring-white/10 bg-white/5">
               <div class="whitespace-nowrap will-change-transform animate-[fcTicker_24s_linear_infinite] py-2" id="fc-ticker" aria-label="Sponsor ticker">
                 {% for s in sponsors %}
@@ -199,7 +177,6 @@
         </aside>
       </div>
 
-      <!-- Micro trust strip -->
       <div class="mt-6 grid sm:grid-cols-3 gap-3 text-center">
         <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">🎯 Goal tracking in real-time</div>
         <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">🔒 Secure checkout</div>
@@ -208,8 +185,8 @@
     </div>
   </div>
 
-  <style nonce="{{ NONCE }}">
-    #fc-hero { --heat: 0; }
+  {{ style_open() }}
+    #fc-hero { --heat: 0; scroll-margin-top: clamp(64px, 8vh, 96px); } /* anchors won't hide under sticky header */
     @keyframes shine { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
     @keyframes fcTicker { 0%{ transform: translateX(0)} 100%{ transform: translateX(-50%)} }
     @media (prefers-reduced-motion: reduce) {
@@ -220,30 +197,20 @@
       0%,100%{ transform:scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,.0); }
       50%     { transform:scale(1.02); box-shadow: 0 10px 30px -10px rgba(255,255,255,.15); }
     }
-    /* Goal Heat: opacity scales with --heat (0..1) */
     #fc-hero .heat-layer{
       background:
         radial-gradient(120% 80% at 50% 0%,
-          {{ theme_hex }} 0%,
+          var(--fc-brand) 0%,
           transparent 60%);
       opacity: calc(0.18 + 0.42 * var(--heat));
       transition: opacity .6s ease;
     }
-    /* Milestone active state toggled by JS via .active on wrapper group */
     .group.active span { color:#fff }
-  </style>
+  {{ style_close() }}
 
-  {# Prefer the utility macro for CSP-safe scripts if available #}
-  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
+  {{ script_open() }}
   (() => {
     if (window.__fcHeroInit) return; window.__fcHeroInit = true;
-
-    const FC = window.FC || {};
-
-    // --- config from Jinja ---
-    const VIPS = {{ vip_thresholds|tojson|safe }};
-    const HEAT_ON = {{ 'true' if goal_heat_enabled else 'false' }};
-    const AB_COPY = {{ ab_copy|tojson|safe }};
 
     const $  = (sel, root=document) => root.querySelector(sel);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -272,37 +239,14 @@
       deadline: new Date('{{ fundraiser_deadline }}'),
     };
 
-    // Prefer shared confetti if provided by ui_bootstrap; else fallback
-    const burstConfetti = typeof FC.burstConfetti === 'function'
-      ? FC.burstConfetti
-      : (function(){
-          return function fallbackConfetti(n=24){
-            try{
-              const c = document.createElement('canvas');
-              c.width = innerWidth; c.height = 240;
-              Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60});
-              document.body.appendChild(c);
-              const ctx = c.getContext('2d');
-              const parts = Array.from({length:n}).map(()=>({
-                x: Math.random()*c.width, y: -20 - Math.random()*60,
-                vx:(Math.random()-.5)*3, vy:2+Math.random()*3, r:2+Math.random()*4, a:1
-              }));
-              const colors = ['#ffffff','{{ theme_hex }}','#22c55e','#60a5fa','#eab308'];
-              (function tick(){
-                ctx.clearRect(0,0,c.width,c.height);
-                parts.forEach(p=>{
-                  p.x+=p.vx; p.y+=p.vy; p.a -= 0.012;
-                  ctx.globalAlpha = Math.max(0,p.a);
-                  ctx.fillStyle = colors[(Math.random()*colors.length)|0];
-                  ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
-                });
-                if(parts.some(p=>p.a>0)) requestAnimationFrame(tick); else c.remove();
-              })();
-            } catch {}
-          }
-        })();
+    const VIPS   = {{ vip_thresholds|tojson|safe }};
+    const HEAT_ON = {{ 'true' if goal_heat_enabled else 'false' }};
+    const AB_COPY = {{ ab_copy|tojson|safe }};
 
-    // Animate number helper (easeOutCubic)
+    const confetti = (window.fcUX && typeof window.fcUX.confetti === 'function')
+      ? window.fcUX.confetti
+      : function noop(){};
+
     function tweenNumber(el, to, dur=700){
       if(!el) return;
       const from = parseFloat((el.textContent||'0').replace(/[^0-9.-]/g,'')) || 0;
@@ -331,25 +275,26 @@
         if(wrap) wrap.classList.toggle('active', pct >= m - 0.01);
       });
 
-      // One-shot session confetti on % milestones
+      if (window.fcUX && typeof window.fcUX.announce === 'function') {
+        window.fcUX.announce(`Raised ${fmtMoney(state.raised)} of ${fmtMoney(state.goal)}. ${pct.toFixed(0)} percent funded.`);
+      }
+
       try {
         const key = 'fc_ms_hit';
         const prev = parseFloat(sessionStorage.getItem(key) || '0');
         const hit = [25,50,75,100].find(m => prev < m && pct >= m);
-        if(hit){ sessionStorage.setItem(key, String(hit)); burstConfetti(12 + hit/2); }
+        if(hit){ sessionStorage.setItem(key, String(hit)); confetti({ particleCount: 24 + hit/2 }); }
       } catch {}
 
-      // Goal Heat
       if(HEAT_ON && els.root){
         els.root.style.setProperty('--heat', (pct/100).toFixed(3));
       }
 
-      // VIP threshold confetti (absolute $ thresholds)
       try {
         const key = 'fc_vip_hit';
         const prev = parseFloat(sessionStorage.getItem(key) || '0');
         const crossed = [...VIPS].sort((a,b)=>a-b).find(th => prev < th && state.raised >= th);
-        if(crossed){ sessionStorage.setItem(key, String(crossed)); burstConfetti(24 + Math.min(48, crossed/250)); }
+        if(crossed){ sessionStorage.setItem(key, String(crossed)); confetti({ particleCount: 48 }); }
       } catch {}
     }
 
@@ -368,20 +313,15 @@
       if(el.sec)  el.sec.textContent  = String(sec).padStart(2,'0');
     }
 
-    // Quick donate UX (delegates Checkout creation to backend)
     function openCheckout(amount){
-      const key = '{{ stripe_publishable_key }}';
-      // Whether Stripe is present or not, we use the same backend entry point in this build.
       window.location.href = `/donate?amount=${encodeURIComponent(amount||0)}`;
     }
 
-    // Wire up buttons
     $$('#fc-hero .fc-cta').forEach(btn=>{
       btn.addEventListener('click', ()=> openCheckout(btn.dataset.amount));
     });
     $('#fc-donate')?.addEventListener('click', ()=> openCheckout(0));
 
-    // A/B copy (sticky per-device)
     (function abCopy(){
       try{
         const key = 'fc_ab_copy_hero_v1';
@@ -392,24 +332,23 @@
       } catch {}
     })();
 
-    // Init
     setProgress(state.raised, state.goal);
     updateCountdown();
     setInterval(updateCountdown, 1000);
 
-    // Listen for global updates
-    addEventListener('fc:funds:update', (e)=>{
-      const d = e.detail || {};
-      setProgress(
-        typeof d.raised==='number' ? d.raised : state.raised,
-        typeof d.goal  ==='number' ? d.goal   : state.goal
-      );
-      if(d.sponsorName && els.ticker){
-        const safe = String(d.sponsorName).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
-      }
-    }, { passive:true });
+    if (window.fcBus && typeof window.fcBus.on === 'function') {
+      window.fcBus.on('fc:funds:update', (d={}) => {
+        setProgress(
+          typeof d.raised==='number' ? d.raised : state.raised,
+          typeof d.goal  ==='number' ? d.goal   : state.goal
+        );
+        if(d.sponsorName && els.ticker){
+          const safe = String(d.sponsorName).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+          els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
+        }
+      });
+    }
   })();
-  </script>
+  {{ script_close() }}
 </section>
 

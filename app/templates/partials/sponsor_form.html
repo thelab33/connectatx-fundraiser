@@ -8,7 +8,11 @@
 ============================================================================= #}
 
 {# --- Safe URL + CSRF fallbacks (no current_app requirement) --- #}
-{% set action_url = (safe_url_for('main.sponsor') if (safe_url_for is defined and has_endpoint('main.sponsor')) else (url_for('main.sponsor') if (url_for is defined) else '/sponsor')) %}
+{% if safe_url_for is defined %}
+  {% set action_url = safe_url_for('main.become_sponsor', default='/become-sponsor') %}
+{% else %}
+  {% set action_url = '/become-sponsor' %}
+{% endif %}
 {% set csrf_val   = (csrf_token() if csrf_token is defined else '') %}
 {% set quick_amts = quick_amts if quick_amts is defined else [25, 50, 100, 150, 250] %}
 

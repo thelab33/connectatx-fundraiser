@@ -1,21 +1,24 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-<section data-ui=""${name//_/ -}"" class="block">
 {# ============================================================
-   FundChamps — Header Sponsor Ticker (SV Premium / CSP-safe / A11Y)
+   FundChamps — Header Sponsor Ticker (SV-Premium / CSP-safe / A11Y)
    Expects (optional): items=[{name,amount,when,avatar,url?}], socket_ns
-   Fallback: polls `ticker_url` (default: /donations/ticker)
+   Fallback: polls `ticker_url` (default: /api/donations/ticker)
    Hooks in: Socket.IO 'new_donation', CustomEvents 'fc:vip' | 'fc:donation'
    ============================================================ #}
+
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
 {% set socket_ns   = socket_ns|default('/donations') %}
-{% set ticker_url  = ticker_url|default('/donations/ticker') %}
+{% set ticker_url  = ticker_url|default('/api/donations/ticker') %}
 {% set items       = items if items is defined and items else [] %}
+{% set name_slug   = (name|default('header_ticker'))|replace('_','-') %}
 
 <section id="hdr-ticker"
+  data-ui="{{ name_slug }}"
   class="w-full border-t border-b border-yellow-400/10 bg-black/40"
   role="region" aria-label="Recent support ticker"
   data-endpoint="{{ ticker_url }}" data-socket-ns="{{ socket_ns }}"
   style="--fc-brand: {{ brand_color }}; --hdr-speed: 80; /* px per second */">
+
   <style nonce="{{ NONCE }}">
     /* ----- Scoped to #hdr-ticker only ----- */
     #hdr-ticker .rail{ overflow:hidden }
@@ -44,12 +47,15 @@
           {% for it in items %}
           <li role="listitem">
             {% if it.avatar %}<img loading="lazy" decoding="async" src="{{ it.avatar }}" alt="">{% else %}<span aria-hidden="true">🎉</span>{% endif %}
-            <span class="font-semibold text-yellow-200">{{ it.name|default('Anonymous') }}</span>
+            {% if it.url %}<a href="{{ it.url }}" target="_blank" rel="noopener sponsored nofollow" class="font-semibold text-yellow-200">{{ it.name|default('Anonymous') }}</a>
+            {% else %}<span class="font-semibold text-yellow-200">{{ it.name|default('Anonymous') }}</span>{% endif %}
             <span class="text-yellow-100/80">gave</span>
             <span class="font-bold text-yellow-300">${{ '{:,.0f}'.format(it.amount|default(0)) }}</span>
             <span class="text-[11px] text-zinc-400">· {{ it.when|default('just now') }}</span>
           </li>
           {% endfor %}
+        {% else %}
+          <li role="listitem"><span aria-hidden="true">🎉</span><span class="text-yellow-200 font-semibold">Be the first to donate!</span></li>
         {% endif %}
       </ul>
     </div>
@@ -78,7 +84,7 @@
     const when = esc(it?.when || 'just now');
     const avatar = esc(it?.avatar || '');
     const href = esc(it?.url || '');
-    const who = href ? `<a href="${href}" target="_blank" rel="noopener sponsored" class="font-semibold text-yellow-200">${name}</a>`
+    const who = href ? `<a href="${href}" target="_blank" rel="noopener sponsored nofollow" class="font-semibold text-yellow-200">${name}</a>`
                      : `<span class="font-semibold text-yellow-200">${name}</span>`;
     return `
       <li role="listitem">
@@ -143,15 +149,27 @@
     io.observe(rail);
   }
 
-  // Poll endpoint (skip when tab hidden)
-  const endpoint = root.getAttribute('data-endpoint') || '/donations/ticker';
+  // Poll endpoint (JSON preferred; HTML tolerated)
+  const endpoint = root.getAttribute('data-endpoint') || '/api/donations/ticker';
   async function poll(){
     try {
       if (document.hidden) return;
-      const r = await fetch(endpoint, { headers:{'Accept':'application/json'}, cache:'no-store' });
-      if (r.ok) {
+      const r = await fetch(endpoint, { headers:{'Accept':'application/json, text/html;q=0.8'}, cache:'no-store' });
+      if (!r.ok) return;
+      const ct = r.headers.get('content-type') || '';
+      if (ct.includes('application/json')) {
         const data = await r.json();
         if (Array.isArray(data)) render(data);
+      } else {
+        // If the server returns HTML, try to pick out <li> nodes
+        const txt = await r.text();
+        const tmp = document.createElement('template'); tmp.innerHTML = txt.trim();
+        const li = Array.from(tmp.content.querySelectorAll('li')).map(el => ({
+          name: el.querySelector('.name')?.textContent?.trim() || el.textContent?.trim() || 'Someone',
+          amount: Number(el.querySelector('.amount')?.textContent?.replace(/[^\d.]/g,'') || 0) || 0,
+          when: el.querySelector('.when')?.textContent?.trim() || 'just now'
+        }));
+        if (li.length) render(li);
       }
     } catch { /* silent */ }
   }
@@ -186,5 +204,3 @@
 })();
 </script>
 
-</section>
-</section>

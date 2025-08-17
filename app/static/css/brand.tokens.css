@@ -1,0 +1,8 @@
+:root{
+  --fc-brand: #facc15;
+  --fc-brand-rgb: 250 204 21;
+  --fc-brand-50:  color-mix(in srgb, var(--fc-brand) 12%, transparent);
+  --fc-brand-100: color-mix(in srgb, var(--fc-brand) 18%, transparent);
+  --fc-brand-200: color-mix(in srgb, var(--fc-brand) 26%, transparent);
+  --fc-brand-300: color-mix(in srgb, var(--fc-brand) 42%, #000);
+}

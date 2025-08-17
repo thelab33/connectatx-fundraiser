@@ -1,100 +1,205 @@
-{# templates/partials/program_stats_and_calendar.html #}
-{% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
-{% set _team = team if team is defined and team else none %}
-{% set TEAM_NAME = (_team.team_name if _team and _team.team_name else "Connect ATX Elite") %}
+{# templates/partials/program_stats_and_calendar.html — SV-Elite #}
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
 
-{% set _record = (_team.record if _team and _team.record else {}) %}
-{% set _reg = _record.get('regional') or {} %}
-{% set _nat = _record.get('national') or {} %}
+{# ---------- Inputs & Fallbacks ---------- #}
+{% set __nonce    = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
+{% set team_safe  = team if team is defined and team else none %}
 
-{% set _stats = (_team.impact_stats if _team and _team.impact_stats else [
-  {"label":"Players Enrolled","value":16},
-  {"label":"Honor Roll Scholars","value":11},
-  {"label":"Tournaments Played","value":12},
-  {"label":"Years Running","value":3},
-]) %}
+{# Stats (override by passing `stats=[...]`) #}
+{% set stats = stats if stats is defined and stats else (
+  team_safe.impact_stats if team_safe and team_safe.impact_stats else [
+    {"label":"Wins","value":23},
+    {"label":"Players","value":16},
+    {"label":"Avg GPA","value":3.5},
+    {"label":"Active Sponsors","value":17}
+  ])
+%}
 
-{% set _events = (
-  calendar_events if calendar_events is defined and calendar_events else
-  (events if events is defined and events else [])
-) %}
-{% set _events = _events[:6] if _events else [] %}
+{# Events (accepts calendar_events or events). We’ll show up to 6, prioritizing upcoming. #}
+{% set _incoming = calendar_events if calendar_events is defined and calendar_events else (events if events is defined and events else []) %}
+{% set all_events = _incoming if _incoming else [] %}
+{% set upcoming   = all_events|selectattr('is_upcoming')|list if all_events is iterable else [] %}
+{% set past       = all_events|rejectattr('is_upcoming')|list if all_events is iterable else [] %}
+{% set ordered    = (upcoming + past)[:6] %}
 
-<section aria-labelledby="psc-h" class="mx-auto w-full max-w-6xl px-4 md:px-6">
+{# Optional feature flags #}
+{% set use_htmx      = use_htmx|default(false) %}           {# if true, section can auto-refresh #}
+{% set events_partial_url = events_partial_url|default(None) %}
+{% set show_jsonld   = show_jsonld|default(true) %}
+{% set donate_url    = url_for('main.donate') if url_for is defined else '/donate' %}
+{% set calendar_url  = url_for('main.calendar') if url_for is defined else '/calendar' %}
+
+<section id="program-stats-calendar" aria-labelledby="stats-schedule" class="fc-reveal"
+  {% if use_htmx and events_partial_url %}
+    hx-get="{{ events_partial_url }}" hx-trigger="revealed, every 10m" hx-swap="outerHTML"
+  {% endif %}
+>
   <style nonce="{{ __nonce }}">
-    #psc .card{background:rgba(15,15,18,.72);border:1px solid var(--fc-border);border-radius:1rem;
-      box-shadow:0 10px 32px rgba(250,204,21,.08)}
-    #psc .kpi{display:flex;flex-direction:column;gap:.15rem;padding:.85rem;border-radius:.85rem;
-      background:var(--fc-surface);border:1px solid var(--fc-border)}
-    #psc .kpi .v{font-weight:900;font-size:1.35rem;color:#fff;line-height:1}
-    #psc .kpi .l{font-size:.8rem;color:var(--fc-muted)}
+    /* micro polish localized to this partial */
+    .psc-tabs{display:grid;grid-template-columns:1fr 1fr;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+    .psc-tab{padding:.4rem .9rem;font-weight:700;text-align:center;border-radius:999px}
+    .psc-tab[aria-selected="true"]{background:linear-gradient(180deg,var(--fc-amber,#facc15),#d1a90d);color:#0b0b0c}
+    .psc-chip{display:inline-grid;grid-template-rows:auto auto;align-items:center;justify-items:center;width:3.1rem;border-radius:.8rem;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06)}
+    .psc-chip .m{font-size:.65rem;opacity:.85;letter-spacing:.08em;text-transform:uppercase}
+    .psc-chip .d{font-size:1.05rem;font-weight:900;line-height:1.1}
+    .psc-meta{font-size:.72rem;opacity:.8}
+    .psc-skel{position:relative;overflow:hidden}
+    .psc-skel:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.06),transparent);animation:pscShimmer 1.25s infinite}
+    @keyframes pscShimmer{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
+    @media (max-width: 1023px){ .psc-desktop{display:none} }
+    @media (min-width: 1024px){ .psc-mobile{display:none} }
   </style>
 
-  <div id="psc" class="grid gap-6 md:grid-cols-2">
-    <!-- Program Stats -->
-    <article class="card p-5" aria-labelledby="stats-h">
-      <header class="mb-3">
-        <h3 id="stats-h" class="text-xl font-extrabold text-yellow-300">Program Stats</h3>
-        <p class="text-sm text-yellow-100/80">Snapshot of {{ TEAM_NAME }}’s season.</p>
-      </header>
-
-      <dl class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-        {% for s in _stats %}
-          <div class="kpi" role="group" aria-label="{{ s.label }}">
-            <dt class="l">{{ s.label }}</dt>
-            <dd class="v">{{ s.value }}</dd>
-          </div>
-        {% endfor %}
-      </dl>
-
-      <div class="mt-4 text-xs text-yellow-200/80">
-        <span class="inline-block mr-4">Regional: <strong>{{ _reg.get('wins', 0) }}–{{ _reg.get('losses', 0) }}</strong></span>
-        <span class="inline-block">National: <strong>{{ _nat.get('wins', 0) }}–{{ _nat.get('losses', 0) }}</strong></span>
+  <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    {# ===== Mobile tabs (Stats / Schedule) ===== #}
+    <div class="psc-mobile mb-4">
+      <div role="tablist" aria-label="Program section tabs" class="psc-tabs">
+        <button class="psc-tab" role="tab" aria-selected="true"  id="tab-stats"    aria-controls="panel-stats">Stats</button>
+        <button class="psc-tab" role="tab" aria-selected="false" id="tab-schedule" aria-controls="panel-schedule">Schedule</button>
       </div>
-    </article>
+    </div>
 
-    <!-- Upcoming Schedule -->
-    <article class="card p-5" aria-labelledby="cal-h">
-      <header class="mb-3 flex items-center justify-between gap-3">
-        <div>
-          <h3 id="cal-h" class="text-xl font-extrabold text-yellow-300">Upcoming Schedule</h3>
-          <p class="text-sm text-yellow-100/80">Next events & games.</p>
-        </div>
-        <a href="{{ safe_url_for('main_bp.calendar') or '#' }}"
-           class="inline-flex items-center rounded-xl bg-yellow-400 px-3 py-1.5 text-sm font-black text-black">
-          View Calendar
-        </a>
-      </header>
+    <div class="grid gap-6 lg:grid-cols-2">
+      <!-- ########## Program Stats ########## -->
+      <section class="fc-card p-5" aria-labelledby="stats-schedule" id="panel-stats" role="tabpanel" tabindex="-1" aria-labelledby="tab-stats">
+        <h2 id="stats-schedule" class="text-base font-semibold tracking-wide opacity-90">Program Stats</h2>
 
-      {% if _events %}
-        <ul class="divide-y divide-[var(--fc-border)]" role="list">
-          {% for e in _events %}
-            {% set title = e.title or e.name or 'Event' %}
-            {% set when  = e.when or e.start or e.date or '' %}
-            {% set where = e.where or e.location or '' %}
-            <li class="py-3 flex items-start gap-3">
-              <div class="rounded-lg bg-[var(--fc-surface)] px-2 py-1 text-xs font-bold text-yellow-200 shrink-0">
-                {{ (when|string)[:16] }}
-              </div>
-              <div class="min-w-0">
-                <div class="truncate font-extrabold text-yellow-100">{{ title }}</div>
-                {% if where %}<div class="text-xs text-yellow-100/75">{{ where }}</div>{% endif %}
-              </div>
-              {% if e.url %}
-                <a class="ml-auto inline-flex items-center justify-center rounded-lg border border-[var(--fc-border)] px-2 py-1 text-xs"
-                   href="{{ e.url }}" target="_blank" rel="noopener">
-                  Details
-                </a>
-              {% endif %}
-            </li>
+        <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
+          {% for s in stats %}
+          <div class="rounded-xl border border-white/10 p-4 text-center" role="group" aria-label="{{ s.label }}">
+            <div class="text-2xl md:text-3xl font-extrabold tabular-nums"
+                 data-countup="{{ s.value|float if s.value is string or s.value is number else 0 }}">
+              {{ s.value }}
+            </div>
+            <div class="text-xs opacity-70 mt-1">{{ s.label }}</div>
+          </div>
           {% endfor %}
-        </ul>
-      {% else %}
-        <div class="rounded-lg border border-[var(--fc-border)] bg-[var(--fc-surface)] p-4 text-sm text-yellow-100/80">
-          No events scheduled yet. Check back soon!
         </div>
-      {% endif %}
-    </article>
+
+        {% if last_stats_at is defined and last_stats_at %}
+        <div class="mt-4 text-[12px] opacity-60">Updated {{ last_stats_at }}</div>
+        {% else %}
+        <div class="mt-4 text-[12px] opacity-60">Live metrics update when donations post.</div>
+        {% endif %}
+      </section>
+
+      <!-- ########## Upcoming Schedule ########## -->
+      <section class="fc-card p-5" id="panel-schedule" role="tabpanel" aria-labelledby="tab-schedule" tabindex="-1">
+        <div class="flex items-center justify-between gap-3">
+          <h2 class="text-base font-semibold tracking-wide opacity-90">Upcoming Schedule</h2>
+          <div class="flex items-center gap-2">
+            <a href="{{ calendar_url }}" class="fc-btn fc-btn-ghost text-xs">View Calendar</a>
+          </div>
+        </div>
+
+        {% if ordered and ordered|length %}
+        <ol class="mt-4 space-y-3" role="list">
+          {% for e in ordered %}
+          {% set _date = e.date or e.when or e.start or '' %}
+          {% set _time = e.time or '' %}
+          {% set _loc  = e.location or e.where or '' %}
+          {% set _name = e.name or e.title or 'Event' %}
+          {% set _month = (_date|string)[5:7] %}
+          {% set _day = (_date|string)[8:10] %}
+          {% set _mabbr = {
+            '01':'Jan','02':'Feb','03':'Mar','04':'Apr','05':'May','06':'Jun',
+            '07':'Jul','08':'Aug','09':'Sep','10':'Oct','11':'Nov','12':'Dec'
+          }[_month] if _month in ['01','02','03','04','05','06','07','08','09','10','11','12'] else '' %}
+
+          <li class="flex items-start gap-3 rounded-lg border border-white/10 p-3 hover:border-white/20 transition">
+            <div class="psc-chip mt-0.5" aria-hidden="true">
+              <span class="m">{{ _mabbr }}</span>
+              <span class="d">{{ _day or '' }}</span>
+            </div>
+
+            <div class="flex-1 min-w-0">
+              <div class="font-semibold truncate">{{ _name }}</div>
+              <div class="psc-meta">
+                {% if _date %}<time datetime="{{ _date }}">{{ _date }}</time>{% endif %}
+                {% if _time %} • {{ _time }}{% endif %}
+                {% if _loc %} • {{ _loc }}{% endif %}
+                {% if e.opponent %} • vs {{ e.opponent }}{% endif %}
+                {% if e.result %} • <span class="font-semibold">{{ e.result }}</span>{% endif %}
+              </div>
+              {% if e.highlight %}<div class="text-xs mt-1 opacity-80">{{ e.highlight }}</div>{% endif %}
+            </div>
+
+            <div class="flex items-center gap-2 shrink-0">
+              {% if e.is_upcoming %}
+                <a href="{{ donate_url }}" class="fc-btn fc-btn-primary text-xs">Donate</a>
+              {% endif %}
+              {% if e.url %}
+                <a class="fc-btn fc-btn-ghost text-xs" href="{{ e.url }}" target="_blank" rel="noopener">Details</a>
+              {% endif %}
+              {% if e.map_url %}
+                <a class="fc-btn fc-btn-ghost text-xs" href="{{ e.map_url }}" target="_blank" rel="noopener" aria-label="Directions to {{ _loc }}">Directions</a>
+              {% endif %}
+              {% if e.ics_url or (e.id is defined) %}
+                <a class="fc-btn fc-btn-ghost text-xs" href="{{ e.ics_url or (url_for('main.event_ics', event_id=e.id) if url_for is defined else '#') }}" aria-label="Add {{ _name }} to calendar">Add</a>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ol>
+        {% else %}
+          <div class="rounded-lg border border-white/10 bg-white/5 p-4 text-sm opacity-80">
+            No events scheduled yet. Check back soon!
+          </div>
+        {% endif %}
+      </section>
+    </div>
   </div>
+
+  {# Optional JSON-LD for Events (SEO). Provide `show_jsonld=false` to disable. #}
+  {% if show_jsonld and ordered and ordered|length %}
+  <script type="application/ld+json" nonce="{{ __nonce }}">
+  {{ {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "itemListElement": [
+      {% for e in ordered %}
+      {
+        "@type": "Event",
+        "name": e.name or e.title or "Event",
+        "startDate": (e.date or e.when or e.start) or "",
+        "eventAttendanceMode": "https://schema.org/OfflineEventAttendanceMode",
+        "location": {
+          "@type": "Place",
+          "name": (e.location or e.where) or "",
+          "address": (e.address if e.address is defined else "")
+        },
+        "url": e.url or ""
+      }{{ "," if not loop.last else "" }}
+      {% endfor %}
+    ]
+  } | tojson }}
+  </script>
+  {% endif %}
 </section>
+
+{# Mobile tabs script (tiny, CSP-safe) #}
+<script nonce="{{ __nonce }}">
+(() => {
+  const qs = (s, c=document)=>c.querySelector(s);
+  const tabStats = qs('#tab-stats');
+  const tabSched = qs('#tab-schedule');
+  const panelStats = qs('#panel-stats');
+  const panelSched = qs('#panel-schedule');
+  if (!tabStats || !tabSched) return;
+
+  const select = (which) => {
+    const isStats = which === 'stats';
+    tabStats.setAttribute('aria-selected', String(isStats));
+    tabSched.setAttribute('aria-selected', String(!isStats));
+    panelStats.hidden = !isStats;
+    panelSched.hidden = isStats;
+    (isStats ? panelStats : panelSched).focus({preventScroll:true});
+  };
+  // initial: show stats
+  panelSched.hidden = true;
+
+  tabStats.addEventListener('click', ()=>select('stats'));
+  tabSched.addEventListener('click', ()=>select('schedule'));
+})();
+</script>
 

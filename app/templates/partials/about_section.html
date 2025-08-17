@@ -1,28 +1,31 @@
-<section data-ui=""${name//_/ -}"" class="block">
 {# ====================== FundChamps • About + Mission (SV Premium, Self-Contained) ====================== #}
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
+
 {# ---- Vars & Fallbacks ---- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set player_team   = team.team_name if team and team.team_name is defined else "Connect ATX Elite" %}
-{% set team_league   = team.league if team and team.league is defined else "AAU" %}
-{% set team_region   = team.region if team and team.region is defined else "Austin, TX" %}
+{% set _team        = team if team is defined and team else none %}
+{% set player_team  = _team.team_name if _team and _team.team_name is defined else "Connect ATX Elite" %}
+{% set team_league  = _team.league if _team and _team.league is defined else "AAU" %}
+{% set team_region  = _team.region if _team and _team.region is defined else "Austin, TX" %}
+
 {# Hardened: prefer founder_lastname; fallback to founderlastname; final default "Smith" #}
 {% set founder_last  = (
-  team.founder_lastname if team and team.founder_lastname is defined and team.founder_lastname
-  else (team.founderlastname if team and team.founderlastname is defined and team.founderlastname else "Smith")
+  _team.founder_lastname if _team and _team.founder_lastname is defined and _team.founder_lastname
+  else (_team.founderlastname if _team and _team.founderlastname is defined and _team.founderlastname else "Smith")
 ) %}
 
-{% set img_src_raw   = team.img if team and team.img else 'images/fallback.jpg' %}
+{% set img_src_raw   = _team.img if _team and _team.img else 'images/fallback.jpg' %}
 {% set img_src       = img_src_raw if '://' in img_src_raw else (url_for('static', filename=img_src_raw) if url_for is defined else '/static/' ~ img_src_raw) %}
 
 {% set rings_img     = (url_for('static', filename='images/team-rings.webp') if url_for is defined else '/static/images/team-rings.webp') %}
 
-{% set video_src_raw    = team.story_video if team and team.story_video else 'videos/story.mp4' %}
+{% set video_src_raw    = _team.story_video if _team and _team.story_video else 'videos/story.mp4' %}
 {% set video_src        = video_src_raw if '://' in video_src_raw else (url_for('static', filename=video_src_raw) if url_for is defined else '/static/' ~ video_src_raw) %}
-{% set video_poster_raw = team.story_poster if team and team.story_poster else 'images/video_poster.jpg' %}
+{% set video_poster_raw = _team.story_poster if _team and _team.story_poster else 'images/video_poster.jpg' %}
 {% set video_poster     = video_poster_raw if '://' in video_poster_raw else (url_for('static', filename=video_poster_raw) if url_for is defined else '/static/' ~ video_poster_raw) %}
 
-{% set kvue_url   = team.kvue_url if team and team.kvue_url else 'https://www.kvue.com/' %}
-{% set youtube_id = team.youtube_id if team and team.youtube_id else 'dQw4w9GgXcQ' %}
+{% set kvue_url   = _team.kvue_url if _team and _team.kvue_url else 'https://www.kvue.com/' %}
+{% set youtube_id = _team.youtube_id if _team and _team.youtube_id else 'dQw4w9GgXcQ' %}
 
 {% set testimonials = testimonials if testimonials is defined and testimonials else [
   {"quote": "Winning felt amazing — but it’s being part of a team that believes in you that means the most.", "author": player_team ~ " Player, Class of 2030"},
@@ -38,10 +41,11 @@
 ] %}
 
 {# Brand color (sync with header/hero) #}
-{% set brand_color = (team.theme_color if team and team.theme_color is defined and team.theme_color else '#facc15') %}
+{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
 
 <section
   id="mission"
+  data-ui="{{ (name|default('about_mission'))|replace('_','-') }}"
   class="relative overflow-hidden bg-zinc-950/95 py-20 text-white md:py-32"
   itemscope itemtype="https://schema.org/SportsTeam"
   aria-labelledby="about-heading"
@@ -101,6 +105,18 @@
       #mission .cta, #mission .ambient-glow { transition:none !important; animation:none !important; }
     }
   </style>
+
+  {# ---- JSON-LD (SportsTeam) for SEO ---- #}
+  <script type="application/ld+json" nonce="{{ NONCE }}">
+  {{ {
+    "@context": "https://schema.org",
+    "@type": "SportsTeam",
+    "name": player_team,
+    "sport": "Basketball",
+    "memberOf": team_league,
+    "areaServed": team_region
+  } | tojson }}
+  </script>
 
   <meta itemprop="name" content="{{ player_team }}">
   <meta itemprop="areaServed" content="{{ team_region }}">
@@ -275,6 +291,7 @@
         {% if t.id == 'myvideo' %}
           <video controls preload="none" poster="{{ video_poster }}" class="w-full rounded-lg shadow">
             <source src="{{ video_src }}" type="video/mp4" />
+            <noscript><a href="{{ video_src }}">Watch the team video</a></noscript>
             Sorry, your browser doesn’t support embedded videos.
           </video>
         {% elif t.id == 'kvue' %}
@@ -446,5 +463,3 @@
   document.addEventListener('openDonate', ()=>{ (window.openDonationModal?.()) ?? window.dispatchEvent(new CustomEvent('fc:donate:open')); });
 })();
 </script>
-
-</section>

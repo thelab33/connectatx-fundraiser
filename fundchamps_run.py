@@ -27,6 +27,62 @@ from datetime import datetime
 from typing import Optional, Tuple
 
 from dotenv import load_dotenv
+# ── FundChamps Preflight Autopatcher ─────────────────────────────────────────
+import re
+
+def autopatch() -> None:
+    print("\033[1;36m🔧 Running FundChamps Preflight Autopatcher...\033[0m")
+
+    # 1. Fix inline Jinja comment in index.html
+    idx = Path("app/templates/index.html")
+    if idx.exists():
+        txt = idx.read_text(encoding="utf-8")
+        patched = re.sub(r'"newsletter":\s*true,.*$', '"newsletter":       true,', txt, flags=re.M)
+        if txt != patched:
+            idx.write_text(patched, encoding="utf-8")
+            print("✅ Fixed inline Jinja comment in index.html")
+
+    # 2. Deduplicate IDs (fc-*) by suffixing team.id
+    for html in Path("app/templates").rglob("*.html"):
+        text = html.read_text(encoding="utf-8")
+        patched = re.sub(r'id="(fc-[a-z0-9-]+)"', r'id="\1-{{ team.id|default(\"X\") }}"', text)
+        if text != patched:
+            html.write_text(patched, encoding="utf-8")
+            print(f"✅ Patched duplicate IDs in {html}")
+
+    # 3. Add CSP nonces to <script> tags
+    for html in Path("app/templates/partials").rglob("*.html"):
+        text = html.read_text(encoding="utf-8")
+        if "<script>" in text and 'nonce="{{ NONCE }}"' not in text:
+            patched = text.replace("<script>", '<script nonce="{{ NONCE }}">')
+            html.write_text(patched, encoding="utf-8")
+            print(f"✅ Injected NONCE in {html}")
+
+    # 4. Ensure Stripe key fallback
+    env_path = Path(".env")
+    if env_path.exists():
+        env_txt = env_path.read_text()
+    else:
+        env_txt = ""
+    if "STRIPE_API_KEY" not in env_txt:
+        with env_path.open("a") as f:
+            f.write("\nSTRIPE_API_KEY=sk_test_dummy\n")
+        print("✅ Added dummy STRIPE_API_KEY to .env")
+
+    # 5. Symlink or copy globals.css if missing
+    css_dir = Path("app/static/css")
+    if css_dir.exists():
+        g = css_dir / "globals.css"
+        t = css_dir / "tailwind.min.css"
+        if not g.exists() and t.exists():
+            try:
+                g.symlink_to(t)
+                print("✅ Symlinked globals.css → tailwind.min.css")
+            except Exception:
+                g.write_text(t.read_text())
+                print("✅ Copied tailwind.min.css → globals.css")
+
+    print("\033[1;32m✨ Autopatch complete.\033[0m")
 
 # ── Defaults ──────────────────────────────────────────────────────────────────
 os.environ.setdefault("SOCKETIO_ASYNC_MODE", "threading")

@@ -1,5 +1,13 @@
-<section data-ui=""${name//_/ -}"" class="block">
-{# ================== FundChamps — Newsletter + Coaches + Share + Badges (Prestige, Self‑Contained) ================== #}
+{# =============================================================================
+   app/templates/partials/newsletter_coaches_share_badges.html
+   FundChamps — Newsletter + Coaches + Share + Badges (Prestige, Self-Contained)
+   - CSP-safe (NONCE / csp_nonce)
+   - Idempotent JS (guarded), focus-trapped modal, localStorage one-shot
+   - Safe fallbacks; no external macros; mobile-first + a11y-first
+   ============================================================================= #}
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
+
 {# ---- Safe Defaults ---- #}
 {% set NONCE            = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set team_name        = team.team_name if team and team.team_name else 'Connect ATX Elite' %}
@@ -15,9 +23,11 @@
 {% set coach_imgs_base  = (url_for('static', filename='images/coaches/') if url_for is defined else '/static/images/coaches/') %}
 
 <section
+  data-ui="{{ (name|default('newsletter_coaches_share_badges'))|replace('_','-') }}"
   id="nl-coaches-share-badges"
   class="relative bg-zinc-950 text-white"
   style="--fc-brand: {{ brand_color }}; --fc-brand-100: color-mix(in srgb, {{ brand_color }} 28%, transparent); --fc-brand-200: color-mix(in srgb, {{ brand_color }} 18%, transparent); --fc-brand-300: color-mix(in srgb, {{ brand_color }} 40%, black);"
+  aria-label="{{ _('Newsletter, Coaches, and Share Section') }}"
 >
   <style nonce="{{ NONCE }}">
     /* ===== Scoped styles for Newsletter + Coaches + Share + Badges ===== */
@@ -35,7 +45,10 @@
     #social-share .icon-btn:hover{background:rgba(0,0,0,.6)}
     /* Payment/Trust badges */
     #trust-badges .badge{border:1px solid var(--fc-brand-200);background:rgba(255,255,255,.06);border-radius:.9rem;padding:.6rem .8rem;display:inline-flex;align-items:center;gap:.45rem}
-    @media (prefers-reduced-motion:reduce){#nl-coaches-share-badges *{transition:none!important;animation:none!important}}
+    @media (prefers-reduced-motion: reduce) {
+  #nl-coaches-share-badges * {
+    transition: none !important;
+    animation: none !important;
   </style>
 
   <div class="container py-12">
@@ -49,14 +62,16 @@
       <h3 class="mb-3 text-lg font-extrabold text-yellow-300">Coaches</h3>
       <div class="flex flex-wrap gap-5">
         {% for c in coaches %}
-        {% set lower = (c|lower|replace(' ', '')) %}
-        {% set role = coach_roles.get(c, 'Assistant Coach') %}
-        <article class="group w-44 cursor-pointer rounded-xl bg-zinc-900/60 p-4 ring-1 ring-white/10 transition hover:bg-zinc-900/70 focus-within:ring-yellow-300" tabindex="0">
-          <img alt="Coach {{ c }}" loading="lazy" decoding="async" class="mb-3 h-32 w-32 rounded-full object-cover mx-auto"
-               src="{{ coach_imgs_base ~ lower ~ '.jpg' }}" onerror="this.src='{{ coach_imgs_base }}placeholder.jpg'"/>
-          <h4 class="text-center text-base font-semibold text-yellow-200">Coach {{ c }}</h4>
-          <p class="text-center text-xs text-zinc-400">{{ role }}</p>
-        </article>
+          {% set lower = (c|lower|replace(' ', '')) %}
+          {% set role = coach_roles.get(c, 'Assistant Coach') %}
+          <article class="group w-44 cursor-pointer rounded-xl bg-zinc-900/60 p-4 ring-1 ring-white/10 transition hover:bg-zinc-900/70 focus-within:ring-yellow-300" tabindex="0">
+            <img alt="Coach {{ c }}" src="{{ coach_imgs_base ~ lower ~ '.jpg' }}"
+                 class="mb-3 h-32 w-32 rounded-full object-cover mx-auto"
+                 loading="lazy" decoding="async"
+                 onerror="this.src='{{ coach_imgs_base }}placeholder.jpg'"/>
+            <h4 class="text-center text-base font-semibold text-yellow-200">Coach {{ c }}</h4>
+            <p class="text-center text-xs text-zinc-400">{{ role }}</p>
+          </article>
         {% endfor %}
       </div>
     </section>
@@ -79,7 +94,7 @@
         <span class="badge" aria-label="Stripe Payments"><span>🔒</span> Stripe</span>
         <span class="badge" aria-label="PayPal Accepted"><span>💳</span> PayPal</span>
         <span class="badge" aria-label="SSL Encrypted"><span>🛡️</span> SSL</span>
-        <span class="badge" aria-label="PCI DSS Compliant"><span>✅</span> PCI‑DSS</span>
+        <span class="badge" aria-label="PCI DSS Compliant"><span>✅</span> PCI-DSS</span>
       </div>
     </section>
   </div>
@@ -118,7 +133,7 @@
   <!-- ===== Component JS (CSP-safe) ===== -->
   <script nonce="{{ NONCE }}">
   (() => {
-    if (window.__fcNewsletterBound) return; 
+    if (window.__fcNewsletterBound) return;
     window.__fcNewsletterBound = true;
 
     const popup     = document.getElementById('newsletter-popup');
@@ -247,7 +262,7 @@
           const orig = btn.textContent;
           btn.textContent = 'Link Copied!';
           setTimeout(() => btn.textContent = orig, 1500);
-        });
+        }).catch(()=>{});
         return;
       }
 
@@ -267,4 +282,3 @@
   </script>
 </section>
 
-</section>

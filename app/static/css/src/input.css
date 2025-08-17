@@ -1,0 +1,7 @@
+/* app/static/css/src/input.css */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "../../css/brand.tokens.css"; /* <= starforge tokens */
+

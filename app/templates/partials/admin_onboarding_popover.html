@@ -1,9 +1,14 @@
 {# =============================================================================
+   app/templates/partials/admin_onboarding_popover.html
    Admin Onboarding Popover — Elite (CSP/HTMX/Alpine-optional, Single-file)
-   - Safe route resolution (no lambdas), brand-aware styling
-   - Vanilla JS core + BroadcastChannel (cross-tab), reduced-motion aware
-   - Works with or without Alpine/HTMX; includes Alpine adapter
+   - Brand-aware styling; safe route resolution
+   - Idempotent JS; BroadcastChannel for cross-tab sync
+   - Proper ARIA (progressbar), reduced-motion aware
+   - Avoids HTMX double-POST by detecting hx-post at runtime
    ============================================================================= #}
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set HAS   = has_endpoint is defined %}
 {% set brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
@@ -21,8 +26,9 @@
 
 {% if current_user and current_user.is_authenticated and current_user.is_admin and not session.get('onboarded') %}
 <div
+  data-ui="{{ (name|default('admin_onboarding_popover'))|replace('_','-') }}"
   id="admin-onboarding"
-  class="fixed bottom-6 right-6 z-[1050] w-[22rem] max-w-[92vw] rounded-2xl border border-yellow-400/25 bg-zinc-950/95 p-5 text-zinc-100 shadow-2xl backdrop-blur-xl opacity-0 translate-y-2"
+  class="fixed bottom-6 right-6 z-[1050] w-[22rem] max-w-[92vw] rounded-2xl border border-yellow-400/25 bg-zinc-950/95 p-5 text-zinc-100 shadow-2xl backdrop-blur-xl opacity-0 translate-y-2 transition"
   role="dialog" aria-modal="true" aria-labelledby="admin-ob-title" aria-describedby="admin-ob-desc" tabindex="-1"
   data-key="{{ storage_key }}"
   data-sync="{{ href_sync }}"
@@ -42,7 +48,13 @@
   <!-- Progress -->
   <div class="mt-3">
     <div class="h-2 w-full overflow-hidden rounded-full bg-zinc-800 ring-1 ring-[color:var(--fc-brand-200)]" aria-hidden="true">
-      <div id="ob-bar" class="h-full bg-gradient-to-r from-yellow-400 to-amber-300 transition-[width] duration-500" style="width:0%"></div>
+      <div id="ob-bar"
+           class="h-full bg-gradient-to-r from-yellow-400 to-amber-300 transition-[width] duration-500"
+           role="progressbar"
+           aria-valuemin="0"
+           aria-valuemax="{{ step_labels|length }}"
+           aria-valuenow="0"
+           style="width:0%"></div>
     </div>
     <div class="mt-1 text-right text-[11px] text-zinc-400">
       <span id="ob-progress" aria-live="polite" aria-atomic="true">0 / {{ step_labels|length }} complete</span>
@@ -130,11 +142,11 @@
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
   const getKey  = () => root.dataset.key || 'adminOnboardSteps:global';
   const getSync = () => root.dataset.sync || '';
-  const getCSRF = () => root.dataset.dc || (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/)?.[1] || '');
+  const getCSRF = () => root.dataset.dc || (document.cookie.match(/(?:^|;\\s*)csrf_token=([^;]+)/)?.[1] || '');
 
   function confettiLite(){ try { window.launchConfetti?.({ particleCount: 60, spread: 80, origin: { y: .6 } }); } catch(_){} }
 
-  // Focus trap (fallback)
+  // Focus trap
   function trapFocus(container){
     const onKey = (e) => {
       if (e.key !== 'Tab') return;
@@ -183,7 +195,7 @@
     });
     const done = steps.reduce((a,b)=>a+(b?1:0),0), total = labels.length, pct = total ? Math.round(done/total*100) : 0;
     const bar = document.getElementById('ob-bar'); const txt = document.getElementById('ob-progress');
-    if (bar) bar.style.width = pct + '%';
+    if (bar) { bar.style.width = pct + '%'; bar.setAttribute('aria-valuenow', String(done)); }
     if (txt) txt.textContent = `${done} / ${total} complete`;
     window.dispatchEvent(new CustomEvent('fc:onboarding:progress', { detail: { done, total, pct } }));
   }
@@ -214,10 +226,33 @@
   }
 
   // Bindings
-  $('#ob-dismiss')?.addEventListener('click', () => close(true));
-  $('#ob-reset')?.addEventListener('click', () => { steps = new Array(labels.length).fill(false); paint(); try{ localStorage.removeItem(getKey()); }catch{} persist(); });
+  const dismissBtn = $('#ob-dismiss');
+  dismissBtn?.addEventListener('click', (e) => {
+    // If HTMX is present and hx-post is configured, let HTMX perform the POST to avoid double-submit.
+    const hasHX = !!window.htmx && dismissBtn.hasAttribute('hx-post');
+    if (hasHX) {
+      e.preventDefault();
+      try {
+        htmx.ajax('POST', dismissBtn.getAttribute('hx-post'), {
+          headers: { 'X-CSRFToken': getCSRF() },
+          swap: 'none'
+        });
+      } catch {}
+      close(true, /*skipServer*/ true);
+    } else {
+      e.preventDefault();
+      close(true); // will call our fetch fallback
+    }
+  });
 
-  $$('#ob-steps [data-toggle]').forEach((btn, idx) => {
+  $('#ob-reset')?.addEventListener('click', () => {
+    steps = new Array(labels.length).fill(false);
+    paint();
+    try{ localStorage.removeItem(getKey()); }catch{}
+    persist();
+  });
+
+  $$('#ob-steps [data-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => toggle(+btn.closest('[data-step]').dataset.step));
     btn.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(+btn.closest('[data-step]').dataset.step); }
@@ -226,7 +261,7 @@
 
   $$('[data-quick]').forEach(a => a.addEventListener('click', () => quick(+a.dataset.quick)));
 
-  // Dismiss server call
+  // Dismiss server call (fallback when HTMX not used)
   function dismissServer(){
     const url = {{ href_dismiss|tojson if tojson is defined else '"' ~ href_dismiss ~ '"' }};
     const csrf = getCSRF();
@@ -245,14 +280,14 @@
     root.focus();
     untrap = trapFocus(root);
   }
-  function close(persistFlag){
+  function close(persistFlag, skipServer = false){
     root.style.opacity = '0';
     root.style.transform = 'translateY(6px)';
     setTimeout(()=> root.remove(), reduce ? 0 : 220);
     untrap?.(); untrap = null;
     if (persistFlag) {
       try { localStorage.removeItem(getKey()); } catch {}
-      dismissServer();
+      if (!skipServer) dismissServer();
     }
   }
 

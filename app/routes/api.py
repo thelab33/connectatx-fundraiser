@@ -2,35 +2,53 @@ from __future__ import annotations
 """
 FundChamps API Blueprint
 ────────────────────────────────────────────
-• RESTX-powered API with Swagger docs
-• Health/status, fundraiser stats, example CRUD
-• Stripe + PayPal payment endpoints (scoped)
-• Consistent JSON and errors
+• Swagger docs via Flask-RESTX at /api/docs
+• Health/status, fundraiser stats, and donors feed
+• Stripe + PayPal payment endpoints (server-side)
+• Bearer auth (static tokens or JWT), CSP-safe JSON
 """
 
-import os
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Dict, List, Optional, Set, Tuple
+import os
+import time
 
 import requests
 from flask import Blueprint, current_app, jsonify, request, make_response
 from flask_restx import Api, Resource, fields
-from sqlalchemy import func
+from sqlalchemy import func, desc
 from werkzeug.exceptions import BadRequest, Unauthorized
 
 from app.extensions import db
 
+# ─────────────────────────────────────────────────────────────────────────────
 # Optional models (fail gracefully in local dev)
+# ─────────────────────────────────────────────────────────────────────────────
 try:
-    from app.models import CampaignGoal, Example, Sponsor  # type: ignore
+    from app.models.donation import Donation  # type: ignore
 except Exception:  # pragma: no cover
-    CampaignGoal = Sponsor = Example = None  # type: ignore
+    Donation = None  # type: ignore
+
+try:
+    from app.models.campaign_goal import CampaignGoal  # type: ignore
+except Exception:  # pragma: no cover
+    CampaignGoal = None  # type: ignore
+
+try:
+    from app.models.sponsor import Sponsor  # type: ignore
+except Exception:  # pragma: no cover
+    Sponsor = None  # type: ignore
+
+try:
+    from app.models.example import Example  # type: ignore
+except Exception:  # pragma: no cover
+    Example = None  # type: ignore
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🔌 Blueprint + API
 # ─────────────────────────────────────────────────────────────────────────────
-api_bp = Blueprint("api", __name__, url_prefix="/api")
+bp = Blueprint("api", __name__, url_prefix="/api")
 
 authorizations = {
     "Bearer": {
@@ -42,7 +60,7 @@ authorizations = {
 }
 
 api = Api(
-    api_bp,
+    bp,
     version="1.0",
     title="FundChamps API",
     description="Public API for the FundChamps platform",
@@ -56,12 +74,12 @@ api = Api(
 try:
     from app.extensions import csrf  # type: ignore
     if csrf:
-        csrf.exempt(api_bp)  # type: ignore
+        csrf.exempt(bp)  # type: ignore
 except Exception:
     pass
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ⚙️ Runtime config helpers (no import-time footguns)
+# ⚙️ Runtime config helpers
 # ─────────────────────────────────────────────────────────────────────────────
 def _cfg(name: str, default: Any = None) -> Any:
     """Prefer app.config, then env, else default."""
@@ -71,19 +89,24 @@ def _cfg(name: str, default: Any = None) -> Any:
         return env if env is not None else default
     return val
 
-def _stripe_secret() -> str:
-    return str(_cfg("STRIPE_SECRET_KEY", "") or "")
+# Payments config getters (single source)
+def _stripe_secret() -> str:  return str(_cfg("STRIPE_SECRET_KEY", "") or "")
+def _stripe_public() -> str:  return str(_cfg("STRIPE_PUBLIC_KEY", "") or "")
 
-def _paypal_cfg() -> dict[str, Any]:
-    env = str(_cfg("PAYPAL_ENV", "sandbox") or "sandbox").lower()
-    base = "https://api-m.paypal.com" if env == "live" else "https://api-m.sandbox.paypal.com"
-    return {
-        "env": env,
-        "client_id": str(_cfg("PAYPAL_CLIENT_ID", "") or ""),
-        "secret": str(_cfg("PAYPAL_SECRET", "") or ""),
-        "base": base,
-        "timeout": int(_cfg("PAYPAL_TIMEOUT", 15) or 15),
-    }
+def _paypal_env() -> str:
+    return str(_cfg("PAYPAL_ENV", "sandbox") or "sandbox").lower()
+
+def _paypal_creds() -> tuple[str, str]:
+    return (str(_cfg("PAYPAL_CLIENT_ID", "") or ""), str(_cfg("PAYPAL_SECRET", "") or ""))
+
+def _paypal_base() -> str:
+    return "https://api-m.paypal.com" if _paypal_env() == "live" else "https://api-m.sandbox.paypal.com"
+
+def _paypal_timeout() -> int:
+    try:
+        return int(_cfg("PAYPAL_TIMEOUT", 15) or 15)
+    except Exception:
+        return 15
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🔐 Auth: API tokens + JWT (scoped)
@@ -165,10 +188,10 @@ def require_bearer(optional: bool = True, scopes: Optional[List[str]] = None):
     return decorator
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 🧩 Utils
+# 🧩 JSON helpers
 # ─────────────────────────────────────────────────────────────────────────────
 def _json(data: Dict[str, Any], status: int = 200, etag: Optional[str] = None, max_age: int = 15):
-    """Return JSON with optional cache headers (for non-RestX-marshal paths)."""
+    """Return JSON with optional cache headers."""
     resp = make_response(jsonify(data), status)
     if request.method == "GET":
         resp.headers.setdefault("Cache-Control", f"public, max-age={max_age}")
@@ -195,8 +218,17 @@ class Stats:
 leaderboard_model = api.model(
     "Leaderboard",
     {
-        "name": fields.String(required=True, description="Sponsor name", example="Gold's Gym"),
+        "name": fields.String(required=True, description="Donor/Sponsor name", example="Gold's Gym"),
         "amount": fields.Float(required=True, description="Amount donated", example=2500.0),
+    },
+)
+
+donor_model = api.model(
+    "Donor",
+    {
+        "name": fields.String(required=True, example="Anonymous"),
+        "amount": fields.Float(required=True, example=50.0),
+        "created_at": fields.String(required=False, example="2025-08-15T21:30:00Z"),
     },
 )
 
@@ -206,7 +238,7 @@ stats_model = api.model(
         "raised": fields.Float(required=True, description="Total raised", example=5000.0),
         "goal": fields.Float(required=True, description="Fundraising goal", example=10000.0),
         "percent": fields.Float(required=True, description="Percent to goal", example=50.0),
-        "leaderboard": fields.List(fields.Nested(leaderboard_model), description="Top sponsors"),
+        "leaderboard": fields.List(fields.Nested(leaderboard_model), description="Top contributors"),
     },
 )
 
@@ -231,6 +263,183 @@ readiness_model = api.model(
     },
 )
 
+payments_cfg_model = api.model(
+    "PaymentsConfig",
+    {
+        "stripe_public_key": fields.String(required=True),
+        "paypal_env": fields.String(required=True, example="sandbox"),
+        "paypal_client_id": fields.String(required=True),
+    },
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 🔎 Data helpers (tolerant of schema differences)
+# ─────────────────────────────────────────────────────────────────────────────
+def _active_goal_amount() -> float:
+    """Pick an active goal or fallback to TEAM_CONFIG or 10000."""
+    # Try CampaignGoal
+    try:
+        if CampaignGoal:
+            # Try common fields: active/is_active + goal_amount/amount
+            q = db.session.query(CampaignGoal)
+            if hasattr(CampaignGoal, "active"):
+                q = q.filter(CampaignGoal.active.is_(True))
+            elif hasattr(CampaignGoal, "is_active"):
+                q = q.filter(CampaignGoal.is_active.is_(True))
+            # Prefer most recent
+            order_col = (
+                getattr(CampaignGoal, "updated_at", None)
+                or getattr(CampaignGoal, "created_at", None)
+                or getattr(CampaignGoal, "id", None)
+            )
+            if order_col is not None:
+                q = q.order_by(desc(order_col))
+            row = q.first()
+            if row:
+                for col in ("goal_amount", "amount", "value"):
+                    if hasattr(row, col):
+                        return float(getattr(row, col) or 0.0)
+    except Exception:
+        current_app.logger.exception("Goal lookup failed; using fallback")
+
+    # Config fallback
+    try:
+        cfg = current_app.config.get("TEAM_CONFIG", {}) or {}
+        for k in ("fundraising_goal", "FUNDRAISING_GOAL"):
+            if k in cfg:
+                return float(cfg[k])
+    except Exception:
+        pass
+
+    return 10000.0
+
+def _sum_sponsor_approved() -> float:
+    """Sum approved sponsors if model exists. Safe fallback to 0."""
+    if not Sponsor:
+        return 0.0
+    try:
+        q = db.session.query(func.coalesce(func.sum(Sponsor.amount), 0.0))
+        if hasattr(Sponsor, "deleted"):
+            q = q.filter(Sponsor.deleted.is_(False))
+        if hasattr(Sponsor, "status"):
+            q = q.filter(Sponsor.status == "approved")
+        total = q.scalar() or 0.0
+        return float(total)
+    except Exception:
+        return 0.0
+
+def _sum_donations() -> float:
+    """Sum donations (if Donation model exists)."""
+    if not Donation:
+        return 0.0
+    try:
+        total = db.session.query(func.coalesce(func.sum(Donation.amount), 0.0)).scalar() or 0.0
+        return float(total)
+    except Exception:
+        return 0.0
+
+def _recent_donations(limit: int) -> List[Dict[str, Any]]:
+    """Return recent donations (name, amount, created_at) with schema tolerance."""
+    out: List[Dict[str, Any]] = []
+    if not Donation:
+        # Fallback to sponsors as "donors"
+        if Sponsor:
+            try:
+                q = db.session.query(Sponsor)
+                col = getattr(Sponsor, "created_at", None) or getattr(Sponsor, "id", None)
+                if hasattr(Sponsor, "deleted"):
+                    q = q.filter(Sponsor.deleted.is_(False))
+                if hasattr(Sponsor, "status"):
+                    q = q.filter(Sponsor.status == "approved")
+                if col is not None:
+                    q = q.order_by(desc(col))
+                for s in q.limit(limit).all():
+                    out.append({
+                        "name": getattr(s, "name", "Sponsor"),
+                        "amount": float(getattr(s, "amount", 0.0) or 0.0),
+                        "created_at": str(getattr(s, "created_at", "") or ""),
+                    })
+            except Exception:
+                pass
+        return out
+
+    # Donation path
+    try:
+        q = db.session.query(Donation)
+        order_col = (
+            getattr(Donation, "created_at", None)
+            or getattr(Donation, "created", None)
+            or getattr(Donation, "timestamp", None)
+            or getattr(Donation, "id", None)
+        )
+        if order_col is not None:
+            q = q.order_by(desc(order_col))
+        for d in q.limit(limit).all():
+            # flexible field names
+            name = None
+            for k in ("display_name", "donor_name", "name"):
+                if hasattr(d, k):
+                    name = getattr(d, k)
+                    if name:
+                        break
+            amount = 0.0
+            for k in ("amount", "total", "value"):
+                if hasattr(d, k):
+                    try:
+                        amount = float(getattr(d, k) or 0.0)
+                        break
+                    except Exception:
+                        pass
+            created_at = ""
+            for k in ("created_at", "created", "timestamp"):
+                if hasattr(d, k):
+                    created_at = str(getattr(d, k) or "")
+                    break
+            out.append({"name": name or "Anonymous", "amount": amount, "created_at": created_at})
+    except Exception:
+        current_app.logger.exception("Recent donations query failed")
+    return out
+
+def _leaderboard(top_n: int) -> List[Dict[str, Any]]:
+    """Leaderboard from Sponsors (preferred) or from Donations (grouped by name)."""
+    # Sponsor leaderboard
+    if Sponsor:
+        try:
+            q = db.session.query(Sponsor)
+            if hasattr(Sponsor, "deleted"):
+                q = q.filter(Sponsor.deleted.is_(False))
+            if hasattr(Sponsor, "status"):
+                q = q.filter(Sponsor.status == "approved")
+            q = q.order_by(desc(getattr(Sponsor, "amount", 0)))
+            items = q.limit(top_n).all()
+            return [{"name": getattr(s, "name", "Sponsor"),
+                     "amount": float(getattr(s, "amount", 0.0) or 0.0)} for s in items]
+        except Exception:
+            pass
+
+    # Donation leaderboard (group by donor_name/display_name)
+    if Donation:
+        try:
+            name_col = (
+                getattr(Donation, "display_name", None)
+                or getattr(Donation, "donor_name", None)
+                or getattr(Donation, "name", None)
+            )
+            amt_col = getattr(Donation, "amount", None)
+            if name_col is not None and amt_col is not None:
+                rows = (
+                    db.session.query(name_col.label("name"), func.coalesce(func.sum(amt_col), 0.0).label("amount"))
+                    .group_by(name_col)
+                    .order_by(desc("amount"))
+                    .limit(top_n)
+                    .all()
+                )
+                return [{"name": r.name or "Anonymous", "amount": float(r.amount or 0.0)} for r in rows]
+        except Exception:
+            pass
+
+    return []
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ✅ Health
 # ─────────────────────────────────────────────────────────────────────────────
@@ -247,20 +456,23 @@ class Status(Resource):
 # ─────────────────────────────────────────────────────────────────────────────
 @api.route("/stats")
 class StatsResource(Resource):
-    @api.doc(description="Get current fundraiser stats and leaderboard", tags=["Stats"])
+    @api.doc(description="Get current fundraiser totals and leaderboard", tags=["Stats"])
     @api.marshal_with(stats_model)
     @require_bearer(optional=True)
     def get(self):
         try:
             top = _safe_int("top", default=10, minimum=1, maximum=50)
-            stats = self._fetch_stats(top)
-            percent = (stats.raised / stats.goal * 100.0) if stats.goal else 0.0
-            etag = f"{int(stats.raised)}-{int(stats.goal)}-{len(stats.leaderboard)}"
+            # Compute totals (donations + approved sponsors)
+            raised = _sum_donations() + _sum_sponsor_approved()
+            goal = _active_goal_amount()
+            percent = (raised / goal * 100.0) if goal else 0.0
+            lb = _leaderboard(top)
+            etag = f"{int(raised)}-{int(goal)}-{len(lb)}"
             data = {
-                "raised": float(stats.raised),
-                "goal": float(stats.goal),
+                "raised": float(raised),
+                "goal": float(goal),
                 "percent": round(percent, 2),
-                "leaderboard": stats.leaderboard,
+                "leaderboard": lb,
             }
             headers = {"Cache-Control": "public, max-age=10", "ETag": etag}
             return data, 200, headers
@@ -270,26 +482,21 @@ class StatsResource(Resource):
             current_app.logger.error("📊 Error fetching stats", exc_info=True)
             api.abort(500, "Database error")
 
-    @staticmethod
-    def _fetch_stats(top_n: int) -> Stats:
-        if not (Sponsor and CampaignGoal):
-            return Stats(raised=0.0, goal=10000.0, leaderboard=[])
-        raised = (
-            db.session.query(func.coalesce(func.sum(Sponsor.amount), 0.0))
-            .filter(Sponsor.deleted.is_(False), Sponsor.status == "approved")
-            .scalar()
-            or 0.0
-        )
-        goal_row = CampaignGoal.query.filter_by(active=True).first()
-        goal = float(getattr(goal_row, "goal_amount", 10000.0))
-        sponsors = (
-            Sponsor.query.filter(Sponsor.deleted.is_(False), Sponsor.status == "approved")
-            .order_by(Sponsor.amount.desc())
-            .limit(top_n)
-            .all()
-        )
-        leaderboard = [{"name": s.name, "amount": float(s.amount or 0.0)} for s in sponsors]
-        return Stats(raised=float(raised), goal=goal, leaderboard=leaderboard)
+# Recent donors feed (for header ticker / wall)
+@api.route("/donors")
+class DonorsResource(Resource):
+    @api.doc(description="Recent donors (for ticker / wall)", params={"limit": "max items (default 12)"}, tags=["Stats"])
+    @api.marshal_list_with(donor_model)
+    @require_bearer(optional=True)
+    def get(self):
+        try:
+            limit = _safe_int("limit", default=12, minimum=1, maximum=100)
+            return _recent_donations(limit)
+        except BadRequest as e:
+            api.abort(400, str(e))
+        except Exception:
+            current_app.logger.error("🧾 donors feed error", exc_info=True)
+            api.abort(500, "Database error")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧪 Example (demo)
@@ -302,7 +509,7 @@ class ExampleResource(Resource):
         if not Example:
             api.abort(404, "Example model not available")
         ex = Example.by_uuid(uuid)
-        if not ex or ex.deleted:
+        if not ex or getattr(ex, "deleted", False):
             api.abort(404, "Example not found or deleted")
         return _json(ex.as_dict())
 
@@ -314,10 +521,10 @@ class ExampleDelete(Resource):
         if not Example:
             api.abort(404, "Example model not available")
         ex = Example.by_uuid(uuid)
-        if not ex or ex.deleted:
+        if not ex or getattr(ex, "deleted", False):
             api.abort(404, "Example not found or already deleted")
         ex.soft_delete()
-        return _json({"message": f"{ex.name} soft-deleted"})
+        return _json({"message": f"{getattr(ex, 'name', 'Example')} soft-deleted"})
 
 @api.route("/example/<uuid:uuid>/restore")
 class ExampleRestore(Resource):
@@ -327,42 +534,42 @@ class ExampleRestore(Resource):
         if not Example:
             api.abort(404, "Example model not available")
         ex = Example.by_uuid(uuid)
-        if not ex or not ex.deleted:
+        if not ex or not getattr(ex, "deleted", False):
             api.abort(404, "Example not found or not deleted")
         ex.restore()
-        return _json({"message": f"{ex.name} restored"})
+        return _json({"message": f"{getattr(ex, 'name', 'Example')} restored"})
 
 # ─────────────────────────────────────────────────────────────────────────────
-# 💳 Payments (Stripe + PayPal) — robust, dynamic, idempotent
+# 💳 Payments (Stripe + PayPal)
 # ─────────────────────────────────────────────────────────────────────────────
-import time
-import requests
-from flask import jsonify, request, current_app
-from werkzeug.exceptions import BadRequest
+# Non-sensitive boot config for frontend
+@api.route("/payments/config")
+class PaymentsConfig(Resource):
+    @api.doc(description="Public payment config for front-end boot", tags=["Payments"])
+    @api.marshal_with(payments_cfg_model)
+    def get(self):
+        cid, _ = _paypal_creds()
+        return {
+            "stripe_public_key": _stripe_public() or "",
+            "paypal_env": _paypal_env(),
+            "paypal_client_id": cid or "",
+        }
 
-ALLOWED_CURRENCIES = {"usd"}  # expand later if you enable more currencies
+@api.route("/payments/readiness")
+class PaymentsReadiness(Resource):
+    @api.doc(description="Server-side readiness flags for settings/diagnostics", tags=["Payments"])
+    @api.marshal_with(readiness_model)
+    def get(self):
+        cid, sec = _paypal_creds()
+        return {
+            "stripe_ready": bool(_stripe_secret()),
+            "paypal_ready": bool(cid and sec),
+            "stripe_public_key": _stripe_public() or "",
+            "paypal_env": _paypal_env(),
+            "paypal_client_id": cid or "",
+        }
 
-def _cfg(name: str, default: str = "") -> str:
-    return (current_app.config.get(name) or os.getenv(name) or default)
-
-def _stripe_secret() -> str:  return _cfg("STRIPE_SECRET_KEY", "")
-def _stripe_public() -> str:  return _cfg("STRIPE_PUBLIC_KEY", "")
-
-def _paypal_env() -> str:     return (_cfg("PAYPAL_ENV", "sandbox") or "sandbox").lower()
-def _paypal_creds() -> tuple[str, str]:
-    return (_cfg("PAYPAL_CLIENT_ID", ""), _cfg("PAYPAL_SECRET", ""))
-
-def _paypal_base() -> str:
-    return "https://api-m.paypal.com" if _paypal_env() == "live" \
-           else "https://api-m.sandbox.paypal.com"
-
-def _paypal_timeout() -> int:
-    try:
-        return int(_cfg("PAYPAL_TIMEOUT", "15"))  # seconds
-    except Exception:
-        return 15
-
-# Small in-process token cache (enough for a single dyno/container)
+# Small in-process PayPal token cache (sufficient for a single dyno/container)
 _PAYPAL_TOKEN: dict[str, float | str] = {"access_token": "", "exp": 0.0}
 
 def _paypal_token(force: bool = False) -> str:
@@ -384,7 +591,6 @@ def _paypal_token(force: bool = False) -> str:
     r.raise_for_status()
     payload = r.json()
     _PAYPAL_TOKEN["access_token"] = payload["access_token"]
-    # expires_in typically large (e.g., hours). We still store conservatively.
     _PAYPAL_TOKEN["exp"] = now + float(payload.get("expires_in", 300)) * 0.9
     return str(_PAYPAL_TOKEN["access_token"])
 
@@ -393,8 +599,9 @@ def _idempotency_key(data: dict) -> str | None:
 
 def _parse_money(data: dict) -> tuple[int, str]:
     """
-    Accept {amount_cents} OR {amount} (USD dollars). Enforce min $1.00.
+    Accept {amount_cents} OR {amount} (USD). Minimum $1.00.
     """
+    ALLOWED_CURRENCIES = {"usd"}
     currency = (data.get("currency") or "usd").lower().strip()
     if currency not in ALLOWED_CURRENCIES:
         raise BadRequest(f"Unsupported currency '{currency}'")
@@ -405,7 +612,6 @@ def _parse_money(data: dict) -> tuple[int, str]:
         except Exception:
             raise BadRequest("Invalid amount_cents")
     else:
-        # fallback to dollars
         try:
             dollars = float(data.get("amount", 5.00))
         except Exception:
@@ -417,34 +623,11 @@ def _parse_money(data: dict) -> tuple[int, str]:
 
     return cents, currency
 
-# ── Non-sensitive boot config for frontend
-@api_bp.get("/payments/config")
-def payments_config():
-    cid, _ = _paypal_creds()
-    return jsonify({
-        "stripe_public_key": _stripe_public() or "",
-        "paypal_env": _paypal_env(),
-        "paypal_client_id": cid or "",
-    })
-
-# ── Readiness probe (for settings UI / diag)
-@api_bp.get("/payments/readiness")
-@api.marshal_with(readiness_model)
-def payments_readiness():
-    cid, sec = _paypal_creds()
-    return {
-        "stripe_ready": bool(_stripe_secret()),
-        "paypal_ready": bool(cid and sec),
-        "stripe_public_key": _stripe_public() or "",
-        "paypal_env": _paypal_env(),
-        "paypal_client_id": cid or "",
-    }
-
-# ── Stripe: Create PaymentIntent (idempotent-friendly)
-@api_bp.post("/payments/stripe/intent")
+# Stripe: create PaymentIntent (idempotent-friendly)
+@bp.post("/payments/stripe/intent")
 @require_bearer(optional=False, scopes=["payments:create"])
 def create_payment_intent():
-    import stripe
+    import stripe  # lazy import
 
     secret = _stripe_secret()
     if not secret:
@@ -458,7 +641,6 @@ def create_payment_intent():
         return jsonify({"error": "invalid_amount", "message": str(e)}), 400
 
     idem = _idempotency_key(data)
-
     try:
         kwargs = dict(
             amount=amount_cents,
@@ -466,13 +648,11 @@ def create_payment_intent():
             automatic_payment_methods={"enabled": True},
             metadata={
                 "app": "fundchamps",
-                # Optional helpful metadata passthrough
-                "bucket": str(data.get("allocation") or ""),   # e.g., uniforms / gym / travel
-                "source": str(data.get("source") or "api"),    # e.g., "impact-lockers"
+                "bucket": str(data.get("allocation") or ""),  # uniforms / gym / travel
+                "source": str(data.get("source") or "api"),   # e.g., "impact-lockers"
             },
             description=data.get("description") or "FundChamps Donation",
         )
-        # Note: stripe-python accepts idempotency via special header; the lib lets you pass kwarg
         intent = stripe.PaymentIntent.create(**kwargs, idempotency_key=idem) if idem \
                  else stripe.PaymentIntent.create(**kwargs)
         return jsonify({"client_secret": intent.client_secret})
@@ -480,8 +660,8 @@ def create_payment_intent():
         current_app.logger.exception("💳 Stripe PI error")
         return jsonify({"error": "stripe_error"}), 400
 
-# ── PayPal: Create order (server-side capture flow)
-@api_bp.post("/payments/paypal/order")
+# PayPal: Create order (server-side capture flow)
+@bp.post("/payments/paypal/order")
 @require_bearer(optional=False, scopes=["payments:create"])
 def create_paypal_order():
     cid, sec = _paypal_creds()
@@ -495,7 +675,9 @@ def create_paypal_order():
         return jsonify({"error": "invalid_amount", "message": str(e)}), 400
 
     # PayPal wants decimal string in major units
-    value = f"{amount_cents/100:.2f}".rstrip("0").rstrip(".") if amount_cents % 100 == 0 else f"{amount_cents/100:.2f}"
+    value = f"{amount_cents/100:.2f}"
+    if amount_cents % 100 == 0:
+        value = value.rstrip("0").rstrip(".")
 
     try:
         tok = _paypal_token()
@@ -505,11 +687,8 @@ def create_paypal_order():
             json={
                 "intent": "CAPTURE",
                 "purchase_units": [{
-                    "amount": {
-                        "currency_code": currency.upper(),
-                        "value": value
-                    },
-                    "custom_id": (data.get("allocation") or "general"),  # shows up in reports
+                    "amount": {"currency_code": currency.upper(), "value": value},
+                    "custom_id": (data.get("allocation") or "general"),
                 }],
                 "application_context": {
                     "shipping_preference": "NO_SHIPPING",
@@ -525,8 +704,8 @@ def create_paypal_order():
         current_app.logger.exception("💳 PayPal order error")
         return jsonify({"error": "paypal_order_error"}), 400
 
-# ── PayPal: Capture order
-@api_bp.post("/payments/paypal/capture")
+# PayPal: Capture order
+@bp.post("/payments/paypal/capture")
 @require_bearer(optional=False, scopes=["payments:capture"])
 def capture_paypal_order():
     cid, sec = _paypal_creds()
@@ -561,7 +740,7 @@ def capture_paypal_order():
         return jsonify({"error": "paypal_capture_error"}), 400
 
 # ─────────────────────────────────────────────────────────────────────────────
-# ❌ JSON Error Handlers
+# ❌ JSON Error Handlers (register in create_app)
 # ─────────────────────────────────────────────────────────────────────────────
 def register_error_handlers(app):
     @app.errorhandler(404)

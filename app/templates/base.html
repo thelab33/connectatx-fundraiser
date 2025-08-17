@@ -1,30 +1,32 @@
-{# templates/base.html — Production-grade, CSP-safe, component-first #}
+{# ============================================================================
+   base.html — Production-Grade Shell
+   - Imports ui_bootstrap macros (style_open/close, script_open/close)
+   - CSP-tight (nonce everywhere, no naked <script>/<style>)
+   - Idempotent includes (safe to include multiple times)
+   - Cohesive with index.html (anchors, header/footer, newsletter, modals)
+   ============================================================================ #}
 {% set asset_version = asset_version|default(0) %}
 {% set __team_name  = (team.team_name if team and team.team_name is defined else 'FundChamps') %}
-{# Support both csp_nonce() and NONCE #}
 {% set __nonce      = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
 {% set __brand      = (team.theme_color if team and team.theme_color is defined else '#facc15') %}
-{% set __desc       = (page_description if page_description is defined and page_description else 'Community-funded performance. Travel, gear, and academics — powered by local supporters.') %}
-
-{# Assets (override via css_path/js_path if needed) #}
-{% set __css_path   = css_path if css_path is defined and css_path else 'css/tailwind.min.css' %}
-{% set __js_path    = js_path  if js_path  is defined and js_path  else 'js/bundle.min.js' %}
-
-{# Logo/fallback #}
-{% set __logo_rel   = (team.logo_path if team and team.logo_path is defined and team.logo_path else 'images/logo.webp') %}
+{% set __desc       = (page_description if page_description else 'Community-funded performance. Travel, gear, and academics — powered by local supporters.') %}
+{% set __css_path   = css_path if css_path else 'css/tailwind.min.css' %}
+{% set __js_path    = js_path  if js_path  else 'js/bundle.min.js' %}
+{% set __logo_rel   = (team.logo_path if team and team.logo_path else 'images/logo.webp') %}
 {% set __logo_url   = (url_for('static', filename=__logo_rel, v=asset_version) if url_for is defined else '/static/' ~ __logo_rel) %}
+{% set __stripe_pk  = (app_config.get('STRIPE_PUBLIC_KEY') or app_config.get('STRIPE_PUBLISHABLE_KEY')) if app_config is defined else None %}
+{% set __rtl_langs  = ['ar','he','fa','ur'] %}
+{% set __dir        = (lang_dir if lang_dir in ['ltr','rtl'] else ('rtl' if (lang_code in __rtl_langs) else 'ltr')) %}
+{% set NONCE = __nonce %}
 
-{# Direction (explicit > auto → rtl-langs) #}
-{% set __rtl_langs = ['ar','he','fa','ur'] %}
-{% set __dir = (lang_dir if lang_dir is defined and lang_dir in ['ltr','rtl'] else ('rtl' if (lang_code in __rtl_langs) else 'ltr')) %}
-
-{# Stripe preconnect if configured #}
-{% set __stripe_pk = (app_config.get('STRIPE_PUBLIC_KEY') or app_config.get('STRIPE_PUBLISHABLE_KEY')) if app_config is defined else None %}
+{# --- Bring in CSP-safe macros (style_open/close, script_open/close) --- #}
+{% from "partials/ui_bootstrap.html" import style_open, style_close, script_open, script_close with context %}
 
 <!doctype html>
-<html lang="{{ lang_code|default('en', true) }}" dir="{{ __dir }}"
+<html lang="{{ lang_code|default('en') }}" dir="{{ __dir }}"
       class="no-js scroll-smooth antialiased bg-zinc-950 text-white"
-      data-env="{{ app_env if app_env is defined else 'development' }}">
+      data-env="{{ app_env|default('development') }}"
+      data-team="{{ __team_name|e }}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=5,viewport-fit=cover" />
@@ -34,7 +36,7 @@
     <meta name="robots" content="index,follow" />
     <title>{% block head_title %}{{ __team_name }} — FundChamps{% endblock %}</title>
 
-    {# Open Graph / Twitter #}
+    {# ---------- SEO / Social Cards ---------- #}
     {% block head_meta %}
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content="{{ __team_name }}" />
@@ -48,108 +50,118 @@
       <meta name="twitter:description" content="{{ __desc }}" />
       <meta name="twitter:image" content="{{ __logo_url }}" />
       <meta name="twitter:image:alt" content="{{ __team_name }} logo" />
-      {% if canonical_url is defined and canonical_url %}
-        <link rel="canonical" href="{{ canonical_url }}">
-      {% endif %}
-      {% if __stripe_pk %}
-        <link rel="preconnect" href="https://js.stripe.com" crossorigin>
-        <link rel="preconnect" href="https://api.stripe.com" crossorigin>
-      {% endif %}
     {% endblock %}
 
-    {# CSS (Tailwind bundle) #}
-    <link rel="preload" href="{{ url_for('static', filename=__css_path, v=asset_version) }}" as="style" />
+    {% if canonical_url %}<link rel="canonical" href="{{ canonical_url }}">{% endif %}
+
+    {# ---------- Stripe Preloads (if active) ---------- #}
+    {% if __stripe_pk %}
+      <link rel="preconnect" href="https://js.stripe.com" crossorigin>
+      <link rel="preconnect" href="https://api.stripe.com" crossorigin>
+      <link rel="preload" href="https://js.stripe.com/v3/" as="script" crossorigin>
+    {% endif %}
+
+    {# ---------- CSS & Assets ---------- #}
+    <link rel="preload" href="{{ url_for('static', filename=__css_path, v=asset_version) }}" as="style">
     <link rel="stylesheet" href="{{ url_for('static', filename=__css_path, v=asset_version) }}" />
-
-    {# Favicons #}
-    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png', v=asset_version) }}" />
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg', v=asset_version) }}" />
-    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png', v=asset_version) }}" />
 
-    {# Global tokens/utilities #}
-    {% include 'partials/ui_bootstrap.html' ignore missing %}
+    {# Utility bundle (event bus, CSP macros, helpers) — safe idempotent include #}
+    {% include 'partials/ui_bootstrap.html' ignore missing with context %}
 
-    {# Per-page extras: preload fonts, extra metas, etc. #}
     {% block head_extra %}{% endblock %}
 
-    {# Optional JSON-LD (pages can override/extend) #}
+    {# ---------- JSON-LD (SportsOrg schema) ---------- #}
     {% block head_jsonld %}
-      <script type="application/ld+json" nonce="{{ __nonce }}">
-      {{ {
-        "@context":"https://schema.org",
-        "@type":"SportsTeam",
-        "name": __team_name,
-        "sport": "Basketball",
-        "url": (request.url_root if request is defined else ""),
-        "brand": { "@type":"Brand", "name": __team_name }
-      }|tojson }}
-      </script>
+      {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ __nonce }}">{% endif %}
+      window.__FC_JSONLD = {
+        "@context": "https://schema.org",
+        "@type": "SportsOrganization",
+        "name": {{ __team_name|tojson }},
+        "url": {{ (request.url_root if request is defined else '/')|tojson }},
+        "logo": {{ __logo_url|tojson }},
+        "description": {{ __desc|tojson }},
+        "memberOf": { "@type": "SportsOrganization", "name": "AAU" }
+      };
+      try{
+        const s=document.createElement('script');
+        s.type='application/ld+json';
+        s.textContent=JSON.stringify(window.__FC_JSONLD);
+        document.currentScript?.after(s);
+      }catch(_){}
+      {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
     {% endblock %}
 
-    <style nonce="{{ __nonce }}">
-      :root{
-        --fc-brand: {{ __brand }};
-        --fc-brand-100: color-mix(in srgb, {{ __brand }} 28%, transparent);
-        --fc-brand-200: color-mix(in srgb, {{ __brand }} 20%, transparent);
-        --fc-brand-300: color-mix(in srgb, {{ __brand }} 40%, black);
-      }
+    {# ---------- Inline CSS (CSP-safe) ---------- #}
+    {% if style_open is defined %}{{ style_open() }}{% else %}<style nonce="{{ __nonce }}">{% endif %}
+      :root { --fc-brand: {{ __brand }}; }
       .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-    </style>
+      :target { scroll-margin-top: clamp(64px, 8vh, 96px); } /* keep anchors visible under sticky header */
+    {% if style_close is defined %}{{ style_close() }}{% else %}</style>{% endif %}
 
-    {# Toggle no-js → js as early as possible #}
-    <script nonce="{{ __nonce }}">
-      try{document.documentElement.classList.remove('no-js');document.documentElement.classList.add('js')}catch(e){}
-    </script>
-
-    {# Preload JS bundle (deferred) #}
-    <link rel="preload" href="{{ url_for('static', filename=__js_path, v=asset_version) }}" as="script" />
+    {# ---------- JS Bootstraps (CSP-safe) ---------- #}
+    {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ __nonce }}">{% endif %}
+      document.documentElement.classList.replace('no-js','js');
+    {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
   </head>
 
-  <body class="min-h-screen">
-    <a href="#app" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-black focus:text-white focus:px-3 focus:py-2">
-      Skip to content
-    </a>
+  <body class="min-h-screen flex flex-col" data-lite="{{ '1' if LITE is defined and LITE else '0' }}">
+    <a href="#app" class="sr-only focus:not-sr-only">Skip to content</a>
 
-    {% block body_top %}{% endblock %}
-    {% block hero %}{% endblock %}
+    {# ---------- Header + Announcement ---------- #}
+    {% block header %}
+      {% set stats_url = '/api/stats' %}
+      {% set donors_url = '/api/donors?limit=12' %}
+      {% set show_trust_band = true %}
+      {% include 'partials/header_and_announcement.html' ignore missing with context %}
+    {% endblock %}
 
-    <main id="app" class="flex flex-col gap-8">
+    {# Flash messages + onboarding overlay (premium UX) #}
+    {% include 'partials/flash_and_onboarding_premium.html' ignore missing with context %}
+
+    <main id="app" class="relative z-0 flex-1 flex flex-col gap-12">
+      {% block hero %}{% endblock %}
       {% block content %}{% endblock %}
     </main>
 
-    {% block footer %}{% endblock %}
+    {% include 'partials/newsletter.html' ignore missing with context %}
 
-    {# Portals for modals/menus #}
+    {# ---------- Footer ---------- #}
+    {% block footer %}
+      {% include 'partials/footer.html' ignore missing with context %}
+      {% include 'partials/back_to_top.html' ignore missing with context %}
+    {% endblock %}
+
     <div id="portals" aria-hidden="true"></div>
 
-    {# App config (CSP-safe) #}
-    <script nonce="{{ __nonce }}">
-      (function(){
-        window.FC = window.FC || {};
-        FC.cfg = {
-          team_id: {{ team.id if team and team.id else 'null' }},
+    {# ---------- Bootstrapped Config (window.FC) ---------- #}
+    {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ __nonce }}">{% endif %}
+      window.FC = Object.assign({}, window.FC || {}, {
+        cfg: {
+          team_id: {{ (team.id if team and team.id else none) | tojson }},
           team_name: {{ __team_name|tojson }},
           asset_v: {{ asset_version|int }},
           brand: {{ __brand|tojson }},
-          env: {{ (app_env if app_env is defined else 'development')|tojson }}
-        };
-        try{ document.documentElement.style.setProperty('--fc-brand', FC.cfg.brand); }catch(e){}
-      })();
-    </script>
+          env: {{ app_env|default('development')|tojson }}
+        },
+        mods: (window.FC && window.FC.mods) ? window.FC.mods : {}
+      });
+    {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 
-    {# Your compiled JS bundle (safe to remove if not used) #}
-    <script src="{{ url_for('static', filename=__js_path, v=asset_version) }}"
-            defer nonce="{{ __nonce }}"></script>
+    <script src="{{ url_for('static', filename=__js_path, v=asset_version) }}" defer></script>
 
-    {# Page-level scripts (inline/deferred as needed by child templates) #}
     {% block scripts_extra %}{% endblock %}
 
-    {# Very-late scripts (analytics beacons, etc.) #}
+    {# ---------- Portals / Modals (safe includes) ---------- #}
+    {% include 'partials/donation_modal.html' ignore missing with context %}
+    {% include 'partials/sponsor_form.html' ignore missing with context %}
+    {% include 'partials/sticky_cta_manager.html' ignore missing with context %}
+
     {% block scripts_tail %}{% endblock %}
 
     <noscript>
-      <div class="fixed inset-x-0 bottom-0 z-50 m-3 rounded-lg bg-yellow-200 px-4 py-3 text-black shadow">
-        JavaScript is disabled. Some interactive features (donation modals, live updates) may not work.
+      <div class="fixed inset-x-0 bottom-0 m-3 rounded bg-yellow-200 px-4 py-2 text-black shadow">
+        JavaScript is disabled. Some interactive features may not work.
       </div>
     </noscript>
   </body>

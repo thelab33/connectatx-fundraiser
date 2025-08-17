@@ -1,4 +1,3 @@
-<section data-ui=""${name//_/ -}"" class="block">
 {# =============================================================================
    app/templates/partials/sponsor_spotlight.html
    FundChamps • Sponsor Spotlight (Wrapper)
@@ -6,7 +5,7 @@
    - Preserves legacy ID (#sponsor-spotlight) for CSS/tests
    - No duplicate logic: hub owns data, sockets, rendering
    - Back-compat shim: window.fcAddSponsorWall(payload)
-   - CSP-safe (NONCE/csp_nonce)
+   - CSP-safe (NONCE / csp_nonce)
    ============================================================================= #}
 
 {% include "partials/ui_bootstrap.html" ignore missing with context %}
@@ -18,7 +17,7 @@
 {# Preserve legacy section ID so existing CSS/tests keep working #}
 {% set sponsors_hub_id = sponsors_hub_id|default('sponsor-spotlight') %}
 
-{# Map old prop name to hub prop (top-N slots) #}
+{# Map legacy prop `total_slots` -> hub `spotlight_slots` #}
 {% set spotlight_slots = spotlight_slots|default(total_slots if total_slots is defined else 4) %}
 
 {# Spotlight view only; disable wall + floating drawer #}
@@ -26,23 +25,23 @@
 {% set show_inline_wall = false %}
 {% set show_floating    = false %}
 
-{# Render unified hub with the current context (sponsors_sorted, etc.) #}
-{% include "partials/sponsors_hub.html" ignore missing with context %}
+<section data-ui="{{ (name|default('sponsor_spotlight'))|replace('_','-') }}" class="block">
+  {# Render unified hub with the current context (sponsors_sorted, etc.) #}
+  {% include "partials/sponsors_hub.html" ignore missing with context %}
 
-{# ---- Back-compat: global API shim ---- #}
-<script nonce="{{ NONCE }}">
-  (function(){
-    // Older code may call window.fcAddSponsorWall(payload)
-    if (!('fcAddSponsorWall' in window)) {
-      window.fcAddSponsorWall = function(payload){
-        try {
-          if (window.fcSponsorsHub && typeof window.fcSponsorsHub.add === 'function') {
-            window.fcSponsorsHub.add(payload);
-          }
-        } catch(_) {}
-      };
-    }
-  })();
-</script>
-
+  {# ---- Back-compat: global API shim ---- #}
+  <script nonce="{{ NONCE }}">
+    (function () {
+      if (!('fcAddSponsorWall' in window)) {
+        window.fcAddSponsorWall = function (payload) {
+          try {
+            if (window.fcSponsorsHub && typeof window.fcSponsorsHub.add === 'function') {
+              window.fcSponsorsHub.add(payload);
+            }
+          } catch (_) {}
+        };
+      }
+    })();
+  </script>
 </section>
+
