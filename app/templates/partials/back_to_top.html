@@ -1,100 +1,69 @@
-<section data-ui=""${name//_/ -}"" class="block">
-{# =============================================================================
-   Back to Top — Basketball Edition (CSP/A11y/Progress Ring/Premium)
-   - Brand-aware ring color, reduced-motion safe, SR announcements (throttled)
-   - Hides near the top; smooth-scroll with graceful fallback
-   - Exposes window.fcBackToTop.open() to programmatically reveal + scroll
-   ============================================================================= #}
-{% set NONCE       = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set brand_color = team.theme_color if team and team.theme_color else '#facc15' %}
-{% set show_at_px  = show_at_px|default(320) %}
+<h2 class="sr-only">Back To Top</h2>
+{# =================== Back to Top — Basketball Edition (CSP/A11y/Progress Ring) =================== #}
+<a id="back-to-top"
+   href="#top"
+   aria-label="Back to top"
+   class="fixed left-4 md:left-6 z-[55] hidden md:inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-sm font-semibold text-yellow-200
+          border border-white/15 shadow-2xl transition-opacity duration-200"
+   style="bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);"
+   data-sticky-cta>
+  <span class="ring-wrap" aria-hidden="true">
+    <span class="ball"></span>
+  </span>
+  <span class="sr-only">Back to top</span>
+  <span id="btt-sr" class="sr-only" aria-live="polite"></span>
+</a>
 
-<section id="fc-backtotop" aria-label="Back to top control">
-  <a id="back-to-top"
-     href="#top"
-     aria-label="Back to top"
-     class="fixed left-4 md:left-6 z-[55] hidden md:inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-sm font-semibold text-yellow-200
-            border border-white/15 shadow-2xl transition-opacity duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
-     style="bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);"
-     data-sticky-cta>
-    <span class="ring-wrap" aria-hidden="true">
-      <span class="ball"></span>
-    </span>
-    <span class="sr-only">Back to top</span>
-    <span id="btt-sr" class="sr-only" aria-live="polite"></span>
-  </a>
-</section>
-
-<script nonce="{{ NONCE }}">
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
 (() => {
-  const btn  = document.getElementById('back-to-top'); if (!btn || btn.__init) return; btn.__init = true;
-  const sr   = document.getElementById('btt-sr');
+  const btn = document.getElementById('back-to-top'); if (!btn || btn.__init) return; btn.__init = true;
+  const sr = document.getElementById('btt-sr');
   const ring = btn.querySelector('.ring-wrap');
-  const showAt = {{ show_at_px|int }};
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection?.saveData === true);
+  const showAt = 320;
 
   function pctScrolled(){
     const doc = document.documentElement;
-    const sc  = window.pageYOffset || doc.scrollTop || 0;
-    const max = Math.max(1, doc.scrollHeight - doc.clientHeight);
-    return Math.max(0, Math.min(100, sc / max * 100));
-  }
-
-  // Throttle announcer so we don't spam SR users
-  let lastAnnounce = 0;
-  function announce(p){
-    const now = Date.now();
-    if (!sr || now - lastAnnounce < 800) return;
-    sr.textContent = `You are ${Math.round(p)}% down the page.`;
-    lastAnnounce = now;
+    const scrollTop = (window.pageYOffset || doc.scrollTop || 0);
+    const max = Math.max(1, (doc.scrollHeight - doc.clientHeight));
+    return Math.max(0, Math.min(100, scrollTop / max * 100));
   }
 
   function sync(){
-    const y = window.pageYOffset || document.documentElement.scrollTop || 0;
-    const on = y > showAt;
+    const on = (window.pageYOffset || document.documentElement.scrollTop || 0) > showAt;
     btn.style.display = on ? 'inline-flex' : 'none';
     const p = pctScrolled();
     ring?.style.setProperty('--p', p + '%');
-    announce(p);
+    if (sr) sr.textContent = `You are ${Math.round(p)}% down the page.`;
   }
 
-  // Smooth scroll (respect reduced motion)
+  // Smooth scroll (respects reduced motion)
   btn.addEventListener('click', (e) => {
-    if (reduce) return; // let anchor jump instantly
+    const prefersReduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    if (prefersReduce) return; // let the anchor jump instantly
     e.preventDefault();
-    try { window.scrollTo({ top: 0, behavior: 'smooth' }); }
-    catch { location.hash = '#top'; }
+    try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { location.hash = '#top'; }
   });
 
   addEventListener('scroll', sync, { passive: true });
   addEventListener('resize', sync, { passive: true });
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); });
   sync();
-
-  // Public API
-  window.fcBackToTop = {
-    openAndScroll() { btn.style.display = 'inline-flex'; btn.click(); },
-    show() { btn.style.display = 'inline-flex'; },
-    hide() { btn.style.display = 'none'; }
-  };
 })();
 </script>
 
-<style nonce="{{ NONCE }}">
+<stylenonce="{{ NONCE }}" nonce="{{ NONCE }}">
   #back-to-top { will-change: opacity, transform; }
   #back-to-top:active { transform: scale(.97); }
   @media (prefers-reduced-motion: reduce){ #back-to-top{ transition: none !important; } }
 
-  /* ===== Basketball ball + progress ring (brand-aware) ===== */
+  /* ===== Basketball ball + progress ring ===== */
   #back-to-top .ring-wrap{
     --p: 0%;
     --ring-thickness: 3px;
-    --ring-color: {{ brand_color }};
     position: relative;
     width: 34px; height: 34px; border-radius: 9999px;
     display: inline-grid; place-items: center;
     background:
-      conic-gradient(var(--ring-color) var(--p), transparent 0);
+      conic-gradient(#fde047 var(--p), transparent 0);
     /* cut out center to make a ring */
     -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));
             mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));
@@ -134,4 +103,3 @@
   }
 </style>
 
-</section>

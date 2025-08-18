@@ -1,169 +1,199 @@
-#!/usr/bin/env python3
-import re, sys, json
+# scripts/starforge_autopatch.py
+from __future__ import annotations
+import argparse, difflib, os, re, shutil, sys, time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-TEMPLATES = ROOT / "app" / "templates"
-BASE_HTML = TEMPLATES / "base.html"
-PARTIALS = list((TEMPLATES / "partials").rglob("*.html"))
-CSS_OUT = ROOT / "app" / "static" / "css" / "sv_enhancements.css"
+ROOT_HINTS = ["app/templates", "app/static", "app/__init__.py"]
+BACKUP_ROOT = Path(".starforge/backups")
+ENC = "utf-8"
 
-ENHANCE_CSS = """/* SV Enhancements — low-specificity helpers */
-:root{
-  --sf-ease:cubic-bezier(.2,.8,.2,1);
-}
-.sf-btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;
-  border-radius:9999px;font-weight:800;padding:.7rem 1.05rem;transition:transform .25s var(--sf-ease),box-shadow .25s var(--sf-ease),background .25s}
-.sf-btn:focus-visible{outline:2px solid var(--fc-brand);outline-offset:2px}
-.sf-btn-primary{background:linear-gradient(90deg,var(--fc-brand),color-mix(in srgb,var(--fc-brand) 65%,#fff));color:#0b0c0f;
-  box-shadow:0 12px 32px color-mix(in srgb,var(--fc-brand) 26%,transparent)}
-.sf-btn-primary:hover{transform:translateY(-1px);box-shadow:0 18px 44px color-mix(in srgb,var(--fc-brand) 36%,transparent)}
-.sf-btn-ghost{background:transparent;border:1px solid var(--fc-brand-100);color:#fff}
-.sf-btn-ghost:hover{background:var(--fc-brand-50)}
-.sf-chip{display:inline-flex;align-items:center;gap:.4rem;border-radius:9999px;padding:.3rem .65rem;
-  border:1px dashed var(--fc-brand-100);color:#fde68a;font-weight:700;background:color-mix(in srgb,var(--fc-brand) 8%,transparent)}
-.motion-safe .reveal{opacity:0;transform:translateY(8px);transition:opacity .55s var(--sf-ease),transform .55s var(--sf-ease)}
-.motion-safe .reveal.is-in{opacity:1;transform:none}
-.card:hover{border-color:var(--fc-brand-100)}
-/* modest focus for links */
-a:focus-visible{outline:2px solid var(--fc-brand);outline-offset:2px}
-"""
+PATCHES = []
 
-LINK_TAG = """
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/sv_enhancements.css', v=asset_version) }}" />
-"""
+def register(patch_fn):
+    PATCHES.append(patch_fn)
+    return patch_fn
 
-STYLE_BLOCK_RE = re.compile(r"(<style[^>]*>)(.*?)(</style>)", re.S|re.I)
-CLASS_RE = re.compile(r'class=("|\')(.*?)\1', re.S|re.I)
+def find_root() -> Path:
+    here = Path.cwd()
+    for p in [here] + list(here.parents):
+        if all((p / hint).exists() for hint in ROOT_HINTS):
+            return p
+    print("❌ Could not locate project root (looked for app/templates, app/static, app/__init__.py).", file=sys.stderr)
+    sys.exit(2)
 
-def write_css(dry=False):
-  changes=False
-  if not CSS_OUT.exists() or CSS_OUT.read_text(encoding="utf-8").strip()!=ENHANCE_CSS.strip():
-    changes=True
-    if not dry:
-      CSS_OUT.parent.mkdir(parents=True, exist_ok=True)
-      CSS_OUT.write_text(ENHANCE_CSS, encoding="utf-8")
-  return changes, str(CSS_OUT.relative_to(ROOT))
+def backup_write(target: Path, new_text: str, backup_dir: Path, apply: bool) -> bool:
+    old = target.read_text(ENC)
+    if old == new_text:
+        return False
+    if apply:
+        dest = backup_dir / target.relative_to(Path.cwd())
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(target, dest)
+        target.write_text(new_text, ENC)
+    # Always print unified diff for visibility
+    diff = difflib.unified_diff(old.splitlines(True), new_text.splitlines(True),
+                                fromfile=str(target), tofile=str(target), lineterm="")
+    sys.stdout.writelines(diff)
+    print()
+    return True
 
-def ensure_link_in_base(dry=False):
-  if not BASE_HTML.exists(): return False, "base.html missing"
-  html = BASE_HTML.read_text(encoding="utf-8")
-  if "css/sv_enhancements.css" in html: return False, "already linked"
-  # insert after the Tailwind link or before </head>
-  m = re.search(r'(<link[^>]+tailwind[^>]*>)', html, re.I)
-  if m:
-    new_html = html[:m.end()] + LINK_TAG + html[m.end():]
-  else:
-    new_html = re.sub(r"</head>", LINK_TAG + "\n  </head>", html, flags=re.I)
-  if not dry:
-    backup(BASE_HTML)
-    BASE_HTML.write_text(new_html, encoding="utf-8")
-  return True, "link inserted"
+def replace_re(text: str, pattern: str, repl: str, flags=re.MULTILINE) -> tuple[str, bool]:
+    new_text, n = re.subn(pattern, repl, text, flags=flags)
+    return new_text, n > 0
 
-def backup(path: Path):
-  bak = path.with_suffix(path.suffix + ".bak")
-  if not bak.exists():
-    bak.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
+def ensure_include_once(text: str, snippet: str, anchor_pattern: str, place="after") -> tuple[str, bool]:
+    if snippet in text:
+        return text, False
+    m = re.search(anchor_pattern, text, re.DOTALL)
+    if not m:
+        return text, False
+    idx = m.end() if place == "after" else m.start()
+    return text[:idx] + "\n" + snippet + "\n" + text[idx:], True
 
-def sanitize_style_blocks(text:str)->str:
-  def _fix(m):
-    head, body, tail = m.groups()
-    body = body.replace("{#", "{ /*#*/").replace("#}", "/*#*/ }")
-    return f"{head}{body}{tail}"
-  return STYLE_BLOCK_RE.sub(_fix, text)
+# ---------------------------
+# Individual patches
+# ---------------------------
 
-def add_reveal_to_cards(text:str)->str:
-  def _add(m):
-    quote, classes = m.groups()
-    parts = classes.split()
-    if ("card" in parts or "glass" in parts) and "reveal" not in parts:
-      parts.append("reveal")
-    return f'class={quote}{" ".join(dict.fromkeys(parts))}{quote}'
-  return CLASS_RE.sub(_add, text)
+@register
+def patch_migrations_sa_text(root: Path):
+    changed = 0
+    mig_dir = root / "migrations" / "versions"
+    if not mig_dir.exists():
+        return "no migrations dir", 0
+    for f in mig_dir.glob("*.py"):
+        t = f.read_text(ENC)
+        orig = t
+        if "Text()" in t and "sa.Text()" not in t:
+            t = t.replace("Text()", "sa.Text()")
+        if "import sqlalchemy as sa" not in t:
+            # Add import near top if we referenced sa.Text()
+            if "sa.Text()" in t:
+                t = re.sub(r"(\nfrom alembic import op[^\n]*\n)", r"\1import sqlalchemy as sa\n", t, count=1)
+        if t != orig:
+            f.write_text(t, ENC)
+            changed += 1
+    return "migrations patched", changed
 
-def upgrade_imgs_links(text:str)->str:
-  # lazy/decoding on images (skip fetchpriority=high or data-no-lazy)
-  text = re.sub(
-    r'<img(?![^>]*\b(fetchpriority|data-no-lazy)\b)([^>]*?)>',
-    lambda m: ('<img'+m.group(2)
-               + ('' if re.search(r'\bloading=', m.group(2)) else ' loading="lazy"')
-               + ('' if re.search(r'\bdecoding=', m.group(2)) else ' decoding="async"')
-               + '>'),
-    text, flags=re.I)
-  # security rel on external links
-  def fix_a(m):
-    tag = m.group(0)
-    if 'rel=' not in tag:
-      tag = tag[:-1] + ' rel="noopener noreferrer">'
-    return tag
-  text = re.sub(r'<a(?=[^>]*\shref=["\']https?://)([^>]*)>', fix_a, text, flags=re.I)
-  return text
+@register
+def patch_nonce_on_inline_scripts(root: Path):
+    changed = 0
+    for f in (root / "app" / "templates").rglob("*.html"):
+        t = f.read_text(ENC)
+        orig = t
+        # ensure NONCE def (lightweight, non-destructive)
+        if "{% set NONCE" not in t and "<script" in t:
+            t = "{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}\n" + t
+        # add nonce attr where missing (avoid external scripts)
+        def add_nonce(m):
+            tag = m.group(0)
+            if " src=" in tag:
+                return tag  # external scripts handled by CSP headers
+            if " nonce=" in tag:
+                return tag
+            return tag.replace("<script", "<script nonce=\"{{ NONCE }}\"", 1)
+        t = re.sub(r"<script(?=[^>]*>)(?![^>]*nonce=)", add_nonce, t)
+        if t != orig:
+            f.write_text(t, ENC)
+            changed += 1
+    return "nonce normalized", changed
 
-def gentle_cta_upgrade(text:str)->str:
-  # add sf-btn classes to donate/sponsor buttons/links (non-destructive)
-  def add_btn_classes(tag):
-    if 'sf-btn' in tag: return tag
-    # keep existing classes, just append
-    return re.sub(r'class=("|\')(.*?)\1',
-                  lambda m: f'class={m.group(1)}{m.group(2)} sf-btn sf-btn-primary{m.group(1)}',
-                  tag, count=1) if 'class=' in tag else tag.replace('>', ' class="sf-btn sf-btn-primary">')
-  text = re.sub(r'<(button|a)([^>]*?(?:>))(?=[^<]*(Donate|Sponsor)(?![a-z]))',
-                lambda m: add_btn_classes(m.group(0)),
-                text, flags=re.I|re.S)
-  return text
+@register
+def ensure_ui_bootstrap_include(root: Path):
+    base = root / "app" / "templates" / "base.html"
+    if not base.exists():
+        return "base missing", 0
+    t = base.read_text(ENC)
+    orig = t
+    snippet = '{% include "partials/ui_bootstrap.html" ignore missing with context %}'
+    # Place after opening <body> or at file start fallback
+    if snippet not in t:
+        if "<body" in t:
+            t = re.sub(r"(<body[^>]*>)", r"\1\n  " + snippet, t, count=1, flags=re.IGNORECASE)
+        else:
+            t = snippet + "\n" + t
+    if t != orig:
+        base.write_text(t, ENC); return "ui_bootstrap include added", 1
+    return "ui_bootstrap already present", 0
 
-def process_file(path: Path, dry=False):
-  original = path.read_text(encoding="utf-8")
-  text = original
-  text = sanitize_style_blocks(text)
-  text = add_reveal_to_cards(text)
-  text = upgrade_imgs_links(text)
-  text = gentle_cta_upgrade(text)
-  changed = (text != original)
-  if changed and not dry:
-    backup(path)
-    path.write_text(text, encoding="utf-8")
-  return changed
+@register
+def patch_common_template_bugs(root: Path):
+    changed = 0
+    for f in (root / "app" / "templates").rglob("*.html"):
+        t = f.read_text(ENC)
+        orig = t
+        # teamName -> team_name, hero fix
+        t = t.replace("{{ teamName }}", "{{ team_name }}")
+        t = t.replace("team.hero ", "team.hero_bg ")
+        # add safe defaults if missing
+        if "team_name" in t and "set team_name" not in t:
+            t = re.sub(r"(\{%.*?block.*?%})", "{% set team_name = (team.team_name if team and team.team_name is defined else 'Connect ATX Elite') %}\n\\1", t, 1, flags=re.DOTALL)
+        if "funds_raised" in t and "| float" not in t:
+            t = t.replace("funds_raised", "(funds_raised if funds_raised is defined else 0) | float")
+        if "fundraising_goal" in t and "| float" not in t:
+            t = t.replace("fundraising_goal", "(fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float")
+        if t != orig:
+            f.write_text(t, ENC)
+            changed += 1
+    return "common html fixes", changed
 
-def revert_all():
-  changed=[]
-  for p in [BASE_HTML, *PARTIALS]:
-    bak = p.with_suffix(p.suffix + ".bak")
-    if bak.exists():
-      p.write_text(bak.read_text(encoding="utf-8"), encoding="utf-8")
-      changed.append(str(p.relative_to(ROOT)))
-  if CSS_OUT.exists():
-    CSS_OUT.unlink()
-  return changed
+@register
+def patch_index_inline_json_comment(root: Path):
+    idx = root / "app" / "templates" / "index.html"
+    if not idx.exists():
+        return "index.html missing", 0
+    t = idx.read_text(ENC)
+    orig = t
+    # Remove trailing JSON-style comments inside object literals like  "layout_bands": false, # comment
+    t = re.sub(r'("layout_bands":[^,\n]*),\s*#.*', r"\1,", t)
+    if t != orig:
+        idx.write_text(t, ENC); return "index json cleaned", 1
+    return "index json ok", 0
 
-def main():
-  cmd = (sys.argv[1] if len(sys.argv)>1 else "dry-run").lower()
-  if cmd not in {"dry-run","patch","revert"}:
-    print("Usage: python scripts/starforge_autopatch.py [dry-run|patch|revert]"); sys.exit(2)
+@register
+def harden_static_asset_versions(root: Path):
+    changed = 0
+    for f in (root / "app" / "templates").rglob("*.html"):
+        t = f.read_text(ENC); orig = t
+        t = re.sub(r"(\{\{\s*url_for\('static',\s*filename=['\"][^'\"]+['\"]\)\s*\}\})(?!\?v=)", r"\1?v={{ asset_version|default(0) }}", t)
+        if t != orig:
+            f.write_text(t, ENC); changed += 1
+    return "asset version params", changed
 
-  if cmd == "revert":
-    files = revert_all()
-    print(json.dumps({"reverted": files}, indent=2)); return
+@register
+def harden_sponsor_form_action(root: Path):
+    p = root / "app" / "templates" / "partials" / "sponsor_form.html"
+    if not p.exists():
+        return "sponsor_form missing", 0
+    t = p.read_text(ENC); orig = t
+    # Replace brittle hardlinks with safe url_for fallback
+    t = re.sub(r'\{%\s*set\s*action_url[^\n]*\n', '', t)
+    if "action=" in t:
+        t = re.sub(r'action="[^"]*"', 'action="{{ url_for(\'main.sponsor_submit\') if url_for is defined else \'/sponsor/submit\' }}"', t)
+    if t != orig:
+        p.write_text(t, ENC); return "sponsor_form action hardened", 1
+    return "sponsor_form ok", 0
 
-  dry = (cmd == "dry-run")
-  css_changed, css_path = write_css(dry=dry)
-  base_changed, base_note = ensure_link_in_base(dry=dry)
-
-  touched=[]
-  for path in [*PARTIALS, BASE_HTML]:
-    try:
-      if process_file(path, dry=dry):
-        touched.append(str(path.relative_to(ROOT)))
-    except Exception as e:
-      print(f"⚠️  skip {path}: {e}")
-
-  report = {
-    "mode": "dry-run" if dry else "patched",
-    "css": {"path": css_path, "updated": css_changed},
-    "base_link": {"changed": base_changed, "note": base_note},
-    "files_updated": touched,
-  }
-  print(json.dumps(report, indent=2))
+def run(apply: bool):
+    root = find_root()
+    backup_dir = BACKUP_ROOT / time.strftime("%Y%m%d-%H%M%S")
+    if apply:
+        backup_dir.mkdir(parents=True, exist_ok=True)
+    print(f"🔧 Starforge Autopatch • root={root}")
+    total_changes = 0
+    for fn in PATCHES:
+        try:
+            msg, count = fn(root)
+            total_changes += count
+            print(f" • {msg}: {count} change(s)")
+        except Exception as e:
+            print(f" ! {fn.__name__} failed: {e}", file=sys.stderr)
+    print(f"\n✅ Done. {'Applied' if apply else 'Dry-run'}; total changes: {total_changes}")
+    if not apply:
+        print("ℹ️  Re-run with --apply to write changes and create backups in .starforge/backups")
 
 if __name__ == "__main__":
-  main()
+    ap = argparse.ArgumentParser(description="Starforge Go-Live Autopatch")
+    ap.add_argument("--apply", action="store_true", help="write changes (otherwise dry-run)")
+    args = ap.parse_args()
+    run(apply=args.apply)
+

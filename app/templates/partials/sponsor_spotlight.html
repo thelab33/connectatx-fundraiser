@@ -1,47 +1,312 @@
-{# =============================================================================
-   app/templates/partials/sponsor_spotlight.html
-   FundChamps • Sponsor Spotlight (Wrapper)
-   - Delegates to sponsors_hub.html in "spotlight-only" mode
-   - Preserves legacy ID (#sponsor-spotlight) for CSS/tests
-   - No duplicate logic: hub owns data, sockets, rendering
-   - Back-compat shim: window.fcAddSponsorWall(payload)
-   - CSP-safe (NONCE / csp_nonce)
-   ============================================================================= #}
+{# =================== FundChamps • Sponsor Spotlight (Widget) =================== #}
+{# Inputs & fallbacks #}
+{% set sponsors_sorted = sponsors_sorted if sponsors_sorted is defined and sponsors_sorted else [] %}
+{% set sponsors_total  = sponsors_total  if sponsors_total  is defined else (sponsors_sorted | sum(attribute='amount')) %}
+{% set sponsors_count  = sponsors_count  if sponsors_count  is defined else (sponsors_sorted | length) %}
+{% set total_slots     = total_slots     if total_slots     is defined else 4 %}
+{% set default_logo    = (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
 
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{% set tier_styles = {
+  'Platinum': 'bg-yellow-300 text-yellow-900 ring-2 ring-yellow-400',
+  'Gold'    : 'bg-yellow-200 text-yellow-800 ring-1 ring-yellow-300',
+  'Silver'  : 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200',
+  'Bronze'  : 'bg-orange-200 text-orange-900 ring-1 ring-orange-300',
+  'default' : 'bg-indigo-900 text-yellow-300 ring-1 ring-indigo-600'
+} %}
+{% set tier_emojis = { 'Platinum':'🥇','Gold':'🥈','Silver':'🥉','Bronze':'🏅','default':'🏆' } %}
 
-{# CSP nonce #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{# Decide what to render initially #}
+{% set _base = sponsors_sorted if sponsors_sorted else [] %}
+{% set _display = (_base | sort(attribute='amount', reverse=True))[:total_slots] %}
+{% set demo_sponsor = {
+  "name":"ESPN",
+  "logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg",
+  "url":"https://espn.com",
+  "amount":5000, "tier":"Platinum",
+  "tooltip":"Official Broadcast Sponsor – Sports bring communities together!"
+} %}
+{% if _display|length == 0 %}{% set _display = [demo_sponsor] %}{% endif %}
 
-{# ---- Spotlight-only config (pass-through to the Hub) ---- #}
-{# Preserve legacy section ID so existing CSS/tests keep working #}
-{% set sponsors_hub_id = sponsors_hub_id|default('sponsor-spotlight') %}
+<aside
+  class="fc-widget-sponsor-spotlight lg:col-span-4"
+  data-widget="sponsor-spotlight"
+  data-total="{{ (sponsors_total or 0)|float }}"
+  data-count="{{ sponsors_count }}"
+  data-slots="{{ total_slots }}"
+  data-fallback-logo="{{ default_logo }}"
+  aria-labelledby="sponsor-spotlight-h-{{ caller_id|default('1') }}"
+  role="region"
+>
+  <header class="mb-4 text-center">
+    <h3 id="sponsor-spotlight-h-{{ caller_id|default('1') }}" class="text-2xl font-extrabold tracking-tight text-yellow-300">🏆 Sponsor Spotlight</h3>
+    <p class="mt-1 text-xs font-medium text-yellow-200">
+      <span class="ss-count">{{ sponsors_count }}</span> Champions
+      &nbsp;|&nbsp; $ <span class="ss-total">{{ '{:,.0f}'.format((sponsors_total or 0)|float) }}</span> raised
+    </p>
+  </header>
 
-{# Map legacy prop `total_slots` -> hub `spotlight_slots` #}
-{% set spotlight_slots = spotlight_slots|default(total_slots if total_slots is defined else 4) %}
+  <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-1"
+       role="list" aria-label="Top Sponsors" aria-live="polite" aria-relevant="additions"
+       data-wall>
+    {% for sponsor in _display[:total_slots] %}
+      {% set tier = sponsor.tier|default('default') %}
+      {% set _raw = sponsor.logo if sponsor.logo else 'images/logo.webp' %}
+      {% set logo_src = _raw if '://' in _raw else (url_for('static', filename=_raw) if url_for is defined else '/' ~ _raw.lstrip('/')) %}
+      {% set tip_id = "tip-%d"|format(loop.index) %}
+      <article
+        class="s-card gold-shadow flex min-h-[200px] flex-col items-center gap-2 rounded-2xl border-2 px-6 py-5 {{ tier_styles.get(tier, tier_styles['default']) }}"
+        role="listitem" tabindex="0"
+        data-name="{{ sponsor.name|e }}" data-tier="{{ tier|e }}"
+        aria-label="{{ sponsor.name or 'Sponsor' }}" aria-describedby="{{ tip_id }}"
+        itemscope itemtype="https://schema.org/Organization" itemprop="sponsor"
+      >
+        {% if tier in ['Platinum','Gold'] %}<span class="text-3xl" aria-hidden="true">✨</span>{% endif %}
+        {% if sponsor.url %}<a href="{{ sponsor.url }}" target="_blank" rel="noopener noreferrer sponsored" tabindex="-1" aria-label="Visit {{ sponsor.name }}">{% endif %}
+          <img src="{{ logo_src }}" alt="{{ sponsor.name }} logo" width="96" height="96"
+               class="h-16 w-16 rounded-xl border border-yellow-400/40 bg-white/90 object-contain shadow-inner sm:h-20 sm:w-20"
+               loading="lazy" decoding="async" />
+        {% if sponsor.url %}</a>{% endif %}
 
-{# Spotlight view only; disable wall + floating drawer #}
-{% set show_spotlight   = true  %}
-{% set show_inline_wall = false %}
-{% set show_floating    = false %}
+        <h4 class="mt-2 line-clamp-2 text-center text-lg font-bold">{{ sponsor.name }}</h4>
+        <span class="text-base font-extrabold text-yellow-700">$ {{ '{:,.0f}'.format((sponsor.amount or 0)|float) }}</span>
 
-<section data-ui="{{ (name|default('sponsor_spotlight'))|replace('_','-') }}" class="block">
-  {# Render unified hub with the current context (sponsors_sorted, etc.) #}
-  {% include "partials/sponsors_hub.html" ignore missing with context %}
+        <span class="text-2xl" aria-label="{{ tier if tier != 'default' else 'Champion' }}">
+          {{ tier_emojis.get(tier, '🏆') }}
+          <span class="ml-1 text-xs">{{ tier if tier != 'default' else 'Champion' }}</span>
+        </span>
 
-  {# ---- Back-compat: global API shim ---- #}
-  <script nonce="{{ NONCE }}">
-    (function () {
-      if (!('fcAddSponsorWall' in window)) {
-        window.fcAddSponsorWall = function (payload) {
-          try {
-            if (window.fcSponsorsHub && typeof window.fcSponsorsHub.add === 'function') {
-              window.fcSponsorsHub.add(payload);
-            }
-          } catch (_) {}
-        };
+        <div id="{{ tip_id }}" class="tooltip pointer-events-none mt-1 rounded bg-black/60 px-3 py-1 text-xs text-yellow-100 shadow-lg" role="tooltip">
+          {{ sponsor.tooltip or "Thank you for supporting us!" }}
+        </div>
+      </article>
+    {% endfor %}
+
+    {% set used = _display|length %}
+    {% for _ in range(total_slots - used) %}
+      <div role="listitem"
+           class="flex min-h-[200px] flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-yellow-400/40 bg-black/60 px-6 py-5 shadow-xl"
+           data-empty tabindex="0" aria-label="Available sponsorship spot">
+        <span class="text-3xl" aria-hidden="true">✨</span>
+        <span class="text-center text-sm font-semibold text-yellow-300">This spot is waiting for you!</span>
+        <div class="flex gap-2">
+          <button type="button"
+                  class="mt-2 rounded-full bg-yellow-400 px-4 py-2 text-sm font-bold text-black shadow transition hover:bg-yellow-300 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                  data-modal-open="tiers-modal" data-track="cta_become_sponsor">🌟 Become a Sponsor</button>
+          <button type="button"
+                  class="mt-2 rounded-full bg-black/70 px-4 py-2 text-sm font-bold text-yellow-200 ring-1 ring-yellow-400/40 hover:bg-zinc-900"
+                  data-open-donation data-track="cta_quick_donate">💳 Quick Donate</button>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="mt-6 flex items-center gap-4 overflow-x-auto rounded-2xl bg-black/50 py-3 shadow-inner ring-1 ring-yellow-400/10"
+       aria-label="Sponsor logos" data-ribbon>
+    <img src="{{ demo_sponsor.logo }}" alt="ESPN logo" title="ESPN (Demo Sponsor)" class="mx-2 h-8 w-auto rounded shadow-inner" loading="lazy" decoding="async" />
+    {% for s in (sponsors_sorted or [])[:8] %}
+      {% set _r = s.logo if s.logo else 'images/logo.webp' %}
+      {% set _src = _r if '://' in _r else (url_for('static', filename=_r) if url_for is defined else '/' ~ _r.lstrip('/')) %}
+      <img src="{{ _src }}" alt="{{ s.name or 'Sponsor logo' }}" title="{{ s.name or 'Sponsor' }}"
+           class="mx-2 h-8 w-auto rounded shadow" loading="lazy" decoding="async" />
+    {% endfor %}
+    <span class="ml-2 whitespace-nowrap text-sm font-bold text-yellow-400">+ Your Brand Here</span>
+  </div>
+</aside>
+
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+(() => {
+  // Multi-instance widget bootstrap
+  const WIDGET_SEL = '[data-widget="sponsor-spotlight"]';
+  const instances = [];
+
+  function fmt0(n){ return (Math.round(+n||0)).toLocaleString(); }
+  function uid(prefix='tip'){ return `${prefix}-${Math.random().toString(36).slice(2,9)}`; }
+
+  function mount(root){
+    if (!root || root.__mounted) return;
+    root.__mounted = true;
+
+    const wall    = root.querySelector('[data-wall]');
+    const ribbon  = root.querySelector('[data-ribbon]');
+    const totalEl = root.querySelector('.ss-total');
+    const countEl = root.querySelector('.ss-count');
+
+    const DEFAULT_LOGO = root.dataset.fallbackLogo || '/static/images/logo.webp';
+    const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
+    // Add error fallbacks to existing logos (CSP-safe)
+    root.querySelectorAll('img').forEach(img=>{
+      img.addEventListener('error', ()=> {
+        img.src = DEFAULT_LOGO;
+      }, { once:true });
+    });
+
+    const tierMap = {
+      Platinum: 'bg-yellow-300 text-yellow-900 ring-2 ring-yellow-400',
+      Gold    : 'bg-yellow-200 text-yellow-800 ring-1 ring-yellow-300',
+      Silver  : 'bg-yellow-100 text-yellow-700 ring-1 ring-yellow-200',
+      Bronze  : 'bg-orange-200 text-orange-900 ring-1 ring-orange-300',
+      default : 'bg-indigo-900 text-yellow-300 ring-1 ring-indigo-600'
+    };
+    const emojiMap = { Platinum:'🥇', Gold:'🥈', Silver:'🥉', Bronze:'🏅', default:'🏆' };
+
+    const existing = new Set(Array.from(wall.querySelectorAll('[data-name]'))
+      .map(n => (n.dataset.name||'').trim().toLowerCase()));
+
+    function addLogoToRibbon(logo, alt){
+      if (!logo || !ribbon) return;
+      const img = document.createElement('img');
+      img.src = logo; img.alt = alt || 'Sponsor logo';
+      img.className = 'mx-2 h-8 w-auto rounded shadow';
+      img.loading = 'lazy'; img.decoding = 'async';
+      img.addEventListener('error', ()=> { img.src = DEFAULT_LOGO; }, { once:true });
+      ribbon.insertBefore(img, ribbon.lastElementChild);
+    }
+
+    function makeCard({ name, amount=0, tier='default', url=null, logo=null, tooltip=null }){
+      const card = document.createElement('article');
+      card.className = `s-card gold-shadow flex min-h-[200px] flex-col items-center gap-2 rounded-2xl border-2 px-6 py-5 ${tierMap[tier] || tierMap.default}`;
+      card.setAttribute('role','listitem');
+      card.tabIndex = 0;
+      card.dataset.name = name;
+      card.dataset.tier = tier;
+
+      if (/^(Platinum|Gold)$/i.test(tier)) {
+        const spark = document.createElement('span');
+        spark.className = 'text-3xl';
+        spark.setAttribute('aria-hidden','true');
+        spark.textContent = '✨';
+        card.appendChild(spark);
       }
-    })();
-  </script>
-</section>
+
+      const logoImg = document.createElement('img');
+      logoImg.className = 'h-16 w-16 rounded-xl border border-yellow-400/40 bg-white/90 object-contain shadow-inner sm:h-20 sm:w-20';
+      logoImg.width = 96; logoImg.height = 96; logoImg.loading = 'lazy'; logoImg.decoding = 'async';
+      logoImg.alt = `${name} logo`;
+      logoImg.src = logo || DEFAULT_LOGO;
+      logoImg.addEventListener('error', ()=> { logoImg.src = DEFAULT_LOGO; }, { once:true });
+
+      if (url) {
+        const a = document.createElement('a');
+        a.href = url; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; a.tabIndex = -1;
+        a.setAttribute('aria-label', `Visit ${name}`);
+        a.appendChild(logoImg); card.appendChild(a);
+      } else {
+        card.appendChild(logoImg);
+      }
+
+      const h3 = document.createElement('h3');
+      h3.className = 'mt-2 line-clamp-2 text-center text-lg font-bold';
+      h3.textContent = name; card.appendChild(h3);
+
+      const amt = document.createElement('span');
+      amt.className = 'text-base font-extrabold text-yellow-700';
+      amt.textContent = '$ ' + fmt0(amount);
+      card.appendChild(amt);
+
+      const tierRow = document.createElement('span');
+      tierRow.className = 'text-2xl';
+      tierRow.setAttribute('aria-label', /default/i.test(tier) ? 'Champion' : tier);
+      tierRow.innerHTML = `${emojiMap[tier] || emojiMap.default}<span class="ml-1 text-xs">${/default/i.test(tier) ? 'Champion' : tier}</span>`;
+      card.appendChild(tierRow);
+
+      const tip = document.createElement('div');
+      const tipId = uid();
+      tip.id = tipId;
+      tip.className = 'tooltip pointer-events-none mt-1 rounded bg-black/60 px-3 py-1 text-xs text-yellow-100 shadow-lg';
+      tip.setAttribute('role','tooltip');
+      tip.textContent = tooltip || 'Thank you for supporting us!';
+      card.setAttribute('aria-describedby', tipId);
+      card.appendChild(tip);
+
+      return card;
+    }
+
+    function updateTotals(deltaAmount, isNew){
+      const curTotal = parseFloat(root.dataset.total || '0');
+      const curCount = parseInt(root.dataset.count || '0', 10);
+      const nextTotal = curTotal + (parseFloat(deltaAmount)||0);
+      const nextCount = curCount + (isNew ? 1 : 0);
+      root.dataset.total = String(nextTotal);
+      root.dataset.count = String(nextCount);
+      if (totalEl) totalEl.textContent = fmt0(nextTotal);
+      if (countEl) countEl.textContent = String(nextCount);
+    }
+
+    function add(payload){
+      const name = String(payload?.name||'').trim();
+      if (!name) return;
+
+      const lower = name.toLowerCase();
+      const isNew = !existing.has(lower);
+      if (isNew) existing.add(lower);
+
+      const card = makeCard({
+        name,
+        amount: +payload.amount || 0,
+        tier: payload.tier || 'default',
+        url : payload.url  || null,
+        logo: payload.logo || null,
+        tooltip: payload.tooltip || null
+      });
+
+      const empty = wall.querySelector('[data-empty]');
+      if (empty) empty.replaceWith(card); else wall.prepend(card);
+
+      updateTotals(+payload.amount || 0, isNew);
+      if (payload.logo) addLogoToRibbon(payload.logo, `${name} logo`);
+
+      const vip = (payload.tier && /platinum|gold|vip/i.test(payload.tier)) || (+payload.amount >= 500);
+      if (vip && !prefersReduced && typeof window.launchConfetti === 'function') {
+        window.launchConfetti({ particleCount: 200, spread: 80 });
+      }
+    }
+
+    // Wire global CTAs (modals/donate) once per document
+    if (!document.__fcSpotlightCtas) {
+      document.__fcSpotlightCtas = true;
+      document.addEventListener('click', (e)=>{
+        const open = e.target.closest('[data-modal-open]');
+        if (open) {
+          const id = open.getAttribute('data-modal-open');
+          const dlg = document.getElementById(id);
+          if (dlg?.showModal) { e.preventDefault(); dlg.showModal(); }
+        }
+        const donate = e.target.closest('[data-open-donation]');
+        if (donate) {
+          e.preventDefault();
+          if (typeof window.openDonationModal === 'function') return void window.openDonationModal();
+          const btn = document.querySelector('[data-open-donation]');
+          if (btn && btn !== donate) btn.click();
+        }
+      });
+    }
+
+    // Events: public API + listeners
+    root.addEventListener('fc:vip', (ev)=> add(ev.detail || {}));
+    // Optional Socket.IO live updates
+    if (typeof window.io === 'function') {
+      try {
+        const sock = window.io('/sponsors', { transports: ['websocket','polling'] });
+        sock.on('sponsor', (payload)=> add(payload));
+      } catch(_) {}
+    }
+
+    const api = { add };
+    root.__api = api;
+    instances.push(api);
+    return api;
+  }
+
+  // Auto-mount all instances on the page
+  document.querySelectorAll(WIDGET_SEL).forEach(mount);
+
+  // Expose a tiny registry
+  (window.FundChamps ||= {}).widgets ||= {};
+  window.FundChamps.widgets.sponsorSpotlight = {
+    mount,
+    all: instances
+  };
+})();
+</script>
 

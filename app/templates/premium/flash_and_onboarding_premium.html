@@ -103,7 +103,7 @@
     {% endfor %}
   </div>
 
-  <script nonce="{{ NONCE }}">
+  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
   (() => {
     const host = document.getElementById('fc-flash'); if (!host) return;
     const DEF = parseInt(host.dataset.autocloseDefault || '4500', 10);
@@ -241,7 +241,8 @@
     window.addEventListener('fc:flash', e => window.fcFlash(e.detail||{}));
     bc?.addEventListener?.('message', (ev)=>{ if (ev?.data?.type==='fc:flash') window.fcFlash(ev.data.detail); });
   })();
-  </script>
+  
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 {% endif %}
 {% endwith %}
 
@@ -284,7 +285,7 @@
     </div>
   </div>
 
-  <script nonce="{{ NONCE }}">
+  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
   (() => {
     const pop = document.getElementById('fc-onboarding'); if (!pop) return;
     const key = pop.getAttribute('data-storage-key') || 'onboarded:global';
@@ -363,7 +364,8 @@
       bc?.postMessage({type:'fc:flash', detail:{ message:'Thanks for supporting!', category:'success', timeout:2800 }});
     });
   })();
-  </script>
+  
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 {% endif %}
 
 </section>

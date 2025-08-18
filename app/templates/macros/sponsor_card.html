@@ -189,9 +189,9 @@
 <!-- ===== 9. Modal Placeholder (Load dynamically or slot your own) ===== -->
 <div id="sponsor-modal-root"></div>
 
-<!-- ===== 10. Styles & Script (paste in <style> and <script> tags) ===== -->
+<!-- ===== 10. Styles & Script (paste in <stylenonce="{{ NONCE }}"> and <scriptnonce="{{ NONCE }}"> tags) ===== -->
 
-<script>
+<scriptnonce="{{ NONCE }}">
   @keyframes pop { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.1); opacity: 1;} 100% { transform: scale(1); } }
   .animate-pop { animation: pop 0.7s cubic-bezier(.2,1.7,.7,1) both; }
   .animate-pop-slow { animation: pop 1.2s cubic-bezier(.2,1.7,.7,1) both; }
@@ -211,7 +211,7 @@
   @media (prefers-reduced-motion: reduce) { #sponsor-wall-widget, #sponsor-wall-toggle { transition: none !important; animation: none !important; } }
 </script>
 
-<script>
+<scriptnonce="{{ NONCE }}">
   (() => {
     const toggleBtn = document.getElementById('sponsor-wall-toggle');
     const widget = document.getElementById('sponsor-wall-widget');

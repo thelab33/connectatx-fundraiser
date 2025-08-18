@@ -1,60 +1,121 @@
-{# =============================================================================
-   app/templates/partials/hero_and_fundraiser.html
-   Prestige Hero (Glass 2.0 • Animated • CSP-safe • ui_bootstrap-integrated)
-   ============================================================================= #}
+{# ========================================================================
+   hero_and_fundraiser.html — Prestige SV + Connect ATX team photo hero
+   CLARITY BOOST: more image, less fog (vars control intensity)
+   ======================================================================== #}
+{% set NONCE     = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set theme_hex = theme_hex|default('#facc15') %}
+{% set team_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
 
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{# ---------- Fundraiser numbers (robust to strings like "$12,345") ---------- #}
+{% set _fr = (funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is defined else 0.0 %}
+{% set _fg = (fundraising_goal|string)|replace('$','')|replace(',','')|float if fundraising_goal is defined and fundraising_goal else 10000.0 %}
+{% set funds_raised = _fr %}
+{% set fundraising_goal = (_fg if _fg > 0 else 1.0) %}
+{% set pct_raw = 100.0 * (funds_raised / (fundraising_goal if fundraising_goal else 1)) %}
+{% set pct = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) | round(1) %}
 
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set team_name = (team.team_name if team and team.team_name is defined else 'Connect ATX Elite') %}
-{% set theme_hex = (team.theme_color if team and team.theme_color is defined else '#f59e0b') %}
-{% set hero_bg   = (
-  team.hero_bg if team and team.hero_bg is defined and team.hero_bg
-  else (url_for('static', filename='images/hero.webp') if url_for is defined else '/static/images/hero.webp')
+{# ---------- Background image sources (prefer team hero; robust fallbacks) ---- #}
+{% set _input_src = (
+  (team.hero_bg if team and team.hero_bg is defined and team.hero_bg) or
+  (team.hero_image if team and team.hero_image is defined and team.hero_image) or
+  (team.team_photo if team and team.team_photo is defined and team.team_photo) or
+  (team.photo_url  if team and team.photo_url  is defined and team.photo_url) or
+  none
 ) %}
-{% set funds_raised        = (funds_raised if funds_raised is defined else 0) | float %}
-{% set fundraising_goal    = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
-{% set fundraiser_deadline = fundraiser_deadline if fundraiser_deadline is defined and fundraiser_deadline else '2025-12-31T23:59:59' %}
-{% set quick_donate_amounts = quick_donate_amounts if quick_donate_amounts is defined and quick_donate_amounts else [25,50,100,250] %}
-{% set stripe_publishable_key = stripe_publishable_key|default('') %}
-{% set sponsors = sponsors if sponsors is defined and sponsors else ['Austin Realty','TechNova','River BBQ','Sunrise Dental'] %}
-{% set sponsor_list_href    = (url_for('main.sponsor_list') if url_for is defined else '/sponsors') %}
-{% set become_sponsor_href  = (url_for('main.become_sponsor') if url_for is defined else '/become-sponsor') %}
-{% set vip_thresholds = vip_thresholds if vip_thresholds is defined and vip_thresholds else [5000, 10000, 20000] %}
-{% set goal_heat_enabled = goal_heat_enabled if goal_heat_enabled is defined else true %}
-{% set ab_copy = ab_copy if ab_copy is defined and ab_copy else [
-  "Your $25 covers 1 practice",
-  "$25 = 1 practice pass"
-] %}
-{% set pct_raw = (100.0 * (funds_raised / (fundraising_goal if fundraising_goal else 1))) if fundraising_goal else 0 %}
-{% set pct     = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) | round(1) %}
 
-<section id="hero"
-         class="relative z-30"           {# <-- sits above page chrome, below modals #}
-         aria-labelledby="fc-hero-title"
-         style="--fc-brand: {{ theme_hex }}; isolation:isolate;"> {# new stacking context #}
+{% set _default_jpg  = 'images/connect-atx-team.jpg' %}
+{% set _default_logo_webp = 'images/logo.webp' %}
+{% set _default_logo_avif = 'images/logo.avif' %}
 
-  {# Background image + gradient mask + ambient glow #}
-  <div class="absolute inset-0 -z-[1]">               {# <-- background behind all hero content #}
-    <img src="{{ hero_bg }}" alt=""
-         class="pointer-events-none h-full w-full object-cover object-center opacity-75"
-         loading="eager" decoding="async" />
-    <div class="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/50 to-zinc-950" aria-hidden="true"></div>
+{% if _input_src %}
+  {% if '://' in _input_src or _input_src.startswith('data:') %}
+    {% set hero_bg = _input_src %}
+  {% else %}
+    {% set hero_bg = (url_for('static', filename=_input_src.lstrip('/')) if url_for is defined else '/' ~ _input_src.lstrip('/')) %}
+  {% endif %}
+  {% set hero_bg_avif = none %}
+  {% set hero_bg_webp = none %}
+{% else %}
+  {% if url_for is defined %}
+    {% set hero_bg      = url_for('static', filename=_default_jpg) %}
+    {% set hero_bg_webp = none %}
+    {% set hero_bg_avif = none %}
+    {% set hero_fallback= url_for('static', filename=_default_logo_webp) %}
+  {% else %}
+    {% set hero_bg      = '/static/' ~ _default_jpg %}
+    {% set hero_bg_webp = none %}
+    {% set hero_bg_avif = none %}
+    {% set hero_fallback= '/static/' ~ _default_logo_webp %}
+  {% endif %}
+{% endif %}
+
+{% if not hero_fallback %}
+  {% set hero_fallback = (url_for('static', filename=_default_logo_webp) if url_for is defined else '/static/' ~ _default_logo_webp) %}
+{% endif %}
+{% set logo_avif = (url_for('static', filename=_default_logo_avif) if url_for is defined else '/static/' ~ _default_logo_avif) %}
+
+{# ---------- Other knobs ----------------------------------------------------- #}
+{% set fundraiser_deadline   = fundraiser_deadline if fundraiser_deadline is defined and fundraiser_deadline else '2025-12-31T23:59:59' %}
+{% set quick_donate_amounts  = quick_donate_amounts if quick_donate_amounts is defined and quick_donate_amounts else [25,50,100,250] %}
+{% set stripe_publishable_key= stripe_publishable_key|default('') %}
+{% set sponsors              = sponsors if sponsors is defined and sponsors else ['Austin Realty','TechNova','River BBQ','Sunrise Dental'] %}
+{% set sponsor_list_href     = sponsor_list_href if sponsor_list_href is defined and sponsor_list_href else '/sponsors' %}
+{% set become_sponsor_href   = become_sponsor_href if become_sponsor_href is defined and become_sponsor_href else '/become-sponsor' %}
+{% set donate_href           = donate_href if donate_href is defined and donate_href else '/donate' %}
+{% set vip_thresholds        = vip_thresholds if vip_thresholds is defined and vip_thresholds else [5000, 10000, 20000] %}
+{% set goal_heat_enabled     = goal_heat_enabled if goal_heat_enabled is defined else true %}
+{% set ab_copy               = ab_copy if ab_copy is defined and ab_copy else ["Your $25 covers 1 practice", "$25 = 1 practice pass"] %}
+
+<section id="fc-hero" class="relative overflow-clip" aria-labelledby="fc-hero-title">
+  <div class="absolute inset-0">
+    {# ---- LCP-friendly background: AVIF → WebP → JPG/URL; fallback to logo ---- #}
+    <picture>
+      {% if hero_bg_avif %}<source srcset="{{ hero_bg_avif }}" type="image/avif" sizes="100vw">{% endif %}
+      {% if hero_bg_webp %}<source srcset="{{ hero_bg_webp }}" type="image/webp" sizes="100vw">{% endif %}
+      <img
+        src="{{ hero_bg }}"
+        alt="{{ team_name }} team photo"
+        width="1920" height="1080"
+        class="h-full w-full object-cover object-center"
+        loading="eager" decoding="async" fetchpriority="high"
+        onerror="this.onerror=null;this.src='{{ hero_fallback }}';"
+        style="opacity: var(--hero-img-opacity, 1);"
+        sizes="100vw">
+    </picture>
+
+    {# Readability overlays with lowered strength (CSS variables below) #}
+    <div class="absolute inset-0" aria-hidden="true"
+         style="background: linear-gradient(
+           to bottom,
+           rgba(0,0,0,var(--hero-grad-top, .40)) 0%,
+           rgba(0,0,0,var(--hero-grad-mid, .22)) 36%,
+           rgba(12,12,12,var(--hero-grad-bot, .72)) 100%
+         );"></div>
+
     <div class="pointer-events-none absolute inset-0" aria-hidden="true"
-         style="box-shadow: 0 0 120px 40px color-mix(in oklab, var(--fc-brand) 40%, transparent) inset;"></div>
+         style="box-shadow: 0 0 120px 40px color-mix(in oklab, {{ theme_hex }} 22%, transparent) inset;"></div>
+
     <div class="pointer-events-none absolute inset-0 heat-layer" aria-hidden="true"></div>
+
+    <div class="pointer-events-none absolute inset-0 mix-blend-soft-light" aria-hidden="true"
+         style="opacity: var(--hero-noise, .12);
+                background-image:
+                  radial-gradient(transparent 60%, rgba(0,0,0,.45)),
+                  url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%22448%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 fill=%22none%22/><circle cx=%226%22 cy=%226%22 r=%221%22 fill=%22%23fff%22 fill-opacity=%220.06%22/></svg>');
+                background-size: cover, 48px 48px;"></div>
   </div>
 
-  <div class="relative z-10 fc-section">               {# <-- content above bg, below overlays #}
-    <div class="rounded-3xl ring-1 ring-white/10 backdrop-blur-xl bg-white/5 p-5 sm:p-8 lg:p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]">
+  <div class="relative fc-section">
+    {# Glass panel: lighter blur for more background detail #}
+    <div class="rounded-3xl ring-1 ring-white/10 backdrop-blur-md bg-white/5 p-5 sm:p-8 lg:p-10 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.5)]">
       <div class="fc-head flex-col md:flex-row gap-6">
         <div>
           <h1 id="fc-hero-title" class="text-3xl sm:text-4xl lg:text-5xl font-extrabold leading-tight tracking-tight">
             <span class="inline-block bg-clip-text text-transparent"
-                  style="background-image: linear-gradient(90deg, var(--fc-brand), #fff);">
+                  style="background-image: linear-gradient(90deg, {{ theme_hex }}, #ffffff);">
               {{ team_name }}
             </span>
-            <span class="ml-1 opacity-90">Fundraiser</span>
+            <span class="ml-1 opacity-90">Connect ATX Elite</span>
           </h1>
           <p class="mt-2 text-sm sm:text-base text-zinc-200/90" id="fc-ab-copy">
             Every dollar fuels travel, uniforms, and training. You’re part of the story.
@@ -92,11 +153,12 @@
             </div>
 
             <div class="mt-4">
-              <div class="relative h-4 w-full rounded-full bg-zinc-800/80 ring-1 ring-white/10 overflow-hidden" aria-label="Fundraising progress" role="img">
+              <div class="relative h-4 w-full rounded-full bg-zinc-800/70 ring-1 ring-white/10 overflow-hidden"
+                   aria-label="Fundraising progress" role="img">
                 <div class="absolute inset-0 animate-[shine_3s_linear_infinite] opacity-20 mix-blend-overlay"
                      style="background: linear-gradient(90deg, transparent, white, transparent);"></div>
                 <div id="fc-bar" class="h-full rounded-full"
-                     style="width: {{ pct }}%; background: linear-gradient(90deg, var(--fc-brand), #22c55e);"></div>
+                     style="width: {{ pct }}%; background: linear-gradient(90deg, {{ theme_hex }}, #22c55e);"></div>
               </div>
 
               <div class="relative mt-3 flex justify-between text-[11px] text-zinc-300">
@@ -132,13 +194,13 @@
 
             <div class="grid grid-cols-2 gap-2">
               {% for amt in quick_donate_amounts %}
-                <button type="button"
-                        class="fc-cta tier-pulse rounded-xl px-3 py-3 text-base font-semibold ring-1 ring-white/10"
-                        style="background: color-mix(in srgb, var(--fc-brand) 80%, transparent)"
-                        data-amount="{{ amt }}"
-                        aria-label="Quick donate {{ amt }} dollars">
-                  ${{ amt }}
-                </button>
+              <button type="button"
+                      class="fc-cta tier-pulse rounded-xl px-3 py-3 text-base font-semibold ring-1 ring-white/10"
+                      style="background: {{ theme_hex }}cc"
+                      data-amount="{{ amt }}"
+                      aria-label="Quick donate {{ amt }} dollars">
+                ${{ amt }}
+              </button>
               {% endfor %}
             </div>
 
@@ -147,8 +209,7 @@
                       class="flex-1 rounded-xl px-4 py-3 font-semibold bg-white/10 hover:bg-white/15 ring-1 ring-white/10">
                 💸 Quick Donate
               </button>
-              <a href="{{ become_sponsor_href }}"
-                 class="rounded-xl px-4 py-3 font-semibold bg-emerald-500/90 hover:bg-emerald-500">
+              <a href="{{ become_sponsor_href }}" class="rounded-xl px-4 py-3 font-semibold bg-emerald-500/90 hover:bg-emerald-500">
                 🤝 Become a Sponsor
               </a>
             </div>
@@ -180,37 +241,42 @@
       <div class="mt-6 grid sm:grid-cols-3 gap-3 text-center">
         <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">🎯 Goal tracking in real-time</div>
         <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">🔒 Secure checkout</div>
-        <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">✨ VIP shout-outs for top donors</div>
+        <div class="rounded-XL ring-1 ring-white/10 bg-white/5 px-3 py-2 text-sm text-zinc-300">✨ VIP shout-outs for top donors</div>
       </div>
     </div>
   </div>
 
-  {{ style_open() }}
-    #fc-hero { --heat: 0; scroll-margin-top: clamp(64px, 8vh, 96px); } /* anchors won't hide under sticky header */
+  <style nonce="{{ NONCE }}">
+    /* --- Clarity controls (tune these) --- */
+    #fc-hero {
+      --hero-img-opacity: 1;     /* 0.85–1.0 */
+      --hero-grad-top: .40;      /* top darkness */
+      --hero-grad-mid: .22;      /* mid haze */
+      --hero-grad-bot: .72;      /* bottom anchor for text contrast */
+      --hero-noise: .12;         /* soft-light grain */
+      --heat: 0;                 /* set by JS */
+    }
+
     @keyframes shine { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
     @keyframes fcTicker { 0%{ transform: translateX(0)} 100%{ transform: translateX(-50%)} }
-    @media (prefers-reduced-motion: reduce) {
-      #fc-hero * { animation: none !important; transition: none !important; }
-    }
+    @media (prefers-reduced-motion: reduce) { #fc-hero * { animation: none !important; transition: none !important; } }
     .tier-pulse { animation: tierPulse 2.5s ease-in-out infinite; }
-    @keyframes tierPulse {
-      0%,100%{ transform:scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,.0); }
-      50%     { transform:scale(1.02); box-shadow: 0 10px 30px -10px rgba(255,255,255,.15); }
-    }
+    @keyframes tierPulse { 0%,100%{ transform:scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,.0);} 50%{ transform:scale(1.02); box-shadow: 0 10px 30px -10px rgba(255,255,255,.15);} }
     #fc-hero .heat-layer{
-      background:
-        radial-gradient(120% 80% at 50% 0%,
-          var(--fc-brand) 0%,
-          transparent 60%);
-      opacity: calc(0.18 + 0.42 * var(--heat));
+      background: radial-gradient(120% 80% at 50% 0%, {{ theme_hex }} 0%, transparent 60%);
+      opacity: calc(0.12 + 0.28 * var(--heat)); /* lower baseline & slope */
       transition: opacity .6s ease;
     }
     .group.active span { color:#fff }
-  {{ style_close() }}
+  </style>
 
-  {{ script_open() }}
+  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
   (() => {
     if (window.__fcHeroInit) return; window.__fcHeroInit = true;
+    const FC = window.FC || {};
+    const VIPS = {{ vip_thresholds|tojson|safe }};
+    const HEAT_ON = {{ 'true' if goal_heat_enabled else 'false' }};
+    const AB_COPY = {{ ab_copy|tojson|safe }};
 
     const $  = (sel, root=document) => root.querySelector(sel);
     const $$ = (sel, root=document) => Array.from(root.querySelectorAll(sel));
@@ -222,12 +288,7 @@
       raised: $('#fc-raised'),
       goal:   $('#fc-goal'),
       pct:    $('#fc-pct'),
-      countdown: {
-        days:  $('#fc-ct-days'),
-        hrs:   $('#fc-ct-hrs'),
-        min:   $('#fc-ct-min'),
-        sec:   $('#fc-ct-sec'),
-      },
+      countdown: { days:$('#fc-ct-days'), hrs:$('#fc-ct-hrs'), min:$('#fc-ct-min'), sec:$('#fc-ct-sec') },
       ticker: $('#fc-ticker'),
       root:   $('#fc-hero'),
       ab:     $('#fc-ab-copy'),
@@ -239,116 +300,78 @@
       deadline: new Date('{{ fundraiser_deadline }}'),
     };
 
-    const VIPS   = {{ vip_thresholds|tojson|safe }};
-    const HEAT_ON = {{ 'true' if goal_heat_enabled else 'false' }};
-    const AB_COPY = {{ ab_copy|tojson|safe }};
-
-    const confetti = (window.fcUX && typeof window.fcUX.confetti === 'function')
-      ? window.fcUX.confetti
-      : function noop(){};
+    const burstConfetti = typeof FC.burstConfetti === 'function'
+      ? FC.burstConfetti
+      : (function(){ return function(n=24){ try{
+          const c=document.createElement('canvas'); c.width=innerWidth; c.height=240;
+          Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60}); document.body.appendChild(c);
+          const ctx=c.getContext('2d'); const parts=Array.from({length:n}).map(()=>({x:Math.random()*c.width,y:-20-Math.random()*60,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,r:2+Math.random()*4,a:1}));
+          const colors=['#ffffff','{{ theme_hex }}','#22c55e','#60a5fa','#eab308'];
+          (function tick(){ ctx.clearRect(0,0,c.width,c.height);
+            parts.forEach(p=>{ p.x+=p.vx;p.y+=p.vy;p.a-=.012; ctx.globalAlpha=Math.max(0,p.a);
+              ctx.fillStyle=colors[(Math.random()*colors.length)|0]; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); });
+            if(parts.some(p=>p.a>0)) requestAnimationFrame(tick); else c.remove(); })();
+        } catch{} }})();
 
     function tweenNumber(el, to, dur=700){
-      if(!el) return;
-      const from = parseFloat((el.textContent||'0').replace(/[^0-9.-]/g,'')) || 0;
-      const start = performance.now();
-      const step = (t)=>{
-        const k = clamp((t - start)/dur, 0, 1);
-        const eased = 1 - Math.pow(1-k,3);
-        el.textContent = fmtMoney(from + (to - from) * eased);
-        if(k < 1) requestAnimationFrame(step);
-      };
-      requestAnimationFrame(step);
+      if(!el) return; const from=parseFloat((el.textContent||'0').replace(/[^0-9.-]/g,''))||0;
+      const start=performance.now();
+      (function step(t){ const k=clamp((t-start)/dur,0,1); const eased=1-Math.pow(1-k,3);
+        el.textContent=fmtMoney(from+(to-from)*eased); if(k<1) requestAnimationFrame(step); })(start);
     }
 
     function setProgress(raised=state.raised, goal=state.goal){
-      state.raised = +raised || 0; state.goal = Math.max(+goal||1, 1);
-      const pct = clamp((state.raised/state.goal)*100, 0, 100);
+      state.raised=+raised||0; state.goal=Math.max(+goal||1,1);
+      const pct=clamp((state.raised/state.goal)*100,0,100);
+      els.bar && (els.bar.style.width=pct.toFixed(1)+'%');
+      els.pct && (els.pct.textContent=pct.toFixed(1));
+      els.goal && (els.goal.textContent=fmtMoney(state.goal));
+      els.raised && tweenNumber(els.raised,state.raised);
 
-      if(els.bar)  els.bar.style.width = pct.toFixed(1) + '%';
-      if(els.pct)  els.pct.textContent = pct.toFixed(1);
-      if(els.goal) els.goal.textContent = fmtMoney(state.goal);
-      if(els.raised) tweenNumber(els.raised, state.raised);
+      [25,50,75,100].forEach(m=>{ const ms=document.getElementById('fc-ms-'+m); const wrap=ms?.closest('.group'); wrap&&wrap.classList.toggle('active', pct>=m-0.01); });
 
-      [25,50,75,100].forEach(m => {
-        const ms = document.getElementById(`fc-ms-${m}`);
-        const wrap = ms?.closest('.group');
-        if(wrap) wrap.classList.toggle('active', pct >= m - 0.01);
-      });
+      try{ const key='fc_ms_hit',prev=parseFloat(sessionStorage.getItem(key)||'0'); const hit=[25,50,75,100].find(m=>prev<m && pct>=m);
+        if(hit){ sessionStorage.setItem(key,String(hit)); burstConfetti(12+hit/2); } }catch{}
 
-      if (window.fcUX && typeof window.fcUX.announce === 'function') {
-        window.fcUX.announce(`Raised ${fmtMoney(state.raised)} of ${fmtMoney(state.goal)}. ${pct.toFixed(0)} percent funded.`);
-      }
+      HEAT_ON && els.root && els.root.style.setProperty('--heat',(pct/100).toFixed(3));
 
-      try {
-        const key = 'fc_ms_hit';
-        const prev = parseFloat(sessionStorage.getItem(key) || '0');
-        const hit = [25,50,75,100].find(m => prev < m && pct >= m);
-        if(hit){ sessionStorage.setItem(key, String(hit)); confetti({ particleCount: 24 + hit/2 }); }
-      } catch {}
+      try{ const key='fc_vip_hit',prev=parseFloat(sessionStorage.getItem(key)||'0'); const crossed=[...VIPS].sort((a,b)=>a-b).find(th=>prev<th && state.raised>=th);
+        if(crossed){ sessionStorage.setItem(key,String(crossed)); burstConfetti(24+Math.min(48,crossed/250)); } }catch{}
 
-      if(HEAT_ON && els.root){
-        els.root.style.setProperty('--heat', (pct/100).toFixed(3));
-      }
-
-      try {
-        const key = 'fc_vip_hit';
-        const prev = parseFloat(sessionStorage.getItem(key) || '0');
-        const crossed = [...VIPS].sort((a,b)=>a-b).find(th => prev < th && state.raised >= th);
-        if(crossed){ sessionStorage.setItem(key, String(crossed)); confetti({ particleCount: 48 }); }
-      } catch {}
+      try{ dispatchEvent(new CustomEvent('fc:funds:update',{detail:{raised:state.raised, goal:state.goal}})); }catch{}
     }
 
     function updateCountdown(){
-      const now = new Date();
-      const diff = Math.max(0, state.deadline - now);
-      const s = Math.floor(diff/1000);
-      const d = Math.floor(s/86400);
-      const h = Math.floor((s%86400)/3600);
-      const m = Math.floor((s%3600)/60);
-      const sec = s%60;
-      const el = els.countdown;
-      if(el.days) el.days.textContent = String(d).padStart(2,'0');
-      if(el.hrs)  el.hrs.textContent  = String(h).padStart(2,'0');
-      if(el.min)  el.min.textContent  = String(m).padStart(2,'0');
-      if(el.sec)  el.sec.textContent  = String(sec).padStart(2,'0');
+      const now=new Date(), diff=Math.max(0,state.deadline-now), s=Math.floor(diff/1000);
+      const d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
+      const c=els.countdown; c.days&&(c.days.textContent=String(d).padStart(2,'0'));
+      c.hrs&&(c.hrs.textContent=String(h).padStart(2,'0')); c.min&&(c.min.textContent=String(m).padStart(2,'0')); c.sec&&(c.sec.textContent=String(sec).padStart(2,'0'));
     }
 
-    function openCheckout(amount){
-      window.location.href = `/donate?amount=${encodeURIComponent(amount||0)}`;
-    }
+    function openCheckout(amount){ window.location.href = '{{ donate_href }}' + '?amount=' + encodeURIComponent(amount||0); }
 
-    $$('#fc-hero .fc-cta').forEach(btn=>{
-      btn.addEventListener('click', ()=> openCheckout(btn.dataset.amount));
-    });
+    $$('#fc-hero .fc-cta').forEach(btn=> btn.addEventListener('click', ()=> openCheckout(btn.dataset.amount)));
     $('#fc-donate')?.addEventListener('click', ()=> openCheckout(0));
 
-    (function abCopy(){
-      try{
-        const key = 'fc_ab_copy_hero_v1';
-        let variant = localStorage.getItem(key);
-        if(!variant){ variant = Math.random() < 0.5 ? 'A' : 'B'; localStorage.setItem(key, variant); }
-        const text = (variant === 'A' ? AB_COPY[0] : (AB_COPY[1] || AB_COPY[0]));
-        els.ab && (els.ab.textContent = text);
-      } catch {}
-    })();
+    (function abCopy(){ try{
+      const key='fc_ab_copy_hero_v1'; let v=localStorage.getItem(key);
+      if(!v){ v=Math.random()<.5?'A':'B'; localStorage.setItem(key,v); }
+      const text=(v==='A'?AB_COPY[0]:(AB_COPY[1]||AB_COPY[0])); els.ab && (els.ab.textContent=text);
+    }catch{} })();
 
     setProgress(state.raised, state.goal);
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
+    updateCountdown(); setInterval(updateCountdown, 1000);
 
-    if (window.fcBus && typeof window.fcBus.on === 'function') {
-      window.fcBus.on('fc:funds:update', (d={}) => {
-        setProgress(
-          typeof d.raised==='number' ? d.raised : state.raised,
-          typeof d.goal  ==='number' ? d.goal   : state.goal
-        );
-        if(d.sponsorName && els.ticker){
-          const safe = String(d.sponsorName).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-          els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
-        }
-      });
-    }
+    addEventListener('fc:funds:update', (e)=>{
+      const d=e.detail||{};
+      setProgress(typeof d.raised==='number'?d.raised:state.raised,
+                  typeof d.goal==='number'?d.goal:state.goal);
+      if(d.sponsorName && els.ticker){
+        const safe=String(d.sponsorName).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
+      }
+    }, { passive:true });
   })();
-  {{ script_close() }}
+  {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 </section>
 

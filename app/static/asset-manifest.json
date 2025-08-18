@@ -1,17 +1,17 @@
 {
   "version": {
-    "git": "f40584dc",
-    "builtAt": "2025-08-16T05:57:44.073Z",
+    "git": "000f92f9",
+    "builtAt": "2025-08-18T05:15:46.761Z",
     "mode": "production"
   },
   "js": {
     "bundle": {
       "path": "app/static/js/bundle.min.js",
-      "bytes": 2873,
-      "gzipBytes": 1473,
+      "bytes": 2855,
+      "gzipBytes": 1467,
       "sri": {
-        "sha256": "sha256-Aaml8hkMxEPzQVLLVUSONm6W2EB8PztqKof6QQxTk3Q=",
-        "sha384": "sha384-6qRbL1wyVfLajxk5Bc3MPxG1oFcWK1fwJ8ooybukpsxxL7h5+kSbr0vV6N9sPjYo"
+        "sha256": "sha256-W/lYDw4u58rJo4TjRC48AZxW06FyVf+IppiSyt5ab5w=",
+        "sha384": "sha384-1dkKK8jMjeY4jmPYy49BDMVZ1B1bF3ZFdv+tfsA+KxktTK6k09QpH+gC+Yle2ij8"
       }
     }
   }

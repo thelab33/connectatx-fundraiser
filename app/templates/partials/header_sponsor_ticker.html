@@ -1,3 +1,4 @@
+<h2 class="sr-only">Header Sponsor Ticker</h2>
 {# ============================================================
    FundChamps — Header Sponsor Ticker (SV-Premium / CSP-safe / A11Y)
    Expects (optional): items=[{name,amount,when,avatar,url?}], socket_ns
@@ -63,7 +64,7 @@
   </div>
 </section>
 
-<script nonce="{{ NONCE }}">
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
 (() => {
   const root = document.getElementById('hdr-ticker'); if (!root) return;
   const list = root.querySelector('#donation-ticker');
@@ -202,5 +203,5 @@
     enableScrollIfNeeded();
   }
 })();
-</script>
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 

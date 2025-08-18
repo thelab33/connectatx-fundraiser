@@ -5,21 +5,55 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "css:dev": "postcss app/static/css/src/input.css -o app/static/css/tailwind.min.css --watch",
-    "css:build": "postcss app/static/css/src/input.css -o app/static/css/tailwind.min.css --env production",
+    "dev": "npm-run-all --parallel css:dev js:watch serve:flask",
+    "preview": "npm-run-all --parallel preview:css preview:js preview:flask",
+
     "serve:flask": "cross-env FLASK_APP=app:create_app FLASK_ENV=development flask run --reload",
-    "dev": "npm-run-all --parallel css:dev serve:flask",
-    "build": "npm run css:build"
-  },
-  "devDependencies": {
-    "@tailwindcss/aspect-ratio": "0.4.2",
-    "@tailwindcss/forms": "0.5.7",
-    "@tailwindcss/typography": "0.5.15",
-    "autoprefixer": "^10.4.21",
-    "cross-env": "^7.0.3",
-    "npm-run-all": "^4.1.5",
-    "postcss": "^8.4.41",
-    "postcss-cli": "^11.0.1",
-    "tailwindcss": "3.4.17"
+    "preview:flask": "flask run --reload --debugger",
+
+    "build": "npm run lint && npm run format && npm run css:build && npm run js:build:prod && npm run css:verify",
+    "build:fast": "npm run css:build && npm run js:build:prod && npm run css:verify",
+
+    "css:build": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/tailwind.min.css --minify",
+    "css:dev": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/tailwind.min.css -w",
+    "css:verify": "node scripts/check_css.js",
+    "preview:css": "tailwindcss -i app/static/css/input.css --minify --watch --config tailwind.config.cjs | browser-sync start --server 'app/static' --files 'app/static/css/tailwind.min.css'",
+
+    "js:build": "node build.js",
+    "js:build:dev": "cross-env NODE_ENV=development node build.js",
+    "js:build:prod": "cross-env NODE_ENV=production node build.js",
+    "js:watch": "cross-env NODE_ENV=development node build.js --watch",
+    "preview:js": "esbuild app/static/js/app.entry.js --bundle --format=esm --sourcemap --outfile=app/static/js/main.js --watch --servedir=app/static",
+
+    "lint": "npm-run-all lint:css lint:js lint:html lint:md",
+    "lint:css": "stylelint 'app/static/css/**/*.css' --fix --config stylelint.config.cjs --ignore-path .stylelintignore",
+    "lint:js": "eslint 'app/static/js/**/*.js' --fix",
+    "lint:html": "htmlhint --config .htmlhintrc 'app/templates/**/*.html' || true",
+    "lint:md": "markdownlint README.md \"docs/**/*.md\" \"app/**/*.md\" --ignore-path .markdownlintignore",
+    "lint:css:check": "stylelint 'app/static/css/**/*.css' --config stylelint.config.cjs --ignore-path .stylelintignore",
+    "lint:js:check": "eslint 'app/static/js/**/*.js'",
+
+    "format": "prettier --write \"**/*.{js,css,html,jinja,jinja2,py,json,md}\"",
+    "format:check": "prettier --check \"**/*.{js,css,html,jinja,jinja2,py,json,md}\"",
+
+    "audit:deps": "npm outdated || echo '✅ All dependencies up to date!'",
+    "audit:css": "npm run lint:css:check || true",
+    "audit:js": "npm run lint:js:check || true",
+    "audit:html": "npm run lint:html || true",
+    "audit:md": "npm run lint:md || true",
+    "audit:bundle": "source-map-explorer app/static/js/bundle.min.js || true",
+    "audit:full": "npm run lint && npm run format:check && npm run audit:css && npm run audit:js && npm run audit:html && npm run audit:md && npm run audit:deps",
+
+    "clean:dist": "rm -rf .cache dist *.log app/static/css/*.map app/static/js/*.map app/static/js/main.bundle.js",
+    "clean:hard": "rm -rf node_modules .cache dist *.log app/static/css/tailwind.min.css app/static/css/globals.css app/static/css/*.map app/static/js/*.map app/static/js/main.bundle.js",
+
+    "prepare": "husky install || true",
+    "update:browsers": "npx update-browserslist-db@latest",
+    "svgo:all": "svgo -f app/static/images --recursive --config=svgo.config.json",
+    "a11y:test": "pa11y-ci 'http://localhost:5000' --config .pa11yci",
+    "a11y:report": "pa11y-ci 'http://localhost:5000' --reporter html --config .pa11yci",
+
+    "test": "node -e \"process.exit(0)\""
   }
 }
+

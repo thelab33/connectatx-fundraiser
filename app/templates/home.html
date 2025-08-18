@@ -9,7 +9,7 @@
 
 {# ================= HERO ================= #}
 {% block hero %}
-  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+  
 
   {# Slim fundraising meter — ultra-compact, directly below hero #}
   <section id="hero-slim-meter"
@@ -22,7 +22,7 @@
   </section>
 
   {# Trust bar (premium preferred, fallback basic) #}
-  {% include "partials/funds_allocation_bar_premium.html" ignore missing with context %}
+  {% include "premium/funds_allocation_bar_premium.html" ignore missing with context %}
   {% include "partials/funds_allocation_bar.html" ignore missing with context %}
 
   {# Sponsor ticker (optional) #}
@@ -51,7 +51,7 @@
   <section id="impact-lockers" class="fc-band fc-band--tint scroll-mt-24"
            aria-labelledby="il-h" role="region" tabindex="-1">
     <h2 id="il-h" class="sr-only">{{ _("Impact Lockers") }}</h2>
-    {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+    {% include "premium/impact_lockers_premium.html" ignore missing with context %}
     {% include "partials/impact_lockers.html" ignore missing with context %}
   </section>
 
@@ -66,7 +66,7 @@
     {% include "partials/sponsors_hub.html" ignore missing with context %}
     {% include "partials/sponsor_spotlight_widget.html" ignore missing with context %}
     {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
-    {% include "partials/sponsor_wall.html" ignore missing with context %}
+    
   </section>
 
   {# About & mission #}
@@ -74,7 +74,7 @@
            aria-labelledby="about-h" role="region" tabindex="-1">
     <h2 id="about-h" class="sr-only">{{ _("About the Program") }}</h2>
     {% include "partials/about_section.html" ignore missing with context %}
-    {% include "partials/impact_challenge_coaches_premium.html" ignore missing with context %}
+    {% include "premium/impact_challenge_coaches_premium.html" ignore missing with context %}
   </section>
 
   {# Digital hub & newsletter #}

@@ -42,7 +42,7 @@
   <div class="mb-4">
     <label for="donor-name" class="mb-1 block text-sm font-semibold">Name or Company <span class="text-yellow-300">*</span></label>
     {% if form is defined and form and form.name is defined %}
-      {{ form.name(id="donor-name", class="w-full rounded-lg border border-yellow-400/20 bg-black/50 px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300", placeholder="Your Name or Company", required=True, aria_required="true") }}
+      {{ form.name(id="donor-name-2", class="w-full rounded-lg border border-yellow-400/20 bg-black/50 px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300", placeholder="Your Name or Company", required=True, aria_required="true") }}
     {% else %}
       <input type="text" name="name" id="donor-name" required aria-required="true"
              placeholder="Your Name or Company"
@@ -55,7 +55,7 @@
   <div class="mb-4">
     <label for="donor-email" class="mb-1 block text-sm font-semibold">Email <span class="text-yellow-300">*</span></label>
     {% if form is defined and form and form.email is defined %}
-      {{ form.email(id="donor-email", type="email", class="w-full rounded-lg border border-yellow-400/20 bg-black/50 px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300", placeholder="you@example.com", required=True, aria_required="true") }}
+      {{ form.email(id="donor-email-2", type="email", class="w-full rounded-lg border border-yellow-400/20 bg-black/50 px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300", placeholder="you@example.com", required=True, aria_required="true") }}
     {% else %}
       <input type="email" name="email" id="donor-email" required aria-required="true"
              placeholder="you@example.com"
@@ -70,7 +70,7 @@
     <div class="flex items-stretch rounded-lg border border-yellow-400/20 bg-black/50 focus-within:ring-2 focus-within:ring-yellow-300">
       <span class="inline-flex select-none items-center px-3 text-yellow-200/80" aria-hidden="true">$</span>
       {% if form is defined and form and form.amount is defined %}
-        {{ form.amount(id="donation-amount", inputmode="decimal", class="w-full bg-transparent px-3 py-2 outline-none", placeholder="Amount", required=True, aria_required="true") }}
+        {{ form.amount(id="donation-amount-2", inputmode="decimal", class="w-full bg-transparent px-3 py-2 outline-none", placeholder="Amount", required=True, aria_required="true") }}
       {% else %}
         <input id="donation-amount" name="amount" type="number" inputmode="decimal" min="1" step="1"
                placeholder="Amount"
@@ -133,7 +133,7 @@
   </div>
 </form>
 
-<script nonce="{{ NONCE }}">
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
 (() => {
   const form   = document.getElementById('sponsor-donation-form');
   if (!form || form.__init) return; form.__init = true;
@@ -224,7 +224,7 @@
     if (input){ input.setAttribute('aria-invalid','false'); input.classList.remove('ring-2','ring-red-400'); }
   }
 })();
-</script>
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 
 <style nonce="{{ NONCE }}">
   /* tiny animation for the impact message */

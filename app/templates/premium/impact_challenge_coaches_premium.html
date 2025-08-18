@@ -1,10 +1,8 @@
 {# ======================================================================
    FundChamps • Impact + Challenge & Coaches (Premium / SaaS-ready)
-   - Matches premium card/glow aesthetic (brand-aware)
-   - Pure Jinja2 (no lambdas), CSP-safe vanilla JS
-   - Reduced-motion aware, accessible counters + semantics
+   Hardened: unified NONCE, robust fallbacks, CSP-safe JS, no fragile calls
    ====================================================================== #}
-{% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set asset_version = asset_version|default(None) %}
 {% set brand_color   = (team.theme_color if team and team.theme_color else '#facc15') %}
 
@@ -37,7 +35,7 @@
          aria-labelledby="impactcc-heading"
          style="--fc-brand: {{ brand_color }};">
 
-  <style nonce="{{ __nonce }}">
+  <style nonce="{{ NONCE }}">
     /* ===== Scope: #impact-challenge-coaches ===== */
     #impact-challenge-coaches::before{
       content:""; position:absolute; inset:-28% -8% auto;
@@ -46,7 +44,7 @@
     }
     #impact-challenge-coaches > *{ position:relative; z-index: 1; }
 
-    /* Premium card shell (shared look & feel) */
+    /* Premium card shell */
     #impact-challenge-coaches .fc-card{
       background: linear-gradient(120deg, rgba(255,255,255,.06), rgba(250,220,100,.08));
       border: 1px solid color-mix(in srgb, var(--fc-brand) 18%, transparent);
@@ -102,7 +100,7 @@
       {% for s in impact %}
       <li class="fc-card p-5 text-center" role="listitem" tabindex="0" aria-label="{{ s.value }} {{ s.label }}">
         <div class="text-3xl font-extrabold text-yellow-400">
-          <span class="count" data-target="{{ (s.value or 0)|int }}">0</span>
+          <span class="count" data-target="{{ (s.value|string)|replace(',','')|int }}">0</span>
         </div>
         <p class="mt-1 text-sm font-semibold text-zinc-300">{{ s.label }}</p>
       </li>
@@ -144,60 +142,66 @@
         <h3 id="coaches-heading" class="mb-4 text-2xl font-bold text-yellow-300">Coaches</h3>
 
         <ul class="flex flex-wrap justify-start gap-5" role="list">
+          {% if coaches and coaches|length %}
           {% for c in coaches[:6] %}
-          {% set _img_raw = c.img if c.img else ('images/coaches/' ~ (c.name.split(' ')|last|lower) ~ '.jpg') %}
-          {% set _img_src = (_img_raw if '://' in _img_raw
-                             else (url_for('static', filename=_img_raw, v=asset_version) if url_for is defined
-                                   else '/static/' ~ _img_raw.lstrip('/'))) %}
-          <li class="group w-44 rounded-2xl bg-zinc-900/70 p-4 shadow-lg ring-1 ring-white/5 transition hover:ring-yellow-400/30 focus-within:ring-yellow-400/50"
-              itemscope itemtype="https://schema.org/Person" itemprop="coach" role="listitem" tabindex="0">
-            <img alt="{{ c.name }} headshot" decoding="async" loading="lazy"
-                 class="mb-3 h-32 w-32 rounded-full object-cover border border-yellow-400/20 shadow-inner"
-                 src="{{ _img_src }}" itemprop="image" width="128" height="128">
-            <span class="block text-lg font-semibold text-yellow-300" itemprop="name">{{ c.name }}</span>
-            <span class="text-sm text-zinc-400" itemprop="jobTitle">{{ c.role|default('Coach') }}</span>
-          </li>
+            {% set _img_raw = c.img if c.img else ('images/coaches/' ~ (c.name.split(' ')|last|lower) ~ '.jpg') %}
+            {% set _img_src = (_img_raw if '://' in (_img_raw|string)
+                               else (url_for('static', filename=_img_raw, v=asset_version) if url_for is defined
+                                     else '/static/' ~ _img_raw.lstrip('/'))) %}
+            <li class="group w-44 rounded-2xl bg-zinc-900/70 p-4 shadow-lg ring-1 ring-white/5 transition hover:ring-yellow-400/30 focus-within:ring-yellow-400/50"
+                itemscope itemtype="https://schema.org/Person" itemprop="coach" role="listitem" tabindex="0">
+              <img alt="{{ c.name }} headshot" decoding="async" loading="lazy"
+                   class="mb-3 h-32 w-32 rounded-full object-cover border border-yellow-400/20 shadow-inner"
+                   src="{{ _img_src }}" itemprop="image" width="128" height="128">
+              <span class="block text-lg font-semibold text-yellow-300" itemprop="name">{{ c.name }}</span>
+              <span class="text-sm text-zinc-400" itemprop="jobTitle">{{ c.role|default('Coach') }}</span>
+            </li>
           {% endfor %}
+          {% else %}
+            <li class="rounded-xl bg-white/5 px-4 py-3 ring-1 ring-white/10 text-sm text-zinc-300">
+              Coaches will be announced soon — stay tuned!
+            </li>
+          {% endif %}
         </ul>
       </section>
     </div>
   </div>
 </section>
 
-<script nonce="{{ __nonce }}">
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
 (() => {
   const root = document.getElementById('impact-challenge-coaches'); if (!root || root.__init) return; root.__init = true;
 
-  // Impact counters (animate once on visibility, reduced-motion aware)
+  // Impact counters (animate once on visibility, reduced-motion aware, with graceful fallback)
   const counters = root.querySelectorAll('.count[data-target]');
   if (counters.length) {
-    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection && navigator.connection.saveData === true);
-    const io = new IntersectionObserver((entries, obs) => {
-      if (!entries.some(en => en.isIntersecting)) return;
+    const reduced = (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)
+                    || (navigator.connection && navigator.connection.saveData === true);
+    const startCounters = () => {
       counters.forEach(el => {
         const target = Math.max(0, parseInt(el.dataset.target || '0', 10));
         if (reduced) { el.textContent = String(target); return; }
         let n = 0, step = Math.max(1, Math.ceil(target / 80));
-        const id = setInterval(() => {
-          n += step;
-          if (n >= target) { n = target; clearInterval(id); }
-          el.textContent = String(n);
-        }, 20);
+        const id = setInterval(() => { n += step; if (n >= target) { n = target; clearInterval(id); } el.textContent = String(n); }, 20);
       });
-      obs.disconnect();
-    }, { threshold: .35 });
-    io.observe(root);
+    };
+    try {
+      const io = new IntersectionObserver((entries, obs) => {
+        if (!entries.some(en => en.isIntersecting)) return;
+        startCounters(); obs.disconnect();
+      }, { threshold: .35 });
+      io.observe(root);
+    } catch { startCounters(); }
   }
 
   // Donation modal contract (no inline handlers)
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-open-donate-modal]'); if (!btn) return;
     e.preventDefault();
-    try {
-      if (typeof window.openDonationModal === 'function') { window.openDonationModal(); return; }
-    } catch(_) {}
+    try { if (typeof window.openDonationModal === 'function') { window.openDonationModal(); return; } } catch(_) {}
     window.dispatchEvent(new CustomEvent('fc:donate:open'));
   });
 })();
-</script>
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
+<!-- 🚀 SV-Elite Prestige Upgrade applied -->
 

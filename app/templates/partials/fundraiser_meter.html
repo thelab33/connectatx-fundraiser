@@ -1,3 +1,4 @@
+<h2 class="sr-only">Fundraiser Meter</h2>
 <section data-ui=""${name//_/ -}"" class="block">
 {# =============================================================================
    app/templates/partials/fundraiser_meter.html
@@ -8,7 +9,7 @@
    - A11y: progressbar + live region
    ============================================================================= #}
 
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{% include "shared/ui_bootstrap.html" ignore missing with context %}
 
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set meter_id = meter_id|default('fundraiser-meter') %}
@@ -19,7 +20,7 @@
 {% set pct_raw = (100.0 * (raised / goal)) if goal else 0 %}
 {% set pct     = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) | round(1) %}
 
-<section id="{{ meter_id }}"
+<section id="{{ meter_id }}-2"
   class="relative"
   style="--brand: {{ theme_hex }};"
   data-initial='{{ {"raised": raised, "goal": goal}|tojson }}'

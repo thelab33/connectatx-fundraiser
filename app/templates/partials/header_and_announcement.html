@@ -1,47 +1,49 @@
-{# =============================================================================
-   header_and_announcement.html — Prestige Header (SV-Cohesive, Bulletproof)
-   - Compact + auto-shrinks on scroll
-   - Announcement / deadline / trust bands (optional)
-   - Mini-meter + donor ticker; live-synced via socket/poll
-   - CSP-safe, mobile-first, accessibility-first
-   ============================================================================ #}
+<h2 class="sr-only">Header And Announcement</h2>
+{# ==========================================================
+   FundChamps — Elite Header (PaaS-Ready, Premium, Hardened)
+   Self-contained: HTML + Scoped CSS + JS
+   Fixes:
+   - team_name in alt; safe asset_version
+   - Adds mini meter markup to match JS
+   - CSP nonce on inline scripts
+   - Partial meter updates supported
+   ========================================================== #}
 
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{# ---------- Safe Fallbacks ---------- #}
+{% set _hdr_id             = header_id if header_id is defined and header_id else 'site-header' %}
+{% set team_name           = team.team_name if team and team.team_name is defined else 'Connect ATX Elite' %}
+{% set _logo               = (team.logo if team and team.logo else 'images/logo.webp') %}
+{% set asset_version       = asset_version|default(None) %}
+{% if _logo.startswith('http') %}
+  {% set logoSrc = _logo %}
+{% else %}
+  {% if asset_version %}
+    {% set logoSrc = url_for('static', filename=_logo.lstrip('/'), v=asset_version) %}
+  {% else %}
+    {% set logoSrc = url_for('static', filename=_logo.lstrip('/')) %}
+  {% endif %}
+{% endif %}
+{% set funds_raised        = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraising_goal    = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set raw_pct             = (funds_raised / fundraising_goal * 100 if fundraising_goal else 0) | round(1) %}
+{% set pct                 = 0 if raw_pct < 0 else (100 if raw_pct > 100 else raw_pct) %}
+{% set has_announcement    = (announcement and announcement.visible) if announcement is defined else False %}
+{% set fundraising_deadline= fundraising_deadline if fundraising_deadline is defined else None %}
+{% set deadline_iso        = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
+{% set brand_color         = (team.theme_color if team and team.theme_color is defined and team.theme_color else '#facc15') %}
 
-{# ---------- Safe Fallbacks & Config ---------- #}
-{% set NONCE      = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set team_name  = team.team_name if team and team.team_name is defined else 'Connect ATX Elite' %}
-{% set logo_src   = team.logo if team and team.logo else (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
-{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
-{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
-{% set pct       = (funds_raised / fundraising_goal * 100 if fundraising_goal else 0) | round(1) %}
-{% set brand_color = (team.theme_color if team and team.theme_color is defined else '#facc15') %}
-{% set compact_threshold = compact_threshold|default(28) %}
+{# ---------- Configurable URLs ---------- #}
+{% set stats_url                = stats_url|default('/api/stats') %}
+{% set home_url                 = home_url|default('/') %}
+{% set announcement_partial_url = announcement_partial_url|default(None) %}
+{% set tenant_slug              = tenant_slug|default(team.slug if team and team.slug is defined else 'default') %}
 
-{% set has_announcement     = (announcement and announcement.visible) if announcement is defined else false %}
-{% set fundraising_deadline = fundraising_deadline if fundraising_deadline is defined else None %}
-{% set deadline_iso         = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
-{% set show_trust_band      = show_trust_band|default(false) %}
-
-{# ---------- URLs / API Endpoints ---------- #}
-{% set stats_url   = stats_url|default('/api/stats') %}
-{% set donors_url  = donors_url|default('/api/donors?limit=12') %}
-{% set home_url    = home_url|default('/') %}
-{% set tenant_slug = tenant_slug|default(team.slug if team and team.slug is defined else 'default') %}
-{% set socket_ns   = socket_ns|default('/donations') %}
-{% set poll_ms     = poll_ms|default(15000) %}
-
-<section id="header-wrapper" class="block" data-ui="header">
-
-<header id="site-header"
+<header
+  id="{{ _hdr_id }}"
   role="banner"
-  class="sticky top-0 z-50 bg-black/70 border-b transition-all border-[color:var(--fc-brand-200)]"
+  class="sticky top-0 z-50 border-b transition-all bg-black/80 border-[color:var(--fc-brand-200)]"
   data-stats-url="{{ stats_url }}"
-  data-donors-url="{{ donors_url }}"
   data-tenant="{{ tenant_slug }}"
-  data-socket-ns="{{ socket_ns }}"
-  data-poll-ms="{{ poll_ms }}"
-  data-compact-threshold="{{ compact_threshold }}"
   style="
     --fc-brand: {{ brand_color }};
     --fc-brand-100: color-mix(in srgb, {{ brand_color }} 28%, transparent);
@@ -49,169 +51,359 @@
     --fc-brand-300: color-mix(in srgb, {{ brand_color }} 40%, black);
     --fc-brand-text: #111827;
   "
+  data-analytics="header"
 >
-  <div class="ambient-glow" aria-hidden="true"></div>
-  <div id="fc-header-sentinel" aria-hidden="true"></div>
+  <stylenonce="{{ NONCE }}" nonce="{{ NONCE }}">
+    /* ---------- Scoped styles (no bleed) ---------- */
+    #{{ _hdr_id }} { backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    #{{ _hdr_id }}.is-shrunk { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
 
-  {# ---- Announcement Bar ---- #}
+    #{{ _hdr_id }} .shrinkable { transition: transform .2s ease, opacity .2s ease; }
+    #{{ _hdr_id }}.is-shrunk .shrinkable { transform: scale(.96); opacity:.96; }
+
+    /* Announcement */
+    #{{ _hdr_id }} .announce { background: linear-gradient(90deg, var(--fc-brand), #fef08a); color: var(--fc-brand-text); }
+    #{{ _hdr_id }} .announce a { text-decoration: underline; }
+
+    /* Mini meter */
+    #{{ _hdr_id }} .mini-meter { height: .5rem; border-radius: 9999px; overflow: hidden; }
+    #{{ _hdr_id }} .mini-bg { background: rgba(255,255,255,.06); }
+    #{{ _hdr_id }} .mini-bar {
+      width: 0%;
+      background: linear-gradient(90deg, #fde68a, var(--fc-brand), #f59e0b);
+      transition: width .8s cubic-bezier(.22,1,.36,1);
+    }
+
+    /* Mobile menu sheet */
+    #{{ _hdr_id }}-mobile { position: fixed; inset: 0; background: rgba(0,0,0,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+    #{{ _hdr_id }}-mobile[hidden] { display: none; }
+    #{{ _hdr_id }}-mobile a { font-weight: 600; }
+
+    /* No-jank numbers */
+    #{{ _hdr_id }} #hdr-raised, 
+    #{{ _hdr_id }} #hdr-goal, 
+    #{{ _hdr_id }} #hdr-pct { font-variant-numeric: tabular-nums; }
+
+    /* Save-Data mode trims effects */
+    #{{ _hdr_id }}.save-data { backdrop-filter:none; -webkit-backdrop-filter:none; }
+    #{{ _hdr_id }}.save-data .shrinkable, 
+    #{{ _hdr_id }}.save-data .mini-bar { transition: none !important; }
+
+    @media (prefers-reduced-motion: reduce) {
+      #{{ _hdr_id }} .shrinkable, #{{ _hdr_id }} .mini-bar { transition: none !important; }
+    }
+  </style>
+
+  {# Sentinel for performant shrink #}
+  <div id="{{ _hdr_id }}-sentinel" aria-hidden="true"></div>
+
+  {# ---------- Announcement Bar (HTMX optional) ---------- #}
   {% if has_announcement %}
-  <div id="announcement-bar"
-       class="announce flex justify-center items-center gap-2 py-1.5 px-3 text-sm font-semibold border-b"
-       style="border-color: var(--fc-brand-200)"
-       role="status" aria-live="polite" aria-atomic="true"
-       data-key="{{ announcement.id if announcement and announcement.id else 'announcement' }}">
-    <span>{{ announcement.message|safe }}</span>
+  <div
+    id="{{ _hdr_id }}-announcement"
+    class="announce flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold border-b"
+    style="border-color: var(--fc-brand-200)"
+    role="status" aria-live="polite" aria-atomic="true"
+    data-key="{{ (announcement.id if announcement and announcement.id else (announcement.message|default('announcement')|string)) }}"
+    {% if announcement_partial_url %}hx-get="{{ announcement_partial_url }}" hx-trigger="every 5m" hx-swap="outerHTML"{% endif %}
+  >
+    <span class="line-clamp-2">{{ announcement.message|safe }}</span>
     {% if announcement.cta and announcement.cta_url %}
       <a href="{{ announcement.cta_url }}" target="_blank" rel="noopener noreferrer">{{ announcement.cta }}</a>
     {% endif %}
-    <button type="button" aria-label="Close announcement"
-            class="ml-2 px-2 py-0.5 rounded hover:bg-black/10" data-close-announcement>×</button>
+    <button type="button" class="ml-2 px-2 py-1 rounded hover:bg-black/10 transition" aria-label="Close announcement" data-close-announcement>×</button>
   </div>
   {% endif %}
 
-  {# ---- Deadline Band ---- #}
+  {# ---------- Optional Countdown ---------- #}
   {% if fundraising_deadline %}
-  <div class="flex items-center justify-center text-sm font-semibold text-black py-1"
+  <div class="flex items-center justify-center text-sm font-semibold tracking-wide shadow text-black py-1"
        style="background: var(--fc-brand);"
-       aria-label="Fundraising deadline countdown" aria-live="polite">
-    ⏰ <span id="header-countdown" class="ml-1" data-deadline="{{ deadline_iso }}"></span>
+       role="region" aria-label="Fundraising deadline countdown" aria-live="polite" aria-atomic="true">
+    ⏰ <span id="{{ _hdr_id }}-countdown" class="ml-1" data-deadline="{{ deadline_iso }}"></span>
     <span class="ml-1">left — help us reach our goal!</span>
   </div>
   {% endif %}
 
-  <div class="container mx-auto max-w-7xl px-4">
-    <div class="row flex items-center justify-between py-2 gap-4">
+  {# ---------- Main Row ---------- #}
+  <div class="flex flex-wrap items-center justify-between gap-4 py-3 px-4 lg:px-8">
+    {# Brand #}
+    <a href="{{ home_url }}" class="flex items-center gap-3 font-bold text-xl shrinkable" aria-label="{{ team_name }} home" data-analytics="logo">
+      <img
+          src="{{ logoSrc }}"
+          alt="{{ team_name }} logo"
+          class="h-12 w-12 rounded-xl ring-1 ring-white/10"
+          loading="eager"
+          decoding="async"
+        />
+      <span class="hidden sm:inline text-[color:var(--fc-brand)] drop-shadow">{{ team_name }}</span>
+    </a>
 
-      {# ---- Logo ---- #}
-      <a href="{{ home_url }}" aria-label="{{ team_name }} home"
-         class="flex items-center gap-2 shrinkable">
-        <img src="{{ logo_src }}" alt="{{ team_name }} logo"
-             class="h-9 w-9 rounded-lg border shadow"
-             style="border-color: var(--fc-brand)" />
-        <span class="hidden sm:inline font-bold text-lg text-[color:var(--fc-brand)]">{{ team_name }}</span>
-      </a>
+    {# Desktop Nav #}
+    <nav class="hidden md:flex items-center gap-8 font-semibold" aria-label="Primary">
+      <a href="#mission" class="transition-colors hover:text-[color:var(--fc-brand)]">Mission</a>
+      <a href="#tiers" class="transition-colors hover:text-[color:var(--fc-brand)]">Sponsorship Tiers</a>
+      <a href="#program-stats-calendar" class="transition-colors hover:text-[color:var(--fc-brand)]">Schedule</a>
+    </nav>
 
-      {# ---- Primary Nav ---- #}
-<nav class="hidden lg:flex items-center gap-6 font-semibold text-sm tracking-wide" aria-label="Primary navigation">
-  <a href="#mission"
-     class="relative group transition-colors duration-200 hover:text-[color:var(--fc-brand)]">
-    Mission
-    <span class="absolute left-0 -bottom-1 h-0.5 w-0 scale-x-0 bg-[color:var(--fc-brand)] transition-transform duration-200 group-hover:scale-x-100"></span>
-  </a>
-  <a href="#tiers"
-     class="relative group transition-colors duration-200 hover:text-[color:var(--fc-brand)]">
-    Sponsorship Tiers
-    <span class="absolute left-0 -bottom-1 h-0.5 w-0 scale-x-0 bg-[color:var(--fc-brand)] transition-transform duration-200 group-hover:scale-x-100"></span>
-  </a>
-  <a href="#program-stats-calendar"
-     class="relative group transition-colors duration-200 hover:text-[color:var(--fc-brand)]">
-    Schedule
-    <span class="absolute left-0 -bottom-1 h-0.5 w-0 scale-x-0 bg-[color:var(--fc-brand)] transition-transform duration-200 group-hover:scale-x-100"></span>
-  </a>
-</nav>
+    {# CTAs + Mobile Toggle #}
+    <div class="flex items-center gap-3">
+      <button type="button"
+        class="min-w-28 inline-flex items-center justify-center rounded-xl bg-zinc-900 text-[color:var(--fc-brand)] border font-bold px-4 py-2 ring-1 hover:scale-105 transition"
+        style="border-color: var(--fc-brand); box-shadow: 0 0 0 1px color-mix(in srgb, var(--fc-brand) 70%, transparent) inset;"
+        data-open-donate-modal
+        data-analytics="cta:donate">
+        💸 Donate
+      </button>
 
-{# ---- Mini Meter + Donor Ticker ---- #}
-<div class="hidden md:flex flex-col items-end gap-2 min-w-[18rem]"
-     role="region" aria-label="Fundraising progress">
-  <div id="hdr-meter" class="flex items-center gap-2 text-xs font-medium">
-    <div class="relative w-40 h-2 bg-zinc-700/70 rounded overflow-hidden shadow-inner">
-      <div id="hdr-bar" class="absolute top-0 left-0 h-2 bg-[color:var(--fc-brand)] transition-all duration-700 ease-out"
-           style="width: {{ pct }}%"></div>
+      <a href="#tiers"
+         class="min-w-28 inline-flex items-center justify-center rounded-xl bg-zinc-900 text-yellow-200 border font-bold px-4 py-2 ring-1 hover:opacity-90"
+         style="border-color: var(--fc-brand-200); box-shadow: 0 0 0 1px var(--fc-brand-200) inset;"
+         data-analytics="cta:sponsor">🌟 Sponsor</a>
+
+      <a href="#tiers"
+         class="min-w-32 inline-flex items-center justify-center rounded-xl bg-black text-yellow-100 border font-bold px-4 py-2 ring-2 hover:scale-105 motion-safe:animate-pulse"
+         style="border-color: var(--fc-brand); box-shadow: 0 0 0 1px var(--fc-brand) inset, 0 8px 30px color-mix(in srgb, var(--fc-brand) 25%, transparent);"
+         data-analytics="cta:vip">🏆 VIP Sponsor</a>
+
+      <button id="{{ _hdr_id }}-theme" class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5" aria-label="Toggle theme" type="button">🌙</button>
+      <button id="{{ _hdr_id }}-toggle" class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl" aria-expanded="false" aria-controls="{{ _hdr_id }}-mobile" aria-label="Open mobile menu" type="button">☰</button>
     </div>
-    <span class="whitespace-nowrap">
-      <span id="hdr-raised" class="font-semibold">${{ "{:,.0f}".format(funds_raised) }}</span>
-      <span class="opacity-60">/</span>
-      <span id="hdr-goal">${{ "{:,.0f}".format(fundraising_goal) }}</span>
-    </span>
   </div>
 
-  <div class="donor-spot flex items-center gap-2 text-xs italic text-zinc-300 bg-zinc-800/40 px-2 py-1 rounded"
-       aria-live="polite">
-    <span class="label text-[color:var(--fc-brand)] font-semibold">Latest:</span>
-    <span id="hdr-donor-name" class="truncate max-w-[8rem]">Be the first to donate!</span>
-    <span id="hdr-donor-amount" class="value font-bold text-green-400"></span>
-    <span class="animate-pulse text-yellow-300" aria-hidden="true">★</span>
+  {# ---------- Mini Fundraising Meter (added) ---------- #}
+  <div class="px-4 lg:px-8 pb-3">
+    <div class="mini-meter mini-bg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct|int }}" aria-label="Fundraising progress">
+      <div id="hdr-meter" class="mini-bar" style="width: {{ pct }}%"></div>
+    </div>
+    <div class="mt-1 flex items-center justify-between text-[11px] text-yellow-200/85">
+      <span id="hdr-raised">${{ '{:,.0f}'.format(funds_raised) }}</span>
+      <span><span id="hdr-pct">{{ (pct | round(0)) | int }}</span>% • Goal <span id="hdr-goal">${{ '{:,.0f}'.format(fundraising_goal) }}</span></span>
+    </div>
+    <span id="hdr-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(funds_raised) }} of ${{ '{:,.0f}'.format(fundraising_goal) }} ({{ pct | round(0) }}%)</span>
   </div>
-</div>
 
-      {# ---- CTAs ---- #}
-      <div class="flex items-center gap-2">
-        <button type="button"
-          class="cta-btn inline-flex items-center justify-center rounded-lg bg-zinc-900 text-[color:var(--fc-brand)] border font-bold px-3 py-1.5 ring-1 hover:scale-[1.02] transition text-[0.92rem]"
-          style="border-color: var(--fc-brand); box-shadow: 0 0 0 1px color-mix(in srgb, var(--fc-brand) 65%, transparent) inset;"
-          data-open-donate-modal data-analytics="cta:donate">💸 Donate</button>
+  {# ---------- Trust Bar ---------- #}
+  <div class="text-center text-xs py-1 px-3 text-yellow-300 bg-zinc-900/90 border-t" style="border-color: var(--fc-brand-200)"
+       role="note" aria-label="Program accolades">
+    🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold Certified · Austin, TX · Est. 2023
+  </div>
 
-        <a href="#tiers" class="cta-btn inline-flex items-center justify-center rounded-lg bg-zinc-900 text-yellow-200 border font-bold px-3 py-1.5 ring-1 hover:opacity-90 text-[0.92rem]"
-           style="border-color: var(--fc-brand-200); box-shadow: 0 0 0 1px var(--fc-brand-200) inset;"
-           data-analytics="cta:sponsor">🌟 Sponsor</a>
-
-        <a href="#tiers" class="cta-btn vip-pulse hidden sm:inline-flex items-center justify-center rounded-lg bg-black text-yellow-100 border font-bold px-3 py-1.5 ring-2 hover:scale-[1.02] text-[0.92rem]"
-           style="border-color: var(--fc-brand); box-shadow: 0 8px 26px color-mix(in srgb, var(--fc-brand) 22%, transparent);"
-           data-analytics="cta:vip">🏆 VIP</a>
-
-        <button id="theme-toggle" class="ml-1 text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5 text-[1.1rem]"
-                aria-label="Toggle theme" type="button">🌙</button>
-
-        <button id="mobile-toggle" class="lg:hidden ml-1 text-[color:var(--fc-brand)] text-[1.5rem]"
-                aria-expanded="false" aria-controls="mobile-menu" aria-label="Open mobile menu" type="button">☰</button>
+  {# ---------- Mobile Menu ---------- #}
+  <nav id="{{ _hdr_id }}-mobile" hidden aria-label="Mobile" role="menu">
+    <div class="absolute top-4 right-4">
+      <button type="button" id="{{ _hdr_id }}-close" class="text-3xl text-yellow-300 px-2 py-1 rounded hover:bg-yellow-300/10" aria-label="Close menu">×</button>
+    </div>
+    <div class="h-full w-full flex flex-col gap-8 items-center justify-center font-semibold text-lg px-8">
+      <a href="#mission" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Mission</a>
+      <a href="#tiers" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Sponsorship Tiers</a>
+      <a href="#program-stats-calendar" role="menuitem" class="block py-4 px-8 hover:text-[color:var(--fc-brand)] transition">Schedule</a>
+      <div class="flex flex-col gap-4 mt-2 w-full max-w-xs">
+        <a href="#tiers" class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
+           style="background: linear-gradient(90deg, var(--fc-brand), #fde68a)">🌟 Sponsor Now</a>
+        <button class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
+                style="background: var(--fc-brand)" data-open-donate-modal>💸 Donate</button>
       </div>
-    </div>
-  </div>
-
-  {# ---- Trust Band ---- #}
-  {% if show_trust_band %}
-  <div class="bg-zinc-900 text-yellow-300 text-xs text-center py-1 border-t border-[color:var(--fc-brand-200)]">
-    🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold • Austin, TX
-  </div>
-  {% endif %}
-
-  {# ---- Mobile Menu ---- #}
-  <nav id="mobile-menu" hidden aria-label="Mobile">
-    <div class="absolute top-3 right-3">
-      <button type="button" id="mobile-close" class="text-2xl text-yellow-300" aria-label="Close menu">×</button>
-    </div>
-    <div class="flex flex-col items-center gap-6 py-12">
-      <a href="#mission" role="menuitem">Mission</a>
-      <a href="#tiers" role="menuitem">Tiers</a>
-      <a href="#program-stats-calendar" role="menuitem">Schedule</a>
-      <button data-open-donate-modal class="w-full rounded-lg bg-[color:var(--fc-brand)] px-4 py-2 font-bold text-black">Donate</button>
     </div>
   </nav>
 </header>
 
-{# ---- Quick Donate Floater ---- #}
-<a href="#donate" hidden data-open-donate-modal
-   class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-4 rounded-full shadow-lg"
-   aria-label="Quick donate button">💸 Quick Donate</a>
+{# ---------- Floating Quick Donate ---------- #}
+<a href="#donate"
+   class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
+   data-open-donate-modal data-analytics="cta:quick-donate"
+   aria-label="Quick donate button"
+   hidden></a>
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+  if (!document.body.hasAttribute('data-no-float')) {
+    const f = document.querySelector('[data-analytics="cta:quick-donate"]');
+    if (f) { f.hidden = false; f.textContent = '💸 Quick Donate'; }
+  }
+</script>
 
-{# ---- Script for header interactions ---- #}
-{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
+{# ---------- Component JS ---------- #}
+<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
 (() => {
-  // Shrink on scroll
-  const header=document.getElementById('site-header'), sentinel=document.getElementById('fc-header-sentinel');
-  if(header && sentinel && 'IntersectionObserver' in window){
-    new IntersectionObserver(([e])=>header.classList.toggle('is-shrunk', !e.isIntersecting),
-      {rootMargin:`-${header.dataset.compactThreshold||28}px 0px 0px 0px`}).observe(sentinel);
+  if (window.__fcHeaderInit) return; window.__fcHeaderInit = true;
+
+  const id = '{{ _hdr_id }}';
+  const header = document.getElementById(id); if (!header) return;
+  const $ = (sel, ctx=document) => ctx.querySelector(sel);
+
+  /* Performance-aware: respect Save-Data users */
+  if (navigator.connection?.saveData) header.classList.add('save-data');
+
+  /* Idle preconnect for payments & sockets */
+  (window.requestIdleCallback || function(cb){ setTimeout(cb, 1) })(() => {
+    ['https://js.stripe.com','/socket.io/'].forEach(h=>{
+      const l=document.createElement('link'); l.rel='preconnect'; l.href=h; l.crossOrigin='';
+      document.head.appendChild(l);
+    });
+  });
+
+  /* ===== Theme toggle (persisted) ===== */
+  const themeToggle = $(`#${id}-theme`);
+  function applyTheme(mode){
+    const root = document.documentElement;
+    root.dataset.theme = mode;
+    try { localStorage.setItem('fc_theme', mode); } catch(_) {}
+  }
+  try { const saved = localStorage.getItem('fc_theme'); if (saved) applyTheme(saved); } catch(_) {}
+  themeToggle?.addEventListener('click', () => {
+    const next = (document.documentElement.dataset.theme === 'light') ? 'dark' : 'light';
+    document.startViewTransition ? document.startViewTransition(()=>applyTheme(next)) : applyTheme(next);
+  });
+  addEventListener('storage',e=>{ if(e.key==='fc_theme'&&e.newValue){ document.documentElement.dataset.theme=e.newValue; } });
+
+  /* ===== Announcement memory ===== */
+  const ann = $(`#${id}-announcement`);
+  if (ann) {
+    const key = 'fc_announce_closed_' + (ann.dataset.key || 'default');
+    try { if (localStorage.getItem(key) === '1') ann.remove(); } catch(_) {}
+    ann.querySelector('[data-close-announcement]')?.addEventListener('click', ()=>{
+      try { localStorage.setItem(key,'1'); } catch(_) {}
+      ann.remove();
+    });
   }
 
-  // Announcement close
-  document.querySelectorAll('[data-close-announcement]').forEach(b=>b.onclick=()=>b.closest('#announcement-bar')?.remove());
+  /* ===== Countdown ===== */
+  const cd = $(`#${id}-countdown`);
+  if (cd && cd.dataset.deadline) {
+    const deadline = new Date(cd.dataset.deadline);
+    if (!isNaN(deadline)) {
+      const tick = () => {
+        const now = new Date(); let diff = Math.max(0, deadline - now);
+        const d = Math.floor(diff/86400000); diff -= d*86400000;
+        const h = Math.floor(diff/3600000);  diff -= h*3600000;
+        const m = Math.floor(diff/60000);    diff -= m*60000;
+        const s = Math.floor(diff/1000);
+        cd.textContent = `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+      };
+      tick(); setInterval(tick, 1000);
+    }
+  }
 
-  // Mobile menu
-  const toggle=document.getElementById('mobile-toggle'), menu=document.getElementById('mobile-menu'), close=document.getElementById('mobile-close');
-  if(toggle && menu){ toggle.onclick=()=>{menu.hidden=false;toggle.setAttribute('aria-expanded','true');};
-    close.onclick=()=>{menu.hidden=true;toggle.setAttribute('aria-expanded','false');}; }
+  /* ===== Header shrink (IntersectionObserver – jank-free) ===== */
+  (function(){
+    const sentinel = document.getElementById(`${id}-sentinel`);
+    if (!('IntersectionObserver' in window) || !sentinel) {
+      let shrunk = false;
+      const onScroll = () => {
+        const y = window.scrollY || document.documentElement.scrollTop || 0;
+        if (!shrunk && y > 48) { shrunk = true; header.classList.add('is-shrunk'); window.dispatchEvent(new CustomEvent('fc:header:shrink')); }
+        else if (shrunk && y <= 48) { shrunk = false; header.classList.remove('is-shrunk'); window.dispatchEvent(new CustomEvent('fc:header:unshrink')); }
+      };
+      onScroll(); window.addEventListener('scroll', onScroll, { passive: true });
+      return;
+    }
+    const io = new IntersectionObserver(entries=>{
+      const top = entries[0];
+      if (!top) return;
+      if (top.isIntersecting) { header.classList.remove('is-shrunk'); window.dispatchEvent(new CustomEvent('fc:header:unshrink')); }
+      else { header.classList.add('is-shrunk'); window.dispatchEvent(new CustomEvent('fc:header:shrink')); }
+    }, { rootMargin: '-56px 0px 0px 0px', threshold: 0 });
+    io.observe(sentinel);
+  })();
 
-  // Mini meter sync
-  const nf=new Intl.NumberFormat(); const money=n=>'$'+nf.format(Math.round(n||0));
-  window.addEventListener('fc:funds:update',e=>{
-    const {raised,goal}=e.detail||{}; const pct=goal?(100*raised/goal):0;
-    document.getElementById('hdr-bar').style.width=pct+'%';
-    document.getElementById('hdr-pct').textContent=pct.toFixed(0)+'%';
-    document.getElementById('hdr-raised').textContent=money(raised);
-    document.getElementById('hdr-goal').textContent=money(goal);
+  /* ===== Mobile menu (focus-safe) ===== */
+  (function(){
+    const openBtn  = $(`#${id}-toggle`);
+    const menu     = document.getElementById(`${id}-mobile`);
+    const closeBtn = document.getElementById(`${id}-close`);
+    let lastFocus = null;
+
+    if (menu && 'inert' in menu) menu.inert = true;
+
+    function open(){
+      if(!menu) return;
+      lastFocus = document.activeElement;
+      menu.hidden = false;
+      document.body.style.overflow = 'hidden';
+      menu.setAttribute('aria-hidden','false');
+      if ('inert' in menu) menu.inert = false;
+      openBtn?.setAttribute('aria-expanded','true');
+      (menu.querySelector('a,button')||menu).focus();
+      const onKey = (e) => { if (e.key === 'Escape') close(); };
+      menu.__onKey = onKey; document.addEventListener('keydown', onKey);
+      window.dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'menu_open', area:'header' }}));
+    }
+    function close(){
+      if(!menu) return;
+      menu.hidden = true;
+      document.body.style.overflow = '';
+      menu.setAttribute('aria-hidden','true');
+      if ('inert' in menu) menu.inert = true;
+      openBtn?.setAttribute('aria-expanded','false');
+      lastFocus?.focus();
+      document.removeEventListener('keydown', menu.__onKey || (()=>{}));
+      window.dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'menu_close', area:'header' }}));
+    }
+    openBtn?.addEventListener('click', open);
+    closeBtn?.addEventListener('click', close);
+    menu?.addEventListener('click', (e)=>{ if (e.target === menu) close(); });
+    menu?.querySelectorAll('a').forEach(a => a.addEventListener('click', close));
+  })();
+
+  /* ===== Donate modal integration ===== */
+  window.openDonationModal = window.openDonationModal || function(){
+    window.dispatchEvent(new CustomEvent('fc:donate:open'));
+    const dlg = document.getElementById('donation-modal');
+    if (dlg?.showModal) { try { dlg.showModal(); return; } catch(_){} }
+    const trigger = document.querySelector('[data-fc-modal="donation"]');
+    if (trigger) trigger.click();
+  };
+  document.querySelectorAll('[data-open-donate-modal]').forEach(el=>{
+    el.addEventListener('click', (e)=>{ e.preventDefault(); window.openDonationModal(); });
   });
+
+  /* ===== Meter sync (live + polling, partial updates supported) ===== */
+  const meter = {
+    bar:   $('#hdr-meter', header),
+    pct:   $('#hdr-pct', header),
+    raised:$('#hdr-raised', header),
+    goal:  $('#hdr-goal', header),
+    sr:    $('#hdr-sr', header)
+  };
+  const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+  const fmtMoney = n => '$' + nf.format(Math.round(Number(n)||0));
+  let last = { raised: {{ funds_raised|int }}, goal: {{ fundraising_goal|int }} };
+
+  function setMeter(raised=last.raised, goal=last.goal){
+    last.raised = Number(raised ?? last.raised) || 0;
+    last.goal   = Math.max(0, Number(goal ?? last.goal) || 0);
+    const p = Math.max(0, Math.min(100, last.goal ? (last.raised/last.goal*100) : 0));
+    if (meter.bar)    meter.bar.style.width = p.toFixed(1) + '%';
+    if (meter.pct)    meter.pct.textContent = p.toFixed(0);
+    if (meter.raised) meter.raised.textContent = fmtMoney(last.raised);
+    if (meter.goal)   meter.goal.textContent   = fmtMoney(last.goal);
+    if (meter.sr)     meter.sr.textContent     = `Raised ${fmtMoney(last.raised)} of ${fmtMoney(last.goal)} (${p.toFixed(0)}%)`;
+  }
+
+  let gotLive = false;
+  window.addEventListener('fc:meter:update', (ev)=> {
+    gotLive = true;
+    const { raised, goal } = ev.detail || {};
+    setMeter(raised, goal);
+  });
+
+  setTimeout(()=>{
+    if (gotLive) return;
+    const url = header.dataset.statsUrl || '/api/stats';
+    const poll = async () => {
+      try {
+        if (document.hidden) { setTimeout(poll, (navigator.connection?.saveData?30000:15000)); return; }
+        const res = await fetch(url, { headers: { 'Accept': 'application/json' }});
+        if (res.ok) {
+          const data = await res.json();
+          const raised = (data.raised ?? data.funds_raised);
+          const goal   = (data.goal   ?? data.fundraising_goal);
+          setMeter(raised, goal);
+        }
+      } catch(e) { /* silent */ }
+      setTimeout(poll, (navigator.connection?.saveData?30000:15000));
+    };
+    poll();
+  }, 1800);
 })();
-{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
-</section>
+</script>
 

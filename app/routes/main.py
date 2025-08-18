@@ -1,13 +1,14 @@
 from __future__ import annotations
 """
-Main web blueprint: homepage, donor/sponsor flows, and static pages.
+Main web blueprint: homepage, donor/sponsor flows, static pages, and stats API.
 
 Enhancements:
-- Safe DB fallbacks for dev/offline
+- Safe DB fallbacks (dev/offline)
+- SSE/HTMX/JSON friendly context for AI Concierge
+- Consistent ETag generation (HTML + JSON stats)
 - Async email queue with exception logging
-- SEO-friendly docstrings on routes
 - Centralized constants for easy tuning
-- Consistent ETag generation from live stats
+- Tighter typing + schema-tolerant ORM access
 """
 
 import os
@@ -18,15 +19,15 @@ from threading import Thread
 from typing import Any, Dict, List, Optional, Tuple
 
 from flask import (
-    Blueprint, current_app, flash, make_response, redirect,
+    Blueprint, current_app, flash, jsonify, make_response, redirect,
     render_template, request, session, url_for
 )
 from flask_mail import Message
-from sqlalchemy import func, desc
+from sqlalchemy import desc, func
 
 from app.extensions import db, mail
 
-# Models (tolerant import – logs & continues in dev)
+# ── Models (tolerant import – logs & continues in dev) ─────────────
 try:
     from app.models.campaign_goal import CampaignGoal  # type: ignore
 except Exception:  # pragma: no cover
@@ -37,11 +38,11 @@ try:
 except Exception:  # pragma: no cover
     Sponsor = None  # type: ignore
 
-# Config & helpers
+# ── Config & helpers ───────────────────────────────────────────────
 try:
     from app.config.team_config import TEAM_CONFIG  # type: ignore
 except Exception:  # pragma: no cover
-    TEAM_CONFIG = {"team_name": "Connect ATX Elite", "fundraising_goal": 10_000}
+    TEAM_CONFIG = {"team_name": "Connect ATX Elite", "fundraising_goal": 10_000, "theme_color": "#f59e0b"}
 
 try:
     from app.helpers import (  # type: ignore
@@ -57,9 +58,10 @@ except Exception:  # pragma: no cover
     def _generate_mission_section(cfg, *_): return {}
     def _prepare_stats(cfg, raised, goal, pct): return {"raised": raised, "goal": goal, "percent": pct}
 
-# ── Config Constants ───────────────────────────────────────────────
+# ── Config constants ───────────────────────────────────────────────
 DEFAULT_FUNDRAISING_GOAL = 10_000
 SPONSORS_PER_PAGE = 20
+PERSONAS_DEFAULT = ["Sponsor", "Parent", "Coach"]
 
 # ── Forms (fallback SponsorForm → DonationForm) ────────────────────
 try:
@@ -70,19 +72,25 @@ except Exception:  # pragma: no cover
     except Exception:  # pragma: no cover
         SponsorForm = None  # type: ignore
 
-# ── Blueprint ──────────────────────────────────────────────────────
+# ── Blueprint (keep backward compat alias) ─────────────────────────
 bp = Blueprint("main", __name__)
-# keep backward-compat for existing imports/registration
 main_bp = bp
 
-# ── Data Model ─────────────────────────────────────────────────────
+# ── Data model ─────────────────────────────────────────────────────
 @dataclass(frozen=True)
 class FundraisingStats:
     raised: float
     goal: Optional[float]
     percent_raised: float
 
-# ── Email Helpers ──────────────────────────────────────────────────
+# ── Utilities ──────────────────────────────────────────────────────
+def safe_url(endpoint: str, default: str) -> str:
+    """url_for wrapper that never raises at render-time."""
+    try:
+        return url_for(endpoint)
+    except Exception:
+        return default
+
 def _send_async_email(msg: Message) -> None:
     """Send email in a background thread within app context."""
     with current_app.app_context():
@@ -109,9 +117,9 @@ def _create_thank_you_msg(name: str, email: str) -> Message:
         ),
     )
 
-# ── DB Helpers ─────────────────────────────────────────────────────
+# ── DB helpers ─────────────────────────────────────────────────────
 def _get_sponsors() -> Tuple[List[Any], float, Optional[Any]]:
-    """Fetch approved sponsors sorted by amount (schema tolerant)."""
+    """Fetch approved, non-deleted sponsors sorted by amount (schema tolerant)."""
     if not Sponsor:
         return [], 0.0, None
     try:
@@ -123,7 +131,7 @@ def _get_sponsors() -> Tuple[List[Any], float, Optional[Any]]:
         order_col = getattr(Sponsor, "amount", None) or getattr(Sponsor, "id", None)
         if order_col is not None:
             q = q.order_by(desc(order_col))
-        sponsors = q.all()
+        sponsors: List[Any] = q.all()
         total = float(sum((getattr(s, "amount", 0) or 0) for s in sponsors))
         return sponsors, total, (sponsors[0] if sponsors else None)
     except Exception:
@@ -132,7 +140,6 @@ def _get_sponsors() -> Tuple[List[Any], float, Optional[Any]]:
 
 def _active_goal_amount() -> float:
     """Pick an active goal or fallback to TEAM_CONFIG/DEFAULT."""
-    # DB lookup
     try:
         if CampaignGoal:
             q = db.session.query(CampaignGoal)
@@ -154,7 +161,6 @@ def _active_goal_amount() -> float:
                         return float(getattr(row, col) or 0.0)
     except Exception:
         current_app.logger.exception("🎯 Goal lookup failed; using fallback")
-    # Config fallback
     try:
         return float(TEAM_CONFIG.get("fundraising_goal", DEFAULT_FUNDRAISING_GOAL))
     except Exception:
@@ -163,7 +169,6 @@ def _active_goal_amount() -> float:
 def _get_fundraising_stats() -> FundraisingStats:
     """Compute raised, goal, and percent with DB + config fallback."""
     raised = 0.0
-    # Sum sponsors (approved only)
     try:
         if Sponsor:
             q = db.session.query(func.coalesce(func.sum(Sponsor.amount), 0.0))
@@ -180,17 +185,23 @@ def _get_fundraising_stats() -> FundraisingStats:
     percent = (raised / goal * 100.0) if goal else 0.0
     return FundraisingStats(raised=raised, goal=goal, percent_raised=percent)
 
-def _make_etag_from_context(context: dict) -> str:
+def _make_etag_from_context(context: Dict[str, Any]) -> str:
     """Generate a short ETag hash from homepage stats."""
     seed = f"{int(context.get('raised', 0))}-{int(context.get('goal', 0) or 0)}-{len(context.get('sponsors_sorted', []))}-{int(context.get('percent', 0))}"
     return sha1(seed.encode("utf-8")).hexdigest()[:12]
 
-# ── Context Builder ────────────────────────────────────────────────
+# ── Context builder ────────────────────────────────────────────────
 def _home_context() -> Dict[str, Any]:
     """Full homepage context with live DB data + UI sections."""
     sponsors_sorted, sponsors_total, top_sponsor = _get_sponsors()
     stats = _get_fundraising_stats()
     impact = _generate_impact_stats(TEAM_CONFIG)
+
+    # URLs for partials (avoid inline url_for in Jinja)
+    sponsor_list_href = safe_url("main.sponsor_list", "/sponsors")
+    become_sponsor_href = safe_url("main.become_sponsor", "/become-sponsor")
+    donate_href = safe_url("main.donate", "/donate")
+    stats_api_href = safe_url("main.stats_json", "/stats")
 
     return dict(
         team=TEAM_CONFIG,
@@ -205,9 +216,24 @@ def _home_context() -> Dict[str, Any]:
         sponsors_sorted=sponsors_sorted,
         sponsor=top_sponsor,
         features={"digital_hub_enabled": True},
+
+        # Forms + payments
         form=SponsorForm() if SponsorForm else None,
         stripe_pk=os.getenv("STRIPE_PUBLIC_KEY", ""),
         paypal_client_id=os.getenv("PAYPAL_CLIENT_ID", ""),
+
+        # Partial endpoints (hero & AI)
+        sponsor_list_href=sponsor_list_href,
+        become_sponsor_href=become_sponsor_href,
+        donate_href=donate_href,
+
+        ai_post_url=os.getenv("AI_CONCIERGE_POST_URL", safe_url("ai.concierge", "/api/ai/concierge")),
+        ai_stream_url=os.getenv("AI_CONCIERGE_STREAM_URL", safe_url("ai.concierge_stream", "/api/ai/stream")),
+        ai_mode=os.getenv("AI_CONCIERGE_MODE", "auto"),  # 'auto' | 'sse' | 'post'
+        stats_url=stats_api_href,
+        personas=PERSONAS_DEFAULT,
+
+        asset_version=os.getenv("ASSET_VERSION", None),
     )
 
 # ── Routes ─────────────────────────────────────────────────────────
@@ -217,7 +243,7 @@ def home():
     try:
         context = _home_context()
         resp = make_response(render_template("index.html", **context))
-        # conservative: let API endpoints (/api/stats) be cached lightly, but keep HTML fresh
+        # Keep HTML fresh; stats JSON handles its own caching
         resp.cache_control.no_cache = True
         resp.cache_control.no_store = True
         resp.cache_control.must_revalidate = True
@@ -242,10 +268,11 @@ def become_sponsor():
             amt = Decimal(str(form.amount.data or "0"))
         except Exception:
             amt = Decimal("0")
-        # Create pending sponsor
+
         if not Sponsor:
             flash("Thank you for your sponsorship!", "success")
             return redirect(url_for("main.home"))
+
         try:
             sponsor = Sponsor(name=name, email=email, amount=float(amt), status="pending")
             with db.session.begin():
@@ -258,16 +285,19 @@ def become_sponsor():
             current_app.logger.exception("🤝 Sponsor submission error", extra={"name": name, "amount": float(amt)})
             flash("Unable to process sponsorship right now.", "danger")
             return render_template("become_sponsor.html", form=form), 500
+
     elif request.method == "POST":
         flash("Please correct the errors in the form.", "warning")
         return render_template("become_sponsor.html", form=form), 400
+
     return render_template("become_sponsor.html", form=form)
 
 @bp.get("/sponsors")
 def sponsor_list():
     """Paginated list of approved sponsors."""
     page = request.args.get("page", 1, type=int)
-    sponsors, pagination = [], None
+    sponsors: List[Any] = []
+    pagination = None
     if not Sponsor:
         return render_template("sponsor_list.html", sponsors=sponsors, pagination=pagination)
     try:
@@ -276,11 +306,13 @@ def sponsor_list():
             q = q.filter(Sponsor.deleted.is_(False))
         if hasattr(Sponsor, "status"):
             q = q.filter(Sponsor.status == "approved")
-        q = q.order_by(desc(getattr(Sponsor, "amount", 0)))
+        order_col = getattr(Sponsor, "amount", None) or getattr(Sponsor, "id", None)
+        if order_col is not None:
+            q = q.order_by(desc(order_col))
         # Flask-SQLAlchemy paginate available in v3+
         try:
-            pagination = q.paginate(page=page, per_page=SPONSORS_PER_PAGE, error_out=False)
-            sponsors = pagination.items
+            pagination = q.paginate(page=page, per_page=SPONSORS_PER_PAGE, error_out=False)  # type: ignore[attr-defined]
+            sponsors = pagination.items  # type: ignore[assignment]
         except Exception:
             sponsors = q.limit(SPONSORS_PER_PAGE).offset((page - 1) * SPONSORS_PER_PAGE).all()
             pagination = None
@@ -320,11 +352,11 @@ def donate():
     if form.validate_on_submit():
         name = (form.name.data or "Friend").strip()
         email = (form.email.data or "").lower().strip()
-        amount = 0.0
         try:
             amount = float(Decimal(str(form.amount.data or "0")))
         except Exception:
             amount = 0.0
+
         try:
             if email:
                 _queue_email(Message(
@@ -337,9 +369,11 @@ def donate():
             current_app.logger.exception("💌 Donation email failed", extra={"email": email, "amount": amount})
             flash("Donation received but email failed to send.", "info")
         return redirect(url_for("main.home"))
+
     elif request.method == "POST":
         flash("Please fix the highlighted errors.", "warning")
         return render_template("donate.html", form=form), 400
+
     return render_template("donate.html", form=form)
 
 @bp.post("/dismiss-onboarding")
@@ -350,4 +384,35 @@ def dismiss_onboarding():
         return ("", 204)
     flash("Onboarding dismissed!", "success")
     return redirect(url_for("main.home"))
+
+# ── Lightweight stats API used by AI Concierge + front-end widgets ─
+@bp.get("/stats")
+def stats_json():
+    """JSON snapshot of fundraising stats for client widgets/AI context."""
+    try:
+        s = _get_fundraising_stats()
+        sponsors_sorted, sponsors_total, _ = _get_sponsors()
+        payload = {
+            "team": TEAM_CONFIG.get("team_name", "Our Team"),
+            "raised": int(s.raised),
+            "goal": int(s.goal or 0),
+            "percent": round(s.percent_raised, 1),
+            "sponsors_total": int(sponsors_total),
+            "sponsors_count": len(sponsors_sorted),
+        }
+        etag = _make_etag_from_context({
+            "raised": payload["raised"],
+            "goal": payload["goal"],
+            "percent": payload["percent"],
+            "sponsors_sorted": sponsors_sorted,
+        })
+        resp = make_response(jsonify(payload))
+        resp.set_etag(etag)
+        # Allow short caching for widgets
+        resp.cache_control.public = True
+        resp.cache_control.max_age = 30
+        return resp
+    except Exception:
+        current_app.logger.exception("📈 Stats endpoint failed")
+        return jsonify({"raised": 0, "goal": int(TEAM_CONFIG.get("fundraising_goal", DEFAULT_FUNDRAISING_GOAL)), "percent": 0.0}), 200
 

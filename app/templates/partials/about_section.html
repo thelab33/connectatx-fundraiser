@@ -1,5 +1,5 @@
 {# ====================== FundChamps • About + Mission (SV Premium, Self-Contained) ====================== #}
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{% include "shared/ui_bootstrap.html" ignore missing with context %}
 
 {# ---- Vars & Fallbacks ---- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
@@ -199,65 +199,6 @@
           <button class="text-xs text-yellow-200 hover:underline" type="button" data-copy="#testimonial-carousel" data-analytics="about:copy-quote">Copy Quote</button>
           <span class="hidden text-xs text-green-300" data-toast>Copied!</span>
         </div>
-      </div>
-    </section>
-  </div>
-
-  <!-- ===== Middle: Impact (animated counters) ===== -->
-  <div class="relative z-10 mx-auto mt-16 w-full max-w-6xl">
-    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
-      {% for s in impact %}
-      <div class="glass-card p-6 text-center" tabindex="0" aria-label="{{ s.value }} {{ s.label }}">
-        <div class="text-3xl font-extrabold text-yellow-400">
-          <span class="count" data-target="{{ s.value }}">0</span>
-        </div>
-        <p class="mt-1 text-sm font-semibold text-zinc-300">{{ s.label }}</p>
-      </div>
-      {% endfor %}
-    </div>
-  </div>
-
-  <!-- ===== Bottom: Challenge & Coaches ===== -->
-  <div class="relative z-10 mx-auto mt-16 grid w-full max-w-6xl grid-cols-1 items-start gap-10 lg:grid-cols-2">
-    <!-- Challenge -->
-    <section class="glass-card p-8" aria-labelledby="challenge-title">
-      <h3 id="challenge-title" class="mb-3 text-2xl font-bold text-yellow-300">The Challenge We Face</h3>
-      <p class="text-zinc-300 text-base sm:text-lg leading-relaxed">
-        We struggle with consistent gym space and the high cost of tournament travel. These barriers strain our volunteer
-        coaches and parents — limiting our kids’ growth and success together.
-      </p>
-      <h4 class="mt-6 text-xl font-semibold text-yellow-200">The Impact You Can Make</h4>
-      <ul class="mt-2 list-inside list-disc text-zinc-200 space-y-1 text-base sm:text-lg">
-        <li>Secure consistent gym space</li>
-        <li>Support tournament travel</li>
-        <li>Provide gear &amp; team meals</li>
-        <li>Fund academic programs</li>
-      </ul>
-      <p class="mt-4 text-base sm:text-lg font-semibold text-zinc-100">
-        With your help, we give these young athletes the foundation to become confident leaders.
-      </p>
-      <button
-        type="button"
-        class="mt-6 inline-flex items-center justify-center rounded-full bg-yellow-400 px-5 py-2.5 font-bold text-black focus-visible:ring-4 focus-visible:ring-yellow-300"
-        data-open-donate-modal
-        data-analytics="about:donate"
-        aria-label="Open donation modal">
-        Donate Now
-      </button>
-    </section>
-
-    <!-- Coaches (static, lightweight) -->
-    <section class="glass-card p-8" aria-label="Coaches">
-      <h3 class="mb-4 text-2xl font-bold text-yellow-300">Coaches</h3>
-      <div class="flex flex-wrap justify-start gap-5">
-        {% for coach in ['Rodriguez','Smith','Taylor'] %}
-        <div class="coach-card group w-40 cursor-pointer rounded-xl bg-zinc-800/70 p-4 shadow-lg transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-yellow-400">
-          <img alt="Coach {{ coach }}" decoding="async" loading="lazy" class="mb-3 h-32 w-32 rounded-full object-cover"
-               src="{{ (url_for('static', filename='images/coaches/' ~ coach|lower ~ '.jpg') if url_for is defined else '/static/images/coaches/' ~ coach|lower ~ '.jpg') }}">
-          <span class="block text-lg font-semibold text-yellow-400">Coach {{ coach }}</span>
-          <span class="text-sm text-zinc-400">Assistant Coach</span>
-        </div>
-        {% endfor %}
       </div>
     </section>
   </div>
@@ -463,3 +404,4 @@
   document.addEventListener('openDonate', ()=>{ (window.openDonationModal?.()) ?? window.dispatchEvent(new CustomEvent('fc:donate:open')); });
 })();
 </script>
+

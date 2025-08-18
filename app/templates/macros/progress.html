@@ -1,3 +1,4 @@
+<h2 class="sr-only">Progress</h2>
 {# macros/progress.html — Defines the progress_meter macro #} {% macro progress_meter(raised, goal,
 size="md") -%} {# ── Safe float conversion and clamping ── #} {%- set _goal = goal | float if goal
 else 0.0 -%} {%- set _raised = raised | float if raised else 0.0 -%} {%- set _pct = 0.0 if _goal ==
