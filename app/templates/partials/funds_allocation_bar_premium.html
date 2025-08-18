@@ -1,0 +1,310 @@
+<section data-ui=""${name//_/ -}"" class="block">
+{# =============================================================================
+   app/templates/partials/funds_allocation_bar_premium.html
+   FundChamps • Funds Allocation Bar (Prestige / Premium)
+   - ui_bootstrap integrated (idempotent include)
+   - Listens to CustomEvent('fc:funds:update', { raised, goal })
+   - Optional polling via stats_url & allocations_url (JSON)
+   - CSP-safe (NONCE or script_open macro)
+   ============================================================================= #}
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
+
+{% if show_allocation_bar is not defined or show_allocation_bar %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _alloc_id   = alloc_id|default('funds-allocation') %}
+{% set raised      = (funds_raised|default(0))|float %}
+{% set goal        = (fundraising_goal|default(10000))|float %}
+{% set stats_url   = stats_url|default(None) %}
+{% set alloc_url   = allocations_url|default(None) %}
+{% set brand_color = team.theme_color if team and team.theme_color else '#facc15' %}
+{% set asset_version = asset_version|default(None) %}
+
+{% set default_alloc = allocations if allocations is defined and allocations else [
+  {"key":"gym","label":"Gym Rental","ratio":0.40},
+  {"key":"travel","label":"Travel","ratio":0.35},
+  {"key":"uniforms","label":"Uniforms","ratio":0.15},
+  {"key":"academics","label":"Academic Support","ratio":0.10}
+] %}
+
+<section id="{{ _alloc_id }}"
+  class="relative bg-zinc-950/92 border-y border-zinc-800/60"
+  style="--fc-brand: {{ brand_color }}; --gap: 6px;"
+  data-stats-url="{{ stats_url if stats_url else '' }}"
+  data-alloc-url="{{ alloc_url if alloc_url else '' }}"
+  data-default='{{ default_alloc|tojson }}'
+  data-initial='{{ {"raised": raised, "goal": goal}|tojson }}'
+  role="region" aria-labelledby="{{ _alloc_id }}-title" aria-live="polite">
+
+  <style nonce="{{ NONCE }}">
+    /* Scoped styles for #{{ _alloc_id }} */
+    #{{ _alloc_id }} .wrap{max-width:72rem;margin:0 auto;padding:.75rem 1rem;display:grid;gap:.5rem}
+    #{{ _alloc_id }} .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem}
+    #{{ _alloc_id }} .title{font-weight:900;color:var(--fc-brand)}
+    #{{ _alloc_id }} .nums{margin-left:auto;display:flex;gap:.5rem;align-items:baseline;font-variant-numeric:tabular-nums}
+    #{{ _alloc_id }} .nums .pct{font-weight:800;color:#fde68a}
+    #{{ _alloc_id }} .bar{position:relative;height:.8rem;border-radius:9999px;background:rgba(255,255,255,.06);overflow:hidden;
+      border:1px solid color-mix(in srgb, var(--fc-brand) 20%, transparent)}
+    #{{ _alloc_id }} .seg{height:100%;width:0;display:block;float:left;transition:width .7s ease}
+    #{{ _alloc_id }} .seg + .seg{box-shadow:inset var(--gap) 0 0 0 rgba(0,0,0,.45)}
+    #{{ _alloc_id }} .legend{display:flex;flex-wrap:wrap;gap:.5rem;margin-top:.25rem}
+    #{{ _alloc_id }} .pill{display:inline-flex;align-items:center;gap:.5rem;padding:.25rem .55rem;
+      border-radius:9999px;border:1px solid rgba(250,204,21,.22);background:rgba(250,204,21,.08);font-size:.8rem}
+    #{{ _alloc_id }} .sw{width:.75rem;height:.75rem;border-radius:9999px;border:1px solid rgba(0,0,0,.35)}
+    #{{ _alloc_id }} .pill[aria-current="true"]{outline:2px solid color-mix(in srgb, var(--fc-brand) 55%, transparent)}
+    #{{ _alloc_id }} .meta{display:flex;gap:.75rem;align-items:center;color:#e5e7eb80;font-size:.75rem}
+    #{{ _alloc_id }} .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+      clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    #{{ _alloc_id }} .skeleton{position:absolute;inset:0;background:linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.08), rgba(255,255,255,.04));
+      background-size:200% 100%;animation:sk 1.2s linear infinite}
+    @keyframes sk{to{background-position:-200% 0}}
+    @media (max-width:640px){ #{{ _alloc_id }} .nums{width:100%;order:2;margin-left:0} }
+    @media (prefers-reduced-motion: reduce){ #{{ _alloc_id }} .seg{transition:none!important} #{{ _alloc_id }} .skeleton{animation:none!important}}
+    /* Light-mode tuning */
+    @media (prefers-color-scheme: light){
+      #{{ _alloc_id }}{background:rgba(255,255,255,.9)}
+      #{{ _alloc_id }} .bar{background:rgba(0,0,0,.06)}
+    }
+  </style>
+
+  <div class="wrap">
+    <div class="top">
+      <div class="title" id="{{ _alloc_id }}-title">Funds allocation</div>
+      <div class="nums" role="progressbar"
+           aria-valuemin="0" aria-valuemax="{{ goal|int }}" aria-valuenow="{{ raised|int }}"
+           aria-valuetext="${{ '{:,.0f}'.format(raised) }} of ${{ '{:,.0f}'.format(goal) }}">
+        <span id="{{ _alloc_id }}-raised">${{ '{:,.0f}'.format(raised) }}</span>
+        <span class="opacity-60">/</span>
+        <span id="{{ _alloc_id }}-goal" class="opacity-80">${{ '{:,.0f}'.format(goal) }}</span>
+        <span class="pct"><span id="{{ _alloc_id }}-pct">{{ (raised and goal) and (raised/goal*100)|round(1) or 0 }}</span>%</span>
+      </div>
+    </div>
+
+    <div class="bar" title="How raised funds are planned to be used" aria-describedby="{{ _alloc_id }}-help" data-bar>
+      <div class="skeleton" aria-hidden="true"></div>
+    </div>
+    <div class="legend" aria-label="Allocation breakdown" data-legend></div>
+
+    <div class="meta" id="{{ _alloc_id }}-help">
+      <span>Auto-updates from your totals.</span>
+      <span>Click a legend item to highlight.</span>
+      <span class="hidden sm:inline">“Unallocated” shows remaining funds not yet planned.</span>
+    </div>
+
+    <p id="{{ _alloc_id }}-sr" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+  </div>
+</section>
+
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
+(() => {
+  const id = "{{ _alloc_id }}";
+  const root = document.getElementById(id); if (!root || root.__init) return;
+
+  // Lazy-init when visible
+  const boot = () => { if (root.__init) return; root.__init = true; init(); };
+  if ('IntersectionObserver' in window){
+    const io = new IntersectionObserver((ents)=>{
+      if (ents.some(e=>e.isIntersecting)){ io.disconnect(); boot(); }
+    }, { rootMargin: '120px' });
+    io.observe(root);
+  } else { boot(); }
+
+  function init(){
+    // Elements
+    const bar = root.querySelector('[data-bar]');
+    const legend = root.querySelector('[data-legend]');
+    const raisedEl = document.getElementById(id + "-raised");
+    const goalEl = document.getElementById(id + "-goal");
+    const pctEl = document.getElementById(id + "-pct");
+    const pb = root.querySelector('[role="progressbar"]');
+    const sr = document.getElementById(id + "-sr");
+
+    // State
+    let defaults = []; try { defaults = JSON.parse(root.dataset.default || "[]"); } catch {}
+    let initial = {}; try { initial = JSON.parse(root.dataset.initial || "{}"); } catch {}
+    const state = { raised: Math.max(0, Number(initial.raised || 0)), goal: Math.max(0, Number(initial.goal || 0)), allocations: [] };
+    let highlightedKey = null;
+
+    // Utils
+    const brand = getComputedStyle(root).getPropertyValue("--fc-brand").trim() || "#facc15";
+    const grad = (a,b)=>`linear-gradient(90deg, ${a}, ${b})`;
+    const palette = [
+      grad(brand, "#fde68a"),
+      grad(`color-mix(in srgb, ${brand} 70%, #fff)`, brand),
+      grad("#f59e0b", brand),
+      grad(`color-mix(in srgb, ${brand} 55%, #fff)`, "#f59e0b"),
+      grad("#fbbf24", `color-mix(in srgb, ${brand} 50%, #fff)`)
+    ];
+    const fmt$ = n => "$" + (Math.round(Number(n)||0)).toLocaleString();
+    const clamp01 = n => Math.max(0, Math.min(1, Number(n)||0));
+    const announce = msg => { try { sr.textContent = msg; } catch {} };
+
+    // Rendering
+    function updateTotals(){
+      const { raised, goal } = state;
+      const pct = Math.max(0, Math.min(100, goal ? (raised/goal)*100 : 0));
+      raisedEl.textContent = fmt$(raised);
+      goalEl.textContent = fmt$(goal);
+      pctEl.textContent = (Math.round(pct*10)/10).toString().replace(/\.0$/, "");
+      if (pb){
+        pb.setAttribute("aria-valuenow", String(Math.round(raised)));
+        pb.setAttribute("aria-valuemax", String(Math.round(goal)));
+        pb.setAttribute("aria-valuetext", `${fmt$(raised)} of ${fmt$(goal)}`);
+      }
+    }
+    function normalizeAllocations(baseRaised){
+      const list = (state.allocations.length ? state.allocations : defaults).map(x=>{
+        if (typeof x.amount === "number" && isFinite(x.amount)) {
+          return { key: x.key, label: x.label, amount: Math.max(0, Number(x.amount)||0) };
+        } else {
+          const r = clamp01(x.ratio);
+          return { key: x.key, label: x.label, amount: Math.max(0, r * baseRaised) };
+        }
+      });
+      const sum = list.reduce((a,b)=>a+b.amount,0);
+      if (sum > baseRaised && sum > 0) {
+        const k = baseRaised / sum;
+        for (const it of list) it.amount *= k;
+      }
+      const sum2 = list.reduce((a,b)=>a+b.amount,0);
+      if (baseRaised > sum2 + 0.5) {
+        list.push({ key:"unallocated", label:"Unallocated", amount: baseRaised - sum2, _ghost:true });
+      }
+      return list;
+    }
+    function renderBar(list, total){
+      bar.innerHTML = "";
+      list.forEach((item,i)=>{
+        const seg = document.createElement("span");
+        seg.className = "seg";
+        seg.dataset.key = item.key;
+        const pct = total ? (item.amount/total*100) : 0;
+        seg.style.width = Math.max(0, pct) + "%";
+        seg.style.background = palette[i % palette.length];
+        seg.title = `${item.label}: ${fmt$(item.amount)} (${Math.round(pct)}%)`;
+        if (item._ghost) seg.style.filter = "grayscale(0.25) saturate(0.7)";
+        bar.appendChild(seg);
+      });
+      const sk = bar.querySelector('.skeleton'); if (sk) sk.remove();
+      if (highlightedKey) {
+        bar.querySelectorAll(".seg").forEach(s=> s.style.opacity = (s.dataset.key===highlightedKey) ? "1" : ".35");
+      }
+    }
+    function renderLegend(list, total){
+      legend.innerHTML = "";
+      list.forEach((item,i)=>{
+        const pill = document.createElement("button");
+        pill.type = "button";
+        pill.className = "pill";
+        pill.setAttribute("data-k", item.key);
+        pill.setAttribute("aria-pressed", String(item.key === highlightedKey));
+        if (item.key === highlightedKey) pill.setAttribute("aria-current","true");
+        pill.innerHTML = `<span class="sw" style="background:${palette[i%palette.length]}"></span>
+                          <span>${item.label}: ${fmt$(item.amount)} (${total?Math.round(item.amount/total*100):0}%)</span>`;
+        pill.addEventListener("click", ()=>{
+          if (highlightedKey === item.key) {
+            highlightedKey = null;
+            legend.querySelectorAll(".pill").forEach(p=>{ p.setAttribute("aria-pressed","false"); p.removeAttribute("aria-current"); });
+            bar.querySelectorAll(".seg").forEach(s=> s.style.opacity = "");
+          } else {
+            highlightedKey = item.key;
+            legend.querySelectorAll(".pill").forEach(p=>{ p.setAttribute("aria-pressed","false"); p.removeAttribute("aria-current"); });
+            pill.setAttribute("aria-pressed","true"); pill.setAttribute("aria-current","true");
+            bar.querySelectorAll(".seg").forEach(s=>{ s.style.opacity = (s.dataset.key===highlightedKey) ? "1" : ".35"; });
+            announce(`${item.label} highlighted: ${fmt$(item.amount)} of ${fmt$(state.raised)}`);
+          }
+        });
+        pill.addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); pill.click(); } });
+        legend.appendChild(pill);
+      });
+    }
+    function render(){
+      updateTotals();
+      const list = normalizeAllocations(state.raised);
+      const total = list.reduce((a,b)=>a+b.amount,0) || state.raised;
+      renderBar(list, total);
+      renderLegend(list, total);
+    }
+
+    // Public API (optional debug/use elsewhere)
+    window.fcAlloc = {
+      setTotals({raised, goal}){ 
+        if (typeof raised==="number") state.raised=Math.max(0,raised);
+        if (typeof goal==="number") state.goal=Math.max(0,goal);
+        render();
+      },
+      setAllocations(list){ state.allocations = Array.isArray(list) ? list.slice() : []; render(); },
+      setFromRatios(ratios){
+        state.allocations = Array.isArray(ratios) ? ratios.map(r=>({key:r.key,label:r.label,ratio:clamp01(r.ratio)})) : [];
+        render();
+      },
+      rerender: render
+    };
+
+    // Cross-component events
+    window.addEventListener("fc:meter:update", (ev)=>{
+      const d = ev.detail || {};
+      if (typeof d.raised === "number") state.raised = Math.max(0,d.raised);
+      if (typeof d.goal === "number") state.goal = Math.max(0,d.goal);
+      render();
+    });
+
+    // Primary bridge: same event the hero emits/listens to
+    window.addEventListener("fc:funds:update", (ev)=>{
+      const d = ev.detail || {};
+      const newRaised = (typeof d.raised==='number') ? d.raised : state.raised;
+      const newGoal   = (typeof d.goal==='number')   ? d.goal   : state.goal;
+      if (newRaised !== state.raised || newGoal !== state.goal){
+        state.raised = Math.max(0,newRaised);
+        state.goal   = Math.max(0,newGoal);
+        render();
+      }
+    }, {passive:true});
+
+    // Allocation updates
+    window.addEventListener("fc:alloc:update", (ev)=>{
+      const list = (ev.detail && ev.detail.allocations) || ev.detail || [];
+      if (Array.isArray(list)) { state.allocations = list.slice(); render(); }
+    }, {passive:true});
+
+    // First render
+    render();
+
+    // Optional polling (Data Saver–aware); safe to leave enabled
+    (async function poll(){
+      const statsUrl = (root.dataset.statsUrl || "").trim();
+      const allocUrl = (root.dataset.allocUrl || "").trim();
+      try {
+        if (statsUrl){
+          const r = await fetch(statsUrl, { headers: { Accept:"application/json" }, cache: 'no-store' });
+          if (r.ok){
+            const j = await r.json();
+            const rRaised = (j.raised ?? j.funds_raised);
+            const rGoal   = (j.goal   ?? j.fundraising_goal);
+            if (typeof rRaised === "number") state.raised = Math.max(0,rRaised);
+            if (typeof rGoal   === "number") state.goal   = Math.max(0,rGoal);
+          }
+        }
+        if (allocUrl){
+          const r2 = await fetch(allocUrl, { headers: { Accept:"application/json" }, cache: 'no-store' });
+          if (r2.ok){
+            const j2 = await r2.json();
+            const list = Array.isArray(j2) ? j2 : (j2.allocations || []);
+            state.allocations = list.map(x => ({
+              key: x.key, label: x.label,
+              amount: (typeof x.amount === "number") ? x.amount : undefined,
+              ratio:  (typeof x.ratio  === "number") ? clamp01(x.ratio) : undefined
+            }));
+          }
+        }
+        render();
+      } catch(_) {}
+      const slow = (navigator.connection && (navigator.connection.saveData || (navigator.connection.effectiveType||'').includes('2g')));
+      setTimeout(poll, slow ? 30000 : 15000);
+    })();
+  }
+})();
+{% if script_open is defined %}</script>{% else %}</script>{% endif %}
+{% endif %}
+
+</section>

@@ -29,3 +29,10 @@ app/templates/_unused/
 app/static/_unused/
 app/data/*.db
 pa11y-report.html
+app/static/css/archive/
+*.bak*
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+
