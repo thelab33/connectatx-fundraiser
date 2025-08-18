@@ -1,5 +1,85 @@
+/* =========================================================================
+   FundChamps — Prestige SV Styles
+   app/static/css/fc_prestige.css
+   Silicon Valley–grade progressive enhancement layer
+   ========================================================================= */
 
-/* app/static/css/fc_prestige.css — Progressive enhancement, Tailwind-agnostic */
+/* ===== Hero (Prestige SV) ===== */
+#fc-hero{
+  --hero-img-opacity: 1;
+  --hero-grad-top: .40;
+  --hero-grad-mid: .22;
+  --hero-grad-bot: .72;
+  --hero-noise: .12;
+  --heat: 0; /* 0–1, filled by JS */
+}
+#fc-hero .fc-hero-card{
+  backdrop-filter: blur(12px) saturate(120%);
+  -webkit-backdrop-filter: blur(12px) saturate(120%);
+  background: rgba(255,255,255,.06);
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,.5);
+  border: 1px solid rgba(255,255,255,.10);
+}
+#fc-hero .fc-hero-title-gradient{
+  background-image: linear-gradient(90deg, var(--fc-hero-accent, #facc15), #ffffff);
+}
+#fc-hero .fc-hero-grad{
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(0,0,0,var(--hero-grad-top)) 0%,
+    rgba(0,0,0,var(--hero-grad-mid)) 36%,
+    rgba(12,12,12,var(--hero-grad-bot)) 100%
+  );
+}
+#fc-hero .fc-hero-glow{
+  pointer-events:none; position:absolute; inset:0;
+  box-shadow: 0 0 120px 40px color-mix(in oklab, var(--fc-hero-accent, #facc15) 22%, transparent) inset;
+}
+#fc-hero .noise-layer{
+  pointer-events:none; position:absolute; inset:0;
+  opacity: var(--hero-noise);
+  background-image:
+    radial-gradient(transparent 60%, rgba(0,0,0,.45)),
+    url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 fill=%22none%22/><circle cx=%226%22 cy=%226%22 r=%221%22 fill=%22%23fff%22 fill-opacity=%220.06%22/></svg>');
+  background-size: cover, 48px 48px;
+}
+#fc-hero .heat-layer{
+  pointer-events:none; position:absolute; inset:0;
+  background: radial-gradient(120% 80% at 50% 0%, var(--fc-hero-accent, #facc15) 0%, transparent 60%);
+  opacity: calc(0.12 + 0.28 * var(--heat));
+  transition: opacity .6s ease;
+}
+
+/* Progress bar shine */
+@keyframes fc-shine { 0%{ transform: translateX(-100%) } 100%{ transform: translateX(100%) } }
+#fc-hero .fc-shine{
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.9), transparent);
+  opacity: .2; mix-blend-mode: overlay; animation: fc-shine 3s linear infinite;
+}
+
+/* Gradient fill for bar */
+#fc-hero .fc-bar{
+  background: linear-gradient(90deg, var(--fc-hero-accent, #facc15), #22c55e);
+}
+
+/* Ticker */
+@keyframes fcTicker { 0%{ transform: translateX(0) } 100%{ transform: translateX(-50%) } }
+#fc-hero .ticker-row{ animation: fcTicker 24s linear infinite; padding:.5rem 0; }
+@media (prefers-reduced-motion: reduce){
+  #fc-hero *{ animation: none !important; transition: none !important; }
+}
+
+/* Subtle CTA pulse */
+@keyframes tierPulse {
+  0%,100%{ transform: scale(1); box-shadow: 0 0 0 0 rgba(255,255,255,0) }
+  50%{ transform: scale(1.02); box-shadow: 0 10px 30px -10px rgba(255,255,255,.15) }
+}
+.tier-pulse{ animation: tierPulse 2.5s ease-in-out infinite; }
+
+/* =========================================================================
+   Global Palette + Background
+   ========================================================================= */
 :root {
   --fc-amber: #facc15;
   --fc-amber-600: #d1a90d;
@@ -8,11 +88,12 @@
   --fc-card: rgba(255,255,255,0.04);
   --fc-ring: rgba(250, 204, 21, 0.65);
 }
-
 html { scroll-behavior: smooth; }
 body { background: radial-gradient(80% 60% at 50% 0%, #1a1a1a 0%, #0b0b0c 60%) fixed; }
 
-/* Card glow */
+/* =========================================================================
+   Card + Accessibility + Sticky header
+   ========================================================================= */
 .fc-card {
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(255, 255, 255, 0.03)) padding-box,
               radial-gradient(120% 120% at 0% 0%, rgba(250, 204, 21, 0.35), rgba(250, 204, 21, 0)) border-box;
@@ -21,19 +102,16 @@ body { background: radial-gradient(80% 60% at 50% 0%, #1a1a1a 0%, #0b0b0c 60%) f
   backdrop-filter: blur(6px);
   box-shadow: 0 10px 30px rgba(250, 204, 21, 0.08);
 }
-
-/* Focus ring & accessibility */
 a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px var(--fc-ring);
   border-radius: 12px;
 }
+.fc-sticky-shadow { box-shadow: 0 10px 30px rgba(0,0,0,0.35); }
 
-/* Sticky header shadow */
-.fc-sticky-shadow {
-  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
-}
-/* Progress meter enhancements */
+/* =========================================================================
+   Progress meter enhancements
+   ========================================================================= */
 .fc-meter-track{height:10px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
 .fc-meter-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,var(--fc-amber),#fffbe6)}
 
@@ -44,14 +122,63 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
 .fc-reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
 .fc-reveal.is-visible{opacity:1;transform:none}
 
-/* Buttons */
+/* =========================================================================
+   Buttons
+   ========================================================================= */
 .fc-btn{position:relative;display:inline-flex;align-items:center;gap:.55rem;border-radius:999px;padding:.7rem 1.1rem;font-weight:700}
 .fc-btn-primary{background:linear-gradient(180deg,var(--fc-amber),var(--fc-amber-600));color:#0b0b0c}
 .fc-btn-primary:hover{filter:brightness(1.08)}
 .fc-btn-ghost{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#fff}
 .fc-btn-ghost:hover{background:rgba(255,255,255,.12)}
 
-/* Mini header meter */
+/* =========================================================================
+   Mini header meter
+   ========================================================================= */
 #hdr-meter{display:flex;align-items:center;gap:.55rem}
 #hdr-meter .track{width:160px}
 #hdr-meter .sr{position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden}
+
+/* =========================================================================
+   Back-to-top Basketball Button
+   ========================================================================= */
+#back-to-top { will-change: opacity, transform; }
+#back-to-top:active { transform: scale(.97); }
+@media (prefers-reduced-motion: reduce){ #back-to-top{ transition: none !important; } }
+
+/* Basketball ball + progress ring */
+#back-to-top .ring-wrap{
+  --p: 0%;
+  --ring-thickness: 3px;
+  position: relative;
+  width: 34px; height: 34px; border-radius: 9999px;
+  display: inline-grid; place-items: center;
+  background: conic-gradient(#fde047 var(--p), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));
+          mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));
+}
+#back-to-top .ball{
+  position: relative; z-index: 1;
+  width: 26px; height: 26px; border-radius: 9999px;
+  background: radial-gradient(120% 120% at 30% 30%, #ffd166 0 25%, #f59e0b 58%, #ea580c 100%);
+  box-shadow: inset 0 0 0 1.25px rgba(0,0,0,.35),
+              0 2px 6px rgba(0,0,0,.35);
+  transition: transform .15s ease;
+}
+#back-to-top .ball::before,
+#back-to-top .ball::after{
+  content:""; position:absolute; inset:0; border-radius:9999px; pointer-events:none;
+}
+#back-to-top .ball::before{
+  background:
+    linear-gradient(#7c2d12,#7c2d12) 50% 0 / 2px 100% no-repeat,
+    linear-gradient(#7c2d12,#7c2d12) 0 50% / 100% 2px no-repeat;
+}
+#back-to-top .ball::after{
+  background:
+    radial-gradient(120% 90% at 20% 20%, transparent 60%, #7c2d12 60.8% 62%, transparent 62.8%) no-repeat,
+    radial-gradient(120% 90% at 80% 80%, transparent 60%, #7c2d12 60.8% 62%, transparent 62.8%) no-repeat;
+}
+@media (pointer:fine){
+  #back-to-top:hover .ball{ transform: translateY(-1px); }
+}
+

@@ -1,9 +1,9 @@
 // app/static/js/app.entry.js
 // FundChamps / Connect ATX Elite
-// - Idempotent boot
+// - CSP-safe, production-ready
 // - Hardened fetch (CSRF + headers)
 // - Optional HTMX, Alpine.js, BroadcastChannel
-// - CSP-safe, production-ready
+// - Nike/Apple-level polish
 
 (() => {
   if (window.__FC_APP_INIT__) return;
@@ -13,6 +13,7 @@
   const html = document.documentElement;
   html.classList.add("js");
   html.classList.remove("no-js");
+  html.setAttribute("data-fc-app", "true");
 
   const ENV = html.getAttribute("data-env") || window.APP_ENV || "production";
   const DEV = /dev|local/.test(String(ENV).toLowerCase());
@@ -23,11 +24,7 @@
   const csrfToken = () => getCookie("csrf_token");
 
   let bus = null;
-  try {
-    bus = new BroadcastChannel("fc_ui");
-  } catch {
-    // BroadcastChannel not supported
-  }
+  try { bus = new BroadcastChannel("fc_ui"); } catch { /* ignore */ }
 
   window.fc = Object.assign(window.fc || {}, {
     env: ENV,
@@ -49,15 +46,9 @@
       if (!headers.has("X-Requested-With")) {
         headers.set("X-Requested-With", "XMLHttpRequest");
       }
-
       const method = String(init.method || "GET").toUpperCase();
       const sameOrigin = typeof input === "string" ? input.startsWith("/") : true;
-
-      if (
-        sameOrigin &&
-        !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method) &&
-        !headers.has("X-CSRFToken")
-      ) {
+      if (sameOrigin && !["GET", "HEAD", "OPTIONS", "TRACE"].includes(method) && !headers.has("X-CSRFToken")) {
         const tok = csrfToken();
         if (tok) headers.set("X-CSRFToken", tok);
       }
@@ -75,17 +66,17 @@
         const tok = csrfToken();
         if (tok) e.detail.headers["X-CSRFToken"] = tok;
       });
-    } catch {
-      // HTMX config not critical
-    }
+    } catch {}
   }
 
   /* ---------- Error boundaries ---------- */
   window.addEventListener("error", (e) => {
     if (DEV) console.error("⛑️ Uncaught:", e.error || e.message);
+    window.fc.emit("fc:error", { type: "error", error: e.error || e.message });
   });
   window.addEventListener("unhandledrejection", (e) => {
     if (DEV) console.error("⛑️ Rejection:", e.reason);
+    window.fc.emit("fc:error", { type: "rejection", error: e.reason });
   });
 
   /* ---------- App start ---------- */
@@ -97,26 +88,24 @@
           if (DEV) console.warn(`↪️ ${name} skipped:`, err?.message || err);
         });
 
+    // staged order: site → sponsor → fundraiser
     await Promise.allSettled([
       boot("./site.js", "site.js"),
-      boot("./fundraiser.js", "fundraiser.js"),
       boot("./sponsor.js", "sponsor.js"),
+      boot("./fundraiser.js", "fundraiser.js"),
     ]);
 
     try {
       const { default: Alpine } = await import(/* webpackChunkName:"alpine" */ "alpinejs");
       window.Alpine = Alpine;
       Alpine.store?.("fc", { env: ENV, dev: DEV, csrf: csrfToken() });
-
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => Alpine.start(), { once: true });
-      } else {
-        Alpine.start();
-      }
+      const initAlpine = () => Alpine.start();
+      (window.requestIdleCallback || setTimeout)(initAlpine, 1);
     } catch (err) {
       if (DEV) console.info("ℹ️ Alpine not present:", err?.message || err);
     }
 
+    window.fc.emit("fc:ready", { env: ENV, dev: DEV });
     if (DEV) {
       const nav = performance.getEntriesByType?.("navigation")?.[0];
       console.info("✅ app.entry booted", { env: ENV, serverTiming: nav?.serverTiming || [] });

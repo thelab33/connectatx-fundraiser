@@ -1,220 +1,87 @@
-{# ============================================================================
-   index.html — Home Composition (SV-Prestige, Conversion/SEO tuned)
-   - Extends base.html
-   - Idempotent UI bootstrap
-   - Section flags with sane defaults; dev hints if missing
-   - Text-forward order (About earlier) for crawlability
+{# =============================================================================
+   index.html — FundChamps Home (SV-Prestige, Conversion-Optimized)
    ============================================================================ #}
 {% extends "base.html" %}
 
-{# ---------- Page-level safe fallbacks ---------- #}
-{% set team_name = (team.team_name if team and team.team_name is defined else "Connect ATX Elite") %}
-{% set LITE      = (request.args.get("lite") in ("1","true","yes")) if request is defined else false %}
-{% set __dev     = (app_env|default('development') == 'development') %}
+{% block title %}Connect ATX Elite — Home{% endblock %}
+{% block h1 %}Connect ATX Elite — Fundraising Home{% endblock %}
 
-{# ---------- Section Flags (merged server-side; fallback here) ---------- #}
-{% set __defaults = {
-  "hero":              true,
-  "layout_bands":      false,
-  "meter_strip":       true,
-  "tiers":             true,
-  "about":             true,
-  "program_pulse":     not LITE,
-  "funds_allocation":  not LITE,
-  "impact_challenge":  not LITE,
-  "sponsor_hub":       true,
-  "sponsor_wall":      true,
-  "sponsor_spotlight": true,
-  "newsletter_section": true,
-  "ai_concierge":      true
-} %}
-{% set FLAGS = flags if flags is defined and flags else __defaults %}
-
-{# ---------- Head Title ---------- #}
-{% block title %}{{ team_name }} — Fundraiser & Sponsors{% endblock %}
-
-{# ---------- HERO (Top of Fold) ---------- #}
-{% block hero %}
-  
-  {% if FLAGS.hero %}
-    <div id="top" aria-hidden="true"></div>
-    {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-  {% elif __dev %}
-    <section class="fc-section"><div class="fc-card p-6 text-yellow-300/80">
-      ⚠️ Hero disabled by flags.hero=false
-    </div></section>
+{# Page-specific head content (base.html defines `head`) #}
+{% block head %}
+  {% if team and team.hero_bg is defined and team.hero_bg %}
+    <link rel="preload" as="image" href="{{ team.hero_bg }}">
   {% endif %}
-
-{% include "shared/ui_bootstrap.html" ignore missing with context %}
 {% endblock %}
 
-{# ---------- MAIN CONTENT ---------- #}
+{# ---------- HERO (above the fold) ---------- #}
+{% block hero %}
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+  {% include "partials/meter_strip.html" ignore missing with context %}
+{% endblock %}
+
 {% block content %}
 
-  {# Optional brand layout bands up high if enabled #}
-  {% if FLAGS.layout_bands %}
-    <h2 id="brand-bands" class="sr-only">Brand Highlights</h2>
-    {% include "partials/layout_bands.html" ignore missing with context %}
-  {% endif %}
-
-  {# Compact fundraising meter — keeps momentum after hero #}
-  {% if FLAGS.meter_strip %}
-    <h2 id="progress" class="sr-only">Fundraising Progress</h2>
-    {% include "partials/meter_strip.html" ignore missing with context %}
-  {% endif %}
-
-  {# Tiers CTA near the top for conversion #}
-  <div id="tiers" aria-hidden="true"></div>
-  {% if FLAGS.tiers %}
-    <h2 class="sr-only">Sponsorship Tiers</h2>
-    {% include "partials/tiers.html" ignore missing with context %}
-  {% elif __dev %}
-    <section class="fc-section"><div class="fc-card p-6">⚠️ tiers disabled</div></section>
-  {% endif %}
-
-  {# Move About earlier for text-forward SEO + trust #}
-  <div id="mission" aria-hidden="true"></div>
-  {% if FLAGS.about %}
-    <h2 class="sr-only">About {{ team_name }}</h2>
+  {# 0) Mission (#mission) #}
+  <section id="mission" aria-labelledby="mission-heading" class="py-12 sm:py-16">
+    <h2 id="mission-heading" class="sr-only">Our Mission</h2>
     {% include "partials/about_section.html" ignore missing with context %}
-  {% elif __dev %}
-    <section class="fc-section"><div class="fc-card p-6">⚠️ about disabled</div></section>
-  {% endif %}
+  </section>
 
-  {# Program stats/calendar — proof & activity #}
-  <div id="program-stats-calendar" aria-hidden="true"></div>
-  {% if FLAGS.program_pulse %}
-    <h2 class="sr-only">Schedule and Program Stats</h2>
+  {# 1) Program Stats & Calendar (#program-stats) #}
+  <section id="program-stats" aria-labelledby="program-stats-heading" class="py-12 sm:py-16 bg-neutral-50/60">
+    <h2 id="program-stats-heading" class="sr-only">Program Stats & Calendar</h2>
     {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
-  {% elif __dev %}
-    <section class="fc-section"><div class="fc-card p-6">⚠️ program_stats_and_calendar disabled</div></section>
-  {% endif %}
+  </section>
 
-  {% if FLAGS.funds_allocation %}
-    <h2 id="allocation" class="sr-only">How Funds Are Allocated</h2>
-    {% include "premium/funds_allocation_bar_premium.html" ignore missing with context %}
-  {% endif %}
+  {# 2) Sponsorship Tiers (#tiers) #}
+  <section id="tiers" aria-labelledby="tiers-heading" class="py-12 sm:py-16">
+    <h2 id="tiers-heading" class="sr-only">Sponsorship Tiers</h2>
+    {% include "partials/tiers.html" ignore missing with context %}
+  </section>
 
-  {% if FLAGS.impact_challenge %}
-    <h2 id="impact" class="sr-only">Impact & Coaches Challenge</h2>
-    {% include "premium/impact_challenge_coaches_premium.html" ignore missing with context %}
-  {% endif %}
-
-  {% if FLAGS.sponsor_hub %}
-    <h2 id="sponsor-hub" class="sr-only">Sponsor Hub</h2>
+  {# 3) Sponsor Hub #}
+  <section id="sponsor-hub" aria-labelledby="sponsor-hub-heading" class="py-12 sm:py-16">
+    <h2 id="sponsor-hub-heading" class="sr-only">Sponsor Hub</h2>
     {% include "partials/sponsor_hub.html" ignore missing with context %}
-  {% endif %}
+  </section>
 
-  {% if FLAGS.sponsor_wall %}
-    <h2 id="sponsor-wall" class="sr-only">Sponsor Wall</h2>
-    {# Prefer full wall; fall back to widget #}
-    {% include "partials/sponsor_wall.html" ignore missing with context %}
-    {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
-  {% endif %}
-
-  {% if FLAGS.sponsor_spotlight %}
-    <h2 id="sponsor-spotlight" class="sr-only">Sponsor Spotlight</h2>
+  {# 4) Sponsor Spotlight #}
+  <section id="sponsor-spotlight" aria-labelledby="sponsor-spotlight-heading" class="py-12 sm:py-16 bg-neutral-50/60">
+    <h2 id="sponsor-spotlight-heading" class="sr-only">Sponsor Spotlight</h2>
     {% include "partials/sponsor_spotlight.html" ignore missing with context %}
+  </section>
+
+  {# 5) Sponsor Wall Widget #}
+  <section id="sponsor-wall-widget" aria-labelledby="sponsor-wall-widget-heading" class="py-10">
+    <h2 id="sponsor-wall-widget-heading" class="sr-only">Sponsor Wall (Widget)</h2>
+    {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
+  </section>
+
+  {# 6) Sponsor Wall (full grid) #}
+  <section id="sponsor-wall" aria-labelledby="sponsor-wall-heading" class="py-12 sm:py-16">
+    <h2 id="sponsor-wall-heading" class="sr-only">Sponsor Wall</h2>
+    {% include "partials/sponsor_wall.html" ignore missing with context %}
+  </section>
+
+  {# 7) Newsletter #}
+  {% set show_news = (FLAGS.newsletter_section if FLAGS is defined and FLAGS.newsletter_section is defined else true) %}
+  {% if show_news %}
+    <section id="newsletter" aria-labelledby="newsletter-heading" class="py-12 sm:py-16 bg-neutral-50/60">
+      <h2 id="newsletter-heading" class="sr-only">Newsletter</h2>
+      <div id="newsletter-anchor" aria-hidden="true"></div>
+      {% include "partials/newsletter.html" ignore missing with context %}
+    </section>
   {% endif %}
 
-{# Newsletter growth block (single source of truth) #}
-{% if FLAGS.newsletter_section %}
-  <div id="newsletter-anchor-5" aria-hidden="true"></div>
-  <h2 class="sr-only">Newsletter</h2>
-  
-{% endif %}
-
-{# Newsletter growth block (single source of truth) #}
-{% if FLAGS.newsletter_section %}
-  <div id="newsletter-anchor-4" aria-hidden="true"></div>
-  <h2 class="sr-only">Newsletter</h2>
-  
-{% endif %}
-
-{# Newsletter growth block (single source of truth) #}
-{% if FLAGS.newsletter_section %}
-  <div id="newsletter-anchor-3" aria-hidden="true"></div>
-  <h2 class="sr-only">Newsletter</h2>
-  
-{% endif %}
-
-{# Newsletter growth block (single source of truth) #}
-{% if FLAGS.newsletter_section %}
-  <div id="newsletter-anchor-2" aria-hidden="true"></div>
-  <h2 class="sr-only">Newsletter</h2>
-  
-{% endif %}
-
-{# Newsletter growth block (single source of truth) #}
-{% if FLAGS.newsletter_section %}
-  <div id="newsletter-anchor" aria-hidden="true"></div>
-  <h2 class="sr-only">Newsletter</h2>
-  {% include "partials/newsletter.html" ignore missing with context %}
-{% endif %}
+  {% include "partials/layout_bands.html" ignore missing with context %}
 {% endblock %}
 
-{# ---------- PAGE-SCOPED SCRIPTS ---------- #}
 {% block scripts %}
-  {% if FLAGS.ai_concierge %}
-    
+  {{ super() }}
+  {% include "partials/sticky_cta_manager.html" ignore missing with context %}
+  {% if FLAGS is defined and FLAGS.ai_concierge %}
+    {% include "partials/ai_concierge.html" ignore missing with context %}
   {% endif %}
-
-  <script nonce="{{ NONCE }}">
-    (function(){
-      // Expose page context
-      window.FC = Object.assign({}, window.FC || {}, {
-        page: "home",
-        team: {{ team_name|tojson }},
-        flags: {{ FLAGS|tojson }}
-      });
-
-      {% if __dev %}
-        // Soft probe for missing anchors/partials (dev only)
-        const missing = [];
-        function probe(sel, path){ if(!document.querySelector(sel)){ missing.push(path); } }
-        probe('#mission', 'partials/about_section.html');
-        probe('#program-stats-calendar', 'partials/program_stats_and_calendar.html');
-        if (missing.length) console.warn('FundChamps: missing or anchor-less partials:', missing);
-      {% endif %}
-
-      // Lightweight reveal-on-view + prefetch of CTA routes
-      try {
-        const prefersReduced = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const reveal = (el) => { el.setAttribute('data-visible',''); };
-        if (!prefersReduced && 'IntersectionObserver' in window) {
-          const io = new IntersectionObserver((entries, obs)=>{
-            entries.forEach(en=>{
-              if (en.isIntersecting) {
-                reveal(en.target);
-                obs.unobserve(en.target);
-              }
-            });
-          }, { rootMargin: '0px 0px -10% 0px', threshold: 0.12 });
-          document.querySelectorAll('.fc-section, .fc-card').forEach(el=> io.observe(el));
-        }
-
-        // Prefetch donate/sponsor on hover/touch (pairs with base.html helper)
-        const isMoney = (u) => (u || '').startsWith('/donate') || (u || '').startsWith('/become-sponsor');
-        const addPrefetch = (href) => {
-          if (!href) return;
-          if ([...document.querySelectorAll('link[rel=prefetch]')].some(l => l.href === href)) return;
-          const l = document.createElement('link');
-          l.rel = 'prefetch'; l.as = 'document'; l.href = href; document.head.appendChild(l);
-        };
-        document.addEventListener('pointerenter', (e)=>{
-          const a = e.target.closest('a[href]'); if (!a) return;
-          const u = a.getAttribute('href'); if (!isMoney(u)) return;
-          try { addPrefetch(new URL(u, location.href).href); } catch {}
-        }, { capture:true, passive:true });
-        document.addEventListener('touchstart', (e)=>{
-          const a = e.target.closest('a[href]'); if (!a) return;
-          const u = a.getAttribute('href'); if (!isMoney(u)) return;
-          try { addPrefetch(new URL(u, location.href).href); } catch {}
-        }, { passive:true });
-      } catch(_) {}
-    })();
-  </script>
-
-{% include "admin/ai_concierge.html" ignore missing with context %}
+  {# donation_modal.html already injected via base.html -> global_modals #}
 {% endblock %}
 

@@ -1,3 +1,5 @@
+// tailwind.config.cjs — FundChamps Prestige (SV-Grade)
+
 const forms = require("@tailwindcss/forms");
 const typography = require("@tailwindcss/typography");
 const aspect = require("@tailwindcss/aspect-ratio");
@@ -27,6 +29,7 @@ module.exports = {
       }
     },
     extend: {
+      // ------------------ Brand System ------------------
       fontFamily: {
         sans: ["Inter","Montserrat","Roboto","Segoe UI","Arial","sans-serif"]
       },
@@ -35,16 +38,26 @@ module.exports = {
         "primary-gold": "#fbbf24",
         "primary-yellow": "#fde68a",
         "brand-black": "#09090b",
+
+        // Semantic brand tokens → matches :root in brand.tokens.css
+        surface: "var(--fc-surface, #ffffff)",
+        text: "var(--fc-text, #111111)",
+        accent: "var(--fc-accent, #facc15)",
+
         brand: {
           DEFAULT: "rgb(var(--fc-brand-rgb, 250 204 21) / <alpha-value>)"
         }
       },
+
+      // ------------------ Effects ------------------
       boxShadow: {
         "gold-glow": "0 0 8px 2px #facc15, 0 0 24px 0 #fde68a44",
         glass: "0 4px 32px 0 rgba(250,204,21,0.06), 0 1.5px 4.5px rgba(60,60,60,0.05)",
         "xl-gold": "0 20px 25px -5px rgba(250, 204, 21, 0.4), 0 10px 10px -5px rgba(250, 204, 21, 0.2)",
         "inner-glow": "inset 0 0 15px #facc15cc"
       },
+
+      // ------------------ Animations ------------------
       keyframes: {
         kenburns: {
           "0%": { transform: "scale(1.12) translateY(6px)", opacity: "0.94" },
@@ -72,12 +85,16 @@ module.exports = {
         sparkle: "sparkle 1.3s ease-in-out infinite",
         "fade-in": "fade-in 1.5s cubic-bezier(.39,.575,.565,1) both"
       },
+
+      // ------------------ Gradients ------------------
       backgroundImage: {
         "gold-gradient": "linear-gradient(90deg, #facc15 0%, #fbbf24 100%)",
         "amber-gradient": "linear-gradient(45deg, #fbbf24 0%, #fde68a 100%)",
         "brand-glass":
           "linear-gradient(180deg, rgba(20,20,20,.70), rgba(20,20,20,.86)), linear-gradient(125deg, color-mix(in srgb, var(--fc-brand, #facc15) 28%, transparent), rgba(255,255,255,.03))"
       },
+
+      // ------------------ Utilities ------------------
       ringColor: {
         DEFAULT: "#facc15",
         "primary-focus": "#fbbf24",
@@ -101,6 +118,8 @@ module.exports = {
         9999: "9999",
         99999: "99999"
       },
+
+      // ------------------ Typography ------------------
       typography: (theme) => ({
         DEFAULT: {
           css: {

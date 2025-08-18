@@ -1,8 +1,36 @@
-:root{
+:root {
+  /* Base brand */
   --fc-brand: #facc15;
   --fc-brand-rgb: 250 204 21;
+
+  /* Brand shades (Glass 2.0 friendly) */
   --fc-brand-50:  color-mix(in srgb, var(--fc-brand) 12%, transparent);
-  --fc-brand-100: color-mix(in srgb, var(--fc-brand) 18%, transparent);
-  --fc-brand-200: color-mix(in srgb, var(--fc-brand) 26%, transparent);
-  --fc-brand-300: color-mix(in srgb, var(--fc-brand) 42%, #000);
+  --fc-brand-100: color-mix(in srgb, var(--fc-brand) 20%, transparent);
+  --fc-brand-200: color-mix(in srgb, var(--fc-brand) 35%, #fff);
+  --fc-brand-300: color-mix(in srgb, var(--fc-brand) 50%, #000);
+  --fc-brand-400: color-mix(in srgb, var(--fc-brand) 65%, #000);
+  --fc-brand-500: var(--fc-brand); /* Primary */
+  --fc-brand-600: color-mix(in srgb, var(--fc-brand) 80%, #000);
+  --fc-brand-700: color-mix(in srgb, var(--fc-brand) 90%, #000);
+
+  /* Neutrals (Apple-style backdrop system) */
+  --fc-bg: #0a0a0a;
+  --fc-bg-soft: color-mix(in srgb, var(--fc-bg) 80%, #fff);
+  --fc-bg-glass: rgba(255,255,255,.06);
+
+  /* Text system */
+  --fc-text: #f9fafb;
+  --fc-text-dim: #d1d5db;
+  --fc-text-subtle: #9ca3af;
+
+  /* Accents */
+  --fc-accent: #4ade80; /* success/positive */
+  --fc-accent-rgb: 74 222 128;
+  --fc-danger: #ef4444; /* error */
+  --fc-danger-rgb: 239 68 68;
+
+  /* Elevation */
+  --fc-shadow-sm: 0 2px 6px -1px rgb(0 0 0 / .2);
+  --fc-shadow-lg: 0 10px 40px -10px rgb(0 0 0 / .4);
 }
+

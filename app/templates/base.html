@@ -1,229 +1,254 @@
-<h2 class="sr-only">Base</h2>
 {# =========================
-   base.html — FundChamps (SV-Prestige)
+   base.html — FundChamps SaaS Base
+   - Uses local CSS: brand.tokens.css, tailwind.min.css, output.css, fc_prestige.css
+   - CSP-safe (NONCE on inline <script>)
    ========================= #}
-{% set asset_version = asset_version|default(0) %}
-{% set _team = (team if team is defined and team else none) %}
-
-{# ---------- Safe lookups ---------- #}
-{% set TEAM_NAME   = (_team.team_name   if _team and _team.team_name   else 'Connect ATX Elite') %}
-{% set THEME_COLOR = (_team.theme_color if _team and _team.theme_color else '#facc15') %}
-{% set META_DESC   = (_team.meta_description if _team and _team.meta_description else 'Connect ATX Elite — Family-run AAU basketball building future leaders in East Austin.') %}
-{% set OG_TITLE    = (_team.og_title    if _team and _team.og_title    else 'Connect ATX Elite | Empowering Youth') %}
-{% set OG_DESC     = (_team.og_description if _team and _team.og_description else 'Support our basketball journey and invest in our next generation of leaders.') %}
-{% set TW_HANDLE   = (_team.twitter_handle if _team and _team.twitter_handle else '@ConnectATXElite') %}
-{% set OG_IMAGE    = (_team.og_image    if _team and _team.og_image    else 'images/logo.avif') %}
-{% set OG_ALT      = (_team.og_alt      if _team and _team.og_alt      else OG_TITLE) %}
-{% set TENANT_SLUG = tenant_slug|default(_team.slug if _team and _team.slug else 'default') %}
-
-{# CSP nonce (use one token everywhere) #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 
-{# ---------- URL Helpers ---------- #}
-{% set _root = (request.url_root if request is defined else '/') %}
-{% set _base_url = (request.base_url if request is defined else _root) %}
-{# canonical without query/fragment #}
-{% set _canon = (_base_url.split('?')[0].split('#')[0]) %}
-
-{# Static URL helper w/ cache-busting and absolute passthrough #}
-{% macro static_url(path) -%}
-  {%- set p = (path or '') -%}
-  {%- if '://' in p or p.startswith('data:') -%}
-    {{- p -}}
-  {%- else -%}
-    {{- url_for('static', filename=p.lstrip('/'), v=asset_version) -}}
-  {%- endif -%}
-{%- endmacro %}
-
-{# Absolute URL for OG/Logo #}
-{% set _abs_og = OG_IMAGE if '://' in OG_IMAGE else (_root ~ static_url(OG_IMAGE) | replace(_root, '') | trim('/')) %}
-{% set _logo_path = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
-{% set _abs_logo = _logo_path if '://' in _logo_path else (_root ~ static_url(_logo_path) | replace(_root, '') | trim('/')) %}
+{# Optional cache-bust: set ASSET_VER in config/env if you like #}
+{% set _ver = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
+{% set href_tokens   = url_for('static', filename='css/brand.tokens.css', v=_ver) if _ver else url_for('static', filename='css/brand.tokens.css') %}
+{% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver)  if _ver else url_for('static', filename='css/tailwind.min.css') %}
+{% set href_output   = url_for('static', filename='css/output.css', v=_ver)        if _ver else url_for('static', filename='css/output.css') %}
+{% set href_theme    = url_for('static', filename='css/fc_prestige.css', v=_ver)   if _ver else url_for('static', filename='css/fc_prestige.css') %}
+{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
 
 <!doctype html>
-<html lang="{{ lang_code|default('en', true) }}"
-      data-theme="{{ theme|default('dark', true) }}"
-      class="no-js scroll-smooth antialiased bg-zinc-950 text-white font-sans{% if _team and _team.body_class %} {{ _team.body_class }}{% endif %}"
-      style="min-height:100%"
-      itemscope itemtype="https://schema.org/WebSite"
-      data-tenant="{{ TENANT_SLUG }}"
-      data-team="{{ TEAM_NAME }}">
+<html lang="en" class="h-full">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
-    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="{{ THEME_COLOR }}" />
-    <link rel="canonical" href="{{ _canon }}" />
-    <link rel="manifest" href="{{ static_url('manifest.webmanifest') }}" />
+    <title>{% block title %}Connect ATX Elite{% endblock %}</title>
 
-    {# --- Titles --- #}
-    <title>{% block title %}{{ TEAM_NAME }}{% endblock %}</title>
-    <meta name="description" content="{{ META_DESC }}" />
+    {% block meta %}{% endblock %}
+    {% block head %}{% endblock %}
 
-    {# --- OG / Twitter (absolute image URL) --- #}
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="{{ OG_TITLE }}" />
-    <meta property="og:description" content="{{ OG_DESC }}" />
-    <meta property="og:image" content="{{ _abs_og }}" />
-    <meta property="og:url" content="{{ request.url if request is defined else _canon }}" />
-    <meta property="og:site_name" content="{{ TEAM_NAME }}" />
-    <meta property="og:image:alt" content="{{ OG_ALT }}" />
-    <meta property="og:locale" content="{{ ('en_US' if (lang_code|default('en') == 'en') else lang_code)|replace('-', '_') }}" />
-
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="{{ TW_HANDLE }}" />
-    <meta name="twitter:title" content="{{ OG_TITLE }}" />
-    <meta name="twitter:description" content="{{ OG_DESC }}" />
-    <meta name="twitter:image" content="{{ _abs_og }}" />
-
-    {# Favicons #}
-    <link rel="icon" type="image/png" sizes="32x32"
-          href="{{ static_url(_team.favicon) if _team and _team.favicon else static_url('images/favicon.png') }}" />
-    <link rel="apple-touch-icon" href="{{ static_url(_team.apple_icon) if _team and _team.apple_icon else static_url('images/logo.avif') }}" />
-
-    {# Performance / Fonts / Stripe #}
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="preconnect" href="https://js.stripe.com" />
-    <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-    <link rel="dns-prefetch" href="https://js.stripe.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap"
-          rel="stylesheet" crossorigin="anonymous" />
-
-    {# Preload (safe, optional hero) #}
-    <link rel="preload" as="image" type="image/webp"
-          href="{{ static_url(_team.logo if _team and _team.logo else 'images/logo.webp') }}"
-          imagesizes="(max-width:768px) 128px, 180px" />
-    {% if _team and _team.hero_bg %}
-      <link rel="preload" as="image" href="{{ static_url(_team.hero_bg) }}" imagesizes="100vw" />
-    {% endif %}
-
-    {# CSS — compile-time Tailwind + optional custom CSS #}
-    <link rel="stylesheet" href="{{ static_url('css/tailwind.min.css') }}" />
-    {% if app_env|default('development') != 'production' %}
-      <link rel="stylesheet" href="{{ static_url('css/input.css') }}" />
-    {% endif %}
-    {% if _team and _team.custom_css %}
-      <link rel="stylesheet" href="{{ static_url('css/' ~ _team.custom_css) }}" />
-    {% endif %}
-
-    {# JSON-LD (SportsTeam) — logo absolute #}
-    {% set jsonld = {
-      "@context": "https://schema.org",
-      "@type": "SportsTeam",
-      "name": TEAM_NAME,
-      "url": _root,
-      "logo": _abs_logo,
-      "sport": "Basketball",
-      "memberOf": { "@type": "SportsOrganization", "name": "AAU" },
-      "sameAs": [
-        (_team.facebook  if _team and _team.facebook  else ""),
-        (_team.twitter   if _team and _team.twitter   else ""),
-        (_team.instagram if _team and _team.instagram else "")
-      ] | reject('equalto','') | list
-    } %}
-    <script type="application/ld+json" nonce="{{ NONCE }}">{{ jsonld|tojson }}</script>
-
-    {# CSRF meta + helper (cookie or meta) #}
-    <meta name="csrf-token" content="{{ (csrf_token() if csrf_token is defined else '') }}" />
-    <script nonce="{{ NONCE }}">
-      (function () {
-        const meta = document.querySelector('meta[name="csrf-token"]')?.content || '';
-        const cookie = (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/)||[])[1] || '';
-        window.csrfToken = meta || cookie || '';
-        window.getCsrfHeaders = () => (window.csrfToken ? { 'X-CSRFToken': window.csrfToken } : {});
-      })();
-    </script>
-
-    {# Brand CSS variables for downstream partials #}
-    <style nonce="{{ NONCE }}">
-      :root { --fc-theme: {{ THEME_COLOR }}; }
-      html { scroll-behavior: smooth; }
-      :target { scroll-margin-top: 84px; } /* sticky header offset */
-    </style>
-
-    {% block head_extra %}{% endblock %}
+    {# ---- CSS: tokens → framework → compiled → theme overrides ---- #}
+    <link rel="preload" as="style" href="{{ href_tailwind }}" />
+    <link rel="stylesheet" href="{{ href_tokens }}" />
+    <link rel="stylesheet" href="{{ href_tailwind }}" />
+    <link rel="stylesheet" href="{{ href_output }}" />
+    <link rel="stylesheet" href="{{ href_theme }}" />
   </head>
-
-  <body class="bg-zinc-950 text-white font-sans antialiased min-h-screen flex flex-col"
-        role="document" aria-live="polite" data-csp-nonce="{{ NONCE }}">
-    <noscript>
-      <div class="bg-yellow-200 text-black text-sm px-4 py-2 text-center">
-        For the best experience, please enable JavaScript.
-      </div>
-    </noscript>
-
-    <script nonce="{{ NONCE }}">
-      (d => { d.documentElement.classList.remove('no-js'); d.documentElement.classList.add('js'); })(document);
-      try {
-        const saved = localStorage.getItem('fc_theme') || localStorage.getItem('theme');
-        if (saved) document.documentElement.dataset.theme = saved;
-        if ((saved || 'dark') === 'dark') document.documentElement.classList.add('dark');
-      } catch (_) {}
-      // Lightweight event bus
-      window.FC = Object.assign({ bus: new EventTarget() }, window.FC || {});
-      window.emitFC = (name, detail) => { try { window.FC.bus.dispatchEvent(new CustomEvent(name,{detail})); } catch(_) {} };
-      window.addEventListener = window.addEventListener.bind(window); // no-op safety
-    </script>
-
-    <a href="#main" class="sr-only focus:not-sr-only absolute left-2 top-2 z-50 rounded bg-yellow-400 px-3 py-1 font-semibold text-black">
-      Skip to main
+  <body class="min-h-full bg-zinc-950 text-zinc-100 selection:bg-yellow-300/30">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-zinc-900 px-3 py-2 rounded">
+      Skip to content
     </a>
 
-    {% block pre_content %}{% endblock %}
+    {% include "partials/header_and_announcement.html" ignore missing with context %}
 
-    {# ---------- Header & Announcements ---------- #}
-    {% block header %}
-      {# Prefer the prestige header if present #}
-      {% include "partials/header_and_announcement.html" ignore missing with context %}
-    {% endblock %}
+    {# Shared polite live region for realtime updates #}
+    <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 
-    {# Onboarding / flash (premium first) #}
-    {% include "premium/flash_and_onboarding_premium.html" ignore missing with context %}
-
-    {# ---------- Hero & Page Content ---------- #}
     {% block hero %}{% endblock %}
 
-    <main id="main" class="flex-1 pt-6" tabindex="-1" role="main">
+    <main id="main" role="main" class="relative">
+      <h1 class="sr-only">{% block h1 %}Connect ATX Elite{% endblock %}</h1>
       {% block content %}{% endblock %}
     </main>
 
-    {% block after_content %}{% endblock %}
-
-    {# ---------- Footer & Global ---------- #}
     {% include "partials/footer.html" ignore missing with context %}
     {% include "partials/back_to_top.html" ignore missing with context %}
 
     {% block global_modals %}
       {% include "partials/donation_modal.html" ignore missing with context %}
-      
-      
+    {% endblock %}
 
+    {# Your app bundle (external) #}
+    <script src="{{ js_href }}" defer nonce="{{ NONCE }}"></script>
 
-{% endblock %}
-
-    {# Page loader (idempotent helpers below) #}
-    <div id="page-loader"
-         class="fixed inset-0 z-[9999] grid place-items-center bg-black/60 backdrop-blur-sm opacity-0 pointer-events-none transition">
-      <div class="size-10 rounded-full border-4 border-white/30 border-t-white animate-spin"
-           role="status" aria-live="polite" aria-label="Loading"></div>
-    </div>
-
-    {# JS bundle (defer) #}
-    <script src="{{ static_url('js/bundle.min.js') }}" defer nonce="{{ NONCE }}"></script>
-
+    {# 🔌 Socket.IO bridge #}
     <script nonce="{{ NONCE }}">
-      window.showLoader = () => document.getElementById('page-loader')?.classList.remove('opacity-0','pointer-events-none');
-      window.hideLoader = () => document.getElementById('page-loader')?.classList.add('opacity-0','pointer-events-none');
+(function () {
+  if (window.__fcSocketInit) return; window.__fcSocketInit = true;
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  const vis = () => !document.hidden;
+  const dispatch = (name, detail) => { try { window.dispatchEvent(new CustomEvent(name, { detail })); } catch {} };
+  const now = () => Date.now();
 
-      // Optional PWA service worker (safe no-op if file missing)
-      (function(){
-        if (!('serviceWorker' in navigator)) return;
-        const enable = {{ 'true' if app_env|default('development') == 'production' else 'false' }};
-        if (!enable) return;
-        navigator.serviceWorker.register('{{ static_url("sw.js") }}').catch(()=>{});
-      })();
+  let socket = null, reconnectAttempts = 0, lastSeq = -1;
+  let lastRaised = 0, lastGoal = 0, lastEmittedTs = 0;
+
+  function emitMeter(raised, goal, extra = {}) {
+    if (typeof extra.seq === 'number' && extra.seq <= lastSeq) return;
+    if (typeof extra.seq === 'number') lastSeq = extra.seq;
+    if (raised === lastRaised && goal === lastGoal) return;
+    lastRaised = raised; lastGoal = goal;
+
+    const payload = { raised, goal, sponsorName: extra.sponsorName, seq: extra.seq, ts: now() };
+    dispatch('fc:meter:update', payload);
+    dispatch('fc:funds:update', payload);
+
+    const sr = document.getElementById('sr-live');
+    if (sr) sr.textContent = `Funds updated. ${Math.round((raised/Math.max(goal||1,1))*100)} percent of goal.`;
+  }
+
+  function connect() {
+    if (!window.io || socket) return;
+    socket = window.io({ path: '/socket.io', transports: ['websocket'], timeout: saveData ? 8000 : 4000, reconnection: false, autoConnect: false });
+
+    function open() {
+      if (!vis()) { document.addEventListener('visibilitychange', open, { once: true }); return; }
+      try { socket.connect(); } catch {}
+    }
+
+    socket.on('connect', () => { reconnectAttempts = 0; dispatch('fc:analytics', { event: 'socket_connect', area: 'realtime' }); });
+    socket.on('disconnect', (reason) => { dispatch('fc:analytics', { event: 'socket_disconnect', area: 'realtime', reason }); scheduleReconnect(); });
+
+    socket.on('funds:update', (data) => {
+      const raised = Number(data?.raised ?? lastRaised ?? 0);
+      const goal   = Number(data?.goal   ?? lastGoal   ?? 0);
+      const t = now();
+      if (t - lastEmittedTs < (saveData ? 1500 : 350)) return;
+      lastEmittedTs = t;
+      emitMeter(raised, goal, { sponsorName: data?.sponsorName, seq: data?.seq });
+    });
+
+    socket.on('sponsor:vip', (data) => {
+      dispatch('fc:sponsor:vip', data || {});
+      const el = document.getElementById('vip-leaderboard');
+      if (el && window.htmx) window.htmx.trigger(el, 'refresh');
+    });
+
+    open();
+    document.addEventListener('visibilitychange', () => {
+      if (!socket) return;
+      if (document.hidden) { try { socket.close(); } catch {} } else { scheduleReconnect(100); }
+    });
+  }
+
+  function scheduleReconnect(minDelay) {
+    if (!window.io) return;
+    if (socket) { try { socket.close(); } catch {} socket = null; }
+    const base = saveData ? 2000 : 600, jitter = Math.random() * 200;
+    reconnectAttempts++;
+    const backoff = Math.min(6000, Math.pow(2, Math.min(reconnectAttempts, 5)) * base) + jitter;
+    setTimeout(connect, Math.max(minDelay || 0, backoff));
+  }
+
+  (window.requestIdleCallback || setTimeout)(() => {
+    try { const l = document.createElement('link'); l.rel = 'preconnect'; l.href = '/socket.io/'; l.crossOrigin = ''; document.head.appendChild(l); } catch {}
+    connect();
+  }, 1);
+
+  (function fallbackPolling(){
+    let ok = true;
+    setInterval(async () => {
+      if (socket && socket.connected) return;
+      if (!vis()) return;
+      try {
+        const res = await fetch('/api/stats', { headers: { 'Accept': 'application/json' }});
+        if (!res.ok) throw new Error('http');
+        const j = await res.json();
+        emitMeter(Number(j.raised ?? j.funds_raised ?? 0), Number(j.goal ?? j.fundraising_goal ?? 0), {});
+        if (!ok) { ok = true; dispatch('fc:analytics', { event: 'poll_recovered', area: 'realtime' }); }
+      } catch {
+        if (ok) { ok = false; dispatch('fc:analytics', { event: 'poll_failed', area: 'realtime' }); }
+      }
+    }, saveData ? 30000 : 15000);
+  })();
+})();
+    </script>
+
+    {# 🔁 Bridge: normalize updates #}
+    <script nonce="{{ NONCE }}">
+(() => {
+  const syncMeters = (raised, goal) => window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised, goal }}));
+  window.addEventListener('fc:funds:update', ev => {
+    const d = ev.detail || {};
+    if (d.raised != null || d.goal != null) syncMeters(d.raised, d.goal);
+  });
+  if (window.htmx) {
+    document.body.addEventListener('htmx:afterSwap', e => {
+      if (e.target && e.target.id === 'fundraiser-meter') {
+        try {
+          const raised = parseFloat(e.target.dataset.raised || '0');
+          const goal   = parseFloat(e.target.dataset.goal   || '0');
+          syncMeters(raised, goal);
+        } catch(_) {}
+      }
+    });
+  }
+})();
+    </script>
+
+    {# 🧠 Optimistic UI #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcOptimisticInit) return; window.__fcOptimisticInit = true;
+  let optimistic = 0, timer = null;
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-amount]'); if (!btn) return;
+    optimistic += Number(btn.dataset.amount || 0);
+    const cur = (window.getHeroMeter && window.getHeroMeter()) || {};
+    const raised = (cur.raised || 0) + optimistic; const goal = cur.goal || 0;
+    window.updateHeroMeter && window.updateHeroMeter(raised, goal);
+    window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised, goal }}));
+    clearTimeout(timer); timer = setTimeout(() => { optimistic = 0; }, 12000);
+  });
+  window.addEventListener('fc:meter:update', () => { optimistic = 0; });
+})();
+    </script>
+
+    {# 🧠 Title pulse #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcTitlePulse) return; window.__fcTitlePulse = true;
+  const baseTitle = document.title; let pulseTimer = null;
+  function pulseTitle(pct){ document.title = `⭐ ${Math.round(pct)}% • ${baseTitle}`; clearTimeout(pulseTimer); pulseTimer = setTimeout(()=> { document.title = baseTitle; }, 4000); }
+  window.addEventListener('fc:meter:update', (e)=>{
+    const d = e.detail || {}; const p = Math.max(0, Math.min(100, (d.raised/Math.max(d.goal||1,1))*100));
+    pulseTitle(p);
+  }, { passive:true });
+})();
+    </script>
+
+    {# 🧠 Sponsor ticker #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcTickerQueue) return; window.__fcTickerQueue = true;
+  const q = []; let draining = false;
+  window.addEventListener('fc:funds:update', (e)=>{
+    const name = e.detail && e.detail.sponsorName; if (!name) return;
+    q.push(String(name)); if (!draining) drain();
+  });
+  function drain(){
+    const el = document.getElementById('fc-ticker'); if (!el) return;
+    draining = true; const name = q.shift();
+    if (name) {
+      const safe = name.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      el.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
+      setTimeout(drain, 1500);
+    } else { draining = false; }
+  }
+})();
+    </script>
+
+    {# 🧠 Motion/Save-Data tuning #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcMotionTuner) return; window.__fcMotionTuner = true;
+  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) document.documentElement.classList.add('reduced-motion');
+  if (navigator.connection && navigator.connection.saveData) document.documentElement.classList.add('save-data');
+})();
+    </script>
+
+    {# 🧠 VIP leaderboard auto-refresh (HTMX) #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcLbHook) return; window.__fcLbHook = true;
+  const panel = document.getElementById('vip-leaderboard'); if (!panel || !window.htmx) return;
+  const io = new IntersectionObserver((entries)=>{ const ent = entries[0]; if (!ent) return; panel.__isVisible = ent.isIntersecting; }, { threshold: 0.1 });
+  io.observe(panel);
+  let debounce = null;
+  window.addEventListener('fc:meter:update', () => {
+    if (!panel.__isVisible) return;
+    clearTimeout(debounce);
+    debounce = setTimeout(() => window.htmx.trigger(panel, 'refresh'), 600);
+  }, { passive:true });
+})();
     </script>
 
     {% block scripts %}{% endblock %}
