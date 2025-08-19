@@ -57,12 +57,6 @@
     {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
   </section>
 
-  {# 6) Sponsor Wall (full grid) #}
-  <section id="sponsor-wall" aria-labelledby="sponsor-wall-heading" class="py-12 sm:py-16">
-    <h2 id="sponsor-wall-heading" class="sr-only">Sponsor Wall</h2>
-    {% include "partials/sponsor_wall.html" ignore missing with context %}
-  </section>
-
   {# 7) Newsletter #}
   {% set show_news = (FLAGS.newsletter_section if FLAGS is defined and FLAGS.newsletter_section is defined else true) %}
   {% if show_news %}

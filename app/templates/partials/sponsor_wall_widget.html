@@ -8,6 +8,7 @@
    - SR live region for new donations
    - HTMX optional for ticker refresh
    - Idempotent init, safe fallbacks, dynamic totals + counts
+   - Small fixes: dedupe key, number parsing, keyboard a11y, focus-visible
    ============================================================================= #}
 
 {% include "shared/ui_bootstrap.html" ignore missing with context %}
@@ -38,7 +39,7 @@
   data-team="{{ team_slug }}"
   data-initial-sponsors='{{ sponsors_sorted|tojson }}'
   data-initial-donations='{{ recent_donations|tojson }}'
-  data-initial-total='{{ sponsors_total or 0 }}'
+  data-initial-total='{{ (sponsors_total or 0)|float }}'
 >
   <style nonce="{{ NONCE }}">
     /* ===== Scoped to #sponsor-wall-widget ===== */
@@ -71,6 +72,9 @@
 
     #sponsor-wall-widget [data-ticker-track]{ will-change: transform; display:inline-flex; gap:1.25rem; padding-right:1.25rem; }
 
+    /* Focus visibility for keyboard users */
+    #sponsor-wall-widget :focus-visible{ outline: 2px solid color-mix(in srgb, var(--fc-brand) 75%, transparent); outline-offset: 2px; border-radius: .5rem; }
+
     @media (prefers-reduced-motion: reduce){
       #sponsor-wall-widget .vip-card{ transition: none !important; }
       #sponsor-wall-widget .fc-anim-wiggle{ animation: none !important; }
@@ -96,6 +100,7 @@
   <!-- 2) Live Donation Ticker (HTMX optional) -->
   <div id="donation-ticker"
        class="flex items-center px-6 py-1 text-sm font-semibold text-yellow-200 bg-yellow-900/40 min-h-[1.7em]"
+       aria-live="polite"
        {% if has_ticker %}hx-get="{{ donation_ticker_url }}" hx-trigger="every 30s" hx-swap="innerHTML"{% endif %}>
     <div class="w-full overflow-hidden whitespace-nowrap" data-ticker>
       {% if recent_donations %}
@@ -255,13 +260,16 @@
   // ---------- State & helpers ----------
   const TEAM = widget.getAttribute('data-team') || 'default';
   const KEY_OPENED = `fc_sw_opened:${TEAM}`;
-  const KEY_NUDGE  = `fc_sw_nudged:${TEAM}`;
   const bc = (function(){ try { return new BroadcastChannel('fc_ui'); } catch { return null; }})();
 
-  const reduced = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches || (navigator.connection?.saveData === true);
-  const fmtMoney = (n)=> Math.round(+n||0).toLocaleString();
+  const reduced = (matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) || (navigator.connection?.saveData === true);
+  const fmtMoney = (n)=> (Number.isFinite(+n) ? Math.round(+n) : 0).toLocaleString();
   const esc = (t)=> String(t||'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
-  const getInitial = (key, fallback) => { try { return JSON.parse(widget.dataset[key] || 'null') ?? fallback; } catch { return fallback; } };
+  const getInitial = (key, fallback) => { try { const v = widget.dataset[key]; return (v==null||v==='')?fallback:(JSON.parse(v)); } catch { return fallback; } };
+
+  const nameKey = (v)=> String((v?.name||'').toLowerCase().trim());
+  const idKey   = (v)=> v?.id!=null ? String(v.id).toLowerCase() : '';
+  const sponsorKey = (v)=> idKey(v) || nameKey(v);
 
   let allSponsors = Array.isArray(getInitial('initialSponsors', [])) ? getInitial('initialSponsors', []) : [];
   let totalRaised = Number(widget.dataset.initialTotal || 0) || allSponsors.reduce((a,b)=>a+(+b.amount||0),0);
@@ -271,18 +279,17 @@
   const totalEls = widget.querySelectorAll('[data-total]');
 
   function announce(txt){ try { if (sr) sr.textContent = txt; } catch {} }
-  function shadowCue(){ if (!list) return; list.classList.toggle('fc-scroll-shadow', list.scrollTop > 5); }
+  function shadowCue(){ if (!list) return; list.classList.toggle('fc-scroll-shadow', (list.scrollTop||0) > 5); }
   function updateNumbers(){
     countEls.forEach(el => el.textContent = String(allSponsors.length));
     totalEls.forEach(el => el.textContent = fmtMoney(totalRaised));
   }
 
-  // Deduplicate by lowercased name (or id if provided)
+  // Deduplicate via stable key (id or lowercased name)
   function upsertSponsor(s){
     if (!s) return;
-    const key = (s.id && String(s.id)) || String(s.name||'').toLowerCase().trim();
-    if (!key) return;
-    const idx = allSponsors.findIndex(x => (String(x.id||'').toLowerCase() || String(x.name||'').toLowerCase()) === key);
+    const key = sponsorKey(s); if (!key) return;
+    const idx = allSponsors.findIndex(x => sponsorKey(x) === key);
     if (idx >= 0) allSponsors[idx] = { ...allSponsors[idx], ...s };
     else allSponsors.unshift(s);
     totalRaised = allSponsors.reduce((a,b)=> a + (+b.amount||0), 0);
@@ -313,8 +320,8 @@
     toggle.setAttribute('aria-expanded','true');
     document.body.style.overflow = 'hidden';
     nudgeDot?.classList.add('hidden');
-    widget.focus({ preventScroll: true });
-    if (!escBound) { document.addEventListener('keydown', onKeydown); escBound = true; }
+    try { widget.focus({ preventScroll: true }); } catch {}
+    if (!escBound) { document.addEventListener('keydown', onKeydown, { passive:false }); escBound = true; }
     try { localStorage.setItem(KEY_OPENED,'1'); } catch {}
     openedOnce = true;
     shadowCue();
@@ -328,46 +335,49 @@
     widget.setAttribute('aria-hidden','true');
     toggle.setAttribute('aria-expanded','false');
     document.body.style.overflow = '';
-    toggle.focus({ preventScroll: true });
+    try { toggle.focus({ preventScroll: true }); } catch {}
     if (escBound) { document.removeEventListener('keydown', onKeydown); escBound = false; }
     bc?.postMessage({ type:'fc:sponsorwall:close', detail:{ team: TEAM } });
     window.dispatchEvent(new CustomEvent('fc:sponsorwall:close', { detail:{ team: TEAM } }));
   }
   const toggleWidget = () => (opened ? closeWidget() : openWidget());
 
-  toggle.addEventListener('click', () => { toggleWidget(); bc?.postMessage({type:'fc:sponsorwall:toggle'}); });
-  closeBtn?.addEventListener('click', closeWidget);
-  list?.addEventListener('scroll', shadowCue);
+  // Mouse + keyboard open/close on toggle
+  toggle.addEventListener('click', () => { toggleWidget(); bc?.postMessage({type:'fc:sponsorwall:toggle'}); }, { passive:true });
+  toggle.addEventListener('keydown', (e)=>{ if (e.key==='Enter' || e.key===' ') { e.preventDefault(); toggleWidget(); } }, { passive:false });
+
+  closeBtn?.addEventListener('click', closeWidget, { passive:true });
+  list?.addEventListener('scroll', shadowCue, { passive:true });
 
   // Close on outside click
   document.addEventListener('click', (e)=>{
     if (!opened) return;
     if (!widget.contains(e.target) && !toggle.contains(e.target)) closeWidget();
-  });
+  }, { passive:true });
 
   // Keyboard shortcut: "S" (skip inputs)
   document.addEventListener('keydown', (e)=>{
     const tag = (e.target && e.target.tagName) || '';
     if (['INPUT','TEXTAREA','SELECT'].includes(tag)) return;
     if ((e.key||'').toLowerCase() === 's'){ e.preventDefault(); toggleWidget(); }
-  });
+  }, { passive:false });
 
   // Deep link open (?open=sponsors or #sponsors)
   try {
     const u = new URL(location.href);
-    if (u.searchParams.get('open') === 'sponsors' || location.hash === '#sponsors') {
+    if (u.searchParams.get('open') === 'sponsors' || location.hash.replace('#','') === 'sponsors') {
       setTimeout(openWidget, 300);
     }
   } catch {}
 
   // Gentle nudge if never opened
   if (!openedOnce) {
-    setTimeout(()=>{ if (!opened) nudgeDot?.classList.remove('hidden'); try{ localStorage.setItem(KEY_NUDGE,'1'); }catch{} }, 180000);
+    setTimeout(()=>{ if (!opened) nudgeDot?.classList.remove('hidden'); }, 180000);
   }
 
   // Sponsor CTA → open tiers modal if present, else emit hook
   document.addEventListener('click', (e)=>{
-    const openSponsor = e.target.closest('[data-open-sponsor]'); if (!openSponsor) return;
+    const openSponsor = e.target.closest?.('[data-open-sponsor]'); if (!openSponsor) return;
     e.preventDefault();
     const tiersModal = document.getElementById('tiers-modal');
     if (tiersModal?.showModal) { tiersModal.showModal(); }
@@ -375,7 +385,7 @@
       const mount = document.getElementById('sponsor-modal-root');
       window.dispatchEvent(new CustomEvent('fc:sponsorwall:cta', { detail:{ team: TEAM, mount } }));
     }
-  });
+  }, { passive:false });
 
   // Leaderboard toggle UI hook
   document.querySelectorAll('.leaderboard-toggle').forEach(btn=>{
@@ -386,12 +396,12 @@
       btn.classList.add('bg-yellow-400/40','text-black'); btn.setAttribute('aria-pressed','true');
       const range = btn.dataset.leaderboard || 'all';
       window.dispatchEvent(new CustomEvent('fc:sponsorwall:range', { detail:{ range } }));
-    });
+    }, { passive:true });
   });
 
   // Social share (Web Share API fallback)
   document.addEventListener('click', (e)=>{
-    const share = e.target.closest('[data-share]'); if (!share) return;
+    const share = e.target.closest?.('[data-share]'); if (!share) return;
     const net = share.getAttribute('data-share'); const url = location.href;
     const text = 'Support our team — sponsor or donate!';
     if (navigator.share) { navigator.share({ title: document.title, text, url }).catch(()=>{}); return; }
@@ -402,7 +412,7 @@
     };
     window.open(map[net] || url, '_blank', 'noopener,noreferrer,width=600,height=600');
     window.dispatchEvent(new CustomEvent('fc:sponsorwall:share', { detail:{ net } }));
-  });
+  }, { passive:true });
 
   /* ---------- Renderers ---------- */
   function logoSrc(raw){
@@ -411,13 +421,13 @@
   }
 
   function paintGridIncremental(s){
-    // If card for this sponsor already exists, update it; else prepend
     if (!list || !s) return;
-    const key = (s.id && String(s.id)) || String(s.name||'').toLowerCase().trim();
+    const key = sponsorKey(s);
     const existing = Array.from(list.querySelectorAll('[data-card]')).find(el => {
-      const label = el.querySelector('.text-sm.font-bold')?.textContent?.trim().toLowerCase();
-      return label === (s.name||'').toLowerCase().trim();
+      const label = el.querySelector('.text-sm.font-bold')?.textContent?.trim().toLowerCase() || '';
+      return key && (label === nameKey(s)); // name match for visible label
     });
+    const amt = Number.isFinite(+s.amount) ? +s.amount : 0;
     const html = `
       <article class="vip-card group flex flex-col items-center gap-2 px-4 py-3 rounded-2xl border bg-indigo-900 text-yellow-300 ring ring-indigo-600" role="listitem" data-card data-key="${esc(key)}">
         ${s.url ? `<a href="${esc(s.url)}" target="_blank" rel="noopener sponsored" tabindex="-1" aria-label="Visit ${esc(s.name||'Sponsor')}">` : ``}
@@ -425,11 +435,12 @@
         ${s.url ? `</a>` : ``}
         <div class="text-center">
           <div class="text-sm font-bold leading-tight">${esc(s.name||'Sponsor')}</div>
-          <div class="text-xs text-yellow-800">$ ${fmtMoney(s.amount)}</div>
+          <div class="text-xs text-yellow-800">$ ${fmtMoney(amt)}</div>
         </div>
       </article>`;
     if (existing) existing.outerHTML = html;
     else list.insertAdjacentHTML('afterbegin', html);
+    shadowCue();
   }
 
   /* ---------- Ticker animation (pauses offscreen / reduced-motion) ---------- */
@@ -453,7 +464,7 @@
     }, { threshold: 0.01 }) : null;
     if (io) io.observe(tickerEl);
     else if (!reduced) { running=true; raf=requestAnimationFrame(step); }
-    addEventListener('beforeunload', ()=>{ if (raf) cancelAnimationFrame(raf); });
+    addEventListener('beforeunload', ()=>{ if (raf) cancelAnimationFrame(raf); }, { passive:true });
   })();
 
   /* ---------- Live donation feed & sockets ---------- */
@@ -481,14 +492,17 @@
     upsertSponsor(payload);
   }, { passive:true });
 
-  if (typeof window.io === 'function'){
+  // Socket.IO (guarded, no crash if missing)
+  (function(){
+    const hasIO = typeof window.io === 'function';
+    if (!hasIO) return;
     try{
       const ds = window.io('/donations', { transports:['websocket','polling'] });
-      ds.on('donation', (d)=> { pushDonation(d); if (!opened) nudgeDot?.classList.remove('hidden'); });
+      ds.on?.('donation', (d)=> { pushDonation(d); if (!opened) nudgeDot?.classList.remove('hidden'); });
       const ss = window.io('/sponsors', { transports:['websocket','polling'] });
-      ss.on('sponsor', (s)=> upsertSponsor(s));
+      ss.on?.('sponsor', (s)=> upsertSponsor(s));
     }catch(_){}
-  }
+  })();
 
   // Cross-tab nudges
   bc?.addEventListener?.('message', (ev)=>{
@@ -496,17 +510,18 @@
     if (ev.data.type === 'fc:sponsorwall:open' && !opened) nudgeDot?.classList.add('hidden');
   });
 
-  // Public API
-  window.fcSponsorWall = {
+  // Public API (do not clobber if already present)
+  window.fcSponsorWall = Object.assign({}, window.fcSponsorWall, {
     open: openWidget,
     close: closeWidget,
     toggle: toggleWidget,
     addSponsor: upsertSponsor,
     pushDonation
-  };
+  });
 
   // First-time paint (ensure counts correct even if DOM changed)
   updateNumbers();
+  shadowCue();
 })();
 {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 

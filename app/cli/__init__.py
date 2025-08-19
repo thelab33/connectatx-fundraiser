@@ -28,7 +28,7 @@ def seed_demo(users, sponsors, players, teams, clear):
     from app import create_app
     app = create_app()
     with app.app_context():
-        db.create_all()
+        # db.create_all()  # DISABLED by starforge: use Alembic
         if clear:
             _clear_data()
         team_objs = _seed_teams(teams)

@@ -63,7 +63,7 @@
       const res = await fetch(STATS_URL, { credentials: 'same-origin' });
       const j = await res.json();
       document.dispatchEvent(new CustomEvent('fc:funds:update', { detail: j }));
-    } catch (err) { /* no-op */ }
+    } catch (err) { void err; /* no-op */ }
   }
   if (AUTOSTATS) {
     fetchStats();

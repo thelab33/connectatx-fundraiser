@@ -3,5 +3,5 @@
 @tailwind components;
 @tailwind utilities;
 
-@import "../../css/brand.tokens.css"; /* <= starforge tokens */
+@import url("../../css/brand.tokens.css"); /* <= starforge tokens */
 

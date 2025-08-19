@@ -1,3 +1,4 @@
+/* eslint-disable no-empty */
 // app/static/js/app.entry.js
 // FundChamps / Connect ATX Elite
 // - CSP-safe, production-ready
@@ -102,15 +103,15 @@
       const initAlpine = () => Alpine.start();
       (window.requestIdleCallback || setTimeout)(initAlpine, 1);
     } catch (err) {
-      if (DEV) console.info("ℹ️ Alpine not present:", err?.message || err);
+      if (DEV) console.warn("ℹ️ Alpine not present:", err?.message || err);
     }
 
     window.fc.emit("fc:ready", { env: ENV, dev: DEV });
     if (DEV) {
       const nav = performance.getEntriesByType?.("navigation")?.[0];
-      console.info("✅ app.entry booted", { env: ENV, serverTiming: nav?.serverTiming || [] });
+      console.warn("✅ app.entry booted", { env: ENV, serverTiming: nav?.serverTiming || [] });
     } else {
-      console.info("✅ app.entry.js loaded");
+      console.warn("✅ app.entry.js loaded");
     }
   };
 
@@ -123,7 +124,7 @@
   /* ---------- HMR (vite/webpack) ---------- */
   if (import.meta && import.meta.hot) {
     import.meta.hot.accept?.();
-    if (DEV) console.info("🔁 HMR active");
+    if (DEV) console.warn("🔁 HMR active");
   }
 })();
 

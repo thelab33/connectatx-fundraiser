@@ -2,12 +2,27 @@
 # -----------------------------------------------------------------------------
 # CampaignGoal Model
 # Fundraising target for a team/season; stores cents (Stripe-friendly).
+# SQLAlchemy 2.0 typing; non-negative guards; joined relationship to Team.
 # -----------------------------------------------------------------------------
 
 from __future__ import annotations
 
 import uuid
-from typing import Any, Dict, Tuple
+from datetime import datetime
+from typing import Any, Dict, Final, Optional, Tuple
+
+from sqlalchemy import (
+    Boolean,
+    CheckConstraint,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    event,
+    select,
+    func,
+)
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
 from .mixins import TimestampMixin, SoftDeleteMixin
@@ -16,26 +31,48 @@ from .mixins import TimestampMixin, SoftDeleteMixin
 class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "campaign_goals"
     __table_args__ = (
-        db.Index("ix_campaign_goals_team_active", "team_id", "active"),
+        # team_id + active is a common filter path (find active goal for a team)
+        Index("ix_campaign_goals_team_active", "team_id", "active"),
+        # cents must be non-negative
+        CheckConstraint("goal_amount >= 0", name="ck_cg_goal_nonneg"),
+        CheckConstraint("total >= 0", name="ck_cg_total_nonneg"),
     )
 
     # ── Keys ────────────────────────────────────────────────────
-    id = db.Column(db.Integer, primary_key=True)
-    uuid = db.Column(db.String(36), unique=True, nullable=False, default=lambda: str(uuid.uuid4()), index=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    uuid: Mapped[str] = mapped_column(
+        String(36),
+        unique=True,
+        nullable=False,
+        default=lambda: str(uuid.uuid4()),
+        index=True,
+    )
 
     # ── Foreign key ─────────────────────────────────────────────
-    team_id = db.Column(db.Integer, db.ForeignKey("teams.id", ondelete="CASCADE"), nullable=False, index=True)
+    team_id: Mapped[int] = mapped_column(
+        ForeignKey("teams.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
 
-    # ✅ Proper back_populates (fixes mapper error from backref collisions)
-    # Make sure Team.campaign_goals uses back_populates="team"
-    team = db.relationship("Team", back_populates="campaign_goals", lazy="joined", passive_deletes=True)
+    # Make sure Team.campaign_goals uses back_populates="campaign_goals"
+    team: Mapped["Team"] = relationship(
+        "Team",
+        back_populates="campaign_goals",
+        lazy="joined",
+        passive_deletes=True,
+    )
 
     # ── Money (cents) ───────────────────────────────────────────
-    goal_amount = db.Column(db.Integer, nullable=False, default=0, doc="cents")
-    total = db.Column(db.Integer, nullable=False, default=0, doc="cents")
+    goal_amount: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, doc="cents"
+    )
+    total: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, doc="cents"
+    )
 
     # ── Status ──────────────────────────────────────────────────
-    active = db.Column(db.Boolean, nullable=False, default=True, index=True)
+    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
 
     # ── Computed ────────────────────────────────────────────────
     @property
@@ -49,14 +86,18 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
     @property
     def percent_raised(self) -> float:
         g = int(self.goal_amount or 0)
-        return round((int(self.total or 0) / g) * 100, 1) if g > 0 else 0.0
+        if g <= 0:
+            return 0.0
+        return round((int(self.total or 0) / g) * 100.0, 1)
 
     def percent_complete(self) -> int:
         return int(self.percent_raised)
 
     @property
     def is_complete(self) -> bool:
-        return (self.goal_amount or 0) > 0 and (self.total or 0) >= (self.goal_amount or 0)
+        g = int(self.goal_amount or 0)
+        t = int(self.total or 0)
+        return g > 0 and t >= g
 
     def progress_tuple(self) -> Tuple[float, float, float]:
         return (self.raised_dollars, self.goal_dollars, self.percent_raised)
@@ -70,24 +111,38 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
         self.total = 0
 
     def update_progress_from_donations(self, commit: bool = True) -> None:
-        """Sum paid/complete Sponsor amounts for this team (expects cents)."""
+        """
+        Sum paid/complete Sponsor amounts for this team (in cents).
+        Uses the *current* session when possible; commits only if requested.
+        """
         from .sponsor import Sponsor  # local import avoids circular ref
 
+        # Handle either SoftDelete styles: deleted bool OR deleted_at null.
+        # Prefer attribute presence checks so we work with either mixin.
+        deleted_col = getattr(Sponsor, "deleted", None)
+        deleted_at_col = getattr(Sponsor, "deleted_at", None)
+
         valid_statuses = ("paid", "completed", "success")
-        total_cents = (
-            db.session.query(db.func.coalesce(db.func.sum(Sponsor.amount), 0))
-            .filter(Sponsor.team_id == self.team_id)
-            .filter(Sponsor.status.in_(valid_statuses))
-            .filter(Sponsor.deleted_at.is_(None))
-            .scalar()
+
+        stmt = select(func.coalesce(func.sum(Sponsor.amount), 0)).where(
+            Sponsor.team_id == self.team_id,
+            Sponsor.status.in_(valid_statuses),
         )
-        self.total = int(total_cents or 0)
+        if deleted_col is not None:
+            stmt = stmt.where(deleted_col.is_(False))
+        elif deleted_at_col is not None:
+            stmt = stmt.where(deleted_at_col.is_(None))
+
+        sess = db.session.object_session(self) or db.session
+        total_cents: int = int(sess.execute(stmt).scalar_one() or 0)
+        self.total = max(0, total_cents)
+
         if commit:
-            db.session.commit()
+            sess.commit()
 
     # ── Serialization ───────────────────────────────────────────
     def as_dict(self, include_team: bool = False) -> Dict[str, Any]:
-        data = {
+        data: Dict[str, Any] = {
             "uuid": self.uuid,
             "team_id": self.team_id,
             "goal_amount_cents": int(self.goal_amount or 0),
@@ -98,8 +153,8 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
             "percent_complete": self.percent_complete(),
             "is_complete": self.is_complete,
             "active": bool(self.active),
-            "created_at": self.created_at.isoformat() if self.created_at else None,
-            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
+            "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else None,
+            "updated_at": self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else None,
         }
         if include_team and self.team:
             data["team"] = {

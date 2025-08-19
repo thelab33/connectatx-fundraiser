@@ -7,8 +7,8 @@
    ========================================================================== */
 
 /* Brand Tokens + Prestige Layer */
-@import "./brand.tokens.css";
-@import "./fc_prestige.css";
+@import url("./brand.tokens.css");
+@import url("./fc_prestige.css");
 
 /* ==== Tailwind Core ==== */
 @tailwind base;

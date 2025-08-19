@@ -32,6 +32,8 @@
 {# ================ CONTENT ================ #}
 {% block content %}
 <main id="main" role="main" tabindex="-1" aria-label="{{ _('Main content') }}">
+{% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+
 
   {# Sponsorship tiers #}
   <section id="tiers" class="fc-band fc-band--plain scroll-mt-24"

@@ -1,5 +1,15 @@
-{# ================== FundChamps • Program Stats + Calendar (SV Elite) ================== #}
-{# ---------- Inputs & safe fallbacks ---------- #}
+{# =============================================================================
+   app/templates/partials/program_pulse.html
+   FundChamps • Program Pulse (SV-Elite, CSP-safe, a11y-first)
+   ============================================================================= #}
+
+{# Utilities/bootstrap (idempotent include) #}
+{% include "partials/ui_bootstrap.html" ignore missing with context %}
+
+{# ---------- Safe nonce + fallbacks ---------- #}
+{% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
+
+{# ---------- Inputs & hardened defaults ---------- #}
 {% set stats = stats if stats is defined and stats else [
   {"label":"GPA Avg","value":3.5},
   {"label":"Student-Athletes","value":22},
@@ -22,7 +32,7 @@
 {% set _base = sponsors_sorted if sponsors_sorted else [] %}
 {% set display = (_base | sort(attribute='amount', reverse=True))[:total_slots] %}
 
-{# Seed demo if empty so it never looks bare #}
+{# Seed demo so it never looks empty #}
 {% set demo_sponsor = {
   "name":"ESPN",
   "logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg",
@@ -42,7 +52,7 @@
   data-total="{{ sponsors_total or 0 }}"
   data-count="{{ sponsors_count or 0 }}"
 >
-  <style nonce="{{ NONCE }}">
+  <style nonce="{{ __nonce }}">
     /* ===== Scoped to #program-pulse (no bleed) ===== */
     #program-pulse .fc-card {
       backdrop-filter: blur(10px) saturate(120%);
@@ -100,14 +110,17 @@
     <div class="fc-card px-4 py-4 sm:px-6">
       <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
         {% for s in stats %}
-          <div class="kpi">
+          <div class="kpi" role="group" aria-label="{{ s.label }}">
             <span class="label">{{ s.label }}</span>
             <span class="value text-yellow-300">{{ s.value }}</span>
           </div>
         {% endfor %}
-        <div class="kpi">
+        <div class="kpi" role="group" aria-label="Sponsors summary">
           <span class="label">Sponsors</span>
-          <span class="value text-yellow-300"><span id="ss-count">{{ sponsors_count }}</span> • $<span id="ss-total">{{ (sponsors_total or 0) | round(0, 'floor') | int | string | replace(',', '') }}</span></span>
+          <span class="value text-yellow-300">
+            <span id="ss-count">{{ sponsors_count }}</span> •
+            $<span id="ss-total">{{ (sponsors_total or 0) | int }}</span>
+          </span>
         </div>
       </div>
     </div>
@@ -116,19 +129,19 @@
   <div class="mx-auto grid max-w-6xl grid-cols-1 gap-10 lg:grid-cols-12">
 
     {# ===== Left Column: Next + Filters + Table ===== #}
-    <div class="lg:col-span-8 space-y-8">
+    <div class="space-y-8 lg:col-span-8">
 
       {% if events and events|length %}
       <!-- Next event banner -->
-      <div class="rounded-2xl next-banner p-4 text-sm sm:text-base">
+      <div class="next-banner rounded-2xl p-4 text-sm sm:text-base" role="region" aria-live="polite" aria-label="Next team event">
         <div class="flex flex-wrap items-center gap-3">
           <span class="chip">Next</span>
-          <div id="next-event-text" class="text-yellow-100 flex-1 min-w-[200px]">Scanning upcoming events…</div>
+          <div id="next-event-text" class="min-w-[200px] flex-1 text-yellow-100">Scanning upcoming events…</div>
           <div class="ml-auto flex gap-2">
             <button id="evt-add-ics" type="button" class="rounded-full bg-yellow-400/90 px-3 py-1.5 text-xs font-black text-black hover:bg-yellow-400">
               + Add .ics
             </button>
-            <a id="evt-add-gcal" href="#" class="rounded-full border border-yellow-400/70 px-3 py-1.5 text-xs font-black text-yellow-200 hover:bg-zinc-900">
+            <a id="evt-add-gcal" href="#" class="rounded-full border border-yellow-400/70 px-3 py-1.5 text-xs font-black text-yellow-200 hover:bg-zinc-900" rel="noopener">
               + Google
             </a>
           </div>
@@ -138,8 +151,8 @@
 
       {% if events and events|length %}
       <!-- Filters -->
-      <div class="w-full flex flex-wrap items-center gap-3 text-sm">
-        <div class="flex-1 min-w-[220px]">
+      <div class="flex w-full flex-wrap items-center gap-3 text-sm">
+        <div class="min-w-[220px] flex-1">
           <label for="evt-search" class="sr-only">Search</label>
           <input id="evt-search" type="search" placeholder="Search events, opponents, locations…"
                  class="w-full rounded-lg border border-yellow-400/20 bg-zinc-900/70 px-3 py-2 outline-none ring-0 placeholder:text-zinc-400 focus:border-yellow-400/50" />
@@ -178,6 +191,7 @@
       <!-- Table -->
       <div class="w-full overflow-x-auto rounded-2xl border border-yellow-400/10 bg-zinc-900/90 p-5 shadow-xl md:p-8">
         <table class="min-w-full rounded-xl text-left text-sm" aria-describedby="pulse-heading">
+          <caption class="sr-only">Team schedule with dates, locations, results and sponsors</caption>
           <thead>
             <tr class="border-b border-yellow-400/10 text-yellow-300">
               <th scope="col" class="px-3 py-2" data-sort="date"     aria-sort="none" title="Click to sort">Date</th>
@@ -190,13 +204,14 @@
           </thead>
           <tbody id="evt-body">
             {% for e in events %}
-            {% set res = (e.result or '') %}
-            {% set res_u = res|string|upper %}
+            {% set res = (e.result if e.result is defined else '') %}
+            {% set res_u = (res ~ '')|upper %}
             {% set upcoming = (e.is_upcoming if e.is_upcoming is defined else None) %}
             <tr class="transition-colors"
                 data-row
+                itemscope itemtype="https://schema.org/SportsEvent"
                 data-date="{{ e.date }}"
-                data-name="{{ e.name or e.opponent }}"
+                data-name="{{ (e.name if e.name is defined and e.name else (e.opponent if e.opponent is defined else 'Team Event')) }}"
                 data-location="{{ e.location }}"
                 data-time="{{ e.time }}"
                 data-type="{{ e.type or '' }}"
@@ -204,14 +219,16 @@
                 data-upcoming="{{ 'true' if upcoming else 'auto' }}"
                 data-sponsor="{{ e.sponsor or '' }}">
               <td class="whitespace-nowrap px-3 py-2" data-label="Date">
-                <time datetime="{{ e.date }}T{{ e.time|default('00:00') }}">{{ (e.date|string).replace('-', '/') }}</time>
+                {% set _dt = (e.date ~ '') %}
+                {% set _tm = (e.time if e.time is defined and e.time else '00:00') %}
+                <time datetime="{{ _dt }}T{{ _tm }}" itemprop="startDate">{{ _dt.replace('-', '/') }}</time>
               </td>
               <td class="px-3 py-2" data-label="Event">
-                {{ e.name or e.opponent }}
-                {% if e.type %}<span class="ml-2 chip">{{ e.type }}</span>{% endif %}
+                <span itemprop="name">{{ (e.name if e.name is defined and e.name else (e.opponent if e.opponent is defined else 'Team Event')) }}</span>
+                {% if e.type %}<span class="ml-2 chip" itemprop="eventType">{{ e.type }}</span>{% endif %}
                 {% if e.highlight %}<span class="ml-2 text-xs font-semibold text-yellow-300/90">• {{ e.highlight }}</span>{% endif %}
               </td>
-              <td class="px-3 py-2" data-label="Location">{{ e.location }}</td>
+              <td class="px-3 py-2" data-label="Location" itemprop="location">{{ e.location }}</td>
               <td class="px-3 py-2" data-label="Time">{{ e.time }}</td>
               <td class="px-3 py-2 font-semibold" data-label="Result">
                 {% if 'W' in res_u %}<span class="text-green-300">🟢 Win</span>
@@ -236,11 +253,11 @@
     </div>
 
     {# ===== Right Column: Sponsors ribbon & callouts ===== #}
-    <aside class="lg:col-span-4 space-y-6">
+    <aside class="space-y-6 lg:col-span-4">
       <!-- Sponsors ribbon (auto de-duped) -->
       <div class="fc-card p-4">
         <div class="mb-3 flex items-center justify-between">
-          <h3 class="text-sm font-extrabold tracking-wide text-yellow-300 uppercase">Sponsors</h3>
+          <h3 class="text-sm font-extrabold uppercase tracking-wide text-yellow-300">Sponsors</h3>
           <span class="text-xs text-zinc-300">Top supporters</span>
         </div>
         <div class="ribbon" data-ribbon>
@@ -252,7 +269,7 @@
         </div>
       </div>
 
-      <!-- CTA box (optional) -->
+      <!-- CTA box -->
       <div class="fc-card p-5">
         <h3 class="text-lg font-extrabold text-yellow-200">Fuel the Season</h3>
         <p class="mt-1 text-sm text-zinc-300">Every dollar supports travel, equipment, and academic tutoring.</p>
@@ -265,7 +282,7 @@
   </div>
 </section>
 
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+<script nonce="{{ __nonce }}">
 (() => {
   const root = document.getElementById('program-pulse');
   if (!root || root.__init) return; root.__init = true;
@@ -496,7 +513,7 @@
   }
   window.fcAddSponsorPulseLogo = addLogoToRibbon;
 
-  // Hook for live updates (optional)
+  // Live updates (optional Socket.IO)
   if (typeof window.io === 'function') {
     try {
       const sock = window.io('/sponsors', { transports: ['websocket','polling'] });
@@ -505,10 +522,14 @@
         // Update totals
         const curTotal = parseFloat(root.dataset.total || '0');
         const curCount = parseInt(root.dataset.count || '0', 10);
-        root.dataset.total = String(curTotal + (+payload.amount||0));
+        const newTotal = curTotal + (+payload.amount||0);
+        root.dataset.total = String(newTotal);
         root.dataset.count = String(curCount + 1);
-        if (totalEl) totalEl.textContent = fmt0(curTotal + (+payload.amount||0));
+        if (totalEl) totalEl.textContent = fmt0(newTotal);
         if (countEl) countEl.textContent = String(curCount + 1);
+        // (Optional) Analytics hook
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({event:'sponsor_update', sponsor_tier: payload.tier||'', sponsor_amount: +payload.amount||0});
       });
     } catch(_) {}
   }

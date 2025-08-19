@@ -1,21 +1,32 @@
-"""
-Transaction model — stores payment/donation transactions.
-"""
+# -----------------------------------------------------------------------------
+# Transaction Model
+# Stores payment/donation transactions (cents). Can link to Sponsor/Goal.
+# -----------------------------------------------------------------------------
 
-import uuid
+from __future__ import annotations
+
+import uuid as _uuid
+
+from sqlalchemy import CheckConstraint, Index
 from app.extensions import db
 from .mixins import TimestampMixin, SoftDeleteMixin
 
 
 class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "transactions"
+    __table_args__ = (
+        CheckConstraint("amount_cents >= 0", name="ck_tx_amount_nonneg"),
+        Index("ix_tx_goal", "campaign_goal_id"),
+        Index("ix_tx_sponsor", "sponsor_id"),
+        Index("ix_tx_status", "status"),
+    )
 
     id = db.Column(db.Integer, primary_key=True)
     uuid = db.Column(
         db.String(36),
         unique=True,
         nullable=False,
-        default=lambda: str(uuid.uuid4()),
+        default=lambda: str(_uuid.uuid4()),
         index=True,
         doc="Publicly-safe unique identifier for this transaction",
     )
@@ -51,13 +62,14 @@ class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
     donor_name = db.Column(
         db.String(120),
         nullable=True,
-        doc="Optional name of the donor for this transaction",
+        doc="Optional donor name associated to this transaction",
     )
 
     donor_email = db.Column(
         db.String(255),
         nullable=True,
-        doc="Optional email of the donor",
+        index=True,
+        doc="Optional donor email",
     )
 
     campaign_goal_id = db.Column(
@@ -73,22 +85,18 @@ class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
         db.ForeignKey("sponsors.id", ondelete="SET NULL"),
         nullable=True,
         index=True,
-        doc="If transaction came from a sponsor",
+        doc="If transaction came from/relates to a Sponsor",
     )
 
     # Relationships
-    campaign_goal = db.relationship("CampaignGoal", backref="transactions", lazy="select")
-    sponsor = db.relationship("Sponsor", backref="transactions", lazy="select")
+    campaign_goal = db.relationship("CampaignGoal", backref=db.backref("transactions", lazy="dynamic"))
+    sponsor = db.relationship("Sponsor", backref=db.backref("transactions", lazy="dynamic"))
 
-    def __repr__(self) -> str:
-        return (
-            f"<Transaction {self.uuid} "
-            f"${self.amount_cents / 100:.2f} "
-            f"status={self.status}>"
-        )
-
+    # Convenience
     @property
     def amount_dollars(self) -> float:
-        """Amount in dollars for display."""
-        return self.amount_cents / 100.0
+        return round((self.amount_cents or 0) / 100.0, 2)
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Transaction {self.uuid} ${self.amount_dollars:,.2f} status={self.status}>"
 

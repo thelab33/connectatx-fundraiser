@@ -1,11 +1,5 @@
-**/*.min.css
-**/*.map
-dist/**
-build/**
-app/static/css/tailwind.min.css
-app/static/css/**/*.min.css
-app/static/css/vendor/**
+node_modules
+dist
+build
+*.min.css
 app/static/css/output.css
-app/static/css/dist/**
-app/static/css/tailwind.min.css
-

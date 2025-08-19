@@ -1,14 +1,18 @@
+<!-- FC:HERO_SV_ELITE v2 (deduped, CSP-safe, a11y, LCP-friendly) -->
 {# ========================================================================
-   hero_and_fundraiser.html — SV Centered (SAFE MODE, Jinja-hardened)
-   - Avoids nested {{ }} inside CSS/JS strings (sets --accent once)
-   - Larger hero, centered headline, aligned meter + sleek chips
-   - Accessible, LCP-safe, motion-aware, public APIs preserved
+   hero_and_fundraiser.html — SV Centered, Pro-Polished, CSP-safe
+   - Centered headline with contrast plate + tiny stroke
+   - Larger hero height; stronger top gradient for readability
+   - Milestone chips; Web Share; A/B microcopy
+   - Robust meters; keeps updateHeroMeter() & getHeroMeter()
+   - Runtime de-duper: removes extra hero instances on the page
    ======================================================================== #}
 {% set NONCE     = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set ACCENT    = theme_hex|default('#facc15') %}
+{% set theme_hex = theme_hex|default('#facc15') %}
 {% set team_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set HERO_TITLE = 'Connect ATX Elite — Fundraiser' %}
 
-{# Numbers (robust to "$12,345") #}
+{# --- Numbers (robust to "$12,345") --- #}
 {% set _fr = (funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is defined else 0.0 %}
 {% set _fg = (fundraising_goal|string)|replace('$','')|replace(',','')|float if fundraising_goal is defined and fundraising_goal else 10000.0 %}
 {% set funds_raised = _fr %}
@@ -16,7 +20,7 @@
 {% set pct_raw = 100.0 * (funds_raised / (fundraising_goal if fundraising_goal else 1)) %}
 {% set pct = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) | round(1) %}
 
-{# Background (team > fallbacks) #}
+{# --- Background (team > fallbacks) --- #}
 {% set _input_src = (
   (team.hero_bg if team and team.hero_bg is defined and team.hero_bg) or
   (team.hero_image if team and team.hero_image is defined and team.hero_image) or
@@ -24,9 +28,9 @@
   (team.photo_url  if team and team.photo_url  is defined and team.photo_url) or
   none
 ) %}
-{% set _default_jpg       = 'images/connect-atx-team.jpg' %}
-{% set _default_logo_webp = 'images/logo.webp' %}
-{% set _default_logo_avif = 'images/logo.avif' %}
+{% set _default_jpg        = 'images/connect-atx-team.jpg' %}
+{% set _default_logo_webp  = 'images/logo.webp' %}
+{% set _default_logo_avif  = 'images/logo.avif' %}
 
 {% if _input_src %}
   {% if '://' in _input_src or _input_src.startswith('data:') %}
@@ -54,7 +58,7 @@
 {% endif %}
 {% set logo_avif = (url_for('static', filename=_default_logo_avif) if url_for is defined else '/static/' ~ _default_logo_avif) %}
 
-{# Other knobs #}
+{# --- Other knobs --- #}
 {% set fundraiser_deadline   = fundraiser_deadline if fundraiser_deadline is defined and fundraiser_deadline else '2025-12-31T23:59:59' %}
 {% set quick_donate_amounts  = quick_donate_amounts if quick_donate_amounts is defined and quick_donate_amounts else [25,50,100,250] %}
 {% set stripe_publishable_key= stripe_publishable_key|default('') %}
@@ -66,6 +70,7 @@
 {% set goal_heat_enabled     = goal_heat_enabled if goal_heat_enabled is defined else true %}
 {% set ab_copy               = ab_copy if ab_copy is defined and ab_copy else ["Your $25 covers 1 practice", "$25 = 1 practice pass"] %}
 
+{# --- Brand tail + focal point --- #}
 {% set BRAND = 'Connect ATX Elite' %}
 {% set show_brand_tail = (team_name|lower != BRAND|lower) %}
 {% set hero_focus = (team.hero_focus if team and team.hero_focus is defined and team.hero_focus else '50% 24%') %}
@@ -73,7 +78,7 @@
 <section id="fc-hero"
          class="relative overflow-clip min-h-[82vh] sm:min-h-[88vh]"
          aria-labelledby="fc-hero-title"
-         style="--accent: {{ ACCENT }}; --hero-offset: clamp(2.75rem, 10vw, 10rem);">
+         style="--fc-hero-accent: {{ theme_hex }}; --hero-offset: clamp(3.25rem, 12vw, 10rem);">
   <!-- Background -->
   <div class="absolute inset-0">
     <picture>
@@ -84,7 +89,7 @@
            data-fallback="{{ hero_fallback }}"
            alt="{{ team_name }} team photo"
            width="1920" height="1080"
-           class="h-full w-full object-cover opacity-0 will-change-[filter,opacity]"
+           class="h-full w-full object-cover will-change-[filter,opacity]"
            style="object-position: {{ hero_focus }};"
            loading="eager" decoding="async" fetchpriority="high" sizes="100vw">
     </picture>
@@ -94,29 +99,34 @@
     <div class="noise-layer mix-blend-soft-light" aria-hidden="true"></div>
   </div>
 
-  <!-- Content card -->
+  <!-- Content (centered, offset into photo) -->
   <div class="relative fc-section">
-    <div class="mx-auto fc-hero-card rounded-3xl p-5 sm:p-7 lg:p-8 max-w-7xl"
+    <div class="mx-auto fc-hero-card rounded-3xl p-5 sm:p-7 lg:p-8 max-w-7xl relative z-[1]"
          style="margin-top: var(--hero-offset);">
-      <!-- Headline (centered) -->
+      <p id="sr-live" class="sr-only" aria-live="polite"></p>
+
+      <!-- Headline -->
       <div class="flex flex-col items-center text-center gap-3 sm:gap-4">
-        <h1 id="fc-hero-title"
-            class="fc-title-glow text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
-          <span class="inline-block bg-clip-text text-transparent fc-hero-title-gradient">
-            {{ team_name }}
-          </span>
-          {% if show_brand_tail %}
-            <span class="ml-1 opacity-90">{{ BRAND }}</span>
-          {% else %}
-            <span class="ml-2 align-top text-lg sm:text-xl text-zinc-300/90">— Fundraiser</span>
-          {% endif %}
-        </h1>
+        <div class="fc-title-wrap">
+          <h1 id="fc-hero-title"
+              class="fc-title-glow text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
+            <span class="inline-block bg-clip-text text-transparent fc-hero-title-gradient fc-title-text">
+              {{ team_name }}
+            </span>
+            {% if show_brand_tail %}
+              <span class="ml-1 opacity-90">{{ BRAND }}</span>
+            {% else %}
+              <span class="ml-2 align-top text-lg sm:text-xl text-zinc-300/90">— Fundraiser</span>
+            {% endif %}
+          </h1>
+        </div>
+
         <p id="fc-ab-copy"
            class="text-[13px] sm:text-base text-zinc-50/95 bg-black/35 backdrop-blur px-3 py-1 rounded-full ring-1 ring-white/10">
           Every dollar fuels travel, uniforms, and training. You’re part of the story.
         </p>
 
-        <!-- Countdown -->
+        <!-- Countdown (compact) -->
         <div class="grid grid-cols-4 gap-2 text-center select-none"
              role="timer" aria-live="polite" aria-describedby="fc-deadline">
           {% for key in ['Days','Hrs','Min','Sec'] %}
@@ -131,9 +141,8 @@
       <!-- Body -->
       <div class="mt-5 sm:mt-7 grid lg:grid-cols-5 items-stretch gap-5">
         <!-- Progress -->
-        <section class="lg:col-span-3 h-full flex flex-col" aria-labelledby="fc-progress-title" style="--align-pad:.5rem;">
-          <div class="flex-1 rounded-2xl p-4 sm:p-5 ring-1 ring-white/10 bg-gradient-to-br from-white/5 to-white/0"
-               style="margin-top: var(--align-pad);">
+        <section class="lg:col-span-3 h-full flex flex-col" aria-labelledby="fc-progress-title">
+          <div class="flex-1 rounded-2xl p-4 sm:p-5 ring-1 ring-white/10 bg-gradient-to-br from-white/5 to-white/0">
             <h2 id="fc-progress-title" class="sr-only">Fundraising progress</h2>
 
             <div class="flex items-end justify-between gap-4">
@@ -197,7 +206,6 @@
           <div class="flex-1 rounded-2xl p-4 sm:p-5 ring-1 ring-white/10 bg-white/5 flex flex-col gap-3 sm:gap-4">
             <h2 id="fc-quick-actions" class="sr-only">Quick actions</h2>
 
-            <!-- Amount chips (sleek) -->
             <div class="grid grid-cols-2 gap-2">
               {% for amt in quick_donate_amounts %}
               <button type="button"
@@ -205,7 +213,7 @@
                              bg-white/[.06] hover:bg-white/[.10] ring-1 ring-white/15
                              shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)]
                              transition"
-                      style="color:#0b0b0c; background: color-mix(in srgb, var(--accent) 92%, transparent);
+                      style="color:#0b0b0c; background: color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 92%, transparent);
                              text-shadow: 0 1px 0 rgba(255,255,255,.35);"
                       data-amount="{{ amt }}"
                       aria-label="Quick donate {{ amt }} dollars">
@@ -224,20 +232,13 @@
               <span id="fc-share-ok" class="text-xs text-emerald-300 hidden">Link copied</span>
             </div>
 
-            <!-- Pill row -->
             <div class="flex gap-2">
               <button type="button" id="fc-donate"
-                      class="fc-pill flex-1 rounded-full px-4 py-2.5 sm:py-3 font-extrabold text-zinc-950
-                             ring-1 ring-white/10 hover:brightness-105 transition"
-                      style="background: linear-gradient(180deg, #fffef6, #f6eab4);
-                             box-shadow: 0 6px 18px rgba(250, 204, 21, .20) inset, 0 8px 28px rgba(0,0,0,.25);">
+                      class="flex-1 rounded-xl px-4 py-2.5 sm:py-3 font-semibold bg-white/10 hover:bg-white/15 ring-1 ring-white/10">
                 💸 Quick Donate
               </button>
               <a href="{{ become_sponsor_href }}"
-                 class="fc-pill rounded-full px-4 py-2.5 sm:py-3 font-extrabold text-zinc-950
-                        ring-1 ring-[color:var(--accent)] hover:brightness-105 transition"
-                 style="background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 88%, #ffffff), var(--accent));
-                        box-shadow: 0 8px 28px color-mix(in srgb, var(--accent) 30%, transparent);">
+                 class="rounded-xl px-4 py-2.5 sm:py-3 font-semibold bg-emerald-500/90 hover:bg-emerald-500">
                 🤝 Become a Sponsor
               </a>
             </div>
@@ -275,35 +276,89 @@
     </div>
   </div>
 
-  <!-- Scoped CSS (no nested Jinja in CSS) -->
+  <noscript>
+    <div class="absolute bottom-3 left-3 text-xs text-zinc-300 bg-black/50 px-2 py-1 rounded">
+      JavaScript disabled: live meter & countdown paused.
+    </div>
+  </noscript>
+
   <style nonce="{{ NONCE }}">
-    #fc-hero{ --hero-grad-top:.40; --hero-grad-mid:.22; --hero-grad-bot:.72; --hero-noise:.12; --heat:0 }
-    #fc-hero .fc-hero-card{ backdrop-filter: blur(12px) saturate(120%); -webkit-backdrop-filter: blur(12px) saturate(120%);
-      background: rgba(255,255,255,.06); box-shadow: 0 10px 40px -10px rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.10); }
-    #fc-hero .fc-hero-title-gradient{ background-image: linear-gradient(90deg, var(--accent), #ffffff); }
-    #fc-hero .fc-hero-grad{ position:absolute;inset:0; background:linear-gradient(to bottom,
-      rgba(0,0,0,var(--hero-grad-top)) 0%, rgba(0,0,0,var(--hero-grad-mid)) 36%, rgba(12,12,12,var(--hero-grad-bot)) 100%); }
-    #fc-hero .fc-hero-glow{ pointer-events:none; position:absolute; inset:0;
-      box-shadow: 0 0 120px 40px color-mix(in oklab, var(--accent) 22%, transparent) inset; }
-    #fc-hero .heat-layer{ pointer-events:none; position:absolute; inset:0;
-      background: radial-gradient(120% 80% at 50% 0%, var(--accent) 0%, transparent 60%);
-      opacity: calc(0.12 + 0.28 * var(--heat)); transition: opacity .6s ease; }
-    #fc-hero .noise-layer{ pointer-events:none; position:absolute; inset:0; opacity:var(--hero-noise);
-      background-image: radial-gradient(transparent 60%, rgba(0,0,0,.45)),
-        url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 fill=%22none%22/><circle cx=%226%22 cy=%226%22 r=%221%22 fill=%22%23fff%22 fill-opacity=%220.06%22/></svg>');
-      background-size: cover, 48px 48px; }
-    @keyframes fc-shine{0%{transform:translateX(-100%)}100%{transform:translateX(100%)}}
-    #fc-hero .fc-shine{ background:linear-gradient(90deg,transparent,rgba(255,255,255,.9),transparent); opacity:.2; mix-blend-mode:overlay; animation:fc-shine 3s linear infinite; }
-    #fc-hero .fc-bar{ background:linear-gradient(90deg, var(--accent), #22c55e); }
-    @keyframes fcTicker{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
-    #fc-hero .ticker-row{ animation:fcTicker 24s linear infinite }
-    @media (prefers-reduced-motion:reduce){ #fc-hero *{ animation:none!important; transition:none!important } }
-    #fc-hero .fc-title-glow{ text-shadow: 0 1px 0 rgba(0,0,0,.25), 0 8px 28px color-mix(in oklab, var(--accent) 25%, transparent); }
-    #fc-hero #fc-hero-img{ transition: opacity .45s ease }
+    /* Readability plate behind title */
+    #fc-hero .fc-title-wrap{ position:relative; display:inline-block; }
+    #fc-hero .fc-title-wrap::before{
+      content:""; position:absolute; inset:-.35rem -.9rem; border-radius:1.25rem;
+      background:
+        radial-gradient(60% 70% at 50% 45%, rgba(0,0,0,.62), transparent 78%),
+        linear-gradient(to bottom, rgba(0,0,0,.20), transparent 60%);
+      filter: blur(8px); z-index:-1;
+    }
+    #fc-hero .fc-title-text{ letter-spacing:-.02em; }
+    @supports(-webkit-text-stroke:1px black){
+      #fc-hero .fc-title-text{ -webkit-text-stroke:.6px rgba(0,0,0,.55); }
+    }
+    /* Title glow */
+    #fc-hero .fc-title-glow{
+      text-shadow:
+        0 1px 0 rgba(0,0,0,.60),
+        0 16px 40px rgba(0,0,0,.45),
+        0 0 26px color-mix(in oklab, var(--fc-hero-accent, {{ theme_hex }}) 30%, transparent);
+    }
+    /* Darkening stack for readability */
+    .fc-hero-grad{
+      position:absolute; inset:0;
+      background:
+        linear-gradient(to top, rgba(0,0,0,.68) 0%, rgba(0,0,0,.24) 38%, rgba(0,0,0,.10) 60%, transparent 75%),
+        linear-gradient(to bottom, rgba(0,0,0,.25), transparent 55%);
+      pointer-events:none;
+    }
+    .fc-hero-glow{
+      position:absolute; inset:-10% -10% auto -10%; height:42%;
+      background: radial-gradient(60% 100% at 50% 100%, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 30%, transparent), transparent 70%);
+      filter: blur(24px);
+      opacity:.45; pointer-events:none;
+    }
+    .heat-layer{
+      position:absolute; inset:0; pointer-events:none;
+      opacity: calc(0.15 + (var(--heat,0) * .55));
+      background:
+        radial-gradient(40% 22% at 50% 22%, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 24%, transparent), transparent 70%),
+        radial-gradient(50% 16% at 10% 16%, rgba(255,255,255,.08), transparent 70%);
+      mix-blend-mode: screen;
+    }
+    .noise-layer{
+      position:absolute; inset:0; opacity:.08; pointer-events:none;
+      background-image:
+        repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 2px),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 2px);
+    }
+    /* Progress bar visuals */
+    .fc-bar{
+      background:
+        linear-gradient(90deg, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 90%, transparent), #fff);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.25),
+        0 4px 18px color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 35%, transparent);
+    }
+    .fc-shine{ background: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 35%, rgba(255,255,255,.12)); mix-blend-mode: overlay; }
+    /* Ticker */
+    #fc-hero .ticker-row{ animation: fc-ticker 32s linear infinite; }
+    @keyframes fc-ticker{ from{ transform: translateX(0); } to{ transform: translateX(-50%); } }
+    /* LCP-friendly image reveal */
+    #fc-hero #fc-hero-img{ opacity:1 !important; }
+    @media (prefers-reduced-motion:no-preference){
+      #fc-hero #fc-hero-img{ transition: opacity .45s ease; }
+    }
   </style>
 
   {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
   (() => {
+    // --- Runtime de-duper: keep first hero, remove the rest (prevents double render)
+    const allHeroes = document.querySelectorAll('section#fc-hero');
+    if (allHeroes.length > 1) {
+      for (let i = 1; i < allHeroes.length; i++) {
+        try { allHeroes[i].setAttribute('aria-hidden','true'); allHeroes[i].remove(); } catch {}
+      }
+    }
     if (window.__fcHeroInit) return; window.__fcHeroInit = true;
 
     const VIPS = {{ vip_thresholds|tojson|safe }};
@@ -340,14 +395,16 @@
       deadline: new Date('{{ fundraiser_deadline }}'),
     };
 
+    // Confetti with prefers-reduced-motion guard
     const burstConfetti = (function(){return function(n=24){try{
+      const prm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
+      if (prm && prm.matches) return;
       const c=document.createElement('canvas');c.width=innerWidth;c.height=240;
       Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60});
       document.body.appendChild(c);
       const ctx=c.getContext('2d');
       const p=Array.from({length:n}).map(()=>({x:Math.random()*c.width,y:-20-Math.random()*60,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,r:2+Math.random()*4,a:1}));
-      const styles=getComputedStyle(document.documentElement);
-      const accent=styles.getPropertyValue('--accent').trim()||'#facc15';
+      const accent=getComputedStyle(document.documentElement).getPropertyValue('--fc-hero-accent').trim()||'{{ theme_hex }}';
       const colors=['#ffffff',accent,'#22c55e','#60a5fa','#eab308'];
       (function tick(){
         ctx.clearRect(0,0,c.width,c.height);
@@ -362,7 +419,7 @@
       const from=parseFloat((el.textContent||'0').replace(/[^0-9.-]/g,''))||0;
       const start=performance.now();
       (function step(t){
-        const k=clamp((t-start)/dur,0,1),e=1-Math.pow(1-k,3);
+        const k=Math.min(Math.max((t-start)/dur,0),1),e=1-Math.pow(1-k,3);
         el.textContent=fmtMoney(from+(to-from)*e);
         if(k<1) requestAnimationFrame(step);
       })(start);
@@ -378,27 +435,22 @@
 
     function setProgress(raised=state.raised,goal=state.goal){
       state.raised=+raised||0; state.goal=Math.max(+goal||1,1);
-      const pct=clamp((state.raised/state.goal)*100,0,100);
-
+      const pct=Math.min(Math.max((state.raised/state.goal)*100,0),100);
       els.bar && (els.bar.style.width=pct.toFixed(1)+'%');
       els.pct && (els.pct.textContent=pct.toFixed(1));
       els.goal && (els.goal.textContent=fmtMoney(state.goal));
       els.raised && tweenNumber(els.raised,state.raised);
       els.progressWrap && els.progressWrap.setAttribute('aria-valuenow', pct.toFixed(1));
       milestoneHint(pct, state.raised, state.goal);
-
       [25,50,75,100].forEach(m=>{
         const ms=document.getElementById('fc-ms-'+m);
         const wrap=ms?.closest('.group'); wrap&&wrap.classList.toggle('active', pct>=m-0.01);
       });
-
-      if ({{ 'true' if goal_heat_enabled else 'false' }}) {
-        els.root && els.root.style.setProperty('--heat',(pct/100).toFixed(3));
-      }
+      HEAT_ON && els.root && els.root.style.setProperty('--heat',(pct/100).toFixed(3));
 
       try{
         const key='fc_vip_hit',prev=parseFloat(sessionStorage.getItem(key)||'0');
-        const crossed=[...{{ vip_thresholds|tojson|safe }}].sort((a,b)=>a-b).find(th=>prev<th && state.raised>=th);
+        const crossed=[...VIPS].sort((a,b)=>a-b).find(th=>prev<th && state.raised>=th);
         if(crossed){sessionStorage.setItem(key,String(crossed)); burstConfetti(24+Math.min(48,crossed/250));}
       }catch{}
 
@@ -429,7 +481,7 @@
       if(!btn) return;
       btn.addEventListener('click', async (e)=>{
         e.preventDefault();
-        const data={ title: document.title.replace(/ — .*/,''), text: 'Back our team—every dollar helps!', url: location.href };
+        const data={ title: document.title.replace(/ — .*/,''), text:'Back our team—every dollar helps!', url: location.href };
         try{ if(navigator.share){ await navigator.share(data); ok?.classList.remove('hidden'); setTimeout(()=>ok?.classList.add('hidden'), 1200); return; } }catch{}
         try{ await navigator.clipboard.writeText(data.url); sr && (sr.textContent='Link copied.'); ok?.classList.remove('hidden'); setTimeout(()=>ok?.classList.add('hidden'), 1200); }catch{}
       });
@@ -459,6 +511,7 @@
       const d=e.detail||{}; window.updateHeroMeter(d.raised,d.goal);
     },{passive:true});
 
+    // Public API
     window.updateHeroMeter = (raised,goal)=> setProgress(raised ?? state.raised, goal ?? state.goal);
     window.getHeroMeter    = ()=> ({ raised: state.raised, goal: state.goal });
   })();

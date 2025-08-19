@@ -1,39 +1,29 @@
-"""
-Donation Model — Prestige Tier
-──────────────────────────────────────────────────────────────
-Represents a single donor contribution to a campaign or team.
-
-💎 Prestige Enhancements:
-    1. Stripe/PayPal–friendly cents-based storage (int → safe math)
-    2. Tier classification auto-derivation
-    3. Relationship to Team & CampaignGoal (optional linking)
-    4. Automatic CampaignGoal sync on insert/update/delete
-    5. Animated counter-ready serialization for frontends
-    6. Donor ticker data (logo, anonymization, short name)
-    7. Milestone badge detection (big donor, VIP, first-time)
-    8. Ambient glow / tier pulse metadata in JSON output
-    9. CSP-safe logo URL handling (no inline eval)
-    10. Light/Dark auto-tuning metadata for UI theming
-"""
+# -----------------------------------------------------------------------------
+# Donation Model — Prestige Tier
+# Cents-based, tier auto-derivation, optional team/goal links,
+# and CampaignGoal sync on insert/update/delete.
+# -----------------------------------------------------------------------------
 
 from __future__ import annotations
-from datetime import datetime
+
 from typing import Any, Dict, Optional
-from sqlalchemy import event
+from urllib.parse import urlparse
+
+from sqlalchemy import CheckConstraint, Index, event
 from app.extensions import db
 from .mixins import TimestampMixin, SoftDeleteMixin
 
-DONATION_TIERS = (
-    "Platinum",
-    "Gold",
-    "Silver",
-    "Bronze",
-    "Supporter",
-)
+DONATION_TIERS = ("Platinum", "Gold", "Silver", "Bronze", "Supporter")
 
 
 class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "donations"
+    __table_args__ = (
+        CheckConstraint("amount_cents >= 0", name="ck_donations_amount_nonneg"),
+        Index("ix_donations_team_status", "team_id", "deleted_at"),
+        Index("ix_donations_goal", "campaign_goal_id"),
+        Index("ix_donations_email", "email"),
+    )
 
     # ─── Identifiers ───────────────────────────────────────────
     id: int = db.Column(db.Integer, primary_key=True)
@@ -48,10 +38,11 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         doc="Platinum / Gold / Silver / Bronze / Supporter (auto-derived if not set)",
     )
 
-    # ─── Financials ────────────────────────────────────────────
+    # ─── Financials (cents) ────────────────────────────────────
     amount_cents: int = db.Column(
         db.Integer,
         nullable=False,
+        default=0,
         doc="Donation amount in cents (Stripe/PayPal safe)",
     )
 
@@ -59,7 +50,7 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
     logo_path: Optional[str] = db.Column(
         db.String(255),
         nullable=True,
-        doc="Optional donor logo path for ticker display",
+        doc="Optional donor logo path or URL for ticker display",
     )
 
     # ─── Relationships ─────────────────────────────────────────
@@ -76,21 +67,16 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         nullable=True,
     )
 
+    # Keep backrefs simple to avoid mapper collisions across apps.
     team = db.relationship("Team", backref=db.backref("donations", lazy="dynamic"))
-    campaign_goal = db.relationship(
-        "CampaignGoal",
-        backref=db.backref("donations", lazy="dynamic"),
-    )
-
-    # ─── Meta ──────────────────────────────────────────────────
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    campaign_goal = db.relationship("CampaignGoal", backref=db.backref("donations", lazy="dynamic"))
 
     # ==========================================================
     # Computed Properties
     # ==========================================================
     @property
     def amount_dollars(self) -> float:
-        return (self.amount_cents or 0) / 100
+        return round((self.amount_cents or 0) / 100.0, 2)
 
     @property
     def computed_tier(self) -> str:
@@ -99,19 +85,21 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         amt = self.amount_dollars
         if amt >= 5000:
             return "Platinum"
-        elif amt >= 2500:
+        if amt >= 2500:
             return "Gold"
-        elif amt >= 1000:
+        if amt >= 1000:
             return "Silver"
-        elif amt >= 500:
+        if amt >= 500:
             return "Bronze"
         return "Supporter"
 
     @property
     def short_name(self) -> str:
         """Shortened donor name for ticker display."""
-        parts = self.name.split()
-        return f"{parts[0]} {parts[1][0]}." if len(parts) > 1 else parts[0]
+        parts = (self.name or "").split()
+        if not parts:
+            return "Anonymous"
+        return f"{parts[0]} {parts[1][0]}." if len(parts) > 1 and parts[1] else parts[0]
 
     @property
     def milestone_badge(self) -> Optional[str]:
@@ -119,9 +107,9 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         amt = self.amount_dollars
         if amt >= 10000:
             return "💎 Mega Donor"
-        elif amt >= 5000:
+        if amt >= 5000:
             return "🏆 VIP"
-        elif amt >= 1000:
+        if amt >= 1000:
             return "🥇 Champion"
         return None
 
@@ -142,14 +130,28 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         }
 
     # ==========================================================
-    # Mutators
+    # Mutators / Validators
     # ==========================================================
     def set_amount_dollars(self, dollars: float) -> None:
-        self.amount_cents = int(round(dollars * 100))
+        self.amount_cents = int(round((dollars or 0) * 100))
 
     def auto_assign_tier(self) -> None:
         if not self.tier:
             self.tier = self.computed_tier
+
+    @staticmethod
+    def _sanitize_logo_url(raw: Optional[str]) -> Optional[str]:
+        """CSP-safe logo path: allow only http(s) or app-relative paths."""
+        if not raw:
+            return None
+        raw = raw.strip()
+        if raw.startswith("/"):
+            return raw
+        p = urlparse(raw)
+        if p.scheme in {"http", "https"} and p.netloc:
+            return raw
+        # Fallback: treat as relative to static root
+        return f"/{raw}" if not raw.startswith("/") else raw
 
     # ==========================================================
     # Serialization
@@ -161,54 +163,59 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
             "short_name": self.short_name,
             "email": self.email,
             "tier": self.computed_tier,
-            "amount_cents": self.amount_cents,
+            "amount_cents": int(self.amount_cents or 0),
             "amount_dollars": self.amount_dollars,
-            "logo_path": self.logo_path,
+            "logo_path": self._sanitize_logo_url(self.logo_path),
             "milestone_badge": self.milestone_badge,
             "ui_theme": self.ui_theme_meta,
-            "created_at": self.created_at.isoformat(),
+            "created_at": self.created_at.isoformat() if self.created_at else None,
+            "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_team and self.team:
             data["team"] = {
                 "id": self.team.id,
-                "name": self.team.team_name,
-                "slug": self.team.slug,
+                "name": getattr(self.team, "team_name", None),
+                "slug": getattr(self.team, "slug", None),
             }
         return data
 
     # ==========================================================
     # Representation
     # ==========================================================
-    def __repr__(self) -> str:
-        return (
-            f"<Donation {self.name} ${self.amount_dollars:.2f} "
-            f"Tier={self.computed_tier}>"
-        )
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"<Donation {self.name} ${self.amount_dollars:,.2f} Tier={self.computed_tier}>"
+
 
 
 # ─── Event Hooks ──────────────────────────────────────────────
+
 @event.listens_for(Donation, "before_insert")
 @event.listens_for(Donation, "before_update")
-def donation_before_save(mapper, connection, target: Donation) -> None:
-    """Auto-assign tier before saving."""
+def _donation_before_save(mapper, connection, target: Donation) -> None:
     target.auto_assign_tier()
+    # Normalize logo for CSP safety
+    target.logo_path = Donation._sanitize_logo_url(target.logo_path)
 
 
 @event.listens_for(Donation, "after_insert")
 @event.listens_for(Donation, "after_update")
 @event.listens_for(Donation, "after_delete")
-def donation_after_change(mapper, connection, target: Donation) -> None:
+def _donation_after_change(mapper, connection, target: Donation) -> None:
     """Sync active CampaignGoal totals after any donation change."""
-    if target.team_id:
-        from .campaign_goal import CampaignGoal
-        session = db.session.object_session(target)
-        if session:
-            active_goal = (
-                session.query(CampaignGoal)
-                .filter_by(team_id=target.team_id, active=True)
-                .order_by(CampaignGoal.created_at.desc())
-                .first()
-            )
-            if active_goal:
-                active_goal.update_progress_from_donations(commit=False)
+    if not target.team_id:
+        return
+    from .campaign_goal import CampaignGoal  # local import to avoid cycles
+    session = db.session.object_session(target)
+    if not session:
+        return
+    active_goal = (
+        session.query(CampaignGoal)
+        .filter_by(team_id=target.team_id, active=True)
+        .order_by(CampaignGoal.created_at.desc())
+        .first()
+    )
+    if active_goal:
+        # Recompute from Sponsors/Donations (your CampaignGoal method sums Sponsors;
+        # extend it (optionally) to include Donations as well, or add a parallel method).
+        active_goal.update_progress_from_donations(commit=False)
 

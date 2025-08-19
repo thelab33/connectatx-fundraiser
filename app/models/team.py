@@ -1,4 +1,3 @@
-# app/models/team.py
 # -----------------------------------------------------------------------------
 # Team Model
 # Branding, theme config, roster/stats, SEO assets, and fundraising links.
@@ -38,7 +37,6 @@ TEAM_CONFIG_DEFAULT: Dict[str, Any] = {
 
 class Team(db.Model, TimestampMixin, SoftDeleteMixin):
     """Brand & theme configuration for a team, plus roster, sponsors & stats."""
-
     __tablename__ = "teams"
 
     # ── Identity ────────────────────────────────────────────────
@@ -71,6 +69,7 @@ class Team(db.Model, TimestampMixin, SoftDeleteMixin):
     custom_css = db.Column(db.String(255))
 
     # ── Record & Impact Stats (JSON) ────────────────────────────
+    # Use Postgres JSONB when available; fall back to plain JSON for SQLite.
     record = db.Column(
         JSONB().with_variant(db.JSON, "sqlite"),
         nullable=False,
@@ -99,7 +98,7 @@ class Team(db.Model, TimestampMixin, SoftDeleteMixin):
         lazy="selectin",
     )
 
-    # Properly symmetric with CampaignGoal.team (back_populates) — avoids backref collisions
+    # Symmetric with CampaignGoal.team (back_populates) — avoids backref collisions
     campaign_goals = db.relationship(
         "CampaignGoal",
         back_populates="team",
@@ -132,7 +131,6 @@ class Team(db.Model, TimestampMixin, SoftDeleteMixin):
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
         if include_players:
-            # lazy="selectin" returns a list; be tolerant either way
             players_iter = getattr(self, "players", []) or []
             data["players"] = [p.as_dict() for p in players_iter]
         return data

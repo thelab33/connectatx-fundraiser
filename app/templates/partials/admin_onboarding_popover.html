@@ -1,32 +1,34 @@
 {# =============================================================================
-   Admin Onboarding Popover — Elite (CSP/HTMX/Alpine-optional, Single-file)
+   Admin Onboarding Popover — SV Elite (CSP/HTMX/Alpine-optional, Single-file)
    - Safe route resolution (no lambdas), brand-aware styling
-   - Vanilla JS core + BroadcastChannel (cross-tab), reduced-motion aware
+   - Vanilla JS + BroadcastChannel (cross-tab), reduced-motion aware
    - Works with or without Alpine/HTMX; includes Alpine adapter
    ============================================================================= #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set HAS   = has_endpoint is defined %}
-{% set brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set team_key    = (team.id if team and team.id is defined else 'global') %}
-{% set storage_key = 'adminOnboardSteps:' ~ team_key %}
-{% set step_labels = step_labels if step_labels is defined else ['Visit Dashboard','Invite Sponsors','Import Contacts'] %}
-{% set csrf_val    = (csrf_token() if csrf_token is defined else '') %}
+{% set NONCE        = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set HAS_ENDPOINT = has_endpoint is defined %}
+{% set brand_color  = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set team_key     = (team.id if team and team.id is defined else 'global') %}
+{% set storage_key  = 'adminOnboardSteps:' ~ team_key %}
+{% set step_labels  = step_labels if step_labels is defined else ['Visit Dashboard','Invite Sponsors','Import Contacts'] %}
+{% set csrf_val     = (csrf_token() if csrf_token is defined else '') %}
 
 {# ---- Safe routes (no lambdas) ---- #}
-{% set href_dashboard = (safe_url_for('admin.dashboard')          if (safe_url_for is defined and HAS and has_endpoint('admin.dashboard'))          else '/admin/') %}
-{% set href_invite    = (safe_url_for('admin.invite')             if (safe_url_for is defined and HAS and has_endpoint('admin.invite'))             else '/admin/invite') %}
-{% set href_import    = (safe_url_for('admin.import_contacts')    if (safe_url_for is defined and HAS and has_endpoint('admin.import_contacts'))    else '/admin/import') %}
-{% set href_dismiss   = (safe_url_for('admin.dismiss_onboarding') if (safe_url_for is defined and HAS and has_endpoint('admin.dismiss_onboarding')) else '/admin/dismiss-onboarding') %}
-{% set href_sync      = (safe_url_for('admin.onboarding_sync')    if (safe_url_for is defined and HAS and has_endpoint('admin.onboarding_sync'))    else '/admin/onboarding/sync') %}
+{% set _sf = safe_url_for is defined and safe_url_for %}
+{% set href_dashboard = (_sf and HAS_ENDPOINT and has_endpoint('admin.dashboard')          and safe_url_for('admin.dashboard'))          or '/admin/' %}
+{% set href_invite    = (_sf and HAS_ENDPOINT and has_endpoint('admin.invite')             and safe_url_for('admin.invite'))             or '/admin/invite' %}
+{% set href_import    = (_sf and HAS_ENDPOINT and has_endpoint('admin.import_contacts')    and safe_url_for('admin.import_contacts'))    or '/admin/import' %}
+{% set href_dismiss   = (_sf and HAS_ENDPOINT and has_endpoint('admin.dismiss_onboarding') and safe_url_for('admin.dismiss_onboarding')) or '/admin/dismiss-onboarding' %}
+{% set href_sync      = (_sf and HAS_ENDPOINT and has_endpoint('admin.onboarding_sync')    and safe_url_for('admin.onboarding_sync'))    or '/admin/onboarding/sync' %}
 
-{% if current_user and current_user.is_authenticated and current_user.is_admin and not session.get('onboarded') %}
+{# Only render if authenticated admin and not yet onboarded #}
+{% if (current_user is defined) and current_user and current_user.is_authenticated and (current_user.is_admin or current_user.is_staff) and not session.get('onboarded') %}
 <div
   id="admin-onboarding"
   class="fixed bottom-6 right-6 z-[1050] w-[22rem] max-w-[92vw] rounded-2xl border border-yellow-400/25 bg-zinc-950/95 p-5 text-zinc-100 shadow-2xl backdrop-blur-xl opacity-0 translate-y-2"
   role="dialog" aria-modal="true" aria-labelledby="admin-ob-title" aria-describedby="admin-ob-desc" tabindex="-1"
-  data-key="{{ storage_key }}"
-  data-sync="{{ href_sync }}"
-  data-dc="{{ csrf_val }}"
+  data-storage-key="{{ storage_key }}"
+  data-sync-url="{{ href_sync }}"
+  data-csrf="{{ csrf_val }}"
   style="
     --fc-brand: {{ brand_color }};
     --fc-brand-200: color-mix(in srgb, {{ brand_color }} 20%, transparent);
@@ -40,8 +42,8 @@
   </p>
 
   <!-- Progress -->
-  <div class="mt-3">
-    <div class="h-2 w-full overflow-hidden rounded-full bg-zinc-800 ring-1 ring-[color:var(--fc-brand-200)]" aria-hidden="true">
+  <div class="mt-3" aria-hidden="true">
+    <div class="h-2 w-full overflow-hidden rounded-full bg-zinc-800 ring-1 ring-[color:var(--fc-brand-200)]">
       <div id="ob-bar" class="h-full bg-gradient-to-r from-yellow-400 to-amber-300 transition-[width] duration-500" style="width:0%"></div>
     </div>
     <div class="mt-1 text-right text-[11px] text-zinc-400">
@@ -59,7 +61,7 @@
         aria-checked="false"
         class="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded border border-yellow-400/40 bg-zinc-900/70 focus:outline-none focus:ring-2 focus:ring-yellow-300"
         data-toggle
-        aria-label="Mark step as complete"
+        aria-label="Mark step {{ loop.index }} ({{ lbl }}) as complete"
       >
         <span class="hidden" aria-hidden="true">✔️</span>
       </button>
@@ -122,15 +124,17 @@
 (() => {
   const root = document.getElementById('admin-onboarding');
   const tip  = document.getElementById('ai-concierge-tip');
+
+  // Render-guard if not eligible (e.g., not admin or already onboarded)
   if (!root || root.__init) return; root.__init = true;
 
   // Utils
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection?.saveData === true);
-  const $ = (sel, el = document) => el.querySelector(sel);
+  const $  = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
-  const getKey  = () => root.dataset.key || 'adminOnboardSteps:global';
-  const getSync = () => root.dataset.sync || '';
-  const getCSRF = () => root.dataset.dc || (document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/)?.[1] || '');
+  const getKey  = () => root.dataset.storageKey || 'adminOnboardSteps:global';
+  const getSync = () => root.dataset.syncUrl || '';
+  const getCSRF = () => root.dataset.csrf || (document.cookie.match(/(?:^|;\\s*)csrf_token=([^;]+)/)?.[1] || '');
 
   function confettiLite(){ try { window.launchConfetti?.({ particleCount: 60, spread: 80, origin: { y: .6 } }); } catch(_){} }
 
@@ -159,7 +163,10 @@
 
   // Cross-tab sync
   let bc = null;
-  try { bc = new BroadcastChannel(getKey()); bc.onmessage = (ev) => { if (Array.isArray(ev.data)) { steps = ev.data; paint(); } }; } catch {}
+  try {
+    bc = new BroadcastChannel(getKey());
+    bc.onmessage = (ev) => { if (Array.isArray(ev.data)) { steps = ev.data; paint(); } };
+  } catch {}
 
   // Paint UI
   function paint(){
@@ -215,12 +222,17 @@
 
   // Bindings
   $('#ob-dismiss')?.addEventListener('click', () => close(true));
-  $('#ob-reset')?.addEventListener('click', () => { steps = new Array(labels.length).fill(false); paint(); try{ localStorage.removeItem(getKey()); }catch{} persist(); });
+  $('#ob-reset')?.addEventListener('click', () => {
+    steps = new Array(labels.length).fill(false); paint();
+    try{ localStorage.removeItem(getKey()); }catch{}
+    persist();
+  });
 
-  $$('#ob-steps [data-toggle]').forEach((btn, idx) => {
-    btn.addEventListener('click', () => toggle(+btn.closest('[data-step]').dataset.step));
+  $$('#ob-steps [data-toggle]').forEach(btn => {
+    const idx = +btn.closest('[data-step]').dataset.step;
+    btn.addEventListener('click', () => toggle(idx));
     btn.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(+btn.closest('[data-step]').dataset.step); }
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(idx); }
     });
   });
 
@@ -242,7 +254,7 @@
   function open(){
     root.style.opacity = '1';
     root.style.transform = 'translateY(0)';
-    root.focus();
+    try { root.focus({preventScroll:true}); } catch {}
     untrap = trapFocus(root);
   }
   function close(persistFlag){

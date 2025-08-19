@@ -16,8 +16,8 @@ from werkzeug.routing import BuildError
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Core extensions
-from app.extensions import db, migrate, socketio, mail, csrf, cors, login_manager, babel
+# Core extensions (note: no 'migrate' here anymore)
+from app.extensions import db, socketio, mail, csrf, cors, login_manager, babel
 
 # Optional extras
 try:
@@ -32,6 +32,18 @@ try:
     from flask_wtf.csrf import generate_csrf
 except Exception:  # pragma: no cover
     generate_csrf = None
+
+# Sentry (optional)
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.flask import FlaskIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+except Exception:  # pragma: no cover
+    sentry_sdk = None  # type: ignore
+
+# Flask-Migrate (use the class directly)
+from flask_migrate import Migrate
 
 ConfigLike = str | Type[Any]
 
@@ -55,12 +67,33 @@ def _mtime_or_now(path: Path) -> int:
     except Exception:
         return int(datetime.now(timezone.utc).timestamp())
 
+class _RequestIDFilter(logging.Filter):
+    """Inject g.request_id into all records as 'request_id'."""
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            rid = getattr(g, "request_id", "-")
+        except Exception:
+            rid = "-"
+        setattr(record, "request_id", rid)
+        return True
+
 def _configure_logging(app: Flask) -> None:
-    if not logging.getLogger().handlers:
-        logging.basicConfig(
-            level=app.config.get("LOG_LEVEL", "INFO"),
-            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
-        )
+    # Ensure a formatter with request_id is used
+    fmt = "%(asctime)s [%(levelname)s] %(name)s [rid=%(request_id)s]: %(message)s"
+    root = logging.getLogger()
+    if not root.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter(fmt))
+        handler.addFilter(_RequestIDFilter())
+        root.addHandler(handler)
+        root.setLevel(app.config.get("LOG_LEVEL", "INFO"))
+    else:
+        # Add filter + formatter to existing handlers
+        for h in root.handlers:
+            h.addFilter(_RequestIDFilter())
+            if not isinstance(h.formatter, logging.Formatter) or "%(request_id)s" not in (h.formatter._fmt or ""):
+                h.setFormatter(logging.Formatter(fmt))
+
     logging.getLogger("werkzeug").setLevel(app.config.get("WERKZEUG_LOG_LEVEL", "WARNING"))
     app.logger.info("Loaded config: %s | DEBUG=%s", app.config.get("ENV", "?"), app.debug)
     app.logger.info("DB: %s", app.config.get("SQLALCHEMY_DATABASE_URI", "<unset>"))
@@ -84,18 +117,17 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
     disable = {p.strip().lower() for p in os.getenv("DISABLE_BPS", "").split(",") if p.strip()}
     mod_key = dotted.split(".")[-1].lower()
     if mod_key in disable:
-        app.logger.info(f"⏭️  Disabled module: {dotted}")
+        app.logger.info("⏭️  Disabled module: %s", dotted)
         return False
 
     try:
         mod = import_module(dotted)
     except Exception as e:
-        app.logger.warning(f"⚠️  Import failed: {dotted} → {e}")
+        app.logger.warning("⚠️  Import failed: %s → %s", dotted, e)
         return False
 
-    from flask import Blueprint as _BP  # local import to avoid import cycles
+    from flask import Blueprint as _BP  # local import to avoid cycles
 
-    # Try requested attr(s) first, then common fallbacks.
     wanted = _iter_candidates(attr) + ["bp", "api_bp", "main_bp", "admin_bp"]
     bp = None
     for name in wanted:
@@ -105,19 +137,19 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
             break
 
     if not bp:
-        app.logger.warning(f"⚠️  No blueprint attr found in {dotted} (tried: {', '.join(wanted)})")
+        app.logger.warning("⚠️  No blueprint attr found in %s (tried: %s)", dotted, ", ".join(wanted))
         return False
 
     if bp.name in app.blueprints:
-        app.logger.info(f"⏭️  Already registered: {bp.name}")
+        app.logger.info("⏭️  Already registered: %s", bp.name)
         return False
 
     try:
         app.register_blueprint(bp, url_prefix=url_prefix or getattr(bp, "url_prefix", None))
-        app.logger.info(f"🧩 Registered: {bp.name:<20} → {url_prefix or '/'}")
+        app.logger.info("🧩 Registered: %-20s → %s", bp.name, url_prefix or "/")
         return True
     except Exception as exc:
-        app.logger.error(f"❌ Failed to register {dotted}:{bp.name}: {exc}", exc_info=True)
+        app.logger.error("❌ Failed to register %s:%s: %s", dotted, bp.name, exc, exc_info=True)
         return False
 
 # Regex for auto-nonce injection on stray tags (optional, cheap, guarded)
@@ -134,7 +166,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         template_folder=str(BASE_DIR / "app/templates"),
     )
 
-    # Config
+    # Load config
     cfg = _resolve_config(config_class)
     try:
         app.config.from_object(cfg)
@@ -149,12 +181,33 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     app.config.setdefault("JSON_SORT_KEYS", False)
     app.config.setdefault("JSON_AS_ASCII", False)
     app.config.setdefault("PROPAGATE_EXCEPTIONS", False)
-    app.config.setdefault("AUTO_NONCE_HTML", True)  # auto-inject nonce on stray <script>/<style>
+    app.config.setdefault("AUTO_NONCE_HTML", True)
     app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
     app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
     app.config.setdefault("SESSION_COOKIE_SECURE", app.config.get("ENV") == "production")
 
     _configure_logging(app)
+
+    # Sentry (auto-init if DSN present)
+    dsn = os.getenv("SENTRY_DSN", "").strip()
+    if dsn and sentry_sdk:
+        try:
+            sentry_sdk.init(
+                dsn=dsn,
+                integrations=[
+                    FlaskIntegration(),
+                    LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+                    SqlalchemyIntegration(),
+                ],
+                traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+                profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+                send_default_pii=False,
+                environment=app.config.get("ENV", "development"),
+                release=os.getenv("GIT_COMMIT"),
+            )
+            app.logger.info("🪶 Sentry initialized")
+        except Exception as e:
+            app.logger.warning("Sentry init failed: %s", e)
 
     # CORS
     cors_origins = _parse_cors_origins(app.config.get("ENV", "development"))
@@ -170,16 +223,28 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
 
     # Security headers / CSP (Talisman optional; we still set precise headers below)
     if app.config.get("ENV") == "production" and Talisman:
-        # Let us manage CSP ourselves to include PayPal/Stripe/Socket.IO
         Talisman(app, content_security_policy=None)
 
     # Extensions
-    if csrf: csrf.init_app(app)
+    if csrf:
+        csrf.init_app(app)
     db.init_app(app)
-    migrate.init_app(app, db)
+
+    # ✅ Migrations (SQLite-friendly batching + type diffs)
+    Migrate(app, db, compare_type=True, render_as_batch=True)
+
+    app.socketio = socketio
     socketio.init_app(app, cors_allowed_origins=cors_origins if cors_origins else "*")
     mail.init_app(app)
-    if Compress: Compress(app)
+    if Compress:
+        Compress(app)
+
+    # ✅ CLI commands (import after db/init so they can use models)
+    try:
+        from app.cli.db_tools import dbcli
+        app.cli.add_command(dbcli)
+    except Exception as e:
+        app.logger.warning("⚠️ dbcli not available: %s", e)
 
     # Request bootstrap (nonce, request id, timing)
     @app.before_request
@@ -187,6 +252,15 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         g.csp_nonce = secrets.token_urlsafe(16)
         g.request_id = request.headers.get("X-Request-ID", uuid4().hex)
         g._start_ts = time.perf_counter()
+        # Sentry per-request tagging
+        try:
+            if sentry_sdk:
+                with sentry_sdk.configure_scope() as scope:
+                    scope.set_tag("request_id", g.request_id)
+                    scope.set_tag("endpoint", request.endpoint or "")
+                    scope.set_user({"ip_address": request.access_route[0] if request.access_route else request.remote_addr})
+        except Exception:
+            pass
 
     # Template access to nonce (both csp_nonce() and NONCE)
     @app.context_processor
@@ -202,11 +276,9 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         nonce = getattr(g, "csp_nonce", "")
 
         # Build CSP with payment + websocket + CDN allowances
-        # Stripe + PayPal + Socket.IO (cdn + wss)
         stripe_js = "https://js.stripe.com"
         stripe_api = "https://api.stripe.com"
         paypal_core = "https://www.paypal.com"
-        paypal_objs = "https://*.paypalobjects.com"
         paypal_all  = "https://*.paypal.com"
         paypal_api_live = "https://api-m.paypal.com"
         paypal_api_sbx  = "https://api-m.sandbox.paypal.com"
@@ -243,7 +315,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         except Exception:
             pass
 
-        # Optional: auto-inject nonce into stray tags in HTML bodies (defense-in-depth)
+        # Optional: auto-inject nonce into stray tags in HTML bodies
         try:
             if (
                 app.config.get("AUTO_NONCE_HTML", True)
@@ -260,7 +332,6 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
                     text = STYLE_TAG.sub(_add_nonce, text)
                     resp.set_data(text)
         except Exception:
-            # Never fail a response over best-effort HTML post-process
             pass
 
         return resp
@@ -312,7 +383,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
             "team": team_default,  # overridden by real team in views when available
         }
 
-    # JSON errors for API requests / JSON Accept header
+    # JSON errors (API-friendly)
     def _wants_json() -> bool:
         accept = (request.headers.get("Accept") or "").lower()
         return "application/json" in accept or request.path.startswith("/api") or request.is_json
@@ -328,9 +399,11 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
 
     # Blueprints (attr supports fallbacks: bp|api_bp|main_bp)
     blueprints = [
-        ("app.routes.main",  "main_bp|bp", "/"),
-        ("app.routes.api",   "bp|api_bp",  "/api"),
-        ("app.admin.routes", "bp|admin_bp","/admin"),
+        ("app.routes.main",            "main_bp|bp", "/"),
+        ("app.routes.api",             "bp|api_bp",  "/api"),
+        ("app.admin.routes",           "bp|admin_bp","/admin"),
+        ("app.blueprints.fc_payments", "bp",         "/payments"),
+        ("app.blueprints.fc_metrics",  "bp",         "/metrics"),
     ]
     for dotted, attr, prefix in blueprints:
         _safe_register(app, dotted, attr, prefix)

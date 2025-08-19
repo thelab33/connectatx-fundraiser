@@ -14,9 +14,10 @@ from __future__ import annotations
 import importlib
 import inspect
 import logging
+import os
 import pkgutil
 from types import ModuleType
-from typing import Any, Dict, Iterable, List, Optional, Tuple, Type
+from typing import Any, List, Optional, Tuple, Type
 
 from app.extensions import db  # expose db everywhere
 
@@ -35,7 +36,7 @@ from .player import Player  # noqa: F401
 from .sponsor import Sponsor  # noqa: F401
 from .transaction import Transaction  # noqa: F401
 from .campaign_goal import CampaignGoal  # noqa: F401
-from .sponsor_click import SponsorClick  # analytics beacons table (added)  # noqa: F401
+from .sponsor_click import SponsorClick  # noqa: F401  # analytics beacons table
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Optional models that may or may not exist in a given deployment
@@ -49,10 +50,12 @@ OPTIONAL_MODELS: List[Tuple[str, str]] = [
 
 _loaded_optional: List[str] = []
 
+
 def _try_import_optional() -> None:
     for module_name, class_name in OPTIONAL_MODELS:
+        modpath = f"app.models.{module_name}"
         try:
-            module: ModuleType = importlib.import_module(f"app.models.{module_name}")
+            module: ModuleType = importlib.import_module(modpath)
             model_cls = getattr(module, class_name)
             globals()[class_name] = model_cls  # export into this package
             _loaded_optional.append(class_name)
@@ -60,6 +63,7 @@ def _try_import_optional() -> None:
         except (ImportError, AttributeError) as e:
             # keep noise low in production; INFO is fine
             logger.info("ℹ️ Optional model '%s' not loaded: %s", class_name, e)
+
 
 _try_import_optional()
 
@@ -70,7 +74,6 @@ _try_import_optional()
 # - Controlled by env flag: MODELS_AUTODISCOVER (default: True)
 #   Set to False if you want to only rely on explicit imports above.
 # ───────────────────────────────────────────────────────────────────────────────
-import os
 _AUTODISCOVER = os.getenv("MODELS_AUTODISCOVER", "true").lower() not in {"0", "false", "no"}
 _DISCOVERY_SKIP = {
     "__init__", "mixins", "base", "enums", "types", "typing", "tests", "test", "conftest",
@@ -80,46 +83,49 @@ _DISCOVERY_SKIP = {
     *{m for m, _ in OPTIONAL_MODELS},
 }
 
+
 def _is_sqla_model(obj: Any) -> bool:
-    """Best-effort: object is a subclass of db.Model (but not the class itself)."""
+    """Best-effort: object is a subclass of db.Model (but not the base class)."""
     try:
         return inspect.isclass(obj) and issubclass(obj, db.Model) and obj is not db.Model
     except Exception:
         return False
 
+
 def _discover_models(package_name: str = "app.models") -> List[str]:
     if not _AUTODISCOVER:
         logger.debug("Model discovery disabled via MODELS_AUTODISCOVER=0")
         return []
+
     loaded: List[str] = []
     try:
         pkg = importlib.import_module(package_name)
-        if not hasattr(pkg, "__path__"):
+        pkg_path = getattr(pkg, "__path__", None)
+        if not pkg_path:
             return []
 
-        for finder, modname, ispkg in pkgutil.iter_modules(pkg.__path__):
-            if ispkg:
-                continue
-            if modname in _DISCOVERY_SKIP:
-                continue
-            if modname.startswith(("_", ".")):
+        for _finder, modname, ispkg in pkgutil.iter_modules(pkg_path):
+            if ispkg or modname in _DISCOVERY_SKIP or modname.startswith(("_", ".")):
                 continue
             try:
                 module = importlib.import_module(f"{package_name}.{modname}")
-                # pull any db.Model subclasses into globals() so Alembic sees them
                 exported = 0
+                # pull any db.Model subclasses into globals() so Alembic sees them
                 for name, obj in inspect.getmembers(module, _is_sqla_model):
-                    globals()[name] = obj
+                    if name not in globals():
+                        globals()[name] = obj
                     loaded.append(name)
                     exported += 1
                 if exported:
-                    logger.debug("🔎 Discovered %d model(s) in '%s': %s", exported, modname, ", ".join(n for n in globals() if n in loaded))
+                    logger.debug("🔎 Discovered %d model(s) in '%s': %s", exported, modname, ", ".join(n for n in loaded if n in globals()))
             except Exception as e:
                 logger.info("ℹ️ Skipped auto-import of '%s' due to: %s", modname, e)
                 continue
     except Exception as e:
         logger.info("ℹ️ Model discovery unavailable: %s", e)
+
     return loaded
+
 
 _loaded_discovered = _discover_models()
 
@@ -152,33 +158,25 @@ def iter_models() -> List[Any]:
             out.append(obj)
     return out
 
+
 def iter_sqla_models() -> List[Type[db.Model]]:
-    """
-    Returns only SQLAlchemy model classes (subclasses of db.Model).
-    """
+    """Returns only SQLAlchemy model classes (subclasses of db.Model)."""
     return [m for m in iter_models() if _is_sqla_model(m)]
 
+
 def get_model(name: str) -> Optional[Type[Any]]:
-    """
-    Lookup a model class by exported name, case-sensitive.
-    Example: get_model("Team") -> <class Team> or None
-    """
+    """Lookup a model class by exported name, case-sensitive."""
     return globals().get(name)
 
+
 # Eager check (debug only): helps catch typos while developing
-if os.getenv("FLASK_DEBUG", "1") not in {"0", "false", "no"}:
+if os.getenv("FLASK_DEBUG", "1").lower() not in {"0", "false", "no"}:
     try:
         _cnt = len(iter_sqla_models())
-        logger.debug("📦 models loaded: %d (core=%d, optional=%d, discovered=%d)",
-                     _cnt, 6, len(_loaded_optional), len(_loaded_discovered))
+        logger.debug(
+            "📦 models loaded: %d (core=%d, optional=%d, discovered=%d)",
+            _cnt, 6, len(_loaded_optional), len(_loaded_discovered),
+        )
     except Exception:
         pass
-
-# ───────────────────────────────────────────────────────────────────────────────
-# Type hints for IDEs / mypy (no runtime import cost)
-# ───────────────────────────────────────────────────────────────────────────────
-if False:  # TYPE_CHECKING would import even when running mypy plugins with Alembic; keep dead at runtime
-    from .example import Example  # noqa: F401
-    from .sms_log import SMSLog  # noqa: F401
-    from .user import User  # noqa: F401
 

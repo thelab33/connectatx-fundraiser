@@ -1,10 +1,11 @@
+/* eslint-disable no-empty */
 /* app/static/js/starforge_enhancements.js */
 /* Vanilla, CSP-safe, no dependencies. */
 (() => {
   'use strict';
   if (window.__STARFORGE_READY__) return; window.__STARFORGE_READY__ = true;
 
-  const $ = (s, ctx=document)=>ctx.querySelector(s);
+  const $ = (s, ctx=document)=>ctx.querySelector(s); void $;
   const $$ = (s, ctx=document)=>Array.from(ctx.querySelectorAll(s));
   const clamp = (n, a, b)=>Math.min(b, Math.max(a, n));
 
