@@ -1,5 +1,5 @@
 {# =========================
-   base.html — FundChamps SaaS Base
+   base.html — FundChamps SaaS Base (SV-polished)
    - Uses local CSS: brand.tokens.css, tailwind.min.css, output.css, fc_prestige.css
    - CSP-safe (NONCE on inline <script>)
    ========================= #}
@@ -19,6 +19,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0b0b0c" id="meta-theme-color" />
     <title>{% block title %}Connect ATX Elite{% endblock %}</title>
 
     {% block meta %}{% endblock %}
@@ -248,6 +249,122 @@
     clearTimeout(debounce);
     debounce = setTimeout(() => window.htmx.trigger(panel, 'refresh'), 600);
   }, { passive:true });
+})();
+    </script>
+
+    {# =====================================================================
+       ⭐ SV Upscale — 5 feature add-ons
+       1) Header micro-meter (#hdr-meter) support
+       2) Reveal-on-scroll (.fc-reveal)
+       3) Anchor scroll-spy for in-page sections
+       4) Back-to-top progress ring sync
+       5) Deep-link donate + theme-color polish
+       ===================================================================== #}
+    <script nonce="{{ NONCE }}">
+(() => {
+  /* (1) Header micro-meter */
+  if (!window.__fcHdrMeter) {
+    window.__fcHdrMeter = true;
+    const hdr = document.getElementById('hdr-meter');
+    if (hdr) {
+      const track = hdr.querySelector('.track') || Object.assign(document.createElement('div'), { className:'track relative h-[6px] bg-white/20 rounded-full overflow-hidden' });
+      if (!hdr.querySelector('.track')) hdr.appendChild(track);
+      const fill  = track.querySelector('.fill') || Object.assign(document.createElement('div'), { className:'fill', style:'width:0%' });
+      if (!track.querySelector('.fill')) track.appendChild(fill);
+      const sr    = hdr.querySelector('.sr')   || Object.assign(document.createElement('span'), { className:'sr' });
+      if (!hdr.querySelector('.sr')) hdr.appendChild(sr);
+      const pctLabel = hdr.querySelector('[data-hdr-pct]');
+
+      const set = (raised, goal) => {
+        const pct = Math.max(0, Math.min(100, (raised/Math.max(goal||1,1))*100));
+        fill.style.width = pct.toFixed(1) + '%';
+        if (pctLabel) pctLabel.textContent = pct.toFixed(0) + '%';
+        sr.textContent = `${Math.round(pct)} percent of goal`;
+      };
+      addEventListener('fc:meter:update', e => {
+        const d = e.detail || {};
+        set(+d.raised || 0, +d.goal || 1);
+      }, { passive:true });
+    }
+  }
+
+  /* (2) Reveal-on-scroll */
+  if (!window.__fcReveal) {
+    window.__fcReveal = true;
+    const els = Array.from(document.querySelectorAll('.fc-reveal'));
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((ents) => {
+        ents.forEach(ent => ent.isIntersecting && ent.target.classList.add('is-visible'));
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+      els.forEach(el => io.observe(el));
+    } else {
+      els.forEach(el => el.classList.add('is-visible'));
+    }
+  }
+
+  /* (3) Anchor scroll-spy (lightweight) */
+  if (!window.__fcSpy) {
+    window.__fcSpy = true;
+    const targets = ['mission','program-stats','tiers','sponsor-hub','sponsor-spotlight','sponsor-wall-widget','sponsor-wall','newsletter'];
+    const links = Array.from(document.querySelectorAll('a[href^="#"]')).filter(a => targets.includes(a.getAttribute('href').slice(1)));
+    if (links.length) {
+      const map = new Map(links.map(l => [l.getAttribute('href').slice(1), l]));
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(ent => {
+          const id = ent.target.id, link = map.get(id); if (!link) return;
+          if (ent.isIntersecting) {
+            links.forEach(a => { a.classList.remove('active'); a.removeAttribute('aria-current'); });
+            link.classList.add('active'); link.setAttribute('aria-current', 'page');
+          }
+        });
+      }, { rootMargin: '-25% 0px -60% 0px', threshold: 0.01 });
+      map.forEach((_, id) => { const sec = document.getElementById(id); if (sec) io.observe(sec); });
+    }
+  }
+
+  /* (4) Back-to-top progress ring sync */
+  if (!window.__fcTopRing) {
+    window.__fcTopRing = true;
+    const ring = document.querySelector('#back-to-top .ring-wrap');
+    if (ring) {
+      const onScroll = () => {
+        const h = document.documentElement;
+        const p = (h.scrollTop) / Math.max(1, (h.scrollHeight - h.clientHeight));
+        ring.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+      };
+      addEventListener('scroll', onScroll, { passive:true });
+      onScroll();
+    }
+  }
+
+  /* (5) Deep-link donate + theme-color polish */
+  if (!window.__fcDeepLink) {
+    window.__fcDeepLink = true;
+
+    // Set theme-color to site background (keeps mobile address bar seamless)
+    try {
+      const meta = document.getElementById('meta-theme-color') || document.querySelector('meta[name="theme-color"]');
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--fc-bg-900').trim() || '#0b0b0c';
+      if (meta) meta.setAttribute('content', bg || '#0b0b0c');
+    } catch {}
+
+    // Handle ?donate=### or #donate
+    try {
+      const url = new URL(location.href);
+      const amt = url.searchParams.get('donate') || url.searchParams.get('amount');
+      const wantsDonate = !!amt || (location.hash.toLowerCase() === '#donate');
+      if (wantsDonate) {
+        const hero = document.getElementById('fc-hero');
+        hero && hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+          // Fire a semantic event pages/partials can react to (modal, redirect, etc.)
+          dispatchEvent(new CustomEvent('fc:open:donation', { detail: { amount: amt ? Number(amt) : 0 }}));
+          // Fallback: click the hero donate button if present
+          document.getElementById('fc-donate')?.click();
+        }, 180);
+      }
+    } catch {}
+  }
 })();
     </script>
 

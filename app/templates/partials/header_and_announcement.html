@@ -36,7 +36,7 @@
 <header
   id="{{ _hdr_id }}"
   role="banner"
-  class="sticky top-0 z-50 border-b transition-all bg-black/80 border-[color:var(--fc-brand-200)]"
+  class="sticky top-0 z-50 transition-all bg-black/80 border-b"
   data-stats-url="{{ stats_url }}"
   data-tenant="{{ tenant_slug }}"
   style="
@@ -45,6 +45,7 @@
     --fc-brand-200: color-mix(in srgb, {{ brand_color }} 18%, transparent);
     --fc-brand-300: color-mix(in srgb, {{ brand_color }} 40%, black);
     --fc-brand-text: #111827;
+    border-color: var(--fc-brand-200);
   "
   data-analytics="header"
 >
@@ -60,32 +61,45 @@
     #{{ _hdr_id }} .announce { background: linear-gradient(90deg, var(--fc-brand), #fef08a); color: var(--fc-brand-text); }
     #{{ _hdr_id }} .announce a { text-decoration: underline; }
 
-    /* Mini meter */
-    #{{ _hdr_id }} .mini-meter { height: .5rem; border-radius: 9999px; overflow: hidden; }
-    #{{ _hdr_id }} .mini-bg { background: rgba(255,255,255,.06); }
-    #{{ _hdr_id }} .mini-bar {
+    /* Desktop nav + active state (used by scroll-spy) */
+    #{{ _hdr_id }} .hdr-nav a { position:relative; transition:color .15s ease; }
+    #{{ _hdr_id }} .hdr-nav a:hover { color: var(--fc-brand); }
+    #{{ _hdr_id }} .hdr-nav a.active { color: var(--fc-brand); }
+    #{{ _hdr_id }} .hdr-nav a.active::after{
+      content:""; position:absolute; left:0; right:0; bottom:-6px; height:2px;
+      background: linear-gradient(90deg, var(--fc-brand), #fde68a); border-radius:2px;
+    }
+
+    /* Mini meter (container + track + fill to match base.html addon) */
+    #{{ _hdr_id }} #hdr-meter { display:flex; align-items:center; gap:.5rem; }
+    #{{ _hdr_id }} #hdr-meter .track{
+      width: 160px; height: 6px; border-radius: 9999px; overflow: hidden;
+      background: rgba(255,255,255,.12);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    #{{ _hdr_id }} #hdr-meter .fill{
       width: 0%;
-      background: linear-gradient(90deg, #fde68a, var(--fc-brand), #f59e0b);
+      height: 100%;
+      background: linear-gradient(90deg, #fffbe6, var(--fc-brand), #f59e0b);
       transition: width .8s cubic-bezier(.22,1,.36,1);
     }
+    #{{ _hdr_id }} #hdr-meter [data-hdr-pct]{ font-variant-numeric: tabular-nums; font-size: 11px; color: #fde68a; }
+    #{{ _hdr_id }} #hdr-raised, 
+    #{{ _hdr_id }} #hdr-goal, 
+    #{{ _hdr_id }} #hdr-pct { font-variant-numeric: tabular-nums; }
 
     /* Mobile menu sheet */
     #{{ _hdr_id }}-mobile { position: fixed; inset: 0; background: rgba(0,0,0,.92); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
     #{{ _hdr_id }}-mobile[hidden] { display: none; }
     #{{ _hdr_id }}-mobile a { font-weight: 600; }
 
-    /* No-jank numbers */
-    #{{ _hdr_id }} #hdr-raised, 
-    #{{ _hdr_id }} #hdr-goal, 
-    #{{ _hdr_id }} #hdr-pct { font-variant-numeric: tabular-nums; }
-
     /* Save-Data mode trims effects */
     #{{ _hdr_id }}.save-data { backdrop-filter:none; -webkit-backdrop-filter:none; }
     #{{ _hdr_id }}.save-data .shrinkable, 
-    #{{ _hdr_id }}.save-data .mini-bar { transition: none !important; }
+    #{{ _hdr_id }}.save-data #hdr-meter .fill { transition: none !important; }
 
     @media (prefers-reduced-motion: reduce) {
-      #{{ _hdr_id }} .shrinkable, #{{ _hdr_id }} .mini-bar { transition: none !important; }
+      #{{ _hdr_id }} .shrinkable, #{{ _hdr_id }} #hdr-meter .fill { transition: none !important; }
     }
   </style>
 
@@ -134,11 +148,11 @@
       <span class="hidden sm:inline text-[color:var(--fc-brand)] drop-shadow">{{ team_name }}</span>
     </a>
 
-    {# Desktop Nav (no stray <li>) #}
-    <nav class="hidden md:flex items-center gap-8 font-semibold" aria-label="Primary">
-      <a href="#mission" class="transition-colors hover:text-[color:var(--fc-brand)]">Mission</a>
-      <a href="#tiers" class="transition-colors hover:text-[color:var(--fc-brand)]">Sponsorship Tiers</a>
-      <a href="#program-stats" class="transition-colors hover:text-[color:var(--fc-brand)]">Schedule</a>
+    {# Desktop Nav #}
+    <nav class="hdr-nav hidden md:flex items-center gap-8 font-semibold" aria-label="Primary">
+      <a href="#mission" class="transition-colors">Mission</a>
+      <a href="#tiers" class="transition-colors">Sponsorship Tiers</a>
+      <a href="#program-stats" class="transition-colors">Schedule</a>
       <a href="{{ (url_for('main.calendar') if url_for is defined else '/calendar') }}" class="hover:underline">Calendar</a>
     </nav>
 
@@ -167,16 +181,17 @@
     </div>
   </div>
 
-  {# ---------- Mini Fundraising Meter ---------- #}
+  {# ---------- Mini Fundraising Meter (container matches base addon) ---------- #}
   <div class="px-4 lg:px-8 pb-3">
-    <div class="mini-meter mini-bg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct|int }}" aria-label="Fundraising progress">
-      <div id="hdr-meter" class="mini-bar" style="width: {{ pct }}%"></div>
+    <div id="hdr-meter" aria-label="Fundraising progress">
+      <div class="track"><div class="fill"></div></div>
+      <span data-hdr-pct>0%</span>
+      <span id="hdr-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(funds_raised) }} of ${{ '{:,.0f}'.format(fundraising_goal) }} ({{ pct | round(0) }}%)</span>
     </div>
     <div class="mt-1 flex items-center justify-between text-[11px] text-yellow-200/85">
       <span id="hdr-raised">${{ '{:,.0f}'.format(funds_raised) }}</span>
       <span><span id="hdr-pct">{{ (pct | round(0)) | int }}</span>% • Goal <span id="hdr-goal">${{ '{:,.0f}'.format(fundraising_goal) }}</span></span>
     </div>
-    <span id="hdr-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(funds_raised) }} of ${{ '{:,.0f}'.format(fundraising_goal) }} ({{ pct | round(0) }}%)</span>
   </div>
 
   {# ---------- Trust Bar ---------- #}
@@ -237,19 +252,24 @@
     });
   });
 
-  /* ===== Theme toggle (persisted) ===== */
+  /* ===== Theme toggle (persisted + icon swap) ===== */
   const themeToggle = $(`#${id}-theme`);
   function applyTheme(mode){
     const root = document.documentElement;
     root.dataset.theme = mode;
+    if (themeToggle) themeToggle.textContent = (mode === 'light') ? '🌙' : '☀️';
     try { localStorage.setItem('fc_theme', mode); } catch(_) {}
   }
-  try { const saved = localStorage.getItem('fc_theme'); if (saved) applyTheme(saved); } catch(_) {}
+  try {
+    const saved = localStorage.getItem('fc_theme');
+    if (saved) applyTheme(saved);
+    else applyTheme(document.documentElement.dataset.theme || 'dark');
+  } catch(_) {}
   themeToggle?.addEventListener('click', () => {
     const next = (document.documentElement.dataset.theme === 'light') ? 'dark' : 'light';
     document.startViewTransition ? document.startViewTransition(()=>applyTheme(next)) : applyTheme(next);
   });
-  addEventListener('storage',e=>{ if(e.key==='fc_theme'&&e.newValue){ document.documentElement.dataset.theme=e.newValue; } });
+  addEventListener('storage',e=>{ if(e.key==='fc_theme'&&e.newValue){ applyTheme(e.newValue); } });
 
   /* ===== Announcement memory ===== */
   const ann = $(`#${id}-announcement`);
@@ -354,8 +374,11 @@
 
   /* ===== Meter sync (live + polling, partial updates supported) ===== */
   const meter = {
-    bar:   $('#hdr-meter', header),
+    root:  $('#hdr-meter', header),
+    track: $('#hdr-meter .track', header),
+    fill:  $('#hdr-meter .fill', header),
     pct:   $('#hdr-pct', header),
+    pctLbl:$('#hdr-meter [data-hdr-pct]', header),
     raised:$('#hdr-raised', header),
     goal:  $('#hdr-goal', header),
     sr:    $('#hdr-sr', header)
@@ -368,8 +391,9 @@
     last.raised = Number(raised ?? last.raised) || 0;
     last.goal   = Math.max(0, Number(goal ?? last.goal) || 0);
     const p = Math.max(0, Math.min(100, last.goal ? (last.raised/last.goal*100) : 0));
-    if (meter.bar)    meter.bar.style.width = p.toFixed(1) + '%';
+    if (meter.fill)   meter.fill.style.width = p.toFixed(1) + '%';
     if (meter.pct)    meter.pct.textContent = p.toFixed(0);
+    if (meter.pctLbl) meter.pctLbl.textContent = p.toFixed(0) + '%';
     if (meter.raised) meter.raised.textContent = fmtMoney(last.raised);
     if (meter.goal)   meter.goal.textContent   = fmtMoney(last.goal);
     if (meter.sr)     meter.sr.textContent     = `Raised ${fmtMoney(last.raised)} of ${fmtMoney(last.goal)} (${p.toFixed(0)}%)`;
@@ -400,6 +424,25 @@
     };
     poll();
   }, 1800);
+
+  /* ===== Optional: simple scroll-spy hookup for base's spy ===== */
+  (function(){
+    const ids = ['mission','program-stats','tiers','sponsor-hub','sponsor-spotlight','sponsor-wall','newsletter'];
+    const map = new Map(ids.map(i => [i, document.querySelector(`.hdr-nav a[href="#${i}"]`)]));
+    if (!('IntersectionObserver' in window)) return;
+    const links = Array.from(map.values()).filter(Boolean);
+    if (!links.length) return;
+    const io = new IntersectionObserver((ents)=>{
+      ents.forEach(ent=>{
+        const link = map.get(ent.target.id); if (!link) return;
+        if (ent.isIntersecting) {
+          links.forEach(a=>{ a.classList.remove('active'); a.removeAttribute('aria-current'); });
+          link.classList.add('active'); link.setAttribute('aria-current','page');
+        }
+      });
+    }, { rootMargin: '-25% 0px -60% 0px', threshold: 0.01 });
+    ids.forEach(i=>{ const sec=document.getElementById(i); if(sec) io.observe(sec); });
+  })();
 })();
 </script>
 

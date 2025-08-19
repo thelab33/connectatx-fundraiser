@@ -3,6 +3,7 @@
     background: var(--team-glass);
     background: linear-gradient(180deg, rgb(20 20 20 / 70%), rgb(20 20 20 / 86%)),
                 linear-gradient(125deg, var(--brand-soft), rgb(255 255 255 / 3%));
+
     @apply backdrop-blur-xl border rounded-2xl border-zinc-700/40 shadow-[0_18px_60px_rgba(212,175,55,0.16),inset_0_0_40px_rgba(212,175,55,0.07)];
   }
 
@@ -21,21 +22,27 @@
   .btn-loading::after { animation: spin 1s linear infinite; border: 2.6px solid #fff; border-radius: 9999px; border-top-color: transparent; content: ""; height: 1.1em; position: absolute; right: 1rem; top: 50%; transform: translateY(-50%); width: 1.1em; }
 
   .chip { @apply inline-flex items-center gap-1 rounded-full px-3 py-1 text-sm font-bold;
+
     background: color-mix(in oklab, var(--team-gold) 14%, transparent);
     border: 1px solid color-mix(in oklab, var(--team-gold) 40%, transparent);
   }
+
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-extrabold;
+
     background: color-mix(in oklab, var(--team-gold) 22%, transparent);
     border: 1px solid color-mix(in oklab, var(--team-gold) 50%, transparent);
     box-shadow: var(--badge-glow);
   }
 
   .toast { @apply fixed z-[1050] bottom-6 right-6 rounded-xl px-4 py-3 text-sm font-semibold shadow-2xl;
+
     background: linear-gradient(180deg, rgb(20 20 20 / 90%), rgb(20 20 20 / 84%));
     border: 1px solid var(--brand-soft-2);
   }
   .modal-backdrop { @apply fixed inset-0 bg-black/70 backdrop-blur-sm; }
+
   .modal { @apply fixed inset-x-0 top-[10vh] mx-auto w-[92vw] max-w-lg rounded-2xl p-5;
+
     background: linear-gradient(180deg, rgb(15 15 15 / 92%), rgb(15 15 15 / 86%));
     border: 1px solid var(--brand-soft-2);
   }
@@ -55,6 +62,7 @@
     color: var(--input-text);
     font-size: 1rem; line-height: 1.4;
     padding-top: 1.45rem;
+
     @apply w-full rounded-xl p-3 font-medium shadow-inner transition-colors duration-200 ease-in-out;
   }
   .input-group textarea { @apply min-h-[44px] max-h-[300px] resize-none overflow-y-hidden; }
@@ -80,6 +88,7 @@
     position: absolute; top: 1.25rem;
     transition: all .21s cubic-bezier(.4,0,.2,1), color .16s, background .28s; user-select: none; z-index: 10;
   }
+
   .input-group input:focus + label,
   .input-group input:not(:placeholder-shown) + label,
   .input-group textarea:focus + label,
@@ -118,8 +127,10 @@
 
   .input-clear {
     @apply pointer-events-none absolute right-3 top-1/2 z-10 -translate-y-1/2 cursor-pointer rounded border-0 bg-transparent text-current opacity-0 transition-opacity duration-200;
+
     font-size: 1.125rem; transition: opacity .2s, box-shadow .23s;
   }
+
   .input-group input[type="text"]:focus ~ .input-clear,
   .input-group input[type="text"]:hover ~ .input-clear,
   .input-group input[type="email"]:focus ~ .input-clear,
