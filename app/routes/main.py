@@ -241,7 +241,21 @@ def _home_context() -> Dict[str, Any]:
 def home():
     """Homepage with live stats and sponsor highlights."""
     try:
+        # Define FAQ data
+        faqs = [
+            {"q": "Is my gift tax-deductible?", "a": "Yes. We’ll email a receipt right away."},
+            {"q": "Can I sponsor anonymously?", "a": "Absolutely—toggle anonymous at checkout."},
+            {"q": "Corporate matching?", "a": "Yes. We’ll include the info HR portals need."},
+            {"q": "Refunds/cancellations?", "a": "Email team@connectatxelite.org and we’ll help."},
+            {"q": "Where does it go?", "a": "Gym time, travel, uniforms, tutoring—updated live."},
+        ]
+
+        # Other context data for the homepage
         context = _home_context()
+
+        # Add FAQ data to the context
+        context['faqs'] = faqs
+
         resp = make_response(render_template("index.html", **context))
         # Keep HTML fresh; stats JSON handles its own caching
         resp.cache_control.no_cache = True

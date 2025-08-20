@@ -196,3 +196,11 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
   #back-to-top:hover .ball{ transform: translateY(-1px); }
 }
 
+.hero-glass::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgb(11 12 15 / 90%),transparent 20%,transparent 80%,rgb(11 12 15 / 90%));pointer-events:none;}
+.donate-btn:hover{box-shadow:0 0 12px 2px color-mix(in srgb,var(--fc-brand) 60%,transparent);transform:translateY(-1px);transition:all .25s ease;}
+.fund-meter{background:linear-gradient(90deg,var(--fc-brand) 0%,#22c55e 50%,var(--fc-brand) 100%);background-size:200% 100%;animation:flow 3s linear infinite}
+
+@keyframes flow{0%{background-position:0 0}100%{background-position:200% 0}}
+.sponsor-marquee{display:flex;overflow:hidden;gap:2rem}.sponsor-marquee>div{flex-shrink:0;animation:scrollX 30s linear infinite}
+
+@keyframes scrollX{from{transform:translateX(100%)}to{transform:translateX(-100%)}}

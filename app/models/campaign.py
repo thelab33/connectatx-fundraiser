@@ -2,7 +2,7 @@
 from datetime import datetime
 from app.extensions import db
 
-class CampaignGoal(db.Model):
+# LEGACY REMOVED: class CampaignGoal(db.Model):
     __tablename__ = "campaign_goals"
     __table_args__ = {"extend_existing": True}  # ✅ prevent duplicate mapping
 

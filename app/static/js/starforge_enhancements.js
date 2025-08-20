@@ -86,3 +86,4 @@
     reveal(); hoverLift(); ctaHaptics(); quickDonate(); copyLinks(); hardenExternal(); lazyImages();
   }
 })();
+setInterval(()=>{document.querySelectorAll(".countdown-digit").forEach(el=>el.classList.toggle("animate-pulse"))},1000);

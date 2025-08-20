@@ -1,122 +1,52 @@
-{# =============================================================================
-   index.html — FundChamps Home (SV-Prestige, Conversion-Optimized)
-   ============================================================================ #}
 {% extends "base.html" %}
-
 {% block title %}Connect ATX Elite — Home{% endblock %}
 {% block h1 %}Connect ATX Elite — Fundraising Home{% endblock %}
 
-{% set __NONCE = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
-{% set _team   = team if team is defined and team else none %}
-{% set _name   = (_team.team_name if _team and _team.team_name else "Connect ATX Elite") %}
-{% set _brand  = (_team.theme_color if _team and _team.theme_color else "#facc15") %}
-{% set _hero   = (_team.hero_bg if _team and _team.hero_bg else None) %}
-{% set _goal   = (fundraising_goal if fundraising_goal is defined else 10000) %}
-{% set _raised = (funds_raised if funds_raised is defined else 0) %}
-{% set _stripe_pk = (stripe_publishable_key if stripe_publishable_key is defined else '') %}
-
-{% block content %}
+{% block hero %}
   {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-  {% include "partials/about_section.html" ignore missing with context %}
-  {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
-  {% include "partials/fundraiser_meter.html" ignore missing with context %}
-  {% include "partials/meter_strip.html" ignore missing with context %}
-  {% include "partials/funds_allocation_bar_premium.html" ignore missing with context %}
-  {% include "partials/impact_challenge_coaches_premium.html" ignore missing with context %}
-  {% include "partials/impact_lockers_premium.html" ignore missing with context %}
-  {% include "partials/sponsor_spotlight.html" ignore missing with context %}
-  {% include "partials/sponsor_hub.html" ignore missing with context %}
-  {% include "partials/sponsor_wall.html" ignore missing with context %}
-  {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
-  {% include "partials/sponsor_form.html" ignore missing with context %}
-  {% include "partials/sponsor_ticker.html" ignore missing with context %}
-  {% include "partials/tiers.html" ignore missing with context %}
-  {% include "partials/testimonial_popover.html" ignore missing with context %}
-  {% include "partials/newsletter.html" ignore missing with context %}
-  {% include "partials/donation_modal.html" ignore missing with context %}
-  {% include "partials/flash_and_onboarding_premium.html" ignore missing with context %}
-  {% include "partials/admin_onboarding_popover.html" ignore missing with context %}
-  {% include "partials/ai_concierge.html" ignore missing with context %}
-  {% include "partials/layout_bands.html" ignore missing with context %}
 {% endblock %}
 
+{% block content %}
+  {% include "partials/about_section.html" ignore missing with context %}
 
-{% block scripts %}
-  {{ super() }}
+  <section id="sponsor-wall-widget" class="py-12 sm:py-16 bg-neutral-50/5 dark:bg-zinc-900/40">
+    {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
+  </section>
 
-  {# Sticky CTA manager + Concierge #}
-  {% include "partials/sticky_cta_manager.html" ignore missing with context %}
+  <section id="impact-lockers" class="py-12 sm:py-16">
+    {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+  </section>
+
+  <section id="allocation" class="py-12 sm:py-16 bg-neutral-50/5 dark:bg-zinc-900/40">
+    {% include "partials/funds_allocation_bar_premium.html" ignore missing with context %}
+  </section>
+
+  <section id="tiers" class="py-12 sm:py-16">
+    {% include "partials/tiers.html" ignore missing with context %}
+  </section>
+
+  <section id="sponsor-form" class="py-12 sm:py-16 bg-neutral-50/5 dark:bg-zinc-900/40">
+  {% include "partials/sponsor_form.html" ignore missing with context %}
+</section>
+
+{# NEW — friction-killer FAQ #}
+{% include "partials/faq_minimal.html" ignore missing with context %}
+
+<section id="program-stats" class="py-12 sm:py-16">
+  {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
+</section>
+
+  <section id="newsletter" class="py-12 sm:py-16 bg-neutral-50/5 dark:bg-zinc-900/40">
+    {% include "partials/newsletter.html" ignore missing with context %}
+  </section>
+
+  {% include "partials/testimonial_popover.html" ignore missing with context %}
+  {% include "partials/layout_bands.html" ignore missing with context %}
+  {% include "partials/flash_and_onboarding_premium.html" ignore missing with context %}
+  {% include "partials/admin_onboarding_popover.html" ignore missing with context %}
   {% if FLAGS is defined and FLAGS.ai_concierge %}
     {% include "partials/ai_concierge.html" ignore missing with context %}
   {% endif %}
-
-  {# ---------- VIP toast + ticker hookups (hero + tiers emit events) ---------- #}
-  <script nonce="{{ __NONCE }}">
-  (() => {
-    if (window.__homeInit) return; window.__homeInit = true;
-
-    const NONCE = '{{ __NONCE }}';
-    const toastHost = document.createElement('div');
-    toastHost.setAttribute('id','fc-toasts');
-    Object.assign(toastHost.style, { position:'fixed', right:'12px', bottom:'12px', zIndex:70, display:'grid', gap:'8px' });
-    document.addEventListener('DOMContentLoaded', () => document.body.appendChild(toastHost));
-
-    const fmt = (v)=> new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(+v||0);
-
-    function showToast(html, ttl=4200){
-      const el = document.createElement('div');
-      el.role = 'status';
-      el.ariaLive = 'polite';
-      el.innerHTML = html;
-      el.style.cssText = 'background:rgba(17,17,17,.92);color:#fde68a;border:1px solid rgba(253,224,71,.35);padding:10px 12px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.4);backdrop-filter:saturate(130%) blur(8px)';
-      toastHost.appendChild(el);
-      setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(6px)'; setTimeout(()=>el.remove(),350); }, ttl);
-    }
-
-    // Hero announces VIP thresholds (fc:vip:hit)
-    addEventListener('fc:vip:hit', (e) => {
-      const th = e?.detail?.threshold || 0;
-      showToast(`🏆 <strong>VIP milestone!</strong> We crossed ${fmt(th)} — thank you!`);
-      // Let other widgets know for ticker updates
-      try { dispatchEvent(new CustomEvent('fc:funds:update', { detail: { sponsorName: 'VIP Milestone', raised: e?.detail?.raised, goal: e?.detail?.goal } })); } catch {}
-    }, { passive:true });
-
-    // Tiers / other components may emit fc:vip or fc:donate
-    addEventListener('fc:vip', (e) => {
-      const name = e?.detail?.name || 'VIP Sponsor';
-      const amt  = e?.detail?.amount || 0;
-      showToast(`🌟 <strong>${name}</strong> joined at ${fmt(amt)}!`);
-      try { dispatchEvent(new CustomEvent('fc:funds:update', { detail: { sponsorName: name } })); } catch {}
-    }, { passive:true });
-
-    addEventListener('fc:donate', (e) => {
-      const amt = e?.detail?.amount || 0;
-      showToast(`💛 Thank you for your donation of ${fmt(amt)}!`, 3600);
-    }, { passive:true });
-
-    // Idle prefetch of lightweight APIs
-    (window.requestIdleCallback||setTimeout)(() => {
-      ['{{ url_for("tiers.stats") if url_for is defined and has_endpoint("tiers.stats") else "/tiers/stats" }}',
-       '{{ url_for("main.stats") if url_for is defined and has_endpoint("main.stats") else "/api/stats" }}'
-      ].forEach(h => { try { fetch(h, { method:'HEAD', cache:'no-store' }); } catch {} });
-    }, 1200);
-  })();
-  </script>
-
-  {# ---------- JSON-LD: WebSite + DonateAction (sitewide) ---------- #}
-  <script type="application/ld+json" nonce="{{ __NONCE }}">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "name": "{{ _name }}",
-    "url": "{{ request.url_root | trim if request is defined else '' }}",
-    "potentialAction": {
-      "@type": "DonateAction",
-      "target": "{{ (url_for('donate.initiate') if url_for is defined and has_endpoint('donate.initiate') else '/donate/initiate') }}",
-      "name": "Support {{ _name }}",
-      "result": { "@type": "DonateAction", "name": "Complete donation" }
-    }
-  }
-  </script>
+  {% include "partials/donation_modal.html" ignore missing with context %}
 {% endblock %}
 
