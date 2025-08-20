@@ -70,19 +70,19 @@
 }
 
 /* Ticker */
-@keyframes fcTicker { 0%{ transform: translateX(0) } 100%{ transform: translateX(-50%) } }
-#fc-hero .ticker-row{ animation: fcTicker 24s linear infinite; padding:.5rem 0; }
+@keyframes fc-ticker { 0%{ transform: translateX(0) } 100%{ transform: translateX(-50%) } }
+#fc-hero .ticker-row{ animation: fc-ticker 24s linear infinite; padding:.5rem 0; }
 
 @media (prefers-reduced-motion: reduce){
   #fc-hero *{ animation: none !important; transition: none !important; }
 }
 
 /* Subtle CTA pulse */
-@keyframes tierPulse {
+@keyframes tier-pulse {
   0%,100%{ box-shadow: 0 0 0 0 rgb(255 255 255 / 0%); transform: scale(1) }
   50%{ box-shadow: 0 10px 30px -10px rgb(255 255 255 / 15%); transform: scale(1.02) }
 }
-.tier-pulse{ animation: tierPulse 2.5s ease-in-out infinite; }
+.tier-pulse{ animation: tier-pulse 2.5s ease-in-out infinite; }
 
 /* =========================================================================
    Global Palette + Background

@@ -1,17 +1,14 @@
-<section data-ui=""${name//_/ -}"" class="block">
 {# ============================================================================
    app/templates/partials/impact_lockers.html
-   FundChamps • Impact Lockers (Elite / Premium)
-   - CSP-safe (NONCE fallback), A11Y upgrades, reduced-motion support
-   - Safer math/formatting; guards for empty/missing data
-   - Instance-safe (customizable id) + tiny public API (window.fcImpactLockersById[id])
-   - Opens donation modal; reacts to fc:donation:success (and compat alias)
+   FundChamps • Impact Lockers (SV-Elite, CSP-safe, a11y-first)
+   - Supports: modal flow, Stripe Payment Links per-bucket, Web Share, polling
+   - Safe math/clamping; reduced-motion; Save-Data tuning; instance-scoped API
    ============================================================================ #}
 
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set impact_lockers_id = impact_lockers_id|default('impact-lockers') %}
 {% set brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set asset_version = asset_version|default(None) %}
+{% set stats_url = impact_stats_url|default(None) %} {# optional: /api/impact-buckets returns [{key,allocated,total}] #}
 
 {# Demo + override #}
 {% set demo_buckets = [
@@ -23,16 +20,23 @@
 {% set buckets = impact_buckets if impact_buckets is defined and impact_buckets else demo_buckets %}
 {% set is_demo = (impact_buckets is not defined or not impact_buckets) %}
 
-<section id="{{ impact_lockers_id }}"
+{% set _ui_slug = (impact_lockers_id|string)|replace('_','-') %}
+
+<section
+  id="{{ impact_lockers_id }}"
+  data-ui="{{ _ui_slug }}"
   class="relative mx-auto w-full max-w-7xl px-4 sm:px-6"
   aria-labelledby="{{ impact_lockers_id }}-heading"
   data-demo="{{ 'true' if is_demo else 'false' }}"
-  style="--fc-brand: {{ brand_color }};">
+  {%- if stats_url %} data-stats-url="{{ stats_url }}"{% endif -%}
+  style="--fc-brand: {{ brand_color }};"
+>
   <style nonce="{{ NONCE }}">
     /* ===== Scoped to #{{ impact_lockers_id }} ===== */
     #{{ impact_lockers_id }}::before{
       content:""; position:absolute; inset:-35% -10% auto;
-      background: radial-gradient(900px 450px at 60% -10%, color-mix(in srgb, var(--fc-brand) 22%, transparent), transparent 60%);
+      background: radial-gradient(900px 450px at 60% -10%,
+        color-mix(in srgb, var(--fc-brand) 22%, transparent), transparent 60%);
       z-index:0; pointer-events:none;
     }
     #{{ impact_lockers_id }} > *{ position:relative; z-index:1; }
@@ -46,7 +50,11 @@
       box-shadow: 0 10px 32px rgba(250,204,21,.16), 0 2px 10px rgba(0,0,0,.35);
       transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
     }
-    #{{ impact_lockers_id }} .fc-card:hover{ transform: translateY(-2px) scale(1.01); box-shadow: 0 16px 42px rgba(250,204,21,.22); border-color: color-mix(in srgb, var(--fc-brand) 32%, transparent); }
+    #{{ impact_lockers_id }} .fc-card:hover{
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 16px 42px rgba(250,204,21,.22);
+      border-color: color-mix(in srgb, var(--fc-brand) 32%, transparent);
+    }
 
     #{{ impact_lockers_id }} .fc-cta{
       background: linear-gradient(90deg, #fde68a, #fbbf24, #fde68a);
@@ -68,17 +76,28 @@
     #{{ impact_lockers_id }} .locked{ background:rgba(34,197,94,.18); color:#86efac; font-weight:900; border:1px solid rgba(34,197,94,.35) }
     #{{ impact_lockers_id }} .note{ font-size:.78rem; color:#d4d4d8 }
 
+    #{{ impact_lockers_id }} .icon-btn{
+      display:inline-flex; align-items:center; gap:.4rem; font-weight:800;
+      border-radius:9999px; padding:.45rem .7rem; border:1px solid rgba(255,255,255,.16);
+      background:rgba(0,0,0,.25);
+    }
+
     @media (prefers-reduced-motion:no-preference){
       #{{ impact_lockers_id }} .fc-card{ animation: il-pop .5s cubic-bezier(.4,1.6,.6,1) both; }
       @keyframes il-pop{ from{opacity:0; transform:scale(.96)} to{opacity:1; transform:scale(1)} }
     }
-    @supports not (scroll-margin-top: 1px){ #{{ impact_lockers_id }}{ padding-block: 48px; } }
+    .save-data #{{ impact_lockers_id }} .fc-card{ animation:none!important; }
   </style>
 
   <header class="mb-6 text-center">
     <h2 id="{{ impact_lockers_id }}-heading" class="fc-h2 mb-2">Unlock What Matters — Real Impact Buckets</h2>
-    <p class="note">Every gift locks something concrete for our student-athletes. Pick a bucket and we’ll prefill the exact amount to <span class="font-semibold text-yellow-300">lock the next milestone</span>.</p>
+    <p class="note">
+      Every gift locks something concrete for our student-athletes. Pick a bucket and we’ll prefill
+      the exact amount to <span class="font-semibold text-yellow-300">lock the next milestone</span>.
+    </p>
   </header>
+
+  <p id="{{ impact_lockers_id }}-sr" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
   {% if not buckets %}
     <div class="rounded-xl border border-yellow-400/15 bg-black/40 p-6 text-sm text-zinc-300">
@@ -92,19 +111,30 @@
         {% set pct_raw = (b.percent if b.percent is defined and b.percent is not none else ((alloc / total * 100) if total > 0 else 0)) %}
         {% set pct = (pct_raw|float)|round(0, 'floor') %}
         {% set remaining = (total - alloc) if total > alloc else 0 %}
-        {# For CTA prefill, prefer explicit next_gap; else use remaining (min step $50) #}
         {% set prefill_calc = (b.next_gap if b.next_gap is defined and b.next_gap is not none else remaining) | float %}
         {% set prefill = (50.0 if prefill_calc <= 0 else prefill_calc) %}
         {% set locked= (pct >= 100 or b.locked) %}
         {% set k = (b.key|string) %}
-        <article class="fc-card rounded-2xl p-5 ring-1 ring-yellow-400/10 bg-zinc-900/80"
-                 role="group" aria-labelledby="{{ impact_lockers_id }}-{{ k }}-title" data-key="{{ k }}">
+        <article
+          class="fc-card rounded-2xl p-5 ring-1 ring-yellow-400/10 bg-zinc-900/80"
+          role="group"
+          aria-labelledby="{{ impact_lockers_id }}-{{ k }}-title"
+          data-key="{{ k }}"
+          {% if b.checkout_url %}data-checkout-url="{{ b.checkout_url }}"{% endif %}
+          {% if b.price_id %}data-price-id="{{ b.price_id }}"{% endif %}
+          itemscope itemtype="https://schema.org/DonateAction"
+        >
+          <meta itemprop="name" content="{{ b.label }} Donation" />
+          <meta itemprop="actionStatus" content="https://schema.org/PotentialActionStatus" />
+
           <div class="flex items-start justify-between gap-3">
             <div class="flex items-center gap-3 min-w-0">
               <span class="text-2xl shrink-0" aria-hidden="true">{{ b.emoji }}</span>
               <div class="min-w-0">
-                <h3 id="{{ impact_lockers_id }}-{{ k }}-title" class="text-lg sm:text-xl font-extrabold text-yellow-200 truncate">{{ b.label }}</h3>
-                {% if b.details %}<p class="text-xs text-zinc-400 mt-1 line-clamp-2">{{ b.details }}</p>{% endif %}
+                <h3 id="{{ impact_lockers_id }}-{{ k }}-title" class="text-lg sm:text-xl font-extrabold text-yellow-200 truncate">
+                  {{ b.label }}
+                </h3>
+                {% if b.details %}<p class="text-xs text-zinc-400 mt-1 line-clamp-2" itemprop="description">{{ b.details }}</p>{% endif %}
               </div>
             </div>
 
@@ -122,7 +152,7 @@
               <span data-b-alloc>${{ '{:,.0f}'.format(alloc) }}</span>
               <span data-b-goal>Goal: ${{ '{:,.0f}'.format(total) }}</span>
             </div>
-            {# Accessible progressbar with valuetext #}
+
             <div class="bar"
                  role="progressbar"
                  aria-valuemin="0"
@@ -136,8 +166,9 @@
             <p class="text-xs font-semibold text-yellow-200" data-b-pct>{{ pct if pct <= 100 else 100 }}% funded</p>
 
             {% if prefill > 0 and not locked %}
-              <p class="text-[11px] text-zinc-400" data-b-gap>
-                Only <span class="font-bold text-yellow-200">${{ prefill|round(0, 'ceil')|int }}</span>
+              {% set prefill_int = prefill|round(0, 'ceil')|int %}
+              <p id="{{ impact_lockers_id }}-{{ k }}-gap" class="text-[11px] text-zinc-400" data-b-gap>
+                Only <span class="font-bold text-yellow-200">${{ prefill_int }}</span>
                 to lock <span class="font-bold text-yellow-200">{{ b.next_label or 'the next milestone' }}</span>.
               </p>
             {% endif %}
@@ -153,24 +184,24 @@
 
           <div class="mt-4 flex flex-wrap items-center gap-3" data-b-actions>
             {% if not locked %}
-              {% set prefill_int = prefill|round(0, 'ceil')|int %}
               <button type="button" class="fc-cta px-5 py-2"
                 data-impact-donate
                 data-bucket="{{ k }}"
-                data-amount="{{ prefill_int }}"
+                data-amount="{{ prefill|round(0, 'ceil')|int }}"
                 data-label="{{ b.label }}"
                 aria-describedby="{{ impact_lockers_id }}-{{ k }}-gap"
-                aria-label="Donate {{ prefill_int }} dollars to {{ b.label }} to lock {{ b.next_label or 'the next milestone' }}">
-                Donate ${{ prefill_int }} to lock next
+                aria-label="Donate {{ prefill|round(0, 'ceil')|int }} dollars to {{ b.label }} to lock {{ b.next_label or 'the next milestone' }}">
+                Donate ${{ prefill|round(0, 'ceil')|int }} to lock next
               </button>
-              <button type="button"
-                class="rounded-full bg-zinc-800 px-4 py-2 text-yellow-200 ring-1 ring-yellow-400/20 hover:bg-zinc-700"
-                data-impact-donate
-                data-bucket="{{ k }}"
-                data-amount="0"
-                data-label="{{ b.label }}"
+
+              <button type="button" class="icon-btn"
+                data-impact-donate data-bucket="{{ k }}" data-amount="0" data-label="{{ b.label }}"
                 aria-label="Open donation modal for {{ b.label }} (choose amount)">
-                Choose amount
+                💛 Choose amount
+              </button>
+
+              <button type="button" class="icon-btn" data-share-bucket data-label="{{ b.label }}">
+                🔗 Share
               </button>
             {% else %}
               <button type="button" class="rounded-full bg-zinc-800 px-4 py-2 text-yellow-200 ring-1 ring-yellow-400/20" disabled>
@@ -178,11 +209,6 @@
               </button>
             {% endif %}
           </div>
-          {% if prefill > 0 and not locked %}
-            <span id="{{ impact_lockers_id }}-{{ k }}-gap" class="sr-only">
-              Suggested gift is ${{ prefill_int }} to reach the next milestone.
-            </span>
-          {% endif %}
         </article>
       {% endfor %}
     </div>
@@ -193,11 +219,18 @@
 (() => {
   const root = document.getElementById('{{ impact_lockers_id }}'); if (!root || root.__bound) return; root.__bound = true;
 
-  const prefersReduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  // Motion/Data preferences
+  const prefersReduced = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  if (navigator.connection?.saveData) document.documentElement.classList.add('save-data');
+
+  const sr = document.getElementById('{{ impact_lockers_id }}-sr');
+  const statsUrl = root.dataset.statsUrl || null;
+
   const fmt$ = (n)=> '$' + (Math.round(Number(n||0))).toLocaleString();
   const cssEscape = (window.CSS && CSS.escape) ? CSS.escape : (s)=> String(s).replace(/[^a-zA-Z0-9_\-]/g, '\\$&');
+  const say = (t)=> { if (sr) sr.textContent = t; };
 
-  // Open your donation modal (contract: window.openDonationModal or fc:donate:open)
+  // Open your donation modal, or fallback to event
   function openDonate(opts){
     try {
       if (typeof window.openDonationModal === 'function') { window.openDonationModal(opts); return true; }
@@ -207,28 +240,49 @@
     return true;
   }
 
-  // Remember the last bucket → update UI on success
+  // Stripe Payment Link one-liner redirect if per-bucket checkout_url exists
+  function paylinkOrModal(card, amount, meta){
+    const url = card?.dataset?.checkoutUrl || null;
+    if (url && amount > 0) { try { location.assign(url + (url.includes('?') ? '&' : '?') + 'amount=' + encodeURIComponent(amount)); } catch {} return; }
+    openDonate(Object.assign({ amount: amount || undefined }, meta));
+  }
+
+  // Track pending bucket so we can update on success
   let pending = null;
 
-  root.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-impact-donate]'); if (!btn) return;
-    const bucket = btn.dataset.bucket || '';
-    const label  = btn.dataset.label  || bucket;
-    const amount = Math.max(0, Math.round(parseFloat(btn.dataset.amount || '0') || 0));
+  root.addEventListener('click', async (e) => {
+    // Donate CTAs
+    const donateBtn = e.target.closest('[data-impact-donate]');
+    if (donateBtn) {
+      const card   = donateBtn.closest('[data-key]');
+      const bucket = card?.dataset?.key || donateBtn.dataset.bucket || '';
+      const label  = donateBtn.dataset.label || bucket;
+      const amount = Math.max(0, Math.round(parseFloat(donateBtn.dataset.amount || '0') || 0));
 
-    pending = { bucket, label };
+      pending = { bucket, label };
+      try { window.dispatchEvent(new CustomEvent('fundchamps:donate', { detail: { source:'impact', bucket, label, amount } })); } catch {}
+      paylinkOrModal(card, amount, { allocation: bucket, allocation_label: label });
+      return;
+    }
 
-    // Analytics hook + modal open
-    try { window.dispatchEvent(new CustomEvent('fundchamps:donate', { detail: { source:'impact', bucket, label, amount } })); } catch {}
-    openDonate({ amount: amount || undefined, allocation: bucket, allocation_label: label });
+    // Web Share / clipboard
+    const shareBtn = e.target.closest('[data-share-bucket]');
+    if (shareBtn) {
+      e.preventDefault();
+      const label = shareBtn.dataset.label || 'Impact Bucket';
+      const url = location.href.split('#')[0] + '#{{ impact_lockers_id }}';
+      try {
+        if (navigator.share) { await navigator.share({ title: document.title, text: `Support ${label}`, url }); say('Share dialog opened.'); return; }
+      } catch {}
+      try { await navigator.clipboard.writeText(url); say('Link copied.'); } catch {}
+    }
   });
 
+  // Helpers to read and write one card
   function coerceIntFromText(txt){ return parseInt(String(txt||'').replace(/[^\d]/g,''), 10) || 0; }
 
-  // Utility: update one card in-place
   function updateCard(key, delta){
-    const sel = `[data-key="${cssEscape(String(key))}"]`;
-    const card = root.querySelector(sel); if (!card) return;
+    const card = root.querySelector(`[data-key="${cssEscape(String(key))}"]`); if (!card) return;
 
     const allocEl = card.querySelector('[data-b-alloc]');
     const goalEl  = card.querySelector('[data-b-goal]');
@@ -253,57 +307,103 @@
     if (pctEl) pctEl.textContent = `${pct}% funded`;
 
     const left = Math.max(0, goal - next);
-    if (gapEl) {
-      gapEl.innerHTML = left
-        ? `Only <span class="font-bold text-yellow-200">${fmt$(left)}</span> to lock <span class="font-bold text-yellow-200">${(pending?.label)||'the next milestone'}</span>.`
-        : `Milestone locked. Thank you!`;
-    }
+    if (gapEl) gapEl.innerHTML = left
+      ? `Only <span class="font-bold text-yellow-200">${fmt$(left)}</span> to lock <span class="font-bold text-yellow-200">${(pending?.label)||'the next milestone'}</span>.`
+      : `Milestone locked. Thank you!`;
 
-    // Reached goal → flip CTA area to "locked"
     if (goal && next >= goal) {
       if (!lockPill){
         const tag = document.createElement('span');
         tag.className = 'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs locked';
         tag.textContent = 'LOCKED ✅';
-        const header = card.querySelector('.flex.items-start.justify-between');
-        header?.appendChild(tag);
+        card.querySelector('.flex.items-start.justify-between')?.appendChild(tag);
       }
-      if (actions) {
-        actions.innerHTML = `<button type="button" class="rounded-full bg-zinc-800 px-4 py-2 text-yellow-200 ring-1 ring-yellow-400/20" disabled>Fully funded — thank you!</button>`;
-      }
+      if (actions) actions.innerHTML = `<button type="button" class="rounded-full bg-zinc-800 px-4 py-2 text-yellow-200 ring-1 ring-yellow-400/20" disabled>Fully funded — thank you!</button>`;
       if (!prefersReduced && typeof window.launchConfetti === 'function') {
-        try { window.launchConfetti({ particleCount: 180, spread: 75 }); } catch {}
+        try { window.launchConfetti({ particleCount: 160, spread: 70 }); } catch {}
       }
     }
   }
 
-  // Donation success event from your payments flow
+  // Donation success → bump the right bucket
   const onSuccess = (ev) => {
     const d = ev.detail || {};
     const amt = Number(d.amount || 0);
     const key = (d.allocation || (pending && pending.bucket)) || null;
     if (!key || !amt) return;
     updateCard(key, amt);
+    say(`${d.allocation_label || key} updated by ${fmt$(amt)}.`);
     pending = null;
   };
-  window.addEventListener('fc:donation:success', onSuccess);
-  // Compat alias some flows emit:
-  window.addEventListener('fundchamps:donation:success', onSuccess);
+  addEventListener('fc:donation:success', onSuccess);
+  addEventListener('fundchamps:donation:success', onSuccess); // alias
 
-  // Optional: allow admin/socket to bump a bucket
-  window.addEventListener('fc:bucket:bump', (ev) => {
-    const { key, delta } = ev.detail || {}; if (!key || !delta) return;
-    updateCard(String(key), Number(delta));
-  });
+  // Optional polling for live numbers (expects [{key,allocated,total}])
+  if (statsUrl) {
+    const saveData = !!navigator.connection?.saveData;
+    const poll = async () => {
+      try {
+        if (document.hidden) return;
+        const res = await fetch(statsUrl, { headers: { 'Accept': 'application/json' }});
+        if (!res.ok) throw 0;
+        const rows = await res.json();
+        if (Array.isArray(rows)) {
+          rows.forEach(row => {
+            const card = root.querySelector(`[data-key="${cssEscape(String(row?.key||''))}"]`);
+            if (!card) return;
+            // Override allocated/goal completely (no delta math)
+            const allocEl = card.querySelector('[data-b-alloc]');
+            const goalEl  = card.querySelector('[data-b-goal]');
+            if (allocEl) allocEl.textContent = fmt$(Number(row.allocated||0));
+            if (goalEl)  goalEl.textContent  = 'Goal: ' + fmt$(Number(row.total||0));
+            // Recompute visuals with (next - curr) delta
+            const curr = coerceIntFromText(allocEl?.textContent);
+            const goal = coerceIntFromText(goalEl?.textContent);
+            const pct  = goal ? Math.min(100, Math.round(curr/goal*100)) : 0;
+            const bar  = card.querySelector('[data-b-bar] > span');
+            if (bar) bar.style.width = pct + '%';
+            const pctEl = card.querySelector('[data-b-pct]'); if (pctEl) pctEl.textContent = `${pct}% funded`;
+          });
+        }
+      } catch {}
+    };
+    setInterval(poll, saveData ? 30000 : 16000);
+    setTimeout(poll, 800);
+  }
 
-  // ---------- Public API (instance-safe) ----------
+  // Public API (instance-scoped)
   const api = {
-    openDonate,
-    bump: (key, delta) => updateCard(String(key), Number(delta||0)),
+    open: (key, amount)=> {
+      const card = root.querySelector(`[data-key="${cssEscape(String(key))}"]`);
+      paylinkOrModal(card, Number(amount||0), { allocation:key, allocation_label: key });
+    },
+    bump: (key, delta)=> updateCard(String(key), Number(delta||0))
   };
   window.fcImpactLockersById = window.fcImpactLockersById || {};
   window.fcImpactLockersById['{{ impact_lockers_id }}'] = api;
 })();
 </script>
 
-</section>
+{# ------- Optional: JSON-LD to help “donate to <bucket>” intents ------- #}
+<script type="application/ld+json" nonce="{{ NONCE }}">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Impact Buckets",
+  "itemListElement": [
+    {% for b in buckets %}
+      {
+        "@type": "DonateAction",
+        "name": "{{ (b.label ~ ' Donation')|e }}",
+        "description": "{{ (b.details or 'Support this impact bucket')|e }}",
+        "actionStatus": "https://schema.org/PotentialActionStatus",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "{{ (b.checkout_url if b.checkout_url else url_for('donate.initiate') if (url_for is defined and has_endpoint('donate.initiate')) else '/donate') }}"
+        }
+      }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
+</script>
+

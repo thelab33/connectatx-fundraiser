@@ -134,7 +134,7 @@ def send_slack_alert(message: str):
     webhook = current_app.config.get("SLACK_WEBHOOK_URL")
     if webhook:
         try:
-            requests.post(webhook, json={"text": message})
+            requests.post(webhook, json={"text": message}, timeout=5)
         except Exception as exc:
             current_app.logger.warning(f"Slack alert failed: {exc}")
 

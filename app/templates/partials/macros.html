@@ -1,22 +1,12 @@
 {# =============================================================================
    templates/partials/_macros.html
    Elite, CSP-safe macro kit (aria, tokens, and helpers)
-
-   Public API (backward compatible):
-     • {{ sr(text) }}
-     • {{ currency(cents) }}
-     • {{ render_button(label, href='#', size='md', kind='primary', icon=None, attrs=None) }}
-     • {{ render_meter(goal_cents, raised_cents) }}
-
-   Notes:
-     - Uses CSS vars set in base (e.g., --fc-brand, --fc-brand-200).
-     - Button: if href is falsy, renders a <button>; else an <a>.
-     - attrs can be a dict (preferred) or string (legacy). Dict will be rendered safely.
-     - Meter: true progressbar semantics + clamped width [0..100].
-=============================================================================#}
+============================================================================= #}
 
 {# ───────── small utilities ───────── #}
-{% macro sr(text) %}<span class="sr-only">{{ text }}</span>{% endmacro %}
+{% macro sr(text) %}
+  <span class="sr-only">{{ text }}</span>
+{% endmacro %}
 
 {# Safe attribute renderer: accepts a dict of attributes
    - boolean True → just the key (e.g. disabled)
@@ -125,11 +115,3 @@
          aria-valuemax="{{ (_goal_safe / 100)|int }}"
          aria-valuenow="{{ (_raised / 100)|int }}"
          aria-valuetext="{{ '{:,.0f}'.format(_pct) }}% complete"
-         {% if label_id %}aria-labelledby="{{ label_id }}"{% else %}aria-label="${{ currency(_raised) }} raised of ${{ currency(_goal) }}"{% endif %}>
-      <div class="h-full bg-[var(--fc-brand)]" style="width: {{ '%.2f' % _pct }}%"></div>
-    </div>
-
-    <div class="mt-2 text-xs font-semibold text-white/80">{{ '{:,.0f}'.format(_pct) }}% funded</div>
-  </div>
-{% endmacro %}
-

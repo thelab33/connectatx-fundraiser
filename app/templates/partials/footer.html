@@ -1,4 +1,4 @@
-<section data-ui=""${name//_/ -}"" class="block">
+<section class="block">
 {# === Pro-Polished Footer Partial — FundChamps Elite Edition (SV Premium) === #}
 {# ---------- Vars & Fallbacks ---------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
@@ -9,8 +9,8 @@
 {% set pct_raw        = ((raised / goal * 100) if goal else 0) %}
 {% set pct            = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) %}
 {% set team_name      = (team.team_name if team and team.team_name else 'FundChamps') %}
-{% set team_division  = (team.division if team and team.division else 'AAU 12U') %}
-{% set team_location  = (team.location if team and team.location else 'Austin, TX') %}
+{% set team_division  = (team.division if team and team.division else (team.level if team and team.level else 'AAU 12U')) %}
+{% set team_location  = (team.location if team and team.location else ((team.city ~ ', ' ~ team.state) if team and team.city and team.state else 'Austin, TX')) %}
 {% set email_addr     = (team.email if team and team.email else 'hello@example.com') %}
 {% set phone_raw      = (team.phone if team and team.phone else '5128200475') %}
 {% set phone_pretty   = (team.phone_pretty if team and team.phone_pretty else '512 820-0475') %}
@@ -180,7 +180,7 @@
 
     <p class="mt-6 text-xs leading-relaxed text-zinc-400">
       Built with 💛 by Angel Rodriguez Jr for FundChamps.<br/>
-      <span class="text-zinc-500">All rights reserved. Powered by families &amp; volunteers — every dollar changes lives.</span>
+      <span class="text-zinc-500">Powered by families &amp; volunteers — every dollar changes lives.</span>
     </p>
   </div>
 
@@ -198,15 +198,15 @@
     </div>
   </dialog>
 
-  <!-- JSON-LD -->
-  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
+  <!-- JSON-LD Organization -->
+  <script type="application/ld+json" nonce="{{ NONCE }}">
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": {{ team_name|tojson if tojson is defined else '"' ~ team_name ~ '"' }},
     "url": {{ website_href|tojson if tojson is defined else '"' ~ website_href ~ '"' }},
-    "logo": {{ footer_logo|tojson if tojson is defined else '"' ~ footer_logo ~ '"' }},
-    {% if ig or fb or tw %}"sameAs": [{% if ig %}{{ ig|tojson if tojson is defined else '"' ~ ig ~ '"' }}{% if fb or tw %},{% endif %}{% endif %}{% if fb %}{{ fb|tojson if tojson is defined else '"' ~ fb ~ '"' }}{% if tw %},{% endif %}{% endif %}{% if tw %}{{ tw|tojson if tojson is defined else '"' ~ tw ~ '"' }}{% endif %}],{% endif %}
+    "logo": {{ footer_logo|tojson if tojson is defined else '"' ~ footer_logo ~ '"' }}{% if ig or fb or tw %},
+    "sameAs": [{% if ig %}{{ ig|tojson if tojson is defined else '"' ~ ig ~ '"' }}{% if fb or tw %},{% endif %}{% endif %}{% if fb %}{{ fb|tojson if tojson is defined else '"' ~ fb ~ '"' }}{% if tw %},{% endif %}{% endif %}{% if tw %}{{ tw|tojson if tojson is defined else '"' ~ tw ~ '"' }}{% endif %}]{% endif %},
     "contactPoint": {
       "@type": "ContactPoint",
       "contactType": "customer support",
@@ -216,8 +216,7 @@
     },
     "potentialAction": { "@type": "DonateAction", "target": {{ donate_href|tojson if tojson is defined else '"' ~ donate_href ~ '"' }} }
   }
-  
-{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
+  </script>
 </footer>
 
 <!-- Mobile sticky donate CTA (safe-area + manager + auto-hide) -->
@@ -293,25 +292,8 @@
   } catch { out && (out.textContent = 'See calendar for next event!'); }
   {% endif %}
 
-  /* Ticker autoscroll (pause on hover/focus) */
-  if (ticker && ticker.scrollWidth > ticker.clientWidth && !prefersReduce) {
-    let x = 0, dir = 1, raf; const stepPx = 1;
-    const step = () => { x += dir*stepPx; if (x <= 0 || x >= (ticker.scrollWidth - ticker.clientWidth + 40)) dir *= -1; ticker.scrollLeft = x; raf = requestAnimationFrame(step); };
-    const pause = () => { if (raf) cancelAnimationFrame(raf), raf=null; };
-    const resume= () => { if (!raf) raf = requestAnimationFrame(step); };
-    resume(); ['mouseenter','focusin'].forEach(e=>ticker.addEventListener(e,pause));
-    ['mouseleave','focusout'].forEach(e=>ticker.addEventListener(e,resume));
-    addEventListener('beforeunload', pause);
-  }
-
-  /* Goal celebration + meter sync */
-  let celebrated = false;
-  function celebrate(){
-    if (celebrated) return; celebrated = true;
-    dispatchEvent(new CustomEvent('fc:goal', { detail:{ source:'footer' }}));
-    if (typeof window.launchConfetti === 'function') window.launchConfetti({ particleCount: 120, spread: 80, origin: { y: .88 } });
-  }
-  function fmt(n){ return Number(n||0).toLocaleString(); }
+  /* Meter helpers */
+  function fmt(n){ return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0}); }
   function setMeter(r,g){
     const R = Math.max(0, +r||0), G = Math.max(0, +g||0);
     const P = G ? Math.min(100, Math.max(0, (R/G*100))) : 0;
@@ -319,15 +301,32 @@
     if (pctEl)    pctEl.textContent = P.toFixed(1).replace(/\.0$/,'');
     if (raisedEl) raisedEl.textContent = fmt(R);
     if (goalEl)   goalEl.textContent = fmt(G);
-    if (pbar) { pbar.setAttribute('aria-valuenow', P.toFixed(1)); pbar.setAttribute('aria-describedby', 'footer-status'); }
+    if (pbar)     pbar.setAttribute('aria-valuenow', P.toFixed(1));
     if (P >= 100) celebrate();
   }
+
+  /* Celebration */
+  let celebrated = false;
+  function celebrate(){
+    if (celebrated) return; celebrated = true;
+    try { dispatchEvent(new CustomEvent('fc:goal', { detail:{ source:'footer' }})); } catch {}
+    if (typeof window.launchConfetti === 'function') {
+      window.launchConfetti({ particleCount: 120, spread: 80, origin: { y: .88 } });
+    }
+  }
+
+  /* Sync with hero: listen for both events */
   addEventListener('fc:meter:update', ev => {
     const d = ev.detail || {};
     if ('raised' in d || 'goal' in d) setMeter(d.raised ?? raisedEl?.textContent, d.goal ?? goalEl?.textContent);
-  });
+  }, { passive:true });
 
-  /* Optional polling */
+  addEventListener('fc:funds:update', ev => {
+    const d = ev.detail || {};
+    if ('raised' in d || 'goal' in d) setMeter(d.raised ?? raisedEl?.textContent, d.goal ?? goalEl?.textContent);
+  }, { passive:true });
+
+  /* Optional polling (keeps hero in sync by emitting fc:meter:update) */
   const url = footer?.dataset.statsUrl || '/stats';
   setTimeout(()=> {
     const poll = async () => {
@@ -335,9 +334,12 @@
         const res = await fetch(url, { headers:{Accept:'application/json'} });
         if (res.ok) {
           const data = await res.json();
-          const r = (data.raised ?? data.funds_raised);
-          const g = (data.goal   ?? data.fundraising_goal);
-          if (typeof r === 'number' && typeof g === 'number') setMeter(r,g);
+          const r = Number(data.raised ?? data.funds_raised);
+          const g = Number(data.goal   ?? data.fundraising_goal);
+          if (!Number.isNaN(r) && !Number.isNaN(g)) {
+            setMeter(r,g);
+            try { dispatchEvent(new CustomEvent('fc:meter:update', { detail:{ raised:r, goal:g, source:'footer:poll' } })); } catch {}
+          }
           if (Array.isArray(data.recent_supporters) && items) {
             items.innerHTML = data.recent_supporters.map((s,i)=>`<span class="text-yellow-200/90">${s}</span>${i < data.recent_supporters.length-1 ? '<span class="opacity-60">•</span>' : ''}`).join('') + '<span class="ml-2 text-yellow-300/90">+ Your Brand Next!</span>';
           }
@@ -346,9 +348,11 @@
       setTimeout(poll, 20000);
     };
     poll();
-  }, 1500);
+  }, 1200);
 
   /* Supporters modal: open/close + focus trap + Esc */
+  const modal = document.getElementById('supporters-modal');
+  const box   = document.getElementById('supporters-box');
   const trapFocus = (container)=>{
     const f = container.querySelectorAll('a,button,input,textarea,select,[tabindex]:not([tabindex="-1"])');
     const first = f[0], last = f[f.length-1];
@@ -371,6 +375,17 @@
   });
   modal?.addEventListener('click', (e)=>{ if (box && !box.contains(e.target)) { modal.close(); document.body.style.overflow=''; } });
 
+  /* Ticker autoscroll (pause on hover/focus) */
+  if (ticker && ticker.scrollWidth > ticker.clientWidth && !prefersReduce) {
+    let x = 0, dir = 1, raf; const stepPx = 1;
+    const step = () => { x += dir*stepPx; if (x <= 0 || x >= (ticker.scrollWidth - ticker.clientWidth + 40)) dir *= -1; ticker.scrollLeft = x; raf = requestAnimationFrame(step); };
+    const pause = () => { if (raf) cancelAnimationFrame(raf), raf=null; };
+    const resume= () => { if (!raf) raf = requestAnimationFrame(step); };
+    resume(); ['mouseenter','focusin'].forEach(e=>ticker.addEventListener(e,pause));
+    ['mouseleave','focusout'].forEach(e=>ticker.addEventListener(e,resume));
+    addEventListener('beforeunload', pause);
+  }
+
   /* Newsletter: HTMX submit if available, fallback to mailto */
   const nl = document.querySelector('[data-newsletter]');
   if (nl) {
@@ -391,5 +406,5 @@
   }
 })();
 {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
-
 </section>
+

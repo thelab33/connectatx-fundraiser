@@ -3,13 +3,10 @@
    FundChamps • Program Pulse (SV-Elite, CSP-safe, a11y-first)
    ============================================================================= #}
 
-{# Utilities/bootstrap (idempotent include) #}
 {% include "partials/ui_bootstrap.html" ignore missing with context %}
-
-{# ---------- Safe nonce + fallbacks ---------- #}
 {% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
 
-{# ---------- Inputs & hardened defaults ---------- #}
+{# ---------- Hardened defaults ---------- #}
 {% set stats = stats if stats is defined and stats else [
   {"label":"GPA Avg","value":3.5},
   {"label":"Student-Athletes","value":22},
@@ -28,22 +25,16 @@
 {% set total_slots     = total_slots     if total_slots     is defined else 12 %}
 {% set default_logo    = (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
 
-{# Decide which sponsors to display (top-N by amount) #}
 {% set _base = sponsors_sorted if sponsors_sorted else [] %}
 {% set display = (_base | sort(attribute='amount', reverse=True))[:total_slots] %}
 
-{# Seed demo so it never looks empty #}
 {% set demo_sponsor = {
   "name":"ESPN",
   "logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg",
-  "url":"https://espn.com",
-  "amount":5000,
-  "tier":"Platinum",
+  "url":"https://espn.com","amount":5000,"tier":"Platinum",
   "tooltip":"Official Broadcast Sponsor – Sports bring communities together!"
 } %}
-{% if display|length == 0 %}
-  {% set display = [demo_sponsor] %}
-{% endif %}
+{% if display|length == 0 %}{% set display = [demo_sponsor] %}{% endif %}
 
 <section
   id="program-pulse"
@@ -53,13 +44,20 @@
   data-count="{{ sponsors_count or 0 }}"
 >
   <style nonce="{{ __nonce }}">
-    /* ===== Scoped to #program-pulse (no bleed) ===== */
-    #program-pulse .fc-card {
-      backdrop-filter: blur(10px) saturate(120%);
-      -webkit-backdrop-filter: blur(10px) saturate(120%);
-      background: linear-gradient(120deg, rgba(255,255,255,.06), rgba(250,220,100,.10));
-      border-radius: 1.25rem; border: 1.25px solid rgba(255,255,255,.12);
-      box-shadow: 0 8px 28px rgba(250,204,21,.16), 0 1px 10px rgba(255,255,255,.08);
+    /* ===== Scoped: #program-pulse ===== */
+    #program-pulse .glass {
+      position:relative; isolation:isolate;
+      backdrop-filter: blur(12px) saturate(120%); -webkit-backdrop-filter: blur(12px) saturate(120%);
+      background: rgba(17,17,17,.55);
+      border-radius: 1.25rem; border: 1px solid rgba(255,255,255,.12);
+      box-shadow: 0 10px 32px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    /* spotlight follows pointer (set via CSS vars; motion-safe) */
+    #program-pulse .glass::before{
+      content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; z-index:0;
+      background: radial-gradient(140% 80% at var(--pulse-spot-x,50%) var(--pulse-spot-y,0%),
+                    rgba(250,204,21,.28), transparent 60%);
+      filter: blur(18px); opacity:.5;
     }
     #program-pulse .kpi {
       display:flex; gap:.6rem; align-items:center; padding:.65rem .85rem;
@@ -83,20 +81,25 @@
       height: 28px; width:auto; border-radius:.5rem; background:#fff;
       padding:.25rem .4rem; box-shadow: inset 0 0 0 1px rgba(0,0,0,.06);
     }
-    #program-pulse .ribbon {
-      display:flex; align-items:center; overflow:auto hidden; gap:1rem; scroll-behavior:smooth;
-    }
+    #program-pulse .ribbon { display:flex; align-items:center; overflow:auto hidden; gap:1rem; scroll-behavior:smooth; }
     #program-pulse .ribbon::-webkit-scrollbar{ height:6px }
     #program-pulse .ribbon::-webkit-scrollbar-thumb{ background:rgba(250,204,21,.3); border-radius:9999px }
+
+    /* Row quick actions */
+    #program-pulse .row-actions{ opacity:0; transform:translateY(-2px); transition:opacity .2s ease, transform .2s ease; }
+    #program-pulse tr:hover .row-actions{ opacity:1; transform:none; }
+
+    /* Mobile table */
     @media (max-width: 640px){
       #program-pulse table thead { display:none }
       #program-pulse table, #program-pulse tbody, #program-pulse tr, #program-pulse td { display:block; width:100% }
       #program-pulse tbody tr { margin-bottom: .9rem; border-radius: .9rem; border:1px solid rgba(255,255,255,.08); background:rgba(24,24,27,.7); padding:.4rem .2rem }
       #program-pulse td { padding:.35rem .6rem }
       #program-pulse td[data-label]::before { content: attr(data-label) ": "; font-weight:700; color:#f5f5f4; margin-right:.25rem }
+      #program-pulse .row-actions{ opacity:1; transform:none; margin-top:.35rem; }
     }
     @media (prefers-reduced-motion:no-preference){
-      #program-pulse .fc-card{ animation: fc-pop .6s cubic-bezier(.4,1.6,.6,1) both }
+      #program-pulse .glass{ animation: fc-pop .6s cubic-bezier(.4,1.6,.6,1) both }
       @keyframes fc-pop{ from{opacity:0; transform:scale(.98)} to{opacity:1; transform:scale(1)} }
     }
   </style>
@@ -105,9 +108,9 @@
     🗓️ Program Pulse — Stats & Calendar
   </h2>
 
-  <!-- ===== KPI Row ===== -->
+  <!-- ===== KPI + toolbar ===== -->
   <div class="mx-auto mb-8 max-w-6xl">
-    <div class="fc-card px-4 py-4 sm:px-6">
+    <div class="glass px-4 py-4 sm:px-6" id="pulse-toolbar">
       <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
         {% for s in stats %}
           <div class="kpi" role="group" aria-label="{{ s.label }}">
@@ -122,13 +125,23 @@
             $<span id="ss-total">{{ (sponsors_total or 0) | int }}</span>
           </span>
         </div>
+
+        <!-- quick tools -->
+        <div class="flex items-center gap-2 ml-auto">
+          <button id="pp-jump" type="button" class="rounded-full border border-yellow-400/50 px-3 py-1.5 text-xs font-black text-yellow-200 hover:bg-zinc-900">
+            ⏭️ Jump to Next
+          </button>
+          <button id="pp-share" type="button" class="rounded-full bg-yellow-400/90 px-3 py-1.5 text-xs font-black text-black hover:bg-yellow-400">
+            🔗 Share
+          </button>
+        </div>
       </div>
     </div>
   </div>
 
   <div class="mx-auto grid max-w-6xl grid-cols-1 gap-10 lg:grid-cols-12">
 
-    {# ===== Left Column: Next + Filters + Table ===== #}
+    <!-- ===== Left Column ===== -->
     <div class="space-y-8 lg:col-span-8">
 
       {% if events and events|length %}
@@ -138,12 +151,8 @@
           <span class="chip">Next</span>
           <div id="next-event-text" class="min-w-[200px] flex-1 text-yellow-100">Scanning upcoming events…</div>
           <div class="ml-auto flex gap-2">
-            <button id="evt-add-ics" type="button" class="rounded-full bg-yellow-400/90 px-3 py-1.5 text-xs font-black text-black hover:bg-yellow-400">
-              + Add .ics
-            </button>
-            <a id="evt-add-gcal" href="#" class="rounded-full border border-yellow-400/70 px-3 py-1.5 text-xs font-black text-yellow-200 hover:bg-zinc-900" rel="noopener">
-              + Google
-            </a>
+            <button id="evt-add-ics" type="button" class="rounded-full bg-yellow-400/90 px-3 py-1.5 text-xs font-black text-black hover:bg-yellow-400">+ Add .ics</button>
+            <a id="evt-add-gcal" href="#" class="rounded-full border border-yellow-400/70 px-3 py-1.5 text-xs font-black text-yellow-200 hover:bg-zinc-900" rel="noopener">+ Google</a>
           </div>
         </div>
       </div>
@@ -170,21 +179,8 @@
           Upcoming only
         </label>
         <div class="ml-auto flex items-center gap-2">
-          <button id="evt-export" type="button"
-                  class="rounded-full border border-yellow-400/40 bg-black px-4 py-2 font-bold text-yellow-200 hover:bg-zinc-900">
-            ⤓ Export CSV
-          </button>
-          {% if calendar_ics_url is defined and calendar_ics_url %}
-          <a href="{{ calendar_ics_url }}"
-             class="rounded-full bg-gradient-to-r from-yellow-400 to-yellow-200 px-5 py-2 font-bold text-black shadow hover:scale-105">
-            Export .ics
-          </a>
-          {% else %}
-          <button id="evt-export-ics" type="button"
-            class="rounded-full bg-gradient-to-r from-yellow-400 to-yellow-200 px-5 py-2 font-bold text-black shadow hover:scale-105">
-            Export .ics
-          </button>
-          {% endif %}
+          <button id="evt-export" type="button" class="rounded-full border border-yellow-400/40 bg-black px-4 py-2 font-bold text-yellow-200 hover:bg-zinc-900">⤓ Export CSV</button>
+          <button id="evt-export-ics" type="button" class="rounded-full bg-gradient-to-r from-yellow-400 to-yellow-200 px-5 py-2 font-bold text-black shadow hover:scale-105">Export .ics</button>
         </div>
       </div>
 
@@ -207,7 +203,9 @@
             {% set res = (e.result if e.result is defined else '') %}
             {% set res_u = (res ~ '')|upper %}
             {% set upcoming = (e.is_upcoming if e.is_upcoming is defined else None) %}
-            <tr class="transition-colors"
+            {% set slug = (e.name if e.name is defined and e.name else (e.opponent if e.opponent is defined else 'Team Event'))|lower|replace(' ','-')|replace('/','-') %}
+            {% set row_id = 'evt-' ~ (e.date|replace('-','')) ~ '-' ~ slug %}
+            <tr id="{{ row_id }}" class="transition-colors"
                 data-row
                 itemscope itemtype="https://schema.org/SportsEvent"
                 data-date="{{ e.date }}"
@@ -227,6 +225,10 @@
                 <span itemprop="name">{{ (e.name if e.name is defined and e.name else (e.opponent if e.opponent is defined else 'Team Event')) }}</span>
                 {% if e.type %}<span class="ml-2 chip" itemprop="eventType">{{ e.type }}</span>{% endif %}
                 {% if e.highlight %}<span class="ml-2 text-xs font-semibold text-yellow-300/90">• {{ e.highlight }}</span>{% endif %}
+                <div class="row-actions mt-1 text-xs">
+                  <button class="px-2 py-0.5 rounded border border-yellow-400/40 text-yellow-200" data-row-ics>+ .ics</button>
+                  <a class="px-2 py-0.5 rounded border border-yellow-400/40 text-yellow-200" data-row-gcal href="#">+ Google</a>
+                </div>
               </td>
               <td class="px-3 py-2" data-label="Location" itemprop="location">{{ e.location }}</td>
               <td class="px-3 py-2" data-label="Time">{{ e.time }}</td>
@@ -243,7 +245,10 @@
             {% endfor %}
           </tbody>
         </table>
-        <div class="mt-4 text-xs text-zinc-400">Times shown in your local timezone.</div>
+        <div class="mt-4 flex items-center justify-between text-xs text-zinc-400">
+          <span>Times shown in your local timezone.</span>
+          <span id="pp-sr" class="sr-only" aria-live="polite"></span>
+        </div>
       </div>
       {% else %}
         <div class="w-full rounded-xl border border-yellow-400/20 bg-black/40 p-6 text-sm text-zinc-300">
@@ -252,10 +257,9 @@
       {% endif %}
     </div>
 
-    {# ===== Right Column: Sponsors ribbon & callouts ===== #}
+    <!-- ===== Right Column ===== -->
     <aside class="space-y-6 lg:col-span-4">
-      <!-- Sponsors ribbon (auto de-duped) -->
-      <div class="fc-card p-4">
+      <div class="glass p-4">
         <div class="mb-3 flex items-center justify-between">
           <h3 class="text-sm font-extrabold uppercase tracking-wide text-yellow-300">Sponsors</h3>
           <span class="text-xs text-zinc-300">Top supporters</span>
@@ -269,8 +273,7 @@
         </div>
       </div>
 
-      <!-- CTA box -->
-      <div class="fc-card p-5">
+      <div class="glass p-5">
         <h3 class="text-lg font-extrabold text-yellow-200">Fuel the Season</h3>
         <p class="mt-1 text-sm text-zinc-300">Every dollar supports travel, equipment, and academic tutoring.</p>
         <div class="mt-3 flex gap-2">
@@ -287,130 +290,129 @@
   const root = document.getElementById('program-pulse');
   if (!root || root.__init) return; root.__init = true;
 
-  /* ---------- Cache ---------- */
+  /* Idle preconnect for calendar services */
+  (window.requestIdleCallback||((cb)=>setTimeout(cb,1)))(()=>{
+    ['https://calendar.google.com','https://www.google.com'].forEach(h=>{
+      const l=document.createElement('link'); l.rel='preconnect'; l.href=h; l.crossOrigin=''; document.head.appendChild(l);
+    });
+  });
+
   const tbody   = root.querySelector('#evt-body');
   const ribbon  = root.querySelector('[data-ribbon]');
   const nextTxt = root.querySelector('#next-event-text');
   const totalEl = root.querySelector('#ss-total');
   const countEl = root.querySelector('#ss-count');
+  const srLive  = root.querySelector('#pp-sr');
 
-  /* ---------- Utils ---------- */
+  /* Pointer spotlight on glass panels (motion-safe) */
+  const prefersReduced = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  if (!prefersReduced){
+    root.addEventListener('pointermove', (e)=>{
+      const glass = e.target.closest('.glass'); if(!glass) return;
+      const r = glass.getBoundingClientRect();
+      glass.style.setProperty('--pulse-spot-x', ((e.clientX-r.left)/Math.max(1,r.width))*100+'%');
+      glass.style.setProperty('--pulse-spot-y', ((e.clientY-r.top)/Math.max(1,r.height))*100+'%');
+    }, {passive:true});
+  }
+
+  /* Utils */
   const fmt0 = (n)=> (Math.round(+n||0)).toLocaleString();
   const cmp  = (x,y)=>{ x=(x||'').toLowerCase(); y=(y||'').toLowerCase(); return x<y?-1:x>y?1:0 };
-  const hasCrypto = !!(window.crypto && window.crypto.getRandomValues);
 
-  function cryptoRandom(n){
+  const hasCrypto = !!(window.crypto && window.crypto.getRandomValues);
+  const rand = (n)=> {
     const chars='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     if (!hasCrypto) return Array.from({length:n},()=>chars[Math.floor(Math.random()*chars.length)]).join('');
     const arr = new Uint8Array(n); window.crypto.getRandomValues(arr);
     return Array.from(arr, v=> chars[v%chars.length]).join('');
-  }
+  };
 
   function parseDateTime(date, time){
     if (!date) return new Date(NaN);
     const t = (time||'').trim();
     let norm = t;
     if (t && !/^\d{1,2}:\d{2}\s*[ap]m$/i.test(t) && /^[0-9]{1,2}\s*[ap]m$/i.test(t)) norm = t.replace(/^(\d{1,2})\s*([ap]m)$/i, '$1:00 $2');
-    const d1 = new Date(`${date} ${norm||'12:00 PM'}`);
-    if (!isNaN(d1)) return d1;
-    const d2 = new Date(date);
-    return d2;
+    const d1 = new Date(`${date} ${norm||'12:00 PM'}`); if (!isNaN(d1)) return d1;
+    const d2 = new Date(date); return d2;
   }
-
   function rowToEvent(r){
     const title = (r.dataset.name || 'Team Event');
     const loc   = (r.dataset.location || '');
     const start = parseDateTime(r.dataset.date, r.dataset.time);
-    const end   = new Date(start.getTime() + 90*60*1000); // default 90m
+    const end   = new Date(start.getTime() + 90*60*1000);
     const fmt = (d)=> d.toISOString().replace(/[-:]/g,'').replace('.000','');
-    return {
-      uid: cryptoRandom(10) + '@fundchamps',
-      dtstamp: fmt(new Date()),
-      dtstart: fmt(start),
-      dtend: fmt(end),
-      summary: title,
-      location: loc
-    };
+    return { uid: rand(10)+'@fundchamps', dtstamp: fmt(new Date()), dtstart: fmt(start), dtend: fmt(end), summary: title, location: loc };
   }
-
-  function escapeICS(s){ return String(s).replace(/([,;])/g,'\\$1').replace(/\n/g,'\\n') }
+  function escICS(s){ return String(s).replace(/([,;])/g,'\\$1').replace(/\n/g,'\\n') }
   function downloadICS(events, filename){
     const lines = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//FundChamps//Calendar//EN'];
     events.forEach(e=>{
-      lines.push('BEGIN:VEVENT','UID:'+e.uid,'DTSTAMP:'+e.dtstamp,'DTSTART:'+e.dtstart,'DTEND:'+e.dtend,
-                 'SUMMARY:'+escapeICS(e.summary));
-      if (e.location) lines.push('LOCATION:'+escapeICS(e.location));
+      lines.push('BEGIN:VEVENT','UID:'+e.uid,'DTSTAMP:'+e.dtstamp,'DTSTART:'+e.dtstart,'DTEND:'+e.dtend,'SUMMARY:'+escICS(e.summary));
+      if (e.location) lines.push('LOCATION:'+escICS(e.location));
       lines.push('END:VEVENT');
     });
     lines.push('END:VCALENDAR');
     const blob = new Blob([lines.join('\r\n')], { type:'text/calendar;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename||'events.ics';
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: filename||'events.ics' });
     document.body.appendChild(a); a.click(); a.remove();
   }
-  function googleCalUrl(e){
-    const qp = new URLSearchParams({
-      action:'TEMPLATE', text:e.summary, dates:`${e.dtstart}/${e.dtend}`,
-      details:'FundChamps event', location:e.location||'', trp:'true'
-    });
+  const gcal = (e)=>{
+    const qp = new URLSearchParams({ action:'TEMPLATE', text:e.summary, dates:`${e.dtstart}/${e.dtend}`, details:'FundChamps event', location:e.location||'', trp:'true' });
     return `https://calendar.google.com/calendar/render?${qp.toString()}`;
-  }
+  };
 
-  /* ---------- De-dupe EVENTS by (date|time|name|location) ---------- */
+  /* De-dupe rows */
   if (tbody) {
-    const rows = Array.from(tbody.querySelectorAll('[data-row]'));
-    const seen = new Set();
-    rows.forEach(r => {
-      const key = [
-        (r.dataset.date||'').trim().toLowerCase(),
-        (r.dataset.time||'').trim().toLowerCase(),
-        (r.dataset.name||'').trim().toLowerCase(),
-        (r.dataset.location||'').trim().toLowerCase()
-      ].join('|');
-      if (seen.has(key)) r.remove(); else seen.add(key);
+    const rows = Array.from(tbody.querySelectorAll('[data-row]')); const seen = new Set();
+    rows.forEach(r=>{
+      const key = [(r.dataset.date||''),(r.dataset.time||''),(r.dataset.name||''),(r.dataset.location||'')].map(s=>s.trim().toLowerCase()).join('|');
+      if(seen.has(key)) r.remove(); else seen.add(key);
     });
   }
 
-  /* ---------- Localize <time> + mark upcoming ---------- */
+  /* Localize <time> and mark upcoming */
   function getRowDate(r){ return parseDateTime(r.dataset.date, r.dataset.time) }
   if (tbody) {
     const now = new Date();
-    tbody.querySelectorAll('tr[data-row]').forEach(r => {
+    tbody.querySelectorAll('tr[data-row]').forEach(r=>{
       const t = r.querySelector('time[datetime]');
       if (t) {
         const iso = t.getAttribute('datetime'); const d = new Date(iso);
-        if (!isNaN(d)) {
-          const hasTime = /T\d{2}:\d{2}/.test(iso);
-          t.textContent = hasTime
-            ? d.toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' })
-            : d.toLocaleDateString(undefined, { dateStyle:'medium' });
-        }
+        if (!isNaN(d)) t.textContent = d.toLocaleString(undefined, { dateStyle:'medium', timeStyle:'short' });
       }
       if (r.dataset.upcoming === 'auto') r.dataset.upcoming = getRowDate(r) > now ? 'true' : 'false';
     });
   }
 
-  /* ---------- Next event banner ---------- */
-  if (tbody && nextTxt) {
+  /* Next event banner + actions */
+  function computeNext(){
+    if (!tbody || !nextTxt) return null;
     const rows = Array.from(tbody.querySelectorAll('[data-row]'));
     const upcoming = rows.filter(r => r.dataset.upcoming === 'true');
-    if (!upcoming.length) nextTxt.textContent = 'No upcoming events — stay tuned!';
-    else {
-      const next = upcoming.sort((a,b)=> getRowDate(a) - getRowDate(b))[0];
-      const when = next.querySelector('time')?.textContent?.trim() || next.dataset.date;
-      const what = (next.dataset.name || '').trim();
-      const where= (next.dataset.location || '').trim();
-      nextTxt.textContent = `Next: ${what} • ${when} • ${where}`;
-
-      root.querySelector('#evt-add-ics')?.addEventListener('click', ()=>{
-        const ev = rowToEvent(next);
-        downloadICS([ev], 'next-event.ics');
-      });
-      const g = root.querySelector('#evt-add-gcal');
-      if (g) g.href = googleCalUrl(rowToEvent(next));
-    }
+    if (!upcoming.length) { nextTxt.textContent = 'No upcoming events — stay tuned!'; return null; }
+    const next = upcoming.sort((a,b)=> getRowDate(a) - getRowDate(b))[0];
+    const when = next.querySelector('time')?.textContent?.trim() || next.dataset.date;
+    const what = (next.dataset.name || '').trim(); const where= (next.dataset.location || '').trim();
+    nextTxt.textContent = `Next: ${what} • ${when} • ${where}`;
+    root.querySelector('#evt-add-ics')?.addEventListener('click', ()=> downloadICS([rowToEvent(next)], 'next-event.ics'));
+    const g = root.querySelector('#evt-add-gcal'); if (g) g.href = gcal(rowToEvent(next));
+    return next;
   }
+  const nextRow = computeNext();
 
-  /* ---------- Filters + sort + export ---------- */
+  /* Toolbar: Jump + Share */
+  root.querySelector('#pp-jump')?.addEventListener('click', ()=>{
+    const n = computeNext(); if (!n) return;
+    n.scrollIntoView({ behavior: prefersReduced?'auto':'smooth', block:'center' });
+    n.classList.add('outline','outline-yellow-300/70'); setTimeout(()=>n.classList.remove('outline','outline-yellow-300/70'), 1500);
+  });
+  root.querySelector('#pp-share')?.addEventListener('click', async ()=>{
+    const data={ title: document.title.replace(/ — .*/,''), text:'Our schedule & results', url: location.href.split('#')[0] + '#program-pulse' };
+    try{ if(navigator.share){ await navigator.share(data); srLive.textContent='Shared'; return; } }catch{}
+    try{ await navigator.clipboard.writeText(data.url); srLive.textContent='Link copied'; }catch{ srLive.textContent='Copy failed'; }
+  });
+
+  /* Filters + sort + export */
   const search = root.querySelector('#evt-search');
   const selType = root.querySelector('#evt-type');
   const chkUpcoming = root.querySelector('#evt-upcoming');
@@ -432,9 +434,7 @@
     const onlyUp = !!(chkUpcoming?.checked);
     const visible = [];
     rows.forEach((row)=>{
-      const matchQ = !q || row.dataset.name.toLowerCase().includes(q)
-        || row.dataset.location.toLowerCase().includes(q)
-        || row.dataset.sponsor.toLowerCase().includes(q);
+      const matchQ = !q || row.dataset.name.toLowerCase().includes(q) || row.dataset.location.toLowerCase().includes(q) || row.dataset.sponsor.toLowerCase().includes(q);
       const matchT = !ty || (row.dataset.type||'').toLowerCase() === ty;
       const matchU = !onlyUp || row.dataset.upcoming === 'true';
       row.style.display = matchQ && matchT && matchU ? '' : 'none';
@@ -448,9 +448,7 @@
     if (!tbody) return;
     const k = currentSort.key, dir = currentSort.dir === 'asc' ? 1 : -1;
     const sorted = list.sort((a,b)=> sorters[k](a,b)*dir);
-    const frag = document.createDocumentFragment();
-    sorted.forEach(r=> frag.appendChild(r));
-    tbody.appendChild(frag);
+    const frag = document.createDocumentFragment(); sorted.forEach(r=> frag.appendChild(r)); tbody.appendChild(frag);
   }
   function setSort(key){
     if (currentSort.key === key) currentSort.dir = currentSort.dir === 'asc' ? 'desc' : 'asc';
@@ -468,87 +466,98 @@
   [search, selType, chkUpcoming].forEach(el=> el?.addEventListener('input', ()=> sortRows(applyFilters())));
   setSort('date');
 
-  // CSV/ICS bulk export
+  /* Row quick actions (per-event .ics + Google) */
+  tbody?.addEventListener('click', (e)=>{
+    const tr = e.target.closest('tr[data-row]'); if (!tr) return;
+    if (e.target.matches('[data-row-ics]')) { downloadICS([rowToEvent(tr)], 'event.ics'); }
+    if (e.target.matches('[data-row-gcal]')) { e.preventDefault(); const url=gcal(rowToEvent(tr)); window.open(url, '_blank', 'noopener'); }
+  });
+
+  /* Bulk export */
   root.querySelector('#evt-export')?.addEventListener('click', ()=>{
     const visible = applyFilters();
     const header = ['Date','Event','Location','Time','Result','Sponsor'];
     const lines = [header.join(',')];
     visible.forEach(r=>{
-      const cells = Array.from(r.children).slice(0,6).map(td=>{
-        const txt = td.innerText.replace(/\s+/g,' ').trim().replace(/"/g,'""');
-        return `"${txt}"`;
-      });
+      const cells = Array.from(r.children).slice(0,6).map(td=> `"${td.innerText.replace(/\s+/g,' ').trim().replace(/"/g,'""')}"`);
       lines.push(cells.join(','));
     });
     const blob = new Blob([lines.join('\n')], { type:'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'events.csv';
+    const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: 'events.csv' });
     document.body.appendChild(a); a.click(); a.remove();
   });
-
   root.querySelector('#evt-export-ics')?.addEventListener('click', ()=>{
-    const visible = applyFilters();
-    const evs = visible.map(rowToEvent);
-    downloadICS(evs, 'events.ics');
+    const visible = applyFilters(); downloadICS(visible.map(rowToEvent), 'events.ics');
   });
 
-  /* ---------- Sponsors ribbon: de-dupe logos by src ---------- */
+  /* Sponsors ribbon de-dupe */
   if (ribbon) {
-    const seenSrc = new Set();
+    const seen = new Set();
     Array.from(ribbon.querySelectorAll('img[src]')).forEach(img=>{
-      try {
+      try{
         const key = new URL(img.src, location.href).href;
-        if (seenSrc.has(key)) img.parentElement?.remove(); else seenSrc.add(key);
-      } catch { /* ignore */ }
+        if (seen.has(key)) img.parentElement?.remove(); else seen.add(key);
+      }catch{}
     });
   }
 
-  /* ---------- Public API (compatible with other partials) ---------- */
-  function addLogoToRibbon(logo, alt, url){
+  /* Public API */
+  window.fcAddSponsorPulseLogo = function(logo, alt, url){
     if (!logo || !ribbon) return;
-    const a = document.createElement('a');
-    a.href = url || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; a.className = 'shrink-0';
-    const img = document.createElement('img');
-    img.src = logo; img.alt = alt || 'Sponsor logo'; img.loading='lazy'; img.decoding='async'; img.className='s-logo';
+    const a = document.createElement('a'); a.href = url || '#'; a.target = '_blank'; a.rel = 'noopener noreferrer sponsored'; a.className = 'shrink-0';
+    const img = document.createElement('img'); img.src = logo; img.alt = alt || 'Sponsor logo'; img.loading='lazy'; img.decoding='async'; img.className='s-logo';
     a.appendChild(img); ribbon.insertBefore(a, ribbon.firstChild);
-  }
-  window.fcAddSponsorPulseLogo = addLogoToRibbon;
+  };
 
-  // Live updates (optional Socket.IO)
+  /* Deep-link: #event=YYYYMMDD-slug */
+  (function(){
+    const h = location.hash; if (!h.startsWith('#event=')) return;
+    const id = h.slice(7); const row = document.getElementById(id) || document.querySelector(`[id^="${id}"]`);
+    if (row) {
+      row.scrollIntoView({ behavior: prefersReduced?'auto':'smooth', block:'center' });
+      row.classList.add('outline','outline-yellow-300/70'); setTimeout(()=>row.classList.remove('outline','outline-yellow-300/70'), 1600);
+    }
+  })();
+
+  /* Live sponsor updates (optional Socket.IO) */
   if (typeof window.io === 'function') {
     try {
       const sock = window.io('/sponsors', { transports: ['websocket','polling'] });
-      sock.on('sponsor', (payload)=> {
-        if (payload?.logo) addLogoToRibbon(payload.logo, `${payload.name} logo`, payload.url);
-        // Update totals
-        const curTotal = parseFloat(root.dataset.total || '0');
-        const curCount = parseInt(root.dataset.count || '0', 10);
-        const newTotal = curTotal + (+payload.amount||0);
-        root.dataset.total = String(newTotal);
-        root.dataset.count = String(curCount + 1);
-        if (totalEl) totalEl.textContent = fmt0(newTotal);
-        if (countEl) countEl.textContent = String(curCount + 1);
-        // (Optional) Analytics hook
-        window.dataLayer = window.dataLayer || [];
-        window.dataLayer.push({event:'sponsor_update', sponsor_tier: payload.tier||'', sponsor_amount: +payload.amount||0});
+      sock.on('sponsor', (p)=> {
+        if (p?.logo) window.fcAddSponsorPulseLogo(p.logo, `${p.name} logo`, p.url);
+        const curTotal = parseFloat(root.dataset.total || '0'); const curCount = parseInt(root.dataset.count || '0', 10);
+        const newTotal = curTotal + (+p.amount||0); root.dataset.total = String(newTotal); root.dataset.count = String(curCount + 1);
+        totalEl && (totalEl.textContent = fmt0(newTotal)); countEl && (countEl.textContent = String(curCount + 1));
+        window.dataLayer = window.dataLayer || []; window.dataLayer.push({event:'sponsor_update', sponsor_tier: p.tier||'', sponsor_amount: +p.amount||0});
       });
     } catch(_) {}
   }
 
-  // Modal triggers (donation / tiers)
-  document.addEventListener('click', (e)=>{
-    const open = e.target.closest('[data-modal-open]');
-    if (open) {
-      const id = open.getAttribute('data-modal-open');
-      const dlg = document.getElementById(id);
-      if (dlg?.showModal) { e.preventDefault(); dlg.showModal(); }
-    }
-    const donate = e.target.closest('[data-open-donation]');
-    if (donate) {
-      e.preventDefault();
-      const trigger = document.querySelector('[data-modal-open="donation-modal"], [data-modal-open="tiers-modal"]');
-      trigger?.click();
-    }
-  });
+  /* Announce initialization for SR users */
+  srLive && (srLive.textContent = 'Schedule ready. Use Tab to reach filters and sort headers.');
 })();
+</script>
+
+{# ---------- JSON-LD (SEO): visible events as SportsEvent list ---------- #}
+<script type="application/ld+json" nonce="{{ __nonce }}">
+{
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  "name": "Program Schedule",
+  "itemListElement": [
+    {% for e in events %}
+    {
+      "@type": "ListItem",
+      "position": {{ loop.index }},
+      "item": {
+        "@type": "SportsEvent",
+        "name": "{{ (e.name if e.name is defined and e.name else (e.opponent if e.opponent is defined else 'Team Event'))|e }}",
+        "startDate": "{{ e.date }}T{{ (e.time if e.time is defined and e.time else '00:00') }}",
+        "location": { "@type": "Place", "name": "{{ (e.location or '')|e }}" }
+      }
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+  ]
+}
 </script>
 

@@ -1,18 +1,11 @@
-<!-- FC:HERO_SV_ELITE v2 (deduped, CSP-safe, a11y, LCP-friendly) -->
-{# ========================================================================
-   hero_and_fundraiser.html — SV Centered, Pro-Polished, CSP-safe
-   - Centered headline with contrast plate + tiny stroke
-   - Larger hero height; stronger top gradient for readability
-   - Milestone chips; Web Share; A/B microcopy
-   - Robust meters; keeps updateHeroMeter() & getHeroMeter()
-   - Runtime de-duper: removes extra hero instances on the page
-   ======================================================================== #}
+<!-- FC:HERO_SV_ELITE v2.1 (full-glass cover, CSP-safe, a11y, LCP-friendly) -->
+{# …same header comments omitted for brevity … #}
 {% set NONCE     = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set theme_hex = theme_hex|default('#facc15') %}
 {% set team_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set HERO_TITLE = 'Connect ATX Elite — Fundraiser' %}
+{% set HERO_TITLE = hero_title if hero_title is defined and hero_title else 'Connect ATX Elite — Fundraiser' %}
 
-{# --- Numbers (robust to "$12,345") --- #}
+{# --- Numbers --- #}
 {% set _fr = (funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is defined else 0.0 %}
 {% set _fg = (fundraising_goal|string)|replace('$','')|replace(',','')|float if fundraising_goal is defined and fundraising_goal else 10000.0 %}
 {% set funds_raised = _fr %}
@@ -28,9 +21,9 @@
   (team.photo_url  if team and team.photo_url  is defined and team.photo_url) or
   none
 ) %}
-{% set _default_jpg        = 'images/connect-atx-team.jpg' %}
-{% set _default_logo_webp  = 'images/logo.webp' %}
-{% set _default_logo_avif  = 'images/logo.avif' %}
+{% set _default_jpg       = 'images/connect-atx-team.jpg' %}
+{% set _default_logo_webp = 'images/logo.webp' %}
+{% set _default_logo_avif = 'images/logo.avif' %}
 
 {% if _input_src %}
   {% if '://' in _input_src or _input_src.startswith('data:') %}
@@ -38,18 +31,15 @@
   {% else %}
     {% set hero_bg = (url_for('static', filename=_input_src.lstrip('/')) if url_for is defined else '/' ~ _input_src.lstrip('/')) %}
   {% endif %}
-  {% set hero_bg_avif = none %}
-  {% set hero_bg_webp = none %}
+  {% set hero_bg_avif = none %}{% set hero_bg_webp = none %}
 {% else %}
   {% if url_for is defined %}
     {% set hero_bg      = url_for('static', filename=_default_jpg) %}
-    {% set hero_bg_webp = none %}
-    {% set hero_bg_avif = none %}
+    {% set hero_bg_webp = none %}{% set hero_bg_avif = none %}
     {% set hero_fallback= url_for('static', filename=_default_logo_webp) %}
   {% else %}
     {% set hero_bg      = '/static/' ~ _default_jpg %}
-    {% set hero_bg_webp = none %}
-    {% set hero_bg_avif = none %}
+    {% set hero_bg_webp = none %}{% set hero_bg_avif = none %}
     {% set hero_fallback= '/static/' ~ _default_logo_webp %}
   {% endif %}
 {% endif %}
@@ -59,21 +49,20 @@
 {% set logo_avif = (url_for('static', filename=_default_logo_avif) if url_for is defined else '/static/' ~ _default_logo_avif) %}
 
 {# --- Other knobs --- #}
-{% set fundraiser_deadline   = fundraiser_deadline if fundraiser_deadline is defined and fundraiser_deadline else '2025-12-31T23:59:59' %}
-{% set quick_donate_amounts  = quick_donate_amounts if quick_donate_amounts is defined and quick_donate_amounts else [25,50,100,250] %}
-{% set stripe_publishable_key= stripe_publishable_key|default('') %}
-{% set sponsors              = sponsors if sponsors is defined and sponsors else ['Austin Realty','TechNova','River BBQ','Sunrise Dental'] %}
-{% set sponsor_list_href     = sponsor_list_href if sponsor_list_href is defined and sponsor_list_href else '/sponsors' %}
-{% set become_sponsor_href   = become_sponsor_href if become_sponsor_href is defined and become_sponsor_href else '/become-sponsor' %}
-{% set donate_href           = donate_href if donate_href is defined and donate_href else '/donate' %}
-{% set vip_thresholds        = vip_thresholds if vip_thresholds is defined and vip_thresholds else [5000, 10000, 20000] %}
-{% set goal_heat_enabled     = goal_heat_enabled if goal_heat_enabled is defined else true %}
-{% set ab_copy               = ab_copy if ab_copy is defined and ab_copy else ["Your $25 covers 1 practice", "$25 = 1 practice pass"] %}
+{% set fundraiser_deadline    = fundraiser_deadline if fundraiser_deadline is defined and fundraiser_deadline else '2025-12-31T23:59:59' %}
+{% set quick_donate_amounts   = quick_donate_amounts if quick_donate_amounts is defined and quick_donate_amounts else [25,50,100,250] %}
+{% set stripe_publishable_key = stripe_publishable_key|default('') %}
+{% set stripe_payment_link    = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
+{% set sponsors               = sponsors if sponsors is defined and sponsors else ['Austin Realty','TechNova','River BBQ','Sunrise Dental'] %}
+{% set sponsor_list_href      = sponsor_list_href if sponsor_list_href is defined and sponsor_list_href else '/sponsors' %}
+{% set become_sponsor_href    = become_sponsor_href if become_sponsor_href is defined and become_sponsor_href else '/become-sponsor' %}
+{% set donate_href            = donate_href if donate_href is defined and donate_href else '/donate' %}
+{% set vip_thresholds         = vip_thresholds if vip_thresholds is defined and vip_thresholds else [5000,10000,20000] %}
+{% set goal_heat_enabled      = goal_heat_enabled if goal_heat_enabled is defined else true %}
+{% set ab_copy                = ab_copy if ab_copy is defined and ab_copy else ["Your $25 covers 1 practice","$25 = 1 practice pass"] %}
+{% set hero_focus             = (team.hero_focus if team and team.hero_focus is defined and team.hero_focus else '50% 24%') %}
 
-{# --- Brand tail + focal point --- #}
-{% set BRAND = 'Connect ATX Elite' %}
-{% set show_brand_tail = (team_name|lower != BRAND|lower) %}
-{% set hero_focus = (team.hero_focus if team and team.hero_focus is defined and team.hero_focus else '50% 24%') %}
+<link rel="preload" as="image" href="{{ hero_bg }}" imagesizes="100vw">
 
 <section id="fc-hero"
          class="relative overflow-clip min-h-[82vh] sm:min-h-[88vh]"
@@ -84,24 +73,25 @@
     <picture>
       {% if hero_bg_avif %}<source srcset="{{ hero_bg_avif }}" type="image/avif" sizes="100vw">{% endif %}
       {% if hero_bg_webp %}<source srcset="{{ hero_bg_webp }}" type="image/webp" sizes="100vw">{% endif %}
-      <img id="fc-hero-img"
-           src="{{ hero_bg }}"
-           data-fallback="{{ hero_fallback }}"
-           alt="{{ team_name }} team photo"
-           width="1920" height="1080"
-           class="h-full w-full object-cover will-change-[filter,opacity]"
-           style="object-position: {{ hero_focus }};"
+      <img id="fc-hero-img" src="{{ hero_bg }}" data-fallback="{{ hero_fallback }}"
+           alt="{{ team_name }} team photo" width="1920" height="1080"
+           class="h-full w-full object-cover will-change-[transform,opacity]"
+           style="object-position: {{ hero_focus }}; filter: saturate(1.05) contrast(1.06);"
            loading="eager" decoding="async" fetchpriority="high" sizes="100vw">
     </picture>
+
+    {# NEW: full-bleed glass cover over the entire photo #}
+    <div class="fc-glass-cover" aria-hidden="true"></div>
+
     <div class="fc-hero-grad" aria-hidden="true"></div>
     <div class="fc-hero-glow" aria-hidden="true"></div>
     <div class="heat-layer"   aria-hidden="true"></div>
     <div class="noise-layer mix-blend-soft-light" aria-hidden="true"></div>
   </div>
 
-  <!-- Content (centered, offset into photo) -->
+  <!-- Content -->
   <div class="relative fc-section">
-    <div class="mx-auto fc-hero-card rounded-3xl p-5 sm:p-7 lg:p-8 max-w-7xl relative z-[1]"
+    <div class="mx-auto fc-hero-card rounded-3xl p-5 sm:p-7 lg:p-8 max-w-5xl relative z-[1]"
          style="margin-top: var(--hero-offset);">
       <p id="sr-live" class="sr-only" aria-live="polite"></p>
 
@@ -111,13 +101,8 @@
           <h1 id="fc-hero-title"
               class="fc-title-glow text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
             <span class="inline-block bg-clip-text text-transparent fc-hero-title-gradient fc-title-text">
-              {{ team_name }}
+              {{ HERO_TITLE }}
             </span>
-            {% if show_brand_tail %}
-              <span class="ml-1 opacity-90">{{ BRAND }}</span>
-            {% else %}
-              <span class="ml-2 align-top text-lg sm:text-xl text-zinc-300/90">— Fundraiser</span>
-            {% endif %}
           </h1>
         </div>
 
@@ -126,7 +111,7 @@
           Every dollar fuels travel, uniforms, and training. You’re part of the story.
         </p>
 
-        <!-- Countdown (compact) -->
+        <!-- Countdown -->
         <div class="grid grid-cols-4 gap-2 text-center select-none"
              role="timer" aria-live="polite" aria-describedby="fc-deadline">
           {% for key in ['Days','Hrs','Min','Sec'] %}
@@ -210,22 +195,16 @@
               {% for amt in quick_donate_amounts %}
               <button type="button"
                       class="fc-cta rounded-2xl px-3 py-2.5 sm:py-3 text-xl sm:text-2xl font-extrabold tabular-nums leading-none
-                             bg-white/[.06] hover:bg-white/[.10] ring-1 ring-white/15
-                             shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)]
-                             transition"
-                      style="color:#0b0b0c; background: color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 92%, transparent);
-                             text-shadow: 0 1px 0 rgba(255,255,255,.35);"
-                      data-amount="{{ amt }}"
-                      aria-label="Quick donate {{ amt }} dollars">
+                             bg-white/[.06] hover:bg-white/[.10] ring-1 ring-white/15 shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)] transition"
+                      style="color:#0b0b0c; background: color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 92%, transparent); text-shadow: 0 1px 0 rgba(255,255,255,.35);"
+                      data-amount="{{ amt }}" aria-label="Quick donate {{ amt }} dollars">
                 ${{ amt }}
               </button>
               {% endfor %}
             </div>
 
-            <!-- Share -->
             <div class="flex items-center justify-between -mt-0.5">
-              <a id="fc-share"
-                 href="{{ sponsor_list_href }}"
+              <a id="fc-share" href="{{ sponsor_list_href }}"
                  class="inline-flex items-center gap-1 text-[13px] sm:text-sm text-yellow-200/90 hover:text-yellow-200 underline underline-offset-2">
                  🔗 Share
               </a>
@@ -243,7 +222,6 @@
               </a>
             </div>
 
-            <!-- Trust flip -->
             <div class="relative mt-1 h-11 sm:h-12 [perspective:1000px]" aria-hidden="true">
               <div class="absolute inset-0 [transform-style:preserve-3d] transition-transform duration-700 hover:[transform:rotateY(180deg)]">
                 <div class="absolute inset-0 grid place-items-center rounded-xl ring-1 ring-white/10 bg-white/5 [backface-visibility:hidden]">
@@ -257,7 +235,6 @@
               </div>
             </div>
 
-            <!-- Ticker -->
             <div class="relative overflow-hidden rounded-xl ring-1 ring-white/10 bg-white/5">
               <div class="ticker-row whitespace-nowrap will-change-transform py-1.5" id="fc-ticker" aria-label="Sponsor ticker">
                 {% for s in sponsors %}<span class="mx-6 text-xs text-zinc-300">🏅 {{ s }}</span>{% endfor %}
@@ -283,7 +260,42 @@
   </noscript>
 
   <style nonce="{{ NONCE }}">
-    /* Readability plate behind title */
+    /* Apple-y glass card */
+    .fc-hero-card{
+      background: color-mix(in srgb, rgba(0,0,0,.60) 58%, transparent);
+      border: 1px solid rgba(255,255,255,.10);
+      box-shadow:
+        0 20px 50px rgba(0,0,0,.55),
+        inset 0 1px 0 rgba(255,255,255,.06),
+        inset 0 0 0 1px rgba(255,255,255,.04);
+    }
+    @supports((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))){
+      .fc-hero-card{
+        backdrop-filter: blur(18px) saturate(1.05);
+        -webkit-backdrop-filter: blur(18px) saturate(1.05);
+        background: color-mix(in srgb, rgba(0,0,0,.46) 52%, transparent);
+      }
+    }
+
+    /* FULL-BLEED GLASS COVER */
+    .fc-glass-cover{
+      position:absolute; inset:0; z-index:0;
+      background:
+        linear-gradient(to top, rgba(0,0,0,.42), rgba(0,0,0,.30) 40%, rgba(0,0,0,.18) 65%, rgba(0,0,0,.10)),
+        radial-gradient(90% 60% at 50% 40%, rgba(255,255,255,.06), transparent 70%);
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))){
+      .fc-glass-cover{ -webkit-backdrop-filter: blur(8px) saturate(1.05); backdrop-filter: blur(8px) saturate(1.05); }
+    }
+    @media (max-width: 640px){
+      .fc-glass-cover{ border-width: 0; }
+      @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))){
+        .fc-glass-cover{ -webkit-backdrop-filter: blur(5px) saturate(1.05); backdrop-filter: blur(5px) saturate(1.05); }
+      }
+    }
+
+    /* Title plate + glow */
     #fc-hero .fc-title-wrap{ position:relative; display:inline-block; }
     #fc-hero .fc-title-wrap::before{
       content:""; position:absolute; inset:-.35rem -.9rem; border-radius:1.25rem;
@@ -296,26 +308,24 @@
     @supports(-webkit-text-stroke:1px black){
       #fc-hero .fc-title-text{ -webkit-text-stroke:.6px rgba(0,0,0,.55); }
     }
-    /* Title glow */
     #fc-hero .fc-title-glow{
       text-shadow:
         0 1px 0 rgba(0,0,0,.60),
         0 16px 40px rgba(0,0,0,.45),
         0 0 26px color-mix(in oklab, var(--fc-hero-accent, {{ theme_hex }}) 30%, transparent);
     }
-    /* Darkening stack for readability */
+
+    /* Readability stack (tuned) */
     .fc-hero-grad{
-      position:absolute; inset:0;
+      position:absolute; inset:0; pointer-events:none;
       background:
-        linear-gradient(to top, rgba(0,0,0,.68) 0%, rgba(0,0,0,.24) 38%, rgba(0,0,0,.10) 60%, transparent 75%),
-        linear-gradient(to bottom, rgba(0,0,0,.25), transparent 55%);
-      pointer-events:none;
+        linear-gradient(to top, rgba(0,0,0,.70) 0%, rgba(0,0,0,.22) 40%, rgba(0,0,0,.08) 62%, transparent 78%),
+        linear-gradient(to bottom, rgba(0,0,0,.22), transparent 55%);
     }
     .fc-hero-glow{
       position:absolute; inset:-10% -10% auto -10%; height:42%;
       background: radial-gradient(60% 100% at 50% 100%, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 30%, transparent), transparent 70%);
-      filter: blur(24px);
-      opacity:.45; pointer-events:none;
+      filter: blur(24px); opacity:.45; pointer-events:none;
     }
     .heat-layer{
       position:absolute; inset:0; pointer-events:none;
@@ -325,196 +335,208 @@
         radial-gradient(50% 16% at 10% 16%, rgba(255,255,255,.08), transparent 70%);
       mix-blend-mode: screen;
     }
-    .noise-layer{
-      position:absolute; inset:0; opacity:.08; pointer-events:none;
+    .noise-layer{ position:absolute; inset:0; opacity:.08; pointer-events:none;
       background-image:
         repeating-linear-gradient(0deg, rgba(255,255,255,.06) 0 1px, transparent 1px 2px),
         repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 1px, transparent 1px 2px);
     }
-    /* Progress bar visuals */
+
+    /* Progress bar: premium gradient + specular highlight */
     .fc-bar{
       background:
-        linear-gradient(90deg, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 90%, transparent), #fff);
+        linear-gradient(90deg,
+          color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 94%, transparent) 0%,
+          #fff 100%);
       box-shadow:
-        inset 0 0 0 1px rgba(255,255,255,.25),
-        0 4px 18px color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 35%, transparent);
+        inset 0 0 0 1px rgba(255,255,255,.28),
+        0 6px 22px color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 38%, transparent);
     }
-    .fc-shine{ background: linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.02) 35%, rgba(255,255,255,.12)); mix-blend-mode: overlay; }
-    /* Ticker */
+    .fc-shine{
+      background: linear-gradient(90deg, rgba(255,255,255,.18), rgba(255,255,255,.04) 35%, rgba(255,255,255,.16));
+      mix-blend-mode: soft-light;
+    }
+
+    /* Quick donate: segmented control vibe */
+    #fc-hero .fc-cta{
+      border: 1px solid rgba(255,255,255,.20);
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.08),
+        0 6px 20px rgba(0,0,0,.25);
+    }
+    #fc-hero .fc-cta:focus-visible{
+      outline: none;
+      box-shadow:
+        inset 0 0 0 1px rgba(255,255,255,.12),
+        0 0 0 3px color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 50%, transparent),
+        0 6px 20px rgba(0,0,0,.25);
+    }
+
+    /* Milestones light up when crossed */
+    #fc-hero .group.active span{
+      border: 1px solid rgba(255,255,255,.22);
+      box-shadow: 0 6px 20px color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 40%, transparent);
+    }
+
+    /* Ticker motion control */
     #fc-hero .ticker-row{ animation: fc-ticker 32s linear infinite; }
     @keyframes fc-ticker{ from{ transform: translateX(0); } to{ transform: translateX(-50%); } }
-    /* LCP-friendly image reveal */
+    @media (prefers-reduced-motion: reduce){ #fc-hero .ticker-row{ animation:none; transform: translateX(0); } }
+
+    /* LCP image reveal */
     #fc-hero #fc-hero-img{ opacity:1 !important; }
-    @media (prefers-reduced-motion:no-preference){
-      #fc-hero #fc-hero-img{ transition: opacity .45s ease; }
+    @media (prefers-reduced-motion:no-preference){ #fc-hero #fc-hero-img{ transition: opacity .45s ease; } }
+
+    /* High-contrast users */
+    @media (prefers-contrast: more){
+      .fc-hero-card{ background-color: rgba(0,0,0,.55); }
+      .fc-cta{ box-shadow: none; }
+      .fc-shine{ display:none; }
+    }
+
+    /* Tighter spacing on very large screens */
+    @media (min-width:1280px){
+      #fc-hero .fc-hero-card{ padding: 2.25rem 2.5rem; }
     }
   </style>
 
   {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
   (() => {
-    // --- Runtime de-duper: keep first hero, remove the rest (prevents double render)
     const allHeroes = document.querySelectorAll('section#fc-hero');
-    if (allHeroes.length > 1) {
-      for (let i = 1; i < allHeroes.length; i++) {
-        try { allHeroes[i].setAttribute('aria-hidden','true'); allHeroes[i].remove(); } catch {}
-      }
-    }
+    if (allHeroes.length > 1){ for (let i=1;i<allHeroes.length;i++) try{ allHeroes[i].setAttribute('aria-hidden','true'); allHeroes[i].remove(); }catch{} }
     if (window.__fcHeroInit) return; window.__fcHeroInit = true;
 
-    const VIPS = {{ vip_thresholds|tojson|safe }};
-    const HEAT_ON = {{ 'true' if goal_heat_enabled else 'false' }};
-    const AB_COPY = {{ ab_copy|tojson|safe }};
-
-    const $  = (s,r=document)=>r.querySelector(s);
-    const $$ = (s,r=document)=>Array.from(r.querySelectorAll(s));
-    const clamp=(n,min,max)=>Math.min(Math.max(n,min),max);
+    const VIPS={{ vip_thresholds|tojson|safe }}, HEAT_ON={{ 'true' if goal_heat_enabled else 'false' }}, AB_COPY={{ ab_copy|tojson|safe }};
+    const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
     const fmtMoney=v=>new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(+v||0);
 
-    const els = {
-      img: $('#fc-hero-img'), bar: $('#fc-bar'), raised: $('#fc-raised'), goal: $('#fc-goal'),
-      pct: $('#fc-pct'), next: $('#fc-next'),
+    const els={ img:$('#fc-hero-img'), bar:$('#fc-bar'), raised:$('#fc-raised'), goal:$('#fc-goal'),
+      pct:$('#fc-pct'), next:$('#fc-next'),
       countdown:{days:$('#fc-ct-days'),hrs:$('#fc-ct-hrs'),min:$('#fc-ct-min'),sec:$('#fc-ct-sec')},
-      ticker: $('#fc-ticker'), root: $('#fc-hero'), ab: $('#fc-ab-copy'),
-      progressWrap: $('[role="progressbar"]'), share: $('#fc-share'), shareOK: $('#fc-share-ok')
-    };
+      ticker:$('#fc-ticker'), root:$('#fc-hero'), ab:$('#fc-ab-copy'),
+      progressWrap:$('[role="progressbar"]'), share:$('#fc-share'), shareOK:$('#fc-share-ok') };
 
-    // LCP-safe reveal + fallback
-    try{
-      const reveal = ()=> { if(els.img) els.img.style.opacity='1'; };
-      els.img?.addEventListener('load', reveal, { once:true });
-      els.img?.addEventListener('error', () => {
-        const fb = els.img?.getAttribute('data-fallback');
-        if (fb && els.img?.src !== fb) els.img.src = fb;
-        reveal();
-      }, { once:true });
-    }catch{}
+    try{ const r=()=>{ els.img&&(els.img.style.opacity='1'); }; els.img?.addEventListener('load',r,{once:true});
+         els.img?.addEventListener('error',()=>{ const fb=els.img?.getAttribute('data-fallback'); if(fb&&els.img?.src!==fb) els.img.src=fb; r(); },{once:true}); }catch{}
 
-    const state = {
-      raised: {{ funds_raised|float }},
-      goal: Math.max(1, {{ fundraising_goal|float }}),
-      deadline: new Date('{{ fundraiser_deadline }}'),
-    };
+    const state={ raised: {{ funds_raised|float }}, goal: Math.max(1, {{ fundraising_goal|float }}), deadline: new Date('{{ fundraiser_deadline }}') };
 
-    // Confetti with prefers-reduced-motion guard
-    const burstConfetti = (function(){return function(n=24){try{
-      const prm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)');
-      if (prm && prm.matches) return;
-      const c=document.createElement('canvas');c.width=innerWidth;c.height=240;
-      Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60});
-      document.body.appendChild(c);
-      const ctx=c.getContext('2d');
-      const p=Array.from({length:n}).map(()=>({x:Math.random()*c.width,y:-20-Math.random()*60,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,r:2+Math.random()*4,a:1}));
-      const accent=getComputedStyle(document.documentElement).getPropertyValue('--fc-hero-accent').trim()||'{{ theme_hex }}';
-      const colors=['#ffffff',accent,'#22c55e','#60a5fa','#eab308'];
-      (function tick(){
-        ctx.clearRect(0,0,c.width,c.height);
-        p.forEach(o=>{o.x+=o.vx;o.y+=o.vy;o.a-=.012;ctx.globalAlpha=Math.max(0,o.a);
-          ctx.fillStyle=colors[(Math.random()*colors.length)|0];ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,2*Math.PI);ctx.fill();});
-        if(p.some(o=>o.a>0)) requestAnimationFrame(tick); else c.remove();
-      })();
+    const burstConfetti=(function(){return function(n=24){try{
+      const prm=window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)'); if(prm&&prm.matches) return;
+      const c=document.createElement('canvas'); c.width=innerWidth; c.height=240; Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60}); document.body.appendChild(c);
+      const ctx=c.getContext('2d'); const p=Array.from({length:n}).map(()=>({x:Math.random()*c.width,y:-20-Math.random()*60,vx:(Math.random()-.5)*3,vy:2+Math.random()*3,r:2+Math.random()*4,a:1}));
+      const accent=getComputedStyle(document.documentElement).getPropertyValue('--fc-hero-accent').trim()||'{{ theme_hex }}'; const colors=['#ffffff',accent,'#22c55e','#60a5fa','#eab308'];
+      (function tick(){ ctx.clearRect(0,0,c.width,c.height); p.forEach(o=>{o.x+=o.vx;o.y+=o.vy;o.a-=.012;ctx.globalAlpha=Math.max(0,o.a);ctx.fillStyle=colors[(Math.random()*colors.length)|0];ctx.beginPath();ctx.arc(o.x,o.y,o.r,0,2*Math.PI);ctx.fill();}); if(p.some(o=>o.a>0)) requestAnimationFrame(tick); else c.remove(); })();
     }catch{}}})();
 
-    function tweenNumber(el,to,dur=700){
-      if(!el) return;
-      const from=parseFloat((el.textContent||'0').replace(/[^0-9.-]/g,''))||0;
-      const start=performance.now();
-      (function step(t){
-        const k=Math.min(Math.max((t-start)/dur,0),1),e=1-Math.pow(1-k,3);
-        el.textContent=fmtMoney(from+(to-from)*e);
-        if(k<1) requestAnimationFrame(step);
-      })(start);
-    }
+    function tweenNumber(el,to,dur=700){ if(!el) return; const from=parseFloat((el.textContent||'0').replace(/[^0-9.-]/g,''))||0; const start=performance.now();
+      (function step(t){ const k=Math.min(Math.max((t-start)/dur,0),1),e=1-Math.pow(1-k,3); el.textContent=fmtMoney(from+(to-from)*e); if(k<1) requestAnimationFrame(step); })(start); }
 
-    function milestoneHint(pct, raised, goal){
-      const el=document.getElementById('fc-next'); if(!el) return;
-      const steps=[25,50,75,100]; const next=steps.find(s=>pct < s);
-      if(!next){ el.textContent='Thank you! Goal reached 🎉'; return; }
-      const target = goal*(next/100), delta = Math.max(0, target - raised);
-      el.textContent = `Only ${fmtMoney(delta)} to reach ${next}%`;
-    }
+    function milestoneHint(pct, raised, goal){ const el=document.getElementById('fc-next'); if(!el) return; const steps=[25,50,75,100], next=steps.find(s=>pct<s);
+      if(!next){ el.textContent='Thank you! Goal reached 🎉'; return; } const target=goal*(next/100), delta=Math.max(0,target-raised); el.textContent=`Only ${fmtMoney(delta)} to reach ${next}%`; }
 
     function setProgress(raised=state.raised,goal=state.goal){
       state.raised=+raised||0; state.goal=Math.max(+goal||1,1);
       const pct=Math.min(Math.max((state.raised/state.goal)*100,0),100);
-      els.bar && (els.bar.style.width=pct.toFixed(1)+'%');
-      els.pct && (els.pct.textContent=pct.toFixed(1));
-      els.goal && (els.goal.textContent=fmtMoney(state.goal));
-      els.raised && tweenNumber(els.raised,state.raised);
-      els.progressWrap && els.progressWrap.setAttribute('aria-valuenow', pct.toFixed(1));
-      milestoneHint(pct, state.raised, state.goal);
-      [25,50,75,100].forEach(m=>{
-        const ms=document.getElementById('fc-ms-'+m);
-        const wrap=ms?.closest('.group'); wrap&&wrap.classList.toggle('active', pct>=m-0.01);
-      });
-      HEAT_ON && els.root && els.root.style.setProperty('--heat',(pct/100).toFixed(3));
+      els.bar&&(els.bar.style.width=pct.toFixed(1)+'%'); els.pct&&(els.pct.textContent=pct.toFixed(1));
+      els.goal&&(els.goal.textContent=fmtMoney(state.goal)); els.raised&&tweenNumber(els.raised,state.raised);
+      els.progressWrap&&els.progressWrap.setAttribute('aria-valuenow', pct.toFixed(1)); milestoneHint(pct,state.raised,state.goal);
+      [25,50,75,100].forEach(m=>{ const ms=document.getElementById('fc-ms-'+m); const wrap=ms?.closest('.group'); wrap&&wrap.classList.toggle('active', pct>=m-0.01); });
+      HEAT_ON&&els.root&&els.root.style.setProperty('--heat',(pct/100).toFixed(3));
 
       try{
-        const key='fc_vip_hit',prev=parseFloat(sessionStorage.getItem(key)||'0');
+        const key='fc_vip_hit', prev=parseFloat(sessionStorage.getItem(key)||'0');
         const crossed=[...VIPS].sort((a,b)=>a-b).find(th=>prev<th && state.raised>=th);
-        if(crossed){sessionStorage.setItem(key,String(crossed)); burstConfetti(24+Math.min(48,crossed/250));}
+        if(crossed){ sessionStorage.setItem(key,String(crossed)); burstConfetti(24+Math.min(48,crossed/250));
+          dispatchEvent(new CustomEvent('fc:vip:hit',{detail:{threshold: crossed, raised: state.raised}}));
+        }
       }catch{}
-
       try{ dispatchEvent(new CustomEvent('fc:funds:update',{detail:{raised:state.raised,goal:state.goal}})); }catch{}
     }
 
-    function updateCountdown(){
-      const now=new Date(), diff=Math.max(0,state.deadline-now), s=Math.floor(diff/1000);
+    function updateCountdown(){ const now=new Date(), diff=Math.max(0,state.deadline-now), s=Math.floor(diff/1000);
       const d=Math.floor(s/86400), h=Math.floor((s%86400)/3600), m=Math.floor((s%3600)/60), sec=s%60;
-      const c=els.countdown;
-      c.days&&(c.days.textContent=String(d).padStart(2,'0'));
-      c.hrs&&(c.hrs.textContent=String(h).padStart(2,'0'));
-      c.min&&(c.min.textContent=String(m).padStart(2,'0'));
-      c.sec&&(c.sec.textContent=String(sec).padStart(2,'0'));
-    }
+      const c=els.countdown; c.days&&(c.days.textContent=String(d).padStart(2,'0')); c.hrs&&(c.hrs.textContent=String(h).padStart(2,'0'));
+      c.min&&(c.min.textContent=String(m).padStart(2,'0')); c.sec&&(c.sec.textContent=String(sec).padStart(2,'0')); }
 
+    // Stripe Payment Link swap for Apple/Google Pay
     function openCheckout(amount){
-      const base='{{ donate_href }}';
-      const url=base+(base.includes('?')?'&':'?')+'amount='+encodeURIComponent(amount||0);
-      window.location.href=url;
+      const base='{{ donate_href }}'; const url=base+(base.includes('?')?'&':'?')+'amount='+encodeURIComponent(amount||0);
+      const hasStripe={{ 'true' if stripe_publishable_key else 'false' }}; const SPL='{{ stripe_payment_link|e }}';
+      if (hasStripe && SPL){ window.location.href=SPL; return; } window.location.href=url;
     }
 
     $$('#fc-hero .fc-cta').forEach(btn=>btn.addEventListener('click',()=>openCheckout(btn.dataset.amount)));
-    $('#fc-donate')?.addEventListener('click',()=>openCheckout(0));
+    document.getElementById('fc-donate')?.addEventListener('click',()=>openCheckout(0));
 
-    (function share(){
-      const btn=els.share, ok=els.shareOK, sr=document.getElementById('sr-live');
-      if(!btn) return;
-      btn.addEventListener('click', async (e)=>{
-        e.preventDefault();
+    (function share(){ const btn=els.share, ok=els.shareOK, sr=document.getElementById('sr-live'); if(!btn) return;
+      btn.addEventListener('click', async (e)=>{ e.preventDefault();
         const data={ title: document.title.replace(/ — .*/,''), text:'Back our team—every dollar helps!', url: location.href };
-        try{ if(navigator.share){ await navigator.share(data); ok?.classList.remove('hidden'); setTimeout(()=>ok?.classList.add('hidden'), 1200); return; } }catch{}
-        try{ await navigator.clipboard.writeText(data.url); sr && (sr.textContent='Link copied.'); ok?.classList.remove('hidden'); setTimeout(()=>ok?.classList.add('hidden'), 1200); }catch{}
-      });
+        try{ if(navigator.share){ await navigator.share(data); ok?.classList.remove('hidden'); setTimeout(()=>ok?.classList.add('hidden'),1200); return; } }catch{}
+        try{ await navigator.clipboard.writeText(data.url); sr&&(sr.textContent='Link copied.'); ok?.classList.remove('hidden'); setTimeout(()=>ok?.classList.add('hidden'),1200); }catch{} });
     })();
 
-    (function abCopy(){try{
-      const key='fc_ab_copy_hero_v1'; let v=localStorage.getItem(key);
-      if(!v){ v=Math.random()<.5?'A':'B'; localStorage.setItem(key,v); }
-      const AC={{ ab_copy|tojson|safe }}; const text=(v==='A'?AC[0]:(AC[1]||AC[0]));
-      els.ab && (els.ab.textContent=text);
-    }catch{}})();
+    (function abCopy(){try{ const key='fc_ab_copy_hero_v1'; let v=localStorage.getItem(key); if(!v){ v=Math.random()<.5?'A':'B'; localStorage.setItem(key,v); }
+      const AC={{ ab_copy|tojson|safe }}; const text=(v==='A'?AC[0]:(AC[1]||AC[0])); els.ab&&(els.ab.textContent=text); }catch{}})();
 
-    setProgress(state.raised,state.goal);
-    updateCountdown(); setInterval(updateCountdown,1000);
+    setProgress(state.raised,state.goal); updateCountdown(); setInterval(updateCountdown,1000);
 
-    addEventListener('fc:funds:update',e=>{
-      const d=e.detail||{};
-      setProgress(typeof d.raised==='number'?d.raised:state.raised,
-                  typeof d.goal==='number'?d.goal:state.goal);
-      if(d.sponsorName && els.ticker){
-        const safe=String(d.sponsorName).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-        els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
-      }
+    addEventListener('fc:funds:update',e=>{ const d=e.detail||{};
+      setProgress(typeof d.raised==='number'?d.raised:state.raised, typeof d.goal==='number'?d.goal:state.goal);
+      if(d.sponsorName && els.ticker){ const safe=String(d.sponsorName).replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+        els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`); }
     },{passive:true});
 
-    addEventListener('fc:meter:update',e=>{
-      const d=e.detail||{}; window.updateHeroMeter(d.raised,d.goal);
-    },{passive:true});
+    addEventListener('fc:meter:update',e=>{ const d=e.detail||{}; window.updateHeroMeter(d.raised,d.goal); },{passive:true});
 
-    // Public API
-    window.updateHeroMeter = (raised,goal)=> setProgress(raised ?? state.raised, goal ?? state.goal);
-    window.getHeroMeter    = ()=> ({ raised: state.raised, goal: state.goal });
+    addEventListener('fc:vip:hit', e => { try{
+      const t=e.detail?.threshold; const toast=document.createElement('div'); toast.className='fixed inset-x-0 top-3 z-50 grid place-items-center';
+      toast.innerHTML='<div class="rounded-xl bg-amber-500/95 text-black font-semibold px-4 py-2 ring-1 ring-amber-300 shadow">VIP milestone hit: '+(t||'')+' 🎉</div>';
+      document.body.appendChild(toast); setTimeout(()=>toast.remove(),2400);
+      if(els.ticker){ els.ticker.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏆 VIP ${(t||'')}</span>`); }
+    }catch{} },{passive:true});
+
+    window.updateHeroMeter=(raised,goal)=>setProgress(raised ?? state.raised, goal ?? state.goal);
+    window.getHeroMeter=()=>({ raised: state.raised, goal: state.goal });
+    try{ dispatchEvent(new CustomEvent('fc:hero:init')); }catch{}
+  })();
+
+  // --- micro-parallax + crisp reveal (subtle, motion-aware) ---
+  (() => {
+    const img = document.getElementById('fc-hero-img');
+    if(!img) return;
+
+    const reveal = () => {
+      try{
+        img.style.transition = 'filter 420ms ease, transform 900ms cubic-bezier(.2,.8,.2,1)';
+        img.style.filter = 'saturate(1.07) contrast(1.08)';
+      }catch{}
+    };
+    if (img.complete) reveal(); else img.addEventListener('load', reveal, { once:true });
+
+    const prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduce) return;
+
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const y = Math.min(60, Math.max(-60, window.scrollY * 0.06));
+        img.style.transform = `translateY(${y}px) scale(1.02)`;
+      });
+    };
+    addEventListener('scroll', onScroll, { passive:true });
   })();
   {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
+
+  <!-- JSON-LD DonateAction (SEO) -->
+  <script type="application/ld+json" nonce="{{ NONCE }}">
+  {
+    "@context":"https://schema.org",
+    "@type":"DonateAction",
+    "name": {{ HERO_TITLE|tojson }},
+    "target": {{ donate_href|tojson }},
+    "recipient": { "@type":"SportsOrganization", "name": {{ team_name|tojson }} }
+  }
+  </script>
 </section>
 

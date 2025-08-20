@@ -1,4 +1,4 @@
-{# ====================== FundChamps • About + Mission (Refactor: Stacked Flow) ====================== #}
+{# ====================== FundChamps • About + Mission (SV-Elite, CSP-safe) ====================== #}
 {% include "shared/ui_bootstrap.html" ignore missing with context %}
 
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
@@ -9,18 +9,36 @@
 {% set founder_last = _team.founder_lastname if _team and _team.founder_lastname else "Smith" %}
 {% set brand_color  = _team.theme_color if _team and _team.theme_color else "#facc15" %}
 
-<section id="mission" class="relative overflow-hidden bg-zinc-950/95 py-20 text-white md:py-28"
-         style="--fc-brand: {{ brand_color }}" aria-labelledby="about-heading">
+{# Fallback content (never looks empty) #}
+{% set testimonials = testimonials if testimonials is defined and testimonials else [
+  {"quote":"The coaches care about the whole kid — grades and game.","author":"Parent, 7th Grade"},
+  {"quote":"Our child found confidence and a second family here.","author":"The Johnsons"},
+  {"quote":"Professional program with a heart. We’re proud supporters.","author":"Local Sponsor"}
+] %}
+{% set impact = impact if impact is defined and impact else [
+  {"label":"Student-Athletes","value":22},
+  {"label":"Average GPA","value":3.5},
+  {"label":"Season Practices","value":134},
+  {"label":"Scholarships Awarded","value":19}
+] %}
 
-  <!-- Ambient glow -->
-  <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-[var(--fc-brand)]/10 via-transparent to-transparent"></div>
+<section id="mission" class="relative overflow-hidden bg-zinc-950/95 py-20 md:py-28 text-white"
+         style="--fc-brand: {{ brand_color }}; --fc-brand-200: color-mix(in srgb, {{ brand_color }} 22%, transparent);" 
+         aria-labelledby="about-heading" role="region">
+  <!-- Ambient accent -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute inset-0 bg-gradient-to-b from-[var(--fc-brand)]/10 via-transparent to-transparent"></div>
+    <div class="absolute -top-24 left-1/2 -translate-x-1/2 h-[52rem] w-[52rem] rounded-full"
+         style="background: radial-gradient(45% 60% at 50% 30%, color-mix(in srgb, var(--fc-brand) 24%, transparent), transparent 70%); filter: blur(40px); opacity:.35;">
+    </div>
+  </div>
 
-  <div class="relative z-10 mx-auto max-w-4xl px-6 text-center">
+  <div class="relative z-10 mx-auto max-w-5xl px-6 text-center">
     <!-- Heading -->
     <h2 id="about-heading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-yellow-400">
       About {{ player_team }}
     </h2>
-    <p class="mt-4 text-lg text-zinc-200 max-w-2xl mx-auto">
+    <p class="mt-4 text-lg text-zinc-200 max-w-3xl mx-auto">
       <strong class="text-yellow-300">{{ player_team }}</strong> isn’t just basketball — it’s a 
       <span class="font-semibold text-amber-400">family movement</span> in {{ team_region }}.  
       We build <span class="font-semibold text-yellow-200">teamwork</span>, 
@@ -36,29 +54,41 @@
     </p>
 
     <!-- CTAs -->
-    <div class="mt-8 flex flex-wrap justify-center gap-4">
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 px-7 py-3 font-bold text-black shadow-lg hover:scale-105 transition"
-         data-modal-open="story-modal">▶️ Watch Our Story</a>
-      <a href="#donate" class="inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-300/10 px-6 py-3 font-semibold text-yellow-200 hover:bg-yellow-300/20 transition"
-         data-open-donate-modal>💛 Donate Now</a>
+    <div class="mt-8 flex flex-wrap justify-center gap-3 sm:gap-4">
+      <a href="#story" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 px-6 sm:px-7 py-3 font-bold text-black shadow-lg hover:scale-105 transition will-change-transform"
+         data-modal-open="story-modal" data-analytics="mission:watch-story">▶️ Watch Our Story</a>
+      <a href="#donate" class="inline-flex items-center gap-2 rounded-full border border-[color:var(--fc-brand-200)] bg-yellow-300/10 px-5 sm:px-6 py-3 font-semibold text-yellow-200 hover:bg-yellow-300/20 transition"
+         data-open-donate-modal data-analytics="mission:donate">💛 Donate Now</a>
+      <button type="button" id="mission-share"
+              class="inline-flex items-center gap-2 rounded-full border border-[color:var(--fc-brand-200)] bg-black/40 px-5 py-3 font-semibold text-yellow-200 hover:bg-black/60 transition"
+              aria-label="Share {{ player_team }} mission">🔗 Share</button>
     </div>
   </div>
 
   <!-- Testimonials -->
-  <div class="relative z-10 mx-auto mt-16 max-w-3xl px-6">
-    <div class="glass-card p-8 text-left">
-      <h3 class="text-xl font-bold text-yellow-300 mb-5">💬 What Families Say</h3>
+  <div class="relative z-10 mx-auto mt-14 max-w-4xl px-6">
+    <div class="glass-card group p-6 sm:p-8 text-left" aria-roledescription="carousel" aria-label="Family testimonials">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-bold text-yellow-300">💬 What Families Say</h3>
+        <div class="flex items-center gap-2">
+          <button type="button" class="nav-btn rounded-full border border-[color:var(--fc-brand-200)] px-2.5 py-1 text-yellow-200 hover:bg-zinc-900" data-prev aria-label="Previous testimonial">←</button>
+          <button type="button" class="nav-btn rounded-full border border-[color:var(--fc-brand-200)] px-2.5 py-1 text-yellow-200 hover:bg-zinc-900" data-next aria-label="Next testimonial">→</button>
+        </div>
+      </div>
+
       <div id="testimonial-carousel" data-carousel aria-live="polite">
         {% for t in testimonials %}
-        <figure class="{% if not loop.first %}hidden{% endif %}" data-slide>
-          <blockquote class="mb-3 text-lg italic text-yellow-100">“{{ t.quote }}”</blockquote>
+        <figure class="{% if not loop.first %}hidden{% endif %}" data-slide role="group"
+                aria-roledescription="slide" aria-label="{{ loop.index }} of {{ testimonials|length }}">
+          <blockquote class="mb-3 text-lg sm:text-xl italic text-yellow-100">“{{ t.quote }}”</blockquote>
           <figcaption class="text-sm font-semibold text-yellow-200">— {{ t.author }}</figcaption>
         </figure>
         {% endfor %}
-        <nav class="mt-4 flex justify-center gap-2" aria-label="Testimonial navigation">
+
+        <nav class="mt-5 flex justify-center gap-1.5" aria-label="Testimonial navigation">
           {% for i in range(testimonials|length) %}
           <button class="h-2.5 w-2.5 rounded-full bg-yellow-300/40 hover:bg-yellow-300 focus:ring-2 ring-yellow-300"
-                  type="button" data-dot aria-current="{{ 'true' if i == 0 else 'false' }}"></button>
+                  type="button" data-dot aria-current="{{ 'true' if i == 0 else 'false' }}" aria-label="Go to testimonial {{ i+1 }}"></button>
           {% endfor %}
         </nav>
       </div>
@@ -66,30 +96,145 @@
   </div>
 
   <!-- Impact Stats -->
-  <div class="relative z-10 mx-auto mt-16 max-w-5xl px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+  <div class="relative z-10 mx-auto mt-14 max-w-6xl px-6 grid grid-cols-2 md:grid-cols-4 gap-5 sm:gap-6 text-center">
     {% for item in impact %}
     <div class="glass-card py-6">
-      <p class="text-3xl font-extrabold text-yellow-300 count" data-target="{{ item.value }}">0</p>
+      <p class="text-3xl sm:text-4xl font-extrabold text-yellow-300 count"
+         data-target="{{ item.value }}" aria-live="polite">0</p>
       <p class="mt-2 text-sm font-medium text-zinc-300">{{ item.label }}</p>
     </div>
     {% endfor %}
   </div>
+
+  <!-- sr-only live region -->
+  <p class="sr-only" id="mission-sr" aria-live="polite"></p>
 </section>
 
-<script nonce="{{ NONCE }}">
-(function(){
-  // Carousel
-  const root=document.getElementById('testimonial-carousel');if(!root) return;
-  const slides=[...root.querySelectorAll('[data-slide]')];
-  const dots=[...root.querySelectorAll('[data-dot]')];
-  let idx=0;function show(i){idx=(i+slides.length)%slides.length;slides.forEach((s,k)=>s.classList.toggle('hidden',k!==idx));dots.forEach((d,k)=>d.setAttribute('aria-current',k===idx));}
-  dots.forEach((d,i)=>d.addEventListener('click',()=>show(i)));show(0);
-
-  // Impact counters
-  const counters=document.querySelectorAll('.count[data-target]');if(counters.length){
-    const io=new IntersectionObserver((entries,obs)=>{if(entries.some(e=>e.isIntersecting)){counters.forEach(el=>{const target=+el.dataset.target||0;let n=0;const step=Math.max(1,Math.ceil(target/50));const id=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(id);}el.textContent=n;},20)});obs.disconnect();}}, {threshold:.3});
-    counters.forEach(c=>io.observe(c));
+<style nonce="{{ NONCE }}">
+  /* Scoped glass + spotlight */
+  #mission .glass-card{
+    position:relative; isolation:isolate;
+    backdrop-filter: blur(14px) saturate(120%); -webkit-backdrop-filter: blur(14px) saturate(120%);
+    background: linear-gradient(120deg, rgba(255,255,255,.05), rgba(250,220,100,.08));
+    border: 1px solid rgba(255,255,255,.12); border-radius: 1.25rem;
+    box-shadow: 0 12px 36px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
   }
+  #mission .glass-card::before{
+    content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; z-index:0;
+    background: radial-gradient(120% 70% at var(--spot-x,50%) var(--spot-y,0%), color-mix(in srgb, var(--fc-brand) 28%, transparent), transparent 60%);
+    filter: blur(18px); opacity:.5;
+  }
+  #mission .nav-btn{ transition: transform .15s ease }
+  #mission .nav-btn:active{ transform: scale(.96) }
+  @media (prefers-reduced-motion: reduce){
+    #mission .glass-card::before{ display:none }
+  }
+</style>
+
+<script nonce="{{ NONCE }}">
+(() => {
+  const root = document.getElementById('mission'); if (!root || root.__init) return; root.__init = true;
+  const sr = document.getElementById('mission-sr');
+
+  /* Motion-safe pointer spotlight */
+  const reduced = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  if (!reduced){
+    root.addEventListener('pointermove', (e)=>{
+      const card = e.target.closest('.glass-card'); if(!card) return;
+      const r = card.getBoundingClientRect();
+      card.style.setProperty('--spot-x', ((e.clientX-r.left)/Math.max(1,r.width))*100+'%');
+      card.style.setProperty('--spot-y', ((e.clientY-r.top)/Math.max(1,r.height))*100+'%');
+    }, {passive:true});
+  }
+
+  /* ===== Accessible carousel ===== */
+  const carousel = root.querySelector('#testimonial-carousel'); if (carousel){
+    const slides = Array.from(carousel.querySelectorAll('[data-slide]'));
+    const dots   = Array.from(carousel.querySelectorAll('[data-dot]'));
+    const prevB  = root.querySelector('[data-prev]'); 
+    const nextB  = root.querySelector('[data-next]');
+    let idx = 0, autoId = null, hoverPause = false;
+
+    function show(i){
+      idx = (i + slides.length) % slides.length;
+      slides.forEach((s,k)=>{ s.classList.toggle('hidden', k!==idx); s.inert = (k!==idx); });
+      dots.forEach((d,k)=> d.setAttribute('aria-current', k===idx ? 'true' : 'false'));
+      try{ sr.textContent = `Showing testimonial ${idx+1} of ${slides.length}.`; }catch{}
+    }
+    function next(){ show(idx+1); }
+    function prev(){ show(idx-1); }
+
+    dots.forEach((d,i)=> d.addEventListener('click', ()=> show(i)));
+    nextB?.addEventListener('click', next);
+    prevB?.addEventListener('click', prev);
+
+    carousel.addEventListener('keydown', (e)=>{
+      if (e.key === 'ArrowRight') { e.preventDefault(); next(); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); prev(); }
+    });
+
+    const startAuto = ()=>{
+      if (reduced) return;
+      clearInterval(autoId);
+      autoId = setInterval(()=>{ if(!hoverPause && !document.hidden) next(); }, 6000);
+    };
+    carousel.addEventListener('mouseenter', ()=> hoverPause = true);
+    carousel.addEventListener('mouseleave', ()=> hoverPause = false);
+
+    // Start auto when visible
+    const io = new IntersectionObserver((ents)=>{
+      if (ents[0]?.isIntersecting) startAuto(); else clearInterval(autoId);
+    }, {threshold:.4});
+    io.observe(carousel);
+
+    show(0);
+  }
+
+  /* ===== Impact counters (Intl, rAF, motion-safe) ===== */
+  const counters = root.querySelectorAll('.count[data-target]');
+  if (counters.length){
+    const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 });
+    const run = (el)=>{
+      const raw = el.dataset.target;
+      const target = parseFloat(String(raw).replace(/[^0-9.]/g,'')) || 0;
+      if (matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) { el.textContent = nf.format(target); return; }
+      let start = null; const dur = 950;
+      function step(t){
+        if(!start) start = t;
+        const k = Math.min(1, (t-start)/dur); // easeOutCubic
+        const e = 1 - Math.pow(1-k, 3);
+        el.textContent = nf.format(target*e);
+        if (k<1) requestAnimationFrame(step); else el.textContent = nf.format(target);
+      }
+      requestAnimationFrame(step);
+    };
+    const io = new IntersectionObserver((ents,obs)=>{
+      ents.forEach(ent=>{ if(ent.isIntersecting){ run(ent.target); obs.unobserve(ent.target); }});
+    }, {threshold:.4});
+    counters.forEach(c=> io.observe(c));
+  }
+
+  /* ===== Share (Web Share → clipboard) ===== */
+  const shareBtn = document.getElementById('mission-share');
+  shareBtn?.addEventListener('click', async ()=>{
+    const data = { title: document.title.replace(/ — .*/,''), text: 'Support {{ player_team }} — mission, story, and impact.', url: location.href.split('#')[0] + '#mission' };
+    try{ if(navigator.share){ await navigator.share(data); sr.textContent='Shared.'; return; } }catch{}
+    try{ await navigator.clipboard.writeText(data.url); sr.textContent='Link copied.'; }catch{ sr.textContent='Copy failed.'; }
+  });
 })();
+</script>
+
+{# ---------- JSON-LD (SEO): SportsTeam/Organization ---------- #}
+<script type="application/ld+json" nonce="{{ NONCE }}">
+{
+  "@context": "https://schema.org",
+  "@type": "SportsTeam",
+  "name": "{{ player_team }}",
+  "sport": "Basketball",
+  "areaServed": "{{ team_region }}",
+  "parentOrganization": { "@type":"SportsOrganization", "name":"{{ team_league }}" },
+  "founder": { "@type":"Person", "familyName":"{{ founder_last }}" },
+  "url": "{{ request.url_root | trim if request is defined else '' }}"
+}
 </script>
 

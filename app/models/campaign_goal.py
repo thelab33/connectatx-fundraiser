@@ -1,4 +1,3 @@
-# app/models/campaign_goal.py
 # -----------------------------------------------------------------------------
 # CampaignGoal Model
 # Fundraising target for a team/season; stores cents (Stripe-friendly).
@@ -9,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Any, Dict, Final, Optional, Tuple
+from typing import Any, Dict, Tuple
 
 from sqlalchemy import (
     Boolean,
@@ -21,21 +20,26 @@ from sqlalchemy import (
     event,
     select,
     func,
+    text,
 )
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy.orm import Mapped, mapped_column, relationship, object_session
 
 from app.extensions import db
 from .mixins import TimestampMixin, SoftDeleteMixin
 
-
-class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
+class CampaignGoal(db.Model):
     __tablename__ = "campaign_goals"
-    __table_args__ = (
-        # team_id + active is a common filter path (find active goal for a team)
-        Index("ix_campaign_goals_team_active", "team_id", "active"),
-        # cents must be non-negative
-        CheckConstraint("goal_amount >= 0", name="ck_cg_goal_nonneg"),
-        CheckConstraint("total >= 0", name="ck_cg_total_nonneg"),
+    __table_args__ = {"extend_existing": True}  # ✅ prevent duplicate mapping
+
+    id = db.Column(db.Integer, primary_key=True)
+    goal_amount = db.Column(db.Float, nullable=False, default=10000.0)
+    description = db.Column(db.String(255), nullable=True)
+
+    created_at = db.Column(
+        db.DateTime,
+        default=datetime.utcnow,
+        nullable=False,
+        index=True,
     )
 
     # ── Keys ────────────────────────────────────────────────────
@@ -64,15 +68,16 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
     )
 
     # ── Money (cents) ───────────────────────────────────────────
-    goal_amount: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, doc="cents"
-    )
-    total: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=0, doc="cents"
-    )
+    goal_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0, doc="cents")
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, doc="cents")
 
     # ── Status ──────────────────────────────────────────────────
-    active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True, index=True)
+    active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+        index=True,
+    )
 
     # ── Computed ────────────────────────────────────────────────
     @property
@@ -82,6 +87,14 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
     @property
     def raised_dollars(self) -> float:
         return round((self.total or 0) / 100.0, 2)
+
+    @property
+    def remaining_cents(self) -> int:
+        return max(0, int(self.goal_amount or 0) - int(self.total or 0))
+
+    @property
+    def remaining_dollars(self) -> float:
+        return round(self.remaining_cents / 100.0, 2)
 
     @property
     def percent_raised(self) -> float:
@@ -112,43 +125,100 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def update_progress_from_donations(self, commit: bool = True) -> None:
         """
-        Sum paid/complete Sponsor amounts for this team (in cents).
-        Uses the *current* session when possible; commits only if requested.
+        Sum eligible incoming funds for this team (in cents). Supports both
+        Donation and Sponsor models if present; ignores soft-deleted rows.
         """
-        from .sponsor import Sponsor  # local import avoids circular ref
+        sess = object_session(self) or db.session
 
-        # Handle either SoftDelete styles: deleted bool OR deleted_at null.
-        # Prefer attribute presence checks so we work with either mixin.
-        deleted_col = getattr(Sponsor, "deleted", None)
-        deleted_at_col = getattr(Sponsor, "deleted_at", None)
+        total_cents = 0
 
-        valid_statuses = ("paid", "completed", "success")
+        # ---- Donations -------------------------------------------------------
+        try:
+            from .donation import Donation  # type: ignore
 
-        stmt = select(func.coalesce(func.sum(Sponsor.amount), 0)).where(
-            Sponsor.team_id == self.team_id,
-            Sponsor.status.in_(valid_statuses),
-        )
-        if deleted_col is not None:
-            stmt = stmt.where(deleted_col.is_(False))
-        elif deleted_at_col is not None:
-            stmt = stmt.where(deleted_at_col.is_(None))
+            deleted_col = getattr(Donation, "deleted", None)
+            deleted_at_col = getattr(Donation, "deleted_at", None)
 
-        sess = db.session.object_session(self) or db.session
-        total_cents: int = int(sess.execute(stmt).scalar_one() or 0)
-        self.total = max(0, total_cents)
+            # Adjust status list to match your domain
+            valid_donation_statuses = ("paid", "succeeded", "completed", "success")
+
+            stmt = select(func.coalesce(func.sum(Donation.amount), 0)).where(
+                Donation.team_id == self.team_id,
+                Donation.status.in_(valid_donation_statuses),
+            )
+            if deleted_col is not None:
+                stmt = stmt.where(deleted_col.is_(False))
+            elif deleted_at_col is not None:
+                stmt = stmt.where(deleted_at_col.is_(None))
+
+            total_cents += int(sess.execute(stmt).scalar_one() or 0)
+        except Exception:
+            # Donation model may not exist in some deployments
+            pass
+
+        # ---- Sponsors --------------------------------------------------------
+        try:
+            from .sponsor import Sponsor  # type: ignore
+
+            deleted_col = getattr(Sponsor, "deleted", None)
+            deleted_at_col = getattr(Sponsor, "deleted_at", None)
+
+            valid_sponsor_statuses = ("paid", "completed", "success")
+
+            stmt = select(func.coalesce(func.sum(Sponsor.amount), 0)).where(
+                Sponsor.team_id == self.team_id,
+                Sponsor.status.in_(valid_sponsor_statuses),
+            )
+            if deleted_col is not None:
+                stmt = stmt.where(deleted_col.is_(False))
+            elif deleted_at_col is not None:
+                stmt = stmt.where(deleted_at_col.is_(None))
+
+            total_cents += int(sess.execute(stmt).scalar_one() or 0)
+        except Exception:
+            # Sponsor model may not exist in some deployments
+            pass
+
+        self.total = max(0, int(total_cents))
 
         if commit:
             sess.commit()
 
+    # ── Helpers / Queries ───────────────────────────────────────
+    @classmethod
+    def get_active_for_team(cls, team_id: int) -> "CampaignGoal | None":
+        return db.session.execute(
+            select(cls).where(cls.team_id == team_id, cls.active.is_(True)).limit(1)
+        ).scalars().first()
+
+    @classmethod
+    def set_active_goal(cls, team_id: int, goal_amount_cents: int) -> "CampaignGoal":
+        """
+        Deactivate any existing active goal for the team and create a new one.
+        """
+        sess = db.session
+        sess.execute(
+            db.update(cls)
+            .where(cls.team_id == team_id, cls.active.is_(True))
+            .values(active=False)
+        )
+        goal = cls(team_id=team_id, goal_amount=max(0, int(goal_amount_cents)), total=0, active=True)
+        sess.add(goal)
+        sess.commit()
+        return goal
+
     # ── Serialization ───────────────────────────────────────────
     def as_dict(self, include_team: bool = False) -> Dict[str, Any]:
         data: Dict[str, Any] = {
+            "id": self.id,
             "uuid": self.uuid,
             "team_id": self.team_id,
             "goal_amount_cents": int(self.goal_amount or 0),
             "total_raised_cents": int(self.total or 0),
+            "remaining_cents": self.remaining_cents,
             "goal_dollars": self.goal_dollars,
             "raised_dollars": self.raised_dollars,
+            "remaining_dollars": self.remaining_dollars,
             "percent_raised": self.percent_raised,
             "percent_complete": self.percent_complete(),
             "is_complete": self.is_complete,
@@ -171,4 +241,17 @@ class CampaignGoal(db.Model, TimestampMixin, SoftDeleteMixin):
             f"Goal=${self.goal_dollars:,.2f} Raised=${self.raised_dollars:,.2f} "
             f"({self.percent_raised}% – {status})>"
         )
+
+
+# ── Guards to keep values non-negative ─────────────────────────
+@event.listens_for(CampaignGoal, "before_insert")
+def _cg_before_insert(mapper, connection, target: CampaignGoal):
+    target.goal_amount = max(0, int(target.goal_amount or 0))
+    target.total = max(0, int(target.total or 0))
+
+
+@event.listens_for(CampaignGoal, "before_update")
+def _cg_before_update(mapper, connection, target: CampaignGoal):
+    target.goal_amount = max(0, int(target.goal_amount or 0))
+    target.total = max(0, int(target.total or 0))
 

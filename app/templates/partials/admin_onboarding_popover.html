@@ -1,8 +1,9 @@
 {# =============================================================================
    Admin Onboarding Popover — SV Elite (CSP/HTMX/Alpine-optional, Single-file)
    - Safe route resolution (no lambdas), brand-aware styling
-   - Vanilla JS + BroadcastChannel (cross-tab), reduced-motion aware
-   - Works with or without Alpine/HTMX; includes Alpine adapter
+   - Vanilla JS + BroadcastChannel + storage event (cross-tab)
+   - Reduced-motion aware; a11y: dialog, live regions, keyboardable controls
+   - Idempotent: guards duplicate init
    ============================================================================= #}
 {% set NONCE        = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set HAS_ENDPOINT = has_endpoint is defined %}
@@ -25,7 +26,7 @@
 <div
   id="admin-onboarding"
   class="fixed bottom-6 right-6 z-[1050] w-[22rem] max-w-[92vw] rounded-2xl border border-yellow-400/25 bg-zinc-950/95 p-5 text-zinc-100 shadow-2xl backdrop-blur-xl opacity-0 translate-y-2"
-  role="dialog" aria-modal="true" aria-labelledby="admin-ob-title" aria-describedby="admin-ob-desc" tabindex="-1"
+  role="dialog" aria-modal="true" aria-labelledby="admin-ob-title" aria-describedby="admin-ob-desc admin-ob-sr" tabindex="-1"
   data-storage-key="{{ storage_key }}"
   data-sync-url="{{ href_sync }}"
   data-csrf="{{ csrf_val }}"
@@ -102,6 +103,8 @@
       Reset checklist
     </button>
   </div>
+
+  <p id="admin-ob-sr" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 </div>
 {% endif %}
 
@@ -129,7 +132,7 @@
   if (!root || root.__init) return; root.__init = true;
 
   // Utils
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection?.saveData === true);
+  const reduce = (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.connection?.saveData === true);
   const $  = (sel, el = document) => el.querySelector(sel);
   const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
   const getKey  = () => root.dataset.storageKey || 'adminOnboardSteps:global';
@@ -140,14 +143,15 @@
 
   // Focus trap (fallback)
   function trapFocus(container){
-    const onKey = (e) => {
+    function onKey(e){
+      if (e.key === 'Escape'){ close(true); return; }
       if (e.key !== 'Tab') return;
       const list = $$('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])', container).filter(el => !el.disabled);
       if (!list.length) return;
       const first = list[0], last = list[list.length-1];
       if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
       else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-    };
+    }
     container.addEventListener('keydown', onKey);
     return () => container.removeEventListener('keydown', onKey);
   }
@@ -157,19 +161,24 @@
   let steps = (() => {
     try {
       const saved = JSON.parse(localStorage.getItem(getKey()) || 'null');
-      return (Array.isArray(saved) && saved.length === labels.length) ? saved : new Array(labels.length).fill(false);
+      return (Array.isArray(saved) && saved.length === labels.length) ? saved.map(Boolean) : new Array(labels.length).fill(false);
     } catch { return new Array(labels.length).fill(false); }
   })();
 
-  // Cross-tab sync
+  // Cross-tab sync via BroadcastChannel + storage event fallback
   let bc = null;
-  try {
-    bc = new BroadcastChannel(getKey());
-    bc.onmessage = (ev) => { if (Array.isArray(ev.data)) { steps = ev.data; paint(); } };
-  } catch {}
+  try { bc = new BroadcastChannel(getKey()); } catch {}
+  bc && (bc.onmessage = (ev) => { if (Array.isArray(ev.data)) { steps = ev.data.map(Boolean); paint(false); } });
+  addEventListener('storage', (ev) => {
+    if (ev.key !== getKey()) return;
+    try {
+      const v = JSON.parse(ev.newValue || 'null');
+      if (Array.isArray(v) && v.length === labels.length) { steps = v.map(Boolean); paint(false); }
+    } catch {}
+  });
 
   // Paint UI
-  function paint(){
+  function paint(announce=true){
     $$('#ob-steps [data-step]').forEach(li => {
       const i = +li.dataset.step;
       const on = !!steps[i];
@@ -192,7 +201,8 @@
     const bar = document.getElementById('ob-bar'); const txt = document.getElementById('ob-progress');
     if (bar) bar.style.width = pct + '%';
     if (txt) txt.textContent = `${done} / ${total} complete`;
-    window.dispatchEvent(new CustomEvent('fc:onboarding:progress', { detail: { done, total, pct } }));
+    if (announce) $('#admin-ob-sr')?.append?.(document.createTextNode(`Progress ${done} of ${total}. `));
+    dispatchEvent(new CustomEvent('fc:onboarding:progress', { detail: { done, total, pct } }));
   }
 
   function persist(){
@@ -212,7 +222,8 @@
   function toggle(i){
     const was = !!steps[i];
     steps[i] = !was;
-    paint(); persist();
+    paint();
+    persist();
     if (!was) confettiLite();
     if (steps.every(Boolean)) { setTimeout(()=> close(true), 350); }
   }
@@ -223,7 +234,8 @@
   // Bindings
   $('#ob-dismiss')?.addEventListener('click', () => close(true));
   $('#ob-reset')?.addEventListener('click', () => {
-    steps = new Array(labels.length).fill(false); paint();
+    steps = new Array(labels.length).fill(false);
+    paint();
     try{ localStorage.removeItem(getKey()); }catch{}
     persist();
   });
@@ -271,7 +283,7 @@
   // Show after tiny delay
   setTimeout(open, reduce ? 0 : 120);
 
-  // Esc to close
+  // Global ESC to close
   document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') close(true); }, { passive:true });
 
   // Concierge tip (rate-limited)

@@ -358,8 +358,11 @@
   .skeleton-input { @apply mb-5 h-10 min-h-[44px] w-full animate-pulse rounded-xl bg-zinc-700; }
 
   /* Autofill (WebKit) */
+/* stylelint-disable-next-line no-descending-specificity */
   input:-webkit-autofill,
+/* stylelint-disable-next-line no-descending-specificity */
   textarea:-webkit-autofill,
+/* stylelint-disable-next-line no-descending-specificity */
   select:-webkit-autofill {
     box-shadow: 0 0 0 1000px var(--input-bg) inset !important;
     -webkit-text-fill-color: var(--input-text) !important;

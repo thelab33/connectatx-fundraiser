@@ -1,11 +1,14 @@
 <h2 class="sr-only">Back To Top</h2>
 {# =================== Back to Top — Basketball Edition (CSP/A11y/Progress Ring) =================== #}
+{% set NONCE        = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set brand_color  = (team.theme_color if team and team.theme_color else '#fde047') %}
+
 <a id="back-to-top"
    href="#top"
    aria-label="Back to top"
    class="fixed left-4 md:left-6 z-[55] hidden md:inline-flex items-center gap-2 rounded-full bg-black/70 px-3 py-2 text-sm font-semibold text-yellow-200
           border border-white/15 shadow-2xl transition-opacity duration-200"
-   style="bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);"
+   style="bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem); --ring-color: {{ brand_color }};"
    data-sticky-cta>
   <span class="ring-wrap" aria-hidden="true">
     <span class="ball"></span>
@@ -14,38 +17,58 @@
   <span id="btt-sr" class="sr-only" aria-live="polite"></span>
 </a>
 
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+<script nonce="{{ NONCE }}">
 (() => {
   const btn = document.getElementById('back-to-top'); if (!btn || btn.__init) return; btn.__init = true;
-  const sr = document.getElementById('btt-sr');
+  const sr  = document.getElementById('btt-sr');
   const ring = btn.querySelector('.ring-wrap');
-  const showAt = 320;
+  const mqMd = window.matchMedia?.('(min-width: 768px)');
+  const SHOW_AT = 320;   // px scrolled before showing
+
+  // Ensure a #top anchor exists for the href target (improves a11y/back/forward)
+  if (!document.getElementById('top')) {
+    const top = document.createElement('div');
+    top.id = 'top'; top.setAttribute('aria-hidden','true');
+    top.style.position = 'absolute'; top.style.inset = '0 auto auto 0'; top.style.width='1px'; top.style.height='1px'; top.style.overflow='hidden';
+    document.body.prepend(top);
+  }
 
   function pctScrolled(){
     const doc = document.documentElement;
-    const scrollTop = (window.pageYOffset || doc.scrollTop || 0);
-    const max = Math.max(1, (doc.scrollHeight - doc.clientHeight));
-    return Math.max(0, Math.min(100, scrollTop / max * 100));
+    const sTop = (window.pageYOffset || doc.scrollTop || 0);
+    const max  = Math.max(1, doc.scrollHeight - doc.clientHeight);
+    return Math.max(0, Math.min(100, (sTop / max) * 100));
   }
 
+  function visibleOnViewport(){ return mqMd ? mqMd.matches : (window.innerWidth >= 768); }
+
   function sync(){
-    const on = (window.pageYOffset || document.documentElement.scrollTop || 0) > showAt;
+    const y = window.pageYOffset || document.documentElement.scrollTop || 0;
+    const on = visibleOnViewport() && y > SHOW_AT;
+    // Respect Tailwind hidden/md:inline-flex by only toggling inline style when md+
     btn.style.display = on ? 'inline-flex' : 'none';
+
     const p = pctScrolled();
-    ring?.style.setProperty('--p', p + '%');
-    if (sr) sr.textContent = `You are ${Math.round(p)}% down the page.`;
+    if (ring) ring.style.setProperty('--p', p + '%');
+    if (sr)   sr.textContent = `You are ${Math.round(p)}% down the page.`;
   }
 
   // Smooth scroll (respects reduced motion)
   btn.addEventListener('click', (e) => {
     const prefersReduce = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    if (prefersReduce) return; // let the anchor jump instantly
+    if (prefersReduce) return; // allow instant anchor jump
     e.preventDefault();
     try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch { location.hash = '#top'; }
   });
 
-  addEventListener('scroll', sync, { passive: true });
+  // Lightweight RAF scroll handler
+  let raf = null;
+  function onScroll(){ if (raf) return; raf = requestAnimationFrame(() => { raf = null; sync(); }); }
+
+  addEventListener('scroll', onScroll, { passive: true });
   addEventListener('resize', sync, { passive: true });
+  mqMd?.addEventListener?.('change', sync);
+
   sync();
 })();
 </script>
@@ -59,11 +82,11 @@
   #back-to-top .ring-wrap{
     --p: 0%;
     --ring-thickness: 3px;
+    --ring-color: var(--ring-color, #fde047);
     position: relative;
     width: 34px; height: 34px; border-radius: 9999px;
     display: inline-grid; place-items: center;
-    background:
-      conic-gradient(#fde047 var(--p), transparent 0);
+    background: conic-gradient(var(--ring-color) var(--p), transparent 0);
     /* cut out center to make a ring */
     -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));
             mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));

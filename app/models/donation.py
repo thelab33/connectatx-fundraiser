@@ -5,7 +5,7 @@
 # -----------------------------------------------------------------------------
 
 from __future__ import annotations
-
+from app.models.campaign import CampaignGoal  # import, don't re-declare
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 

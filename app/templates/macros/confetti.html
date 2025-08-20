@@ -1,7 +1,7 @@
 <h2 class="sr-only">Confetti</h2>
 {# macros/confetti.html #} {% macro launch_confetti(sound="yes", particle_count=120, spread=80,
 duration=3, audio_file="cheer.mp3") %}
-<scriptnonce="{{ NONCE }}">
+<script nonce="{{ NONCE }}">
   window.launchConfetti = function() {
     // Confetti.js (canvas-confetti) integration with customizable options
     if (window.confetti) {

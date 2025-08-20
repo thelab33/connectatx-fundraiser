@@ -1,12 +1,13 @@
 {# ======================================================================
    FundChamps • Impact + Challenge & Coaches (Premium / SaaS-ready)
    - Matches premium card/glow aesthetic (brand-aware)
-   - Pure Jinja2 (no lambdas), CSP-safe vanilla JS
+   - Pure Jinja2, CSP-safe vanilla JS (nonce or macros)
    - Reduced-motion aware, accessible counters + semantics
    ====================================================================== #}
 {% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
 {% set asset_version = asset_version|default(None) %}
 {% set brand_color   = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set donate_href   = donate_href|default('/donate') %}
 
 {# --------- Safe fallbacks (only used if not provided by the view/context) --------- #}
 {% set impact = impact if impact is defined and impact else [
@@ -130,12 +131,12 @@
         </p>
 
         <div class="mt-6">
-          <button type="button"
-                  class="inline-flex items-center justify-center rounded-full bg-yellow-400 px-5 py-2.5 font-bold text-black ring-2 ring-yellow-300/30 hover:bg-yellow-300 focus-visible:ring-4 focus-visible:ring-yellow-300"
-                  data-open-donate-modal
-                  aria-label="Open donation modal">
+          <a href="{{ donate_href }}"
+             class="inline-flex items-center justify-center rounded-full bg-yellow-400 px-5 py-2.5 font-bold text-black ring-2 ring-yellow-300/30 hover:bg-yellow-300 focus-visible:ring-4 focus-visible:ring-yellow-300"
+             data-open-donate-modal
+             aria-label="Open donation modal">
             Donate Now
-          </button>
+          </a>
         </div>
       </section>
 
@@ -164,14 +165,15 @@
   </div>
 </section>
 
-<script nonce="{{ __nonce }}">
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ __nonce }}">{% endif %}
 (() => {
   const root = document.getElementById('impact-challenge-coaches'); if (!root || root.__init) return; root.__init = true;
 
   // Impact counters (animate once on visibility, reduced-motion aware)
   const counters = root.querySelectorAll('.count[data-target]');
   if (counters.length) {
-    const reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches || (navigator.connection && navigator.connection.saveData === true);
+    const reduced = (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+                    (navigator.connection && navigator.connection.saveData === true);
     const io = new IntersectionObserver((entries, obs) => {
       if (!entries.some(en => en.isIntersecting)) return;
       counters.forEach(el => {
@@ -192,12 +194,14 @@
   // Donation modal contract (no inline handlers)
   root.addEventListener('click', (e) => {
     const btn = e.target.closest('[data-open-donate-modal]'); if (!btn) return;
-    e.preventDefault();
     try {
-      if (typeof window.openDonationModal === 'function') { window.openDonationModal(); return; }
+      if (typeof window.openDonationModal === 'function') {
+        e.preventDefault();
+        window.openDonationModal();
+        window.dispatchEvent(new CustomEvent('fc:donate:open'));
+      }
     } catch(_) {}
-    window.dispatchEvent(new CustomEvent('fc:donate:open'));
   });
 })();
-</script>
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 

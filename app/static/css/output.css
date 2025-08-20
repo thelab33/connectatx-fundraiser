@@ -2046,7 +2046,7 @@ select {
 }
 
 .animate-\[fcTicker_24s_linear_infinite\] {
-  animation: fcTicker 24s linear infinite;
+  animation: fc-ticker 24s linear infinite;
 }
 
 .animate-\[shine_3s_linear_infinite\] {

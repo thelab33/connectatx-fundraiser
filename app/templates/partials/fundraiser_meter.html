@@ -1,16 +1,16 @@
 {# =============================================================================
    FundChamps • Fundraiser Meter Card (Prestige, CSP-safe, a11y, idempotent)
    - Listens to: 'fc:funds:update' and 'fc:meter:update'
-   - Public API: window.fcMeter.setTotals({raised, goal})
-   - Fixes: ID consistency, robust % calc, reduced-motion friendly
+   - Public API: window.fcMeter.setTotals({raised, goal}), window.fcMeter.bump(amount)
+   - Robust % calc, reduced-motion friendly, brand-aware
    ============================================================================= #}
 
 {% include "shared/ui_bootstrap.html" ignore missing with context %}
 
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set meter_id = meter_id|default('fundraiser-meter') %}
-{% set team_name = (team.team_name if team and team.team_name is defined else 'Connect ATX Elite') %}
-{% set theme_hex = (team.theme_color if team and team.theme_color is defined else '#f59e0b') %}
+{% set meter_id   = meter_id|default('fundraiser-meter') %}
+{% set team_name  = (team.team_name if team and team.team_name is defined else 'Connect ATX Elite') %}
+{% set theme_hex  = (team.theme_color if team and team.theme_color is defined else '#f59e0b') %}
 
 {# Robust numeric parsing (#,$,commas safe) #}
 {% set _r = (funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is defined else 0.0 %}
@@ -26,21 +26,50 @@
   role="region" aria-labelledby="{{ meter_id }}-title" aria-live="polite">
 
   <style nonce="{{ NONCE }}">
-    #{{ meter_id }} .card{border-radius:1rem; padding:1rem; background:rgba(255,255,255,.06);
-      backdrop-filter:saturate(120%) blur(10px); box-shadow:0 10px 30px -12px rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.08)}
+    #{{ meter_id }} .card{
+      position:relative; border-radius:1rem; padding:1rem;
+      background:
+        linear-gradient(120deg, rgba(255,255,255,.06), rgba(250,220,100,.08));
+      backdrop-filter:saturate(120%) blur(10px);
+      -webkit-backdrop-filter:saturate(120%) blur(10px);
+      box-shadow:0 10px 30px -12px rgba(0,0,0,.55);
+      border:1px solid color-mix(in srgb, var(--brand) 18%, transparent);
+    }
+    #{{ meter_id }} .card::after{
+      /* subtle inner highlight */
+      content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      background: radial-gradient(120% 80% at 50% -20%, rgba(255,255,255,.10), transparent 60%);
+    }
+
     #{{ meter_id }} .head{display:flex;align-items:baseline;gap:.5rem}
     #{{ meter_id }} .title{font-weight:900; letter-spacing:-.02em}
     #{{ meter_id }} .nums{margin-left:auto;display:flex;gap:.5rem;align-items:baseline;font-variant-numeric:tabular-nums}
     #{{ meter_id }} .nums .pct{font-weight:800;color:#fde68a}
-    #{{ meter_id }} .bar{position:relative;height:.9rem;border-radius:9999px;background:rgba(255,255,255,.08);overflow:hidden;
-      border:1px solid color-mix(in srgb, var(--brand) 25%, transparent)}
-    #{{ meter_id }} .fill{height:100%;width:{{ pct }}%;background:linear-gradient(90deg, var(--brand), #22c55e);border-radius:9999px;
-      transition:width .6s cubic-bezier(.4,0,.2,1)}
-    #{{ meter_id }} .milestones{display:flex;justify-content:space-between;font-size:.7rem;color:#e5e7eb99;margin-top:.35rem}
+
+    #{{ meter_id }} .bar{
+      position:relative;height:.9rem;border-radius:9999px;overflow:hidden;
+      background:rgba(255,255,255,.08);
+      border:1px solid color-mix(in srgb, var(--brand) 25%, transparent);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+    }
+    #{{ meter_id }} .fill{
+      height:100%;width:{{ pct }}%;
+      background:linear-gradient(90deg, var(--brand), #22c55e);
+      border-radius:9999px; transition:width .6s cubic-bezier(.4,0,.2,1)
+    }
+    #{{ meter_id }} .shine{
+      content:""; position:absolute; inset:0; pointer-events:none;
+      background:linear-gradient(90deg, rgba(255,255,255,.14), rgba(255,255,255,.04) 40%, rgba(255,255,255,.14));
+      mix-blend-mode:overlay;
+    }
+
+    #{{ meter_id }} .milestones{display:flex;justify-content:space-between;font-size:.72rem;color:#e5e7eb99;margin-top:.45rem}
     #{{ meter_id }} .dot{width:.6rem;height:.6rem;border-radius:9999px;background:#e5e7eb33;border:1px solid #fff2; margin:0 auto}
     #{{ meter_id }} .dot.active{background:color-mix(in srgb, var(--brand) 70%, #fff); box-shadow:0 0 0 3px #ffffff18}
-    #{{ meter_id }} .meta{display:flex;gap:.75rem;align-items:center;color:#e5e7eb99;font-size:.8rem;margin-top:.4rem}
+
+    #{{ meter_id }} .meta{display:flex;gap:.75rem;align-items:center;color:#e5e7eb99;font-size:.8rem;margin-top:.5rem}
     #{{ meter_id }} .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
     @media (prefers-reduced-motion: reduce){ #{{ meter_id }} .fill{transition:none!important} }
     @media (prefers-color-scheme: light){
       #{{ meter_id }} .card{background:rgba(255,255,255,.9); border-color:#0001}
@@ -51,9 +80,8 @@
   <div class="card">
     <div class="head">
       <div class="title" id="{{ meter_id }}-title">{{ team_name }} — Fundraiser Progress</div>
-      <div class="nums" role="progressbar"
-           aria-valuemin="0" aria-valuemax="{{ goal|int }}" aria-valuenow="{{ raised|int }}"
-           aria-valuetext="${{ '{:,.0f}'.format(raised) }} of ${{ '{:,.0f}'.format(goal) }}">
+
+      <div class="nums">
         <span id="{{ meter_id }}-raised">${{ '{:,.0f}'.format(raised) }}</span>
         <span class="opacity-60">/</span>
         <span id="{{ meter_id }}-goal" class="opacity-80">${{ '{:,.0f}'.format(goal) }}</span>
@@ -61,8 +89,13 @@
       </div>
     </div>
 
-    <div class="bar" title="Fundraising progress" data-bar>
+    <!-- A11y: progressbar uses percent range; valuetext announces dollars -->
+    <div class="bar" title="Fundraising progress"
+         role="progressbar" aria-valuemin="0" aria-valuemax="100"
+         aria-valuenow="{{ ('%.1f' % pct) }}"
+         aria-describedby="{{ meter_id }}-status" data-bar>
       <span id="{{ meter_id }}-fill" class="fill"></span>
+      <i class="shine" aria-hidden="true"></i>
     </div>
 
     <div class="milestones" aria-hidden="true">
@@ -75,7 +108,7 @@
     </div>
 
     <div class="meta">
-      <span>Auto-updates in real time.</span>
+      <span id="{{ meter_id }}-status">${{ '{:,.0f}'.format(raised) }} of ${{ '{:,.0f}'.format(goal) }} raised</span>
       <span class="hidden sm:inline">Milestones unlock at 25/50/75/100%.</span>
     </div>
 
@@ -87,13 +120,14 @@
     const id = {{ meter_id|tojson }};
     const root = document.getElementById(id); if(!root || root.__init) return; root.__init = true;
 
-    const $ = sel => root.querySelector(sel);
-    const raisedEl = $("#"+id+"-raised");
-    const goalEl   = $("#"+id+"-goal");
-    const pctEl    = $("#"+id+"-pct");
-    const fill     = $("#"+id+"-fill");
-    const pb       = root.querySelector('[role="progressbar"]');
-    const sr       = $("#"+id+"-sr");
+    const $   = sel => root.querySelector(sel);
+    const rEl = $("#"+id+"-raised");
+    const gEl = $("#"+id+"-goal");
+    const pEl = $("#"+id+"-pct");
+    const fill= $("#"+id+"-fill");
+    const pb  = root.querySelector('[role="progressbar"]');
+    const sr  = $("#"+id+"-sr");
+    const st  = $("#"+id+"-status");
 
     const state = (() => { try { return JSON.parse(root.dataset.initial||"{}"); } catch { return {}; } })();
     state.raised = Math.max(0, Number(state.raised||0));
@@ -104,20 +138,31 @@
 
     function setUI(raised, goal){
       const pct = goal ? clamp((raised/goal)*100,0,100) : 0;
-      if(fill)  fill.style.width = pct.toFixed(1) + "%";
-      if(pctEl) pctEl.textContent = pct.toFixed(1);
-      if(raisedEl) raisedEl.textContent = fmt$(raised);
-      if(goalEl)   goalEl.textContent   = fmt$(goal);
-      if(pb){
-        pb.setAttribute("aria-valuenow", String(Math.round(raised)));
-        pb.setAttribute("aria-valuemax", String(Math.round(goal)));
-        pb.setAttribute("aria-valuetext", `${fmt$(raised)} of ${fmt$(goal)}`);
+
+      // Visuals
+      if (fill)  fill.style.width = pct.toFixed(1) + "%";
+      if (pEl)   pEl.textContent  = pct.toFixed(1).replace(/\.0$/,"");
+      if (rEl)   rEl.textContent  = fmt$(raised);
+      if (gEl)   gEl.textContent  = fmt$(goal);
+
+      // A11y
+      if (pb){
+        pb.setAttribute("aria-valuenow", pct.toFixed(1));
       }
+      const status = `${fmt$(raised)} of ${fmt$(goal)} raised`;
+      if (st) st.textContent = status;
+      if (sr) { try { sr.textContent = `Progress ${pct.toFixed(1)} percent — ${status}.`; } catch {} }
+
+      // Milestones
       [25,50,75,100].forEach(m=>{
         const dot = document.getElementById(`${id}-dot-${m}`);
-        if(dot){ dot.classList.toggle('active', pct >= m); }
+        if(dot){ dot.classList.toggle('active', pct >= m - 0.01); }
       });
-      try { sr.textContent = `Progress ${pct.toFixed(1)} percent — ${fmt$(raised)} raised of ${fmt$(goal)}.`; } catch {}
+
+      // Notify others (hero, footer, etc.)
+      try {
+        dispatchEvent(new CustomEvent('fc:meter:changed', { detail:{ raised, goal, pct } }));
+      } catch {}
     }
 
     // Public API
@@ -126,10 +171,15 @@
         if(typeof raised==='number') state.raised = Math.max(0, raised);
         if(typeof goal==='number')   state.goal   = Math.max(1, goal);
         setUI(state.raised, state.goal);
+      },
+      bump(amount){
+        const a = Number(amount)||0; if(!a) return;
+        state.raised = Math.max(0, state.raised + a);
+        setUI(state.raised, state.goal);
       }
     });
 
-    // Events
+    // Event bridges
     addEventListener('fc:meter:update', ev=>{
       const d = ev.detail||{};
       if(typeof d.raised==='number') state.raised = Math.max(0, d.raised);

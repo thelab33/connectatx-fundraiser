@@ -7,7 +7,7 @@ from importlib import import_module
 from pathlib import Path
 from typing import Any, Type, Iterable
 from uuid import uuid4
-
+from app.blueprints import health
 from dotenv import load_dotenv
 from flask import Flask, g, jsonify, request, url_for
 from werkzeug.exceptions import HTTPException, InternalServerError
