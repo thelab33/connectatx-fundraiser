@@ -1,5 +1,5 @@
 {# ---------------------------------------------------------------------
-  Admin Dashboard – Starforge SaaS Elite Edition
+  Admin Dashboard – Starforge SaaS
   KPI summary • Latest sponsors • Latest transactions • CSV export
  ---------------------------------------------------------------------- #}
 {% extends "admin/base.html" %}
@@ -11,25 +11,24 @@
   <span>🏆</span> Admin Dashboard
 </h2>
 
-{# ─── KPI MACRO ────────────────────────────────────────────── #}
-{% macro kpi_card(value, label, gradient) %}
-<div class="{{ gradient }} text-zinc-900 p-6 rounded-xl shadow-xl flex flex-col items-center">
-  <div class="text-3xl font-black animate-pulse">{{ value }}</div>
-  <div class="text-lg font-semibold">{{ label }}</div>
-</div>
-{% endmacro %}
-
 <!-- ───────────────────── KPI GRID ───────────────────── -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
-  {{ kpi_card('$' ~ (stats.total_raised|default(0)|int|comma),  'Total Raised',   'bg-gradient-to-br from-yellow-300 via-yellow-100 to-white') }}
-  {{ kpi_card(stats.sponsor_count|default(0),                 'Sponsors',       'bg-gradient-to-br from-yellow-400 via-yellow-200 to-white') }}
-  {{ kpi_card('$' ~ (stats.goal_amount|default(0)|int|comma), 'Goal',           'bg-gradient-to-br from-zinc-900 via-zinc-700 to-yellow-100') }}
-  {{ kpi_card(stats.pending_sponsors|default(0),              'Pending',        'bg-gradient-to-br from-red-300 via-red-100 to-white') }}
+  {% macro kpi_card(value, label, gradient) %}
+  <div class="{{ gradient }} text-zinc-900 p-6 rounded-xl shadow-xl flex flex-col items-center">
+    <div class="text-3xl font-black animate-pulse">{{ value }}</div>
+    <div class="text-lg font-semibold">{{ label }}</div>
+  </div>
+  {% endmacro %}
+
+  {{ kpi_card('$' ~ (stats.total_raised|int|comma),  'Total Raised',   'bg-gradient-to-br from-yellow-300 via-yellow-100 to-white') }}
+  {{ kpi_card(stats.sponsor_count,                'Sponsors',       'bg-gradient-to-br from-yellow-400 via-yellow-200 to-white') }}
+  {{ kpi_card('$' ~ (stats.goal_amount|int|comma), 'Goal',           'bg-gradient-to-br from-zinc-900 via-zinc-700 to-yellow-100') }}
+  {{ kpi_card(stats.pending_sponsors,             'Pending',        'bg-gradient-to-br from-red-300 via-red-100 to-white') }}
 </div>
 
 <!-- ───────────────────── PROGRESS BAR ───────────────────── -->
-{% set pct = ((stats.total_raised|default(0) / (stats.goal_amount or 1)) * 100)|round(1) %}
 <div class="mb-10">
+  {% set pct = ((stats.total_raised/(stats.goal_amount or 1))*100)|round(1) %}
   <div class="flex justify-between items-center mb-1">
     <span class="text-sm font-medium text-gold">Progress</span>
     <span class="text-sm font-bold text-yellow-200">{{ pct }}%</span>
@@ -42,13 +41,71 @@
 <!-- ───────────────────── LATEST SPONSORS ───────────────────── -->
 <section class="mb-10">
   <h3 class="font-semibold mb-3">Latest Sponsors</h3>
-  {% include "admin/partials/sponsor_table.html" %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-zinc-800/80 rounded-xl overflow-hidden shadow">
+      <thead class="bg-yellow-400/90 text-zinc-900">
+        <tr>
+          <th class="p-3 text-left">Name</th>
+          <th>Email</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in sponsors %}
+        <tr class="border-b border-zinc-700 hover:bg-yellow-50/10">
+          <td class="p-2 font-bold">{{ s.name }}</td>
+          <td class="p-2">{{ s.email or '-' }}</td>
+          <td class="p-2 text-gold font-bold">${{ '%.2f' % s.amount }}</td>
+          <td class="p-2">
+            <span class="px-2 py-1 rounded-full {% if s.status=='approved' %}bg-green-200 text-green-900{% elif s.status=='pending' %}bg-yellow-200 text-yellow-900{% else %}bg-red-200 text-red-900{% endif %}">{{ s.status|capitalize }}</span>
+          </td>
+          <td class="p-2 text-xs">{{ s.created_at.strftime('%Y-%m-%d') }}</td>
+          <td class="p-2">
+            {% if s.status != 'approved' %}
+            <form method="POST" action="{{ url_for('admin.approve_sponsor', sponsor_id=s.id) }}" class="inline">
+              <button type="submit" class="bg-gold text-zinc-900 px-3 py-1 rounded hover:bg-yellow-300 transition">Approve</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="py-8 text-center text-zinc-400">No sponsors found.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <!-- ───────────────────── LATEST TRANSACTIONS ───────────────────── -->
 <section>
   <h3 class="font-semibold mb-3">Latest Transactions</h3>
-  {% include "admin/partials/transaction_table.html" %}
+  <div class="overflow-x-auto">
+    <table class="min-w-full bg-zinc-800/80 rounded-xl overflow-hidden shadow">
+      <thead class="bg-yellow-200 text-zinc-900">
+        <tr>
+          <th class="p-3 text-left">Sponsor</th>
+          <th>Amount</th>
+          <th>Status</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr class="border-b border-zinc-700 hover:bg-yellow-50/10">
+          <td class="p-2">{{ t.sponsor.name }}</td>
+          <td class="p-2 text-gold font-bold">${{ '%.2f' % t.amount }}</td>
+          <td class="p-2">{{ t.status|capitalize }}</td>
+          <td class="p-2 text-xs">{{ t.created_at.strftime('%Y-%m-%d') }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="py-8 text-center text-zinc-400">No transactions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </section>
 
 <!-- ───────────────────── EXPORT CSV BUTTON ───────────────────── -->
@@ -58,9 +115,10 @@
   </a>
 </div>
 
+<!-- Pro tip -->
 <p class="mt-4 text-xs text-zinc-500 text-center">
-  ⭐️ Pro tip: Get real-time sponsor alerts in Slack — enable
-  <code>send_slack_alert()</code> in <code>app/admin/routes.py</code>!
+  ⭐️ Pro tip: Get real‑time sponsor alerts in Slack — enable
+  <code>send_slack_new_sponsor()</code> in <code>app/admin/routes.py</code>!
 </p>
 {% endblock %}
 

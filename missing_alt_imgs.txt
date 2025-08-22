@@ -1,1 +1,0 @@
-app/templates/partials/ui_bootstrap.html:252:ALT_IMG_RE = re.compile(r"<img\b[^>]*>", re.I)

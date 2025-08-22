@@ -1,27 +1,22 @@
-{# =============================================================================
+{# ===========================================================================
    macros/ui.html — FundChamps Premium UI Macros (2025+)
-   - Pure Jinja2 + Tailwind v3+, Unicode (UTF-8, no BOM)
-   - Macros accept **attrs for true SaaS flexibility
-   - A11y-first, scalable, drop-in partials
-   ============================================================================= #}
+   - Unicode, UTF-8, no BOM
+   - Pure Jinja2 + Tailwind v3+
+   - All macros accept extra **attributes for true SaaS flexibility
+   - Drop-in, scalable, a11y-first for your fundraising platform
+=========================================================================== #}
 
-{# ---------------------------------------------------------------------------
-   SECTION: UI Macro Library (screen-reader only heading)
-   --------------------------------------------------------------------------- #}
-<section aria-label="UI Macros" class="sr-only">
-  <h2>UI Components</h2>
-</section>
-
-{# ---------------------------------------------------------------------------
+{# ===========================================================================
    PROGRESS METER — Responsive, animated, glassy, accessible
-   --------------------------------------------------------------------------- #}
+=========================================================================== #}
 {% macro progress_meter(raised, goal, size="md", extra_classes="", attrs=None) -%}
-  {%- set _goal = goal|float if goal else 0.0 -%}
-  {%- set _raised = raised|float if raised else 0.0 -%}
+  {%- set _goal = goal | float if goal else 0.0 -%}
+  {%- set _raised = raised | float if raised else 0.0 -%}
   {%- set _pct = (0.0 if _goal == 0.0 else (_raised / _goal * 100.0)) -%}
   {%- set _pct = (_pct if _pct >= 0.0 else 0.0) | min(100.0) -%}
   {%- set pct_f = '%.1f' % _pct -%}
   {%- set raised_display = '{:,}'.format(raised | int) -%}
+
   {%- set sizes = {
     "sm": "max-w-[7.5rem] h-2 text-[10px] py-0.5",
     "md": "max-w-xs h-3 text-[11px] py-1",
@@ -32,7 +27,9 @@
     x-data="{
       pct: {{ '%.2f' % _pct }},
       init() {
-        if (this.$refs.bar) this.$refs.bar.style.width = this.pct + '%';
+        if (this.$refs.bar) {
+          this.$refs.bar.style.width = this.pct + '%';
+        }
         if (this.pct >= 100) {
           import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/+esm')
             .then(m => m.default({ particleCount: 120, origin: { y: 0.8 } }))
@@ -48,14 +45,20 @@
     aria-valuenow="{{ pct_f }}"
     aria-valuetext="{{ pct_f }} percent"
     class="relative w-full glassy-card {{ sizes.get(size, sizes['md']) }} select-none {{ extra_classes }}"
-    {{ (attrs or {})|xmlattr }}
+    {% if attrs %}
+      {% for k, v in attrs.items() if v is not none %}
+        {{ k.replace('_','-') }}="{{ v }}"
+      {% endfor %}
+    {% endif %}
   >
-    <div class="w-full overflow-hidden rounded-full bg-zinc-800/80 shadow-inner" style="height: inherit">
-      <div x-ref="bar"
-           class="h-full w-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-300 transition-all duration-700 ease-out"
-           style="min-width: 6px"></div>
+    <div class="w-full bg-zinc-800/80 rounded-full overflow-hidden shadow-inner" style="height: inherit;">
+      <div
+        x-ref="bar"
+        class="h-full w-0 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-300 transition-all duration-700 ease-out"
+        style="min-width:6px"
+      ></div>
     </div>
-    <div class="pointer-events-none absolute inset-0 flex items-center justify-center font-bold leading-none" style="font-size: inherit">
+    <div class="absolute inset-0 flex items-center justify-center font-bold leading-none pointer-events-none" style="font-size: inherit;">
       <span class="text-yellow-300 drop-shadow">
         ${{ raised_display }} • {{ pct_f }}%
       </span>
@@ -63,39 +66,44 @@
   </div>
 {%- endmacro %}
 
-{# ---------------------------------------------------------------------------
-   BUTTON — Ultra-flexible, accessible, HTMX/Alpine-ready
-   --------------------------------------------------------------------------- #}
+
+{# ===========================================================================
+   BUTTON — Ultra-flexible, accessible, supports all data-*, aria-*, htmx, etc.
+=========================================================================== #}
 {% macro render_button(
-  label,
-  href="#",
-  color="primary",
-  size="md",
-  icon=None,
-  loading=False,
-  external=False,
-  aria_label=None,
-  extra_classes="",
-  type="button",
-  attrs=None
-) -%}
+    label,
+    href="#",
+    color="primary",
+    size="md",
+    icon=None,
+    loading=False,
+    external=False,
+    aria_label=None,
+    extra_classes="",
+    type="button",
+    attrs=None
+  ) -%}
   {%- set COLORS = {
-    "primary": {"bg":"bg-yellow-400 hover:bg-yellow-300 text-zinc-900", "text":"text-yellow-400"},
-    "secondary": {"bg":"bg-zinc-800 hover:bg-zinc-700 text-yellow-300", "text":"text-yellow-300"},
-    "danger": {"bg":"bg-red-600 hover:bg-red-500 text-white", "text":"text-red-600"},
-    "success": {"bg":"bg-green-600 hover:bg-green-500 text-white", "text":"text-green-600"}
+    "primary":   {"bg":"bg-yellow-400 hover:bg-yellow-300 text-zinc-900", "text":"text-yellow-400"},
+    "secondary": {"bg":"bg-zinc-800 hover:bg-zinc-700 text-yellow-300",  "text":"text-yellow-300"},
+    "danger":    {"bg":"bg-red-600 hover:bg-red-500 text-white",         "text":"text-red-600"},
+    "success":   {"bg":"bg-green-600 hover:bg-green-500 text-white",     "text":"text-green-600"}
   } -%}
   {%- set SIZES = {
     "sm": "px-3 py-1.5 text-sm",
     "md": "px-4 py-2 text-sm",
     "lg": "px-5 py-2.5 text-base"
   } -%}
-  {%- set label = label or 'Click Here' -%}
-  {%- set href = href or '#' -%}
-  {%- set icon = icon or '' -%}
-  {%- if not href.startswith('http') and href == "#" -%}
-    {%- set href = "javascript:void(0);" -%}
-  {%- endif -%}
+
+  {%- set label = label or 'Click Here' %}
+  {%- set href = href or '#' %}
+  {%- set icon = icon or '' %}
+
+  {%- if not href.startswith('http') %}
+    {%- if href == "#" %}
+      {%- set href = "javascript:void(0);" %}
+    {%- endif %}
+  {%- endif %}
 
   <a
     href="{{ href }}"
@@ -110,10 +118,17 @@
     {% if external %}target="_blank" rel="noopener sponsored"{% endif %}
     {% if aria_label %}aria-label="{{ aria_label }}"{% endif %}
     type="{{ type }}"
-    {{ (attrs or {})|xmlattr }}
+    {% if attrs %}
+      {% for k, v in attrs.items() if v is not none %}
+        {{ k.replace('_','-') }}="{{ v }}"
+      {% endfor %}
+    {% endif %}
   >
     {% if loading %}
-      <span class="mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" aria-hidden="true"></span>
+      <span
+        class="inline-block w-4 h-4 mr-2 border-2 border-t-transparent rounded-full animate-spin"
+        aria-hidden="true"
+      ></span>
     {% elif icon %}
       <span class="mr-2 inline-flex items-center" aria-hidden="true">
         {% if icon is string and icon.startswith('fa') %}
@@ -127,9 +142,10 @@
   </a>
 {%- endmacro %}
 
-{# ---------------------------------------------------------------------------
-   GLASSY CARD — Optional helper for translucent panels
-   --------------------------------------------------------------------------- #}
+
+{# ===========================================================================
+   GLASSY CARD (Optional helper for glassy backgrounds)
+=========================================================================== #}
 {% macro glassy_card(content, extra_classes="") -%}
   <div class="glassy-card rounded-3xl p-8 shadow-xl-gold ring-1 ring-yellow-400/20 {{ extra_classes }}">
     {{ content | safe }}

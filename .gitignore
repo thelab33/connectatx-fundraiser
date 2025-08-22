@@ -1,61 +1,19 @@
-# =========================
-# Python / Flask
-# =========================
+# Python/Flask
 instance/
-__pycache__/
 *.pyc
-*.pyo
-*.pyd
-*.bak*
-*.db
-*.sqlite
-*.sqlite3
-
-# Local env/config
+__pycache__/
 .env
 .env.*
-*.env
-
-# Flask app data
-app/data/
-app/data/*.db
-
-# =========================
-# Node / Frontend
-# =========================
+# Node
 node_modules/
 web-frontend/node_modules/
-dist/
-build/
-
-# Logs
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Bundled / compiled JS
-app/static/js/bundle*.js
-app/static/js/*.min.js
-app/static/js/vendor/
-*.map
-
-# Generated CSS
-*.min.css
-app/static/css/output.css
-app/static/css/archive/
-
-# =========================
-# Editor / IDE
-# =========================
+# VS Code
 .vscode/
-.DS_Store
-Thumbs.db
+node_modules/
+app/data/
+app/data/app.db
 
-# =========================
-# FundChamps hard-ignore
-# =========================
-app/templates/_unused/
-app/static/_unused/
-pa11y-report.html
-
+__pycache__/
+*.pyc
+.venv/

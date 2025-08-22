@@ -1,197 +1,191 @@
-{# -----------------------------------------------------------------------------
-  Base layout — FundChamps Prestige Elite (SV-Premium, refined)
-  - CSP-safe NONCE, optional SRI + preconnects
-  - Single CSS payload (tailwind.min.css)
-  - Donate-aware SEO, OG/Twitter, canonical, theme-color sync
-  - Header shrink sentinel included (id="site-header-sentinel")
------------------------------------------------------------------------------ #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _ver = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
-{% set SRI = SRI if SRI is defined else {} %}
-{% set _route = (request.endpoint if request is defined else '') %}
-{% set _TEAM = (team if team is defined else (_team if _team is defined else {})) %}
-{% set _brand_hex = _TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15' %}
-{% set _brand_name = _TEAM.team_name if _TEAM and _TEAM.team_name else 'Connect ATX Elite' %}
-{% set _brand_slug = (_TEAM.team_slug if _TEAM and _TEAM.team_slug else _brand_name)|lower|replace(' ', '-')|replace('--','-') %}
-{% set _title_default = _brand_name %}
-{% set _desc_default = 'Fuel the season. Fund the future.' %}
-{% set _is_donate = (_route == 'main.donate') %}
-{% set _page_title = ( (_is_donate and (_TEAM.og_title_donate if _TEAM and _TEAM.og_title_donate)) or
-                       (_TEAM.og_title if _TEAM and _TEAM.og_title) or
-                       (_is_donate and _brand_name ~ ' — Donate') or
-                       (_brand_name ~ ' — Fundraiser') ) %}
-{% set _page_desc = ( (_is_donate and (_TEAM.og_description_donate if _TEAM and _TEAM.og_description_donate)) or
-                      (_TEAM.og_description if _TEAM and _TEAM.og_description) or
-                      _desc_default ) %}
-{% set _hero_img = _TEAM.hero_image or _TEAM.hero_bg or 'images/hero.avif' %}
-{% set _og_img = _TEAM.og_image or 'images/og_default.jpg' %}
-
-{# Versioned asset URLs #}
-{% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver) if _ver else url_for('static', filename='css/tailwind.min.css') %}
-{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
-{% set js_donate     = url_for('static', filename='js/donate.min.js', v=_ver)      if _ver else url_for('static', filename='js/donate.min.js') %}
-
-{# Optional SRI #}
-{% set sri_css     = SRI.get('css/tailwind.min.css') if SRI else None %}
-{% set sri_js_main = SRI.get('js/bundle.min.js') if SRI else None %}
-{% set sri_js_don  = SRI.get('js/donate.min.js') if SRI else None %}
-
-<!doctype html>
-<html
-  lang="en"
-  class="h-full antialiased scroll-smooth selection:bg-yellow-300/30"
-  data-theme="dark"
-  data-brand="{{ _brand_slug }}"
-  data-route="{{ _route|default('') }}"
+<!DOCTYPE html>
+<html lang="{{ lang_code|default('en', true) }}"
+  data-theme="{{ theme|default('dark', true) }}"
+  class="no-js scroll-smooth antialiased bg-zinc-950 text-white font-sans{% if team and team.body_class %} {{ team.body_class }}{% endif %}"
+  style="min-height: 100%;"
+  itemscope itemtype="https://schema.org/WebSite"
 >
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-    <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#0b0b0c" id="meta-theme-color" />
-    <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <meta name="robots" content="index,follow,max-image-preview:large" />
-    {% if request is defined %}
-      <link rel="canonical" href="{{ request.base_url }}" />
-      <meta property="og:url" content="{{ request.base_url }}" />
-    {% endif %}
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+  <meta name="robots" content="index,follow,max-image-preview:large" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="theme-color" content="{{ team.theme_color|default('#facc15', true) }}" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <link rel="canonical" href="{{ request.url_root|trim('/') }}" />
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest', v=asset_version) }}" />
 
-    <title>{% block title %}{{ _page_title }}{% endblock %}</title>
-    <meta name="description" content="{{ _page_desc }}" />
+  <title>{% block title %}{{ team.team_name|default('Connect ATX Elite', true) }}{% endblock %}</title>
+  <meta name="description" content="{{ team.meta_description|default('Connect ATX Elite — Family-run AAU basketball building future leaders in East Austin.', true) }}" />
 
-    {# --- OG/Twitter --- #}
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="{{ _brand_name }}" />
-    <meta property="og:title" content="{{ _page_title }}" />
-    <meta property="og:description" content="{{ _page_desc }}" />
-    <meta property="og:image" content="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="{{ _page_title }}" />
-    <meta name="twitter:description" content="{{ _page_desc }}" />
-    <meta name="twitter:image" content="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+  {# Open Graph & Twitter Cards #}
+  {% set _raw_og = team.og_image if team and team.og_image else 'images/logo.avif' %}
+  {% set ogimg = _raw_og if _raw_og.startswith('http') else url_for('static', filename=_raw_og) %}
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="{{ team.og_title|default('Connect ATX Elite | Empowering Youth', true) }}" />
+  <meta property="og:description" content="{{ team.og_description|default('Support our basketball journey and invest in our next generation of leaders.', true) }}" />
+  <meta property="og:image" content="{{ ogimg }}" />
+  <meta property="og:url" content="{{ request.url }}" />
+  <meta property="og:site_name" content="{{ team.team_name|default('Connect ATX Elite', true) }}" />
+  <meta property="og:image:alt" content="{{ team.og_alt|default(team.og_title|default('Connect ATX Elite', true), true) }}" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="{{ team.twitter_handle|default('@ConnectATXElite', true) }}" />
+  <meta name="twitter:title" content="{{ team.og_title|default('Connect ATX Elite | Empowering Youth', true) }}" />
+  <meta name="twitter:description" content="{{ team.og_description|default('Support our basketball journey and invest in our next generation of leaders.', true) }}" />
+  <meta name="twitter:image" content="{{ ogimg }}" />
 
-    {# Preconnects (idle) — Stripe, Socket, YouTube #}
-    <link rel="preconnect" href="https://js.stripe.com" crossorigin>
-    <link rel="preconnect" href="/socket.io/" crossorigin>
-    <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
+  {# Favicon & Apple Icons #}
+  <link rel="icon" type="image/png" sizes="32x32" href="{{ (team and team.favicon) and url_for('static', filename=team.favicon, v=asset_version) or url_for('static', filename='images/favicon.png', v=asset_version) }}" />
+  <link rel="apple-touch-icon" href="{{ (team and team.apple_icon) and url_for('static', filename=team.apple_icon, v=asset_version) or url_for('static', filename='images/logo.avif', v=asset_version) }}" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 
-    {# Useful LCP hint if hero image exists #}
-    {% if url_for is defined and _hero_img %}
-      <link rel="preload" as="image" href="{{ url_for('static', filename=_hero_img, v=_ver) if _ver else url_for('static', filename=_hero_img) }}" imagesizes="100vw">
-    {% endif %}
+  {# Preconnects & Prefetch for performance #}
+  <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://api.stripe.com" />
+  <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+  <link rel="dns-prefetch" href="https://api.stripe.com" />
 
-    {# --- SINGLE CSS PIPELINE --- #}
-    <link rel="preload" as="style" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
-    <link rel="stylesheet" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
+  {# Google Fonts - Inter #}
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet" crossorigin="anonymous" />
+  <link rel="preload" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" as="style" crossorigin="anonymous" />
 
-    {% block extra_css %}{% endblock %}
-    {% block head %}{% endblock %}
-  </head>
+  {# Preload critical logo #}
+  <link rel="preload" href="{{ url_for('static', filename=team.logo if team and team.logo else 'images/logo.webp') }}" as="image" type="image/webp" />
 
-  <body class="min-h-full bg-zinc-950 text-zinc-100">
-    <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Skip to content</a>
+  {# Tailwind CSS Styles #}
+  <link rel="preload" href="{{ url_for('static', filename='css/tailwind.min.css', v=asset_version) }}" as="style" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css', v=asset_version) }}" media="all" />
+  {% if app_env != 'production' %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/input.css', v=asset_version) }}">
+  {% endif %}
+  {% if team and team.custom_css %}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/' ~ team.custom_css, v=asset_version) }}">
+  {% endif %}
 
-    {# Header shrink sentinel for IntersectionObserver logic #}
-    <div id="site-header-sentinel" class="h-0" aria-hidden="true"></div>
+  {# JSON-LD Structured Data #}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SportsTeam",
+    "name": "{{ team.team_name|default('Connect ATX Elite') }}",
+    "url": "{{ request.url_root }}",
+    "logo": "{{ url_for('static', filename=team.logo if team and team.logo else 'images/logo.webp') }}",
+    "sport": "Basketball",
+    "memberOf": {
+      "@type": "SportsOrganization",
+      "name": "AAU"
+    },
+    "sameAs": [
+      "{{ team.facebook or '' }}",
+      "{{ team.twitter or '' }}",
+      "{{ team.instagram or '' }}"
+    ]
+  }
+  </script>
 
-    {% include "shared/ui_bootstrap.html" ignore missing with context %}
-    {% include "partials/header_and_announcement.html" ignore missing with context %}
+  {% block head_extra %}{% endblock %}
+</head>
 
-    {% block hero %}{% endblock %}
-    <main id="main" role="main" class="relative">
-      <h1 class="sr-only">{% block h1 %}{{ _title_default }}{% endblock %}</h1>
-      {% block content %}{% endblock %}
-    </main>
+<body
+  class="bg-zinc-950 text-white font-sans antialiased min-h-screen flex flex-col{% if team and team.body_class %} {{ team.body_class }}{% endif %}"
+  role="document"
+  aria-live="polite"
+  aria-busy="false"
+  x-data="{ dark: localStorage.getItem('theme') === 'dark' }"
+>
+  <script>
+    (function(d) {
+      d.documentElement.classList.remove('no-js');
+      d.documentElement.classList.add('js');
+    })(document);
+  </script>
 
-    {% include "partials/back_to_top.html" ignore missing with context %}
-    {% include "partials/sticky_cta_manager.html" ignore missing with context %}
+  <a href="#main-content" class="sr-only focus:not-sr-only absolute top-2 left-2 bg-yellow-400 text-black font-semibold px-3 py-1 rounded-lg z-50" tabindex="0">Skip to main content</a>
 
-    {# --- Core JS --- #}
-    <script src="{{ js_href }}" defer nonce="{{ NONCE }}"{% if sri_js_main %} integrity="{{ sri_js_main }}" crossorigin="anonymous"{% endif %}></script>
-    {% if _is_donate %}
-      <script src="{{ js_donate }}" defer nonce="{{ NONCE }}"{% if sri_js_don %} integrity="{{ sri_js_don }}" crossorigin="anonymous"{% endif %}></script>
-    {% endif %}
-    {% block extra_js %}{% endblock %}
+  <!-- Dark Mode Toggle -->
+  <button id="dark-mode-toggle" aria-label="Toggle dark mode"
+    class="fixed bottom-6 left-6 z-50 rounded-full bg-yellow-400 p-3 shadow-lg focus:outline-none focus:ring-4 focus:ring-yellow-300"
+  >
+    <span aria-hidden="true" class="block text-lg">🌙</span>
+    <span class="sr-only">Toggle dark mode</span>
+  </button>
 
-    {# --- Elite polish (tokens + ripple + reveals + back-to-top ring) --- #}
-    <script nonce="{{ NONCE }}">
-    (() => {
-      if (window.__fcPolish) return; window.__fcPolish = true;
+  <!-- Page Loader Overlay -->
+  <div id="page-loader"
+    class="fixed inset-0 flex items-center justify-center bg-black/50 opacity-0 pointer-events-none transition-opacity duration-300 z-50"
+    aria-label="Loading" aria-live="polite"
+  >
+    <svg class="animate-spin h-12 w-12 text-yellow-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/>
+    </svg>
+  </div>
 
-      const css = `
-      :root{ --fc-brand: {{ _brand_hex }}; --fc-ring: color-mix(in srgb, var(--fc-brand) 65%, transparent); }
-      html{ font-size: clamp(15px, 1.04vw + 12px, 18px); text-rendering: optimizeLegibility; }
-      body{ letter-spacing: .002em; -webkit-font-smoothing: antialiased; }
-      .tabular-nums{ font-variant-numeric: tabular-nums; }
-      .optical-tight{ letter-spacing: -.01em; }
-      .fc-reveal{ opacity:0; transform:translateY(12px); transition:opacity .6s ease, transform .6s ease; }
-      .fc-reveal.is-in{ opacity:1; transform:none; }
-      .fc-focus{ outline:none; box-shadow: 0 0 0 0px transparent; }
-      .fc-focus:focus-visible{ box-shadow: 0 0 0 3px var(--fc-ring); border-radius: 12px; }
-      .fc-btn{ border-radius:999px; font-weight:800; position:relative; overflow:hidden; padding:.7rem 1.1rem; display:inline-flex; align-items:center; gap:.55rem; }
-      .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow:0 10px 30px rgb(250 204 21 / 15%); }
-      .fc-btn-ghost{ color:#fff; background: rgb(255 255 255 / 7%); border:1px solid rgb(255 255 255 / 15%); }
-      .fc-input{ background:rgb(255 255 255 / 6%); border:1px solid rgb(255 255 255 / 12%); border-radius:12px; padding:.65rem .85rem; color:#fff; }
-      .fc-input::placeholder{ color:rgb(255 255 255 /.55); }
-      `;
-      const style = document.createElement('style'); style.textContent=css; try{style.nonce='{{ NONCE }}';}catch(_){}
-      document.head.appendChild(style);
+  {# === ANNOUNCEMENT BAR: SPONSOR TICKER (Elite, always on top) === #}
+  {% block announcement %}
+    {% include "partials/header_sponsor_ticker.html" ignore missing %}
+  {% endblock %}
 
-      const $ = (s, r=document) => r.querySelector(s);
-      const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
-      const clamp=(x,min,max)=>Math.min(Math.max(x,min),max);
+  {% include 'partials/header_and_announcement.html' ignore missing %}
+  {% block hero %}{% endblock %}
 
-      // Ripple
-      function attachRipple(){
-        $$('.fc-btn,[data-ripple]').forEach(btn=>{
-          if (btn.__rip) return; btn.__rip = true;
-          btn.addEventListener('click', e=>{
-            const r = document.createElement('span'); r.className='fc-ripple';
-            const rect=btn.getBoundingClientRect();
-            const x=(e.clientX??(rect.left+rect.width/2))-rect.left;
-            const y=(e.clientY??(rect.top+rect.height/2))-rect.top;
-            const d=Math.max(rect.width,rect.height)*1.1;
-            Object.assign(r.style,{width:d+'px',height:d+'px',left:x+'px',top:y+'px'});
-            btn.appendChild(r);
-            r.animate([{transform:'translate(-50%,-50%) scale(0)',opacity:.35},{transform:'translate(-50%,-50%) scale(18)',opacity:0}],{duration:650,easing:'cubic-bezier(.22,1,.36,1)'}).onfinish=()=>r.remove();
-          }, {passive:true});
-        });
+  <main
+    id="main-content"
+    role="main"
+    tabindex="-1"
+    class="min-h-[60vh] flex flex-col gap-14 max-w-6xl w-full mx-auto px-2 sm:px-8 pt-6"
+    style="scroll-margin-top: 80px;"
+  >
+    {% block content %}{% endblock %}
+  </main>
+
+  {% include 'partials/footer.html' ignore missing %}
+
+  {# === GLOBAL MODALS: Donation Modal + Newsletter === #}
+  {% block global_modals %}
+    {% include 'partials/donation_modal.html' ignore missing %}
+    {% include 'partials/newsletter.html' ignore missing %}
+  {% endblock %}
+
+  {% block pre_scripts %}{% endblock %}
+
+  <script src="{{ url_for('static', filename='js/main.js', v=asset_version) }}" defer></script>
+
+  <script>
+    // Dark Mode Toggle and Persistence
+    (function() {
+      const btn = document.getElementById('dark-mode-toggle');
+      btn.addEventListener('click', () => {
+        const html = document.documentElement;
+        if (html.classList.contains('dark')) {
+          html.classList.remove('dark');
+          localStorage.setItem('theme', 'light');
+        } else {
+          html.classList.add('dark');
+          localStorage.setItem('theme', 'dark');
+        }
+      });
+      // Apply stored theme on load
+      if (localStorage.getItem('theme') === 'dark') {
+        document.documentElement.classList.add('dark');
       }
-
-      // Reveal on scroll
-      function attachReveals(){
-        const els=$$('[data-reveal], .fc-reveal').filter(el=>!el.__reveal);
-        if(!els.length) return;
-        if(!('IntersectionObserver' in window)){ els.forEach(el=>el.classList.add('is-in')); return; }
-        const io=new IntersectionObserver(ents=>{
-          ents.forEach(ent=>{ if(ent.isIntersecting){ ent.target.classList.add('is-in'); io.unobserve(ent.target);} });
-        },{threshold:.14});
-        els.forEach(el=>{ el.classList.add('fc-reveal'); io.observe(el); el.__reveal=true; });
-      }
-
-      // Back-to-top progress ring
-      (function(){
-        const btn=$('#back-to-top'); if(!btn) return; const ring=btn.querySelector('.ring-wrap'); if(!ring) return;
-        const tick=()=>{ const h=document.documentElement; const p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;
-          ring.style.setProperty('--p',clamp(p,0,100)+'%');
-          btn.style.opacity=p>8?1:0; btn.style.transform=p>8?'translateY(0)':'translateY(8px)';
-        };
-        tick(); addEventListener('scroll',tick,{passive:true}); addEventListener('resize',tick,{passive:true});
-      })();
-
-      // Theme-color sync with current theme
-      (function(){
-        const meta = document.getElementById('meta-theme-color'); if(!meta) return;
-        function apply(){ meta.setAttribute('content', document.documentElement.dataset.theme==='light' ? '#fafafa' : '#0b0b0c'); }
-        apply(); addEventListener('storage', e=>{ if(e.key==='fc_theme') apply(); }, {passive:true});
-      })();
-
-      attachRipple(); attachReveals();
-      document.addEventListener('DOMContentLoaded',()=>{ attachRipple(); attachReveals(); },{once:true});
-      document.addEventListener('htmx:afterSwap',()=>{ attachRipple(); attachReveals(); },{passive:true});
     })();
-    </script>
-    <style nonce="{{ NONCE }}">.fc-ripple{position:absolute;border-radius:9999px;transform:translate(-50%,-50%) scale(0);opacity:.35;background:#fff;pointer-events:none}</style>
-  </body>
+
+    // Page loader control
+    window.showLoader = () => {
+      const loader = document.getElementById('page-loader');
+      loader.classList.remove('opacity-0', 'pointer-events-none');
+    };
+    window.hideLoader = () => {
+      const loader = document.getElementById('page-loader');
+      loader.classList.add('opacity-0', 'pointer-events-none');
+    };
+  </script>
+
+  {% block scripts %}{% endblock %}
+  {% block post_scripts %}{% endblock %}
+</body>
 </html>
 

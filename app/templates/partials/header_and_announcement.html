@@ -1,771 +1,140 @@
-{# ============================================================================
-   FundChamps — Header (ELITE v2.4: pro glass, no-flicker brand, nav polish,
-   synced meter, safe-area paddings, motion & data savers) 
-   Tips:
-     - Override width per page: header_max_w='84rem' header_vw='92vw'
-     - HEADER_TITLE_STYLE: 'legacy-chip' (default) or 'sv-gradient'
-   ============================================================================ #}
-
-{% set NONCE    = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
-
-{% set _team       = team if team is defined and team else none %}
-{% set team_name   = _team.team_name if _team and _team.team_name is defined else 'Connect ATX Elite' %}
-{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
-{% set theme_hex   = theme_hex|default(brand_color) %}
-
-{# Title style (chip by default; gradient when shrunk) #}
-{% set _qs_style = (request.args.get('title_style') if request is defined else none) %}
-{% set HEADER_TITLE_STYLE = (_qs_style if _qs_style in ['legacy','legacy-chip','sv','sv-gradient'] else header_title_style|default('legacy-chip')) %}
-{% if HEADER_TITLE_STYLE in ['legacy'] %}{% set HEADER_TITLE_STYLE = 'legacy-chip' %}{% endif %}
-{% if HEADER_TITLE_STYLE in ['sv'] %}{% set HEADER_TITLE_STYLE = 'sv-gradient' %}{% endif %}
-
-{# Width control (thinner defaults; override when including this partial) #}
-{% set header_max_w = header_max_w|default('86rem') %}
-{% set header_vw    = header_vw|default('94vw') %}
-
-{# Logo #}
-{% set _logo         = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
-{% set asset_version = asset_version|default(None) %}
-{% if _logo.startswith('http') %}
-  {% set logoSrc = _logo %}
-{% else %}
-  {% if asset_version %}
-    {% set logoSrc = (url_for('static', filename=_logo.lstrip('/'), v=asset_version) if url_for is defined else '/static/' ~ _logo.lstrip('/')) %}
-  {% else %}
-    {% set logoSrc = (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/')) %}
-  {% endif %}
-{% endif %}
-
-{# Numbers #}
-{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
-{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
-{% set _raw_pct         = (funds_raised / (fundraising_goal if fundraising_goal else 1) * 100) | round(1) %}
-{% set pct              = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
-
-{# Announcement + countdown #}
-{% set has_announcement     = (announcement.visible if announcement is defined and announcement and announcement.visible is defined else (announcement is defined and announcement)) %}
-{% set fundraising_deadline = fundraising_deadline if fundraising_deadline is defined else None %}
-{% set deadline_iso         = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
-
-{# URLs & tenant #}
-{% set stats_url                = stats_url|default('/api/stats') %}
-{% set home_url                 = home_url|default('/') %}
-{% set announcement_partial_url = announcement_partial_url|default(None) %}
-{% set tenant_slug              = tenant_slug|default(_team.slug if _team and _team.slug is defined else 'default') %}
-
-{# Payments #}
-{% set stripe_publishable_key = stripe_publishable_key|default('') %}
-{% set stripe_payment_link    = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
+{% from "macros/ui.html" import render_button %}
+{% from "macros/progress.html" import progress_meter %}
+{% from "macros/confetti.html" import launch_confetti %}
 
 <header
-  id="{{ _hdr_id }}"
+  id="site-header"
+  class="sticky top-0 z-50 bg-black/90 backdrop-blur-xl shadow-2xl border-b border-yellow-400/20 transition-all duration-300"
+  x-data="{ mobileOpen: false }"
+  @keydown.window.escape="mobileOpen = false"
+  itemscope itemtype="https://schema.org/Organization"
+  itemprop="brand"
   role="banner"
-  class="sticky top-0 z-50 will-change-[backdrop-filter,transform] border-b border-white/10"
-  data-stats-url="{{ stats_url }}"
-  data-tenant="{{ tenant_slug }}"
-  data-title-style="{{ HEADER_TITLE_STYLE }}"
-  style="
-    --fc-brand: {{ brand_color }};
-    --fc-brand-100: color-mix(in srgb, {{ brand_color }} 22%, transparent);
-    --fc-brand-200: color-mix(in srgb, {{ brand_color }} 36%, #000);
-    --fc-brand-text: #111827;
-    --meter-h: clamp(10px, 1.3vw, 14px);
-    --hdr-max: {{ header_max_w }};
-    --hdr-vw:  {{ header_vw }};
-  "
-  data-analytics="header"
 >
-  <style nonce="{{ NONCE }}">
-    /* ---------- Glass (contrast tuned + notch-safe paddings) ---------- */
-    #{{ _hdr_id }}{
-      isolation:isolate;
-      background: linear-gradient(180deg, rgb(0 0 0 /.78), rgb(0 0 0 /.60));
-      -webkit-backdrop-filter: blur(12px) saturate(125%);
-      backdrop-filter: blur(12px) saturate(125%);
-      padding-left: max(0px, env(safe-area-inset-left));
-      padding-right: max(0px, env(safe-area-inset-right));
-    }
-    #{{ _hdr_id }}.is-shrunk{
-      -webkit-backdrop-filter: blur(18px) saturate(140%);
-      backdrop-filter: blur(18px) saturate(140%);
-      box-shadow: 0 8px 30px rgb(0 0 0 / .35);
-    }
+  {# === Live Sponsor Ticker === #}
+  {% include "partials/header_sponsor_ticker.html" ignore missing %}
 
-    /* Announcement bar */
-    #{{ _hdr_id }} .announce{
-      background: linear-gradient(90deg, var(--fc-brand), #fef08a);
-      color: var(--fc-brand-text);
-      border-bottom: 1px solid color-mix(in srgb, var(--fc-brand) 25%, transparent);
-    }
-    #{{ _hdr_id }} .announce a{ text-decoration: underline; }
-
-    /* ---------- Container & spacing (thinner via tokens) ---------- */
-    #{{ _hdr_id }} .container{
-      width: min(var(--hdr-max, 86rem), var(--hdr-vw, 94vw));
-      margin-inline: auto;
-    }
-
-    /* ---------- NAV: reset + generous hit-area + active underline ---------- */
-    #{{ _hdr_id }} .hdr-nav a{
-      all: unset;
-      position: relative;
-      display:inline-block;
-      padding:.5rem .4rem;
-      margin-inline:.25rem;
-      cursor:pointer;
-      color:#e5e7eb;
-      font-weight:650;
-      opacity:.95;
-      line-height:1.1;
-      border-radius:.5rem;
-      transition: color .15s ease, opacity .15s ease, background .15s ease;
-    }
-    @media (hover:hover){
-      #{{ _hdr_id }} .hdr-nav a:hover{ color:var(--fc-brand); background:rgb(255 255 255 / .04); opacity:1; }
-    }
-    #{{ _hdr_id }} .hdr-nav a:focus-visible{
-      outline:none; box-shadow:0 0 0 3px color-mix(in srgb, var(--fc-brand) 65%, transparent);
-    }
-    #{{ _hdr_id }} .hdr-nav a.active{ color:var(--fc-brand); }
-    #{{ _hdr_id }} .hdr-nav a.active::after{
-      content:""; position:absolute; left:.2rem; right:.2rem; bottom:.15rem; height:2px; border-radius:2px;
-      background: linear-gradient(90deg, var(--fc-brand), #fde68a);
-    }
-
-    /* ---------- Brand (chip → gradient on shrink; smooth scale) ---------- */
-    #{{ _hdr_id }} .brand{ display:inline-flex; align-items:center; white-space:nowrap; transform-origin:left center; transition: transform .18s ease; }
-    #{{ _hdr_id }}.is-shrunk .brand{ transform: scale(.96); }
-
-    /* show either chip or gradient based on data-title-style */
-    #{{ _hdr_id }} .brand-chip{ display:none; }
-    #{{ _hdr_id }} .brand-gradient{ display:inline; }
-    #{{ _hdr_id }}[data-title-style="legacy-chip"] .brand-chip{ display:inline-block; }
-    #{{ _hdr_id }}[data-title-style="legacy-chip"] .brand-gradient{ display:none; }
-    #{{ _hdr_id }}.is-shrunk .brand-chip{ display:none!important; }
-    #{{ _hdr_id }}.is-shrunk .brand-gradient{ display:inline!important; }
-
-    /* legacy chip */
-    #{{ _hdr_id }} .legacy-chip{
-      position:relative; padding:.42rem .72rem; border-radius:1rem;
-      background:
-        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
-        linear-gradient(90deg, color-mix(in srgb, var(--fc-brand) 86%, #fff) 0%, #fff7cc 100%);
-      box-shadow: 0 8px 24px rgba(0,0,0,.30), inset 0 0 0 1px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.22);
-      backdrop-filter: blur(3px) saturate(1.02);
-    }
-    #{{ _hdr_id }} .legacy-chip::before{
-      content:""; position:absolute; inset:2px 6px auto 6px; height:36%;
-      background: linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,0));
-      border-radius:.65rem; opacity:.55; pointer-events:none;
-    }
-    #{{ _hdr_id }} .legacy-chip .txt{
-      font-weight:900; letter-spacing:-.02em; line-height:1.0;
-      font-size: clamp(16px, 1.6vw, 22px); color:#0b0c0f;
-      text-shadow: 0 .5px 0 rgba(255,255,255,.65), 0 1px 0 rgba(255,255,255,.35), 0 2px 8px rgba(0,0,0,.25);
-    }
-
-    /* gradient brand text */
-    #{{ _hdr_id }} .brand-gradient{
-      font-weight:900; letter-spacing:-.02em; line-height:1.0; font-size: clamp(16px, 1.6vw, 22px);
-      background-image: linear-gradient(180deg,#fff 0%, color-mix(in srgb, var(--fc-brand) 72%, #fff) 100%);
-      -webkit-background-clip:text; background-clip:text; color:transparent;
-      text-shadow: 0 0 .5px rgba(0,0,0,.65), 0 10px 28px rgba(0,0,0,.35);
-    }
-    @supports not ((-webkit-background-clip:text) or (background-clip:text)){
-      #{{ _hdr_id }} .brand-gradient{ color: var(--fc-brand); background:none; text-shadow:none; }
-    }
-
-    /* ---------- Proportional Mini Meter ---------- */
-    #{{ _hdr_id }} #hdr-meter{ display:flex; align-items:center; gap:.6rem; }
-    #{{ _hdr_id }} #hdr-meter .track{
-      flex:1 1 auto; max-width:260px; height: calc(var(--meter-h) * .72);
-      border-radius:9999px; overflow:hidden; position:relative;
-      background: rgb(255 255 255 / 12%);
-      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 9%);
-    }
-    #{{ _hdr_id }} #hdr-meter .track::before{ /* subtle ticks at 25/50/75/100 */
-      content:""; position:absolute; inset:0; opacity:.25; pointer-events:none;
-      background-image: linear-gradient(to right, rgba(255,255,255,.18) 0 0);
-      background-size: 25% 100%;
-      mix-blend-mode: soft-light;
-    }
-    #{{ _hdr_id }} #hdr-meter .fill{
-      height:100%; width:0%;
-      background: linear-gradient(90deg, #fffbe6, var(--fc-brand), #f59e0b);
-      transition: width .8s cubic-bezier(.22,1,.36,1);
-      will-change: width;
-    }
-    #{{ _hdr_id }} #hdr-meter .pct{
-      font-variant-numeric: tabular-nums; font-size:12px; color:#fde68a; min-width:3.2ch; text-align:right;
-    }
-
-    /* Motion & Save-Data */
-    #{{ _hdr_id }}.save-data,
-    @media (prefers-reduced-motion: reduce){
-      #{{ _hdr_id }} { -webkit-backdrop-filter:none; backdrop-filter:none; }
-      #{{ _hdr_id }} .fill { transition:none!important; }
-    }
-
-    /* Target offset & selection */
-    :target{ scroll-margin-top: clamp(64px, 10vh, 96px); }
-    ::selection{ background: color-mix(in srgb, var(--fc-brand) 52%, transparent); color:#111; }
-  </style>
-
-  <div id="{{ _hdr_id }}-sentinel" aria-hidden="true"></div>
-
-  {% if has_announcement %}
-  <div id="{{ _hdr_id }}-announcement" class="announce flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold"
-       role="status" aria-live="polite" aria-atomic="true"
-       data-key="{{ (announcement.id if announcement and announcement.id is defined else (announcement.message|default('announcement')|string)) }}"
-       {% if announcement_partial_url %}hx-get="{{ announcement_partial_url }}" hx-trigger="every 5m" hx-swap="outerHTML"{% endif %}>
-    <span class="line-clamp-2">{{ (announcement.message if announcement and announcement.message is defined else announcement)|safe }}</span>
-    {% if announcement and announcement.cta is defined and announcement.cta and announcement.cta_url is defined and announcement.cta_url %}
-      <a href="{{ announcement.cta_url }}" target="_blank" rel="noopener noreferrer">{{ announcement.cta }}</a>
-    {% endif %}
-    <button type="button" class="ml-2 px-2 py-1 rounded hover:bg-black/10 transition" aria-label="Close announcement" data-close-announcement>×</button>
-  </div>
+  {# === Announcement Bar (dynamic, e.g. for promo/updates) === #}
+  {% if announcement and announcement.visible %}
+    <div
+      id="announcement-bar"
+      class="flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold bg-gradient-to-r from-yellow-500 to-yellow-100 text-black shadow-inner border-b border-yellow-400/30"
+      hx-get="{{ url_for('main.announcement_partial') }}"
+      hx-trigger="every 5m"
+      hx-swap="outerHTML"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span>{{ announcement.message|safe }}</span>
+      {% if announcement.cta and announcement.cta_url %}
+        <a
+          href="{{ announcement.cta_url }}"
+          class="underline font-bold hover:no-underline focus-visible:ring-2 ring-black rounded transition-colors duration-200"
+          target="_blank"
+          rel="noopener noreferrer"
+        >{{ announcement.cta }}</a>
+      {% endif %}
+      <button
+        @click="$el.parentElement.remove()"
+        aria-label="Close announcement"
+        class="ml-2 rounded hover:bg-red-100/50 hover:text-red-700 focus-visible:ring-2 ring-red-600 text-xl leading-none px-2 py-1 select-none"
+        type="button"
+      >×</button>
+    </div>
   {% endif %}
 
+  {# === Fundraising Countdown Bar === #}
   {% if fundraising_deadline %}
-  <div class="flex items-center justify-center text-sm font-semibold tracking-wide text-black py-1"
-       style="background: var(--fc-brand);" role="region" aria-live="polite" aria-atomic="true">
-    ⏰ <span id="{{ _hdr_id }}-countdown" class="ml-1" data-deadline="{{ deadline_iso }}"></span>
-    <span class="ml-1">left — help us reach our goal!</span>
-  </div>
+    <div
+      class="text-xs font-bold bg-yellow-800 text-yellow-100 py-1 text-center animate-pulse tracking-wide border-b border-yellow-400/10"
+      aria-live="polite"
+      aria-atomic="true"
+      role="region"
+      aria-label="Fundraising deadline countdown"
+    >
+      ⏰ <span id="header-countdown">{{ fundraising_deadline|countdown }}</span> left — help us reach our goal!
+    </div>
   {% endif %}
 
-  {# --- Main row: BRAND | NAV (center) | ACTIONS --- #}
-<div class="container">
-  <div class="hdr-row flex items-center gap-3 px-4 lg:px-8 py-3">
-
-    {# Brand (left) #}
-    <a href="{{ home_url }}" class="flex items-center gap-3 shrinkable"
-       aria-label="{{ team_name }} home" data-analytics="logo">
-      <img src="{{ logoSrc }}" alt="{{ team_name }} logo"
-           class="h-10 w-10 rounded-xl ring-1 ring-white/10" loading="eager" decoding="async"/>
-      <span class="brand">
-        <span class="brand-chip legacy-chip"><span class="txt">{{ team_name }}</span></span>
-        <span class="brand-gradient">{{ team_name }}</span>
+  {# === Main Nav & Progress === #}
+  <div class="max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap items-center justify-between px-4 md:px-6 py-3 gap-x-4 gap-y-3">
+    <a
+      href="{{ url_for('main.home') }}"
+      class="flex items-center gap-2 flex-shrink-0 group focus-visible:ring-2 ring-yellow-300 rounded-lg"
+    >
+      <img
+        src="{{ logo_src }}"
+        alt="{{ (team.team_name if team and team.team_name else 'Connect ATX Elite') ~ ' logo' }}"
+        class="h-10 w-10 md:h-11 md:w-11 rounded-full ring-2 ring-yellow-300 shadow-md bg-white transition-transform duration-300 group-hover:scale-110"
+        loading="eager"
+        decoding="async"
+        onerror="this.onerror=null;this.src='/static/images/logo.webp';"
+        itemprop="logo"
+      />
+      <span class="text-xl md:text-2xl font-extrabold bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-50 bg-clip-text text-transparent drop-shadow">
+        {{ team.team_name or 'Connect ATX Elite' }}
       </span>
     </a>
-
-    {# Primary nav (centered) — desktop only #}
-    <nav class="hdr-nav hidden md:flex flex-1 items-center justify-center gap-8"
-         aria-label="Primary">
-      <a href="#mission">Mission</a>
-      <a href="#tiers">Sponsorship Tiers</a>
-      <a href="#program-stats-calendar">Schedule</a>
-      <a href="/about">About</a>
+    <nav class="hidden lg:flex items-center gap-5 text-zinc-200 font-semibold ml-6" aria-label="Primary navigation">
+      {% for id, label in [('mission','Mission'),('tiers','Sponsorship Tiers'),('program-stats-calendar','Schedule')] %}
+        <a
+          href="#{{ id }}"
+          class="relative px-3 py-1 rounded hover:text-yellow-300 focus-visible:ring-2 ring-yellow-400 transition-colors group"
+        >
+          {{ label }}
+          <span class="absolute bottom-0 left-0 h-0.5 w-full bg-yellow-300 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+        </a>
+      {% endfor %}
     </nav>
-
-    {# Actions (right) #}
-    <div class="hdr-actions flex items-center gap-3">
-      <button class="fc-btn fc-btn-ghost min-w-24" data-open-donate-modal>💸 Donate</button>
-      <a href="#tiers" class="fc-btn fc-btn-primary min-w-24">🌟 Sponsor</a>
-      <button id="{{ _hdr_id }}-theme"
-              class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5"
-              aria-label="Toggle theme" aria-pressed="false" type="button">🌙</button>
-      <button id="{{ _hdr_id }}-toggle"
-              class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl"
-              aria-expanded="false" aria-controls="{{ _hdr_id }}-mobile"
-              aria-label="Open mobile menu" type="button">☰</button>
-    </div>
-
-  </div>
-
-  {# Mini meter row (unchanged) #}
-  <div class="px-4 lg:px-8 pb-3">
-    <div id="hdr-meter" role="meter" aria-valuemin="0" aria-valuemax="100" aria-label="Fundraising progress">
-      <div class="track"><div class="fill" style="width: {{ pct }}%"></div></div>
-      <span class="pct" id="hdr-pct" data-hdr-pct>{{ pct | round(0) }}%</span>
-      <span id="hdr-sr" class="sr-only">Raised ${{ '{:,.0f}'.format(funds_raised) }} of ${{ '{:,.0f}'.format(fundraising_goal) }} ({{ pct | round(0) }}%)</span>
-    </div>
-    <div class="mt-1 flex items-center justify-between text-[11px] text-yellow-200/85">
-      <span id="hdr-raised">${{ '{:,.0f}'.format(funds_raised) }}</span>
-      <span>Goal <span id="hdr-goal">${{ '{:,.0f}'.format(fundraising_goal) }}</span></span>
-    </div>
-  </div>
-</div>
-
-  {# ---------- Mobile sheet ---------- #}
-  <nav id="{{ _hdr_id }}-mobile" hidden aria-label="Mobile" tabindex="-1"
-       class="fixed inset-0 z-[60] grid place-items-center bg-black/70 backdrop-blur-sm">
-    <div class="absolute top-4 right-4">
-      <button type="button" id="{{ _hdr_id }}-close" class="text-3xl text-yellow-300 px-2 py-1 rounded hover:bg-yellow-300/10" aria-label="Close menu">×</button>
-    </div>
-    <div class="h-full w-full flex flex-col gap-8 items-center justify-center font-semibold text-lg px-8">
-      <a href="#mission" class="block py-4 px-8 rounded hover:bg-white/5 transition">Mission</a>
-      <a href="#tiers" class="block py-4 px-8 rounded hover:bg-white/5 transition">Sponsorship Tiers</a>
-      <a href="#program-stats-calendar" class="block py-4 px-8 rounded hover:bg-white/5 transition">Schedule</a>
-      <a href="/about" class="block py-4 px-8 rounded hover:bg-white/5 transition">About</a>
-      <div class="flex flex-col gap-4 mt-2 w-full max-w-xs">
-        <a href="#tiers" class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
-           style="background: linear-gradient(90deg, var(--fc-brand), #fde68a)">🌟 Sponsor Now</a>
-        <button class="w-full inline-flex items-center justify-center rounded-xl text-black font-bold px-5 py-3"
-                style="background: var(--fc-brand)" data-open-donate-modal>💸 Donate</button>
+    <div class="ml-auto lg:ml-6 flex flex-col items-start justify-center min-w-[11rem] shrink-0" aria-label="Fundraising progress" role="region">
+      {% set raised = funds_raised or 4200 %}
+      {% set goal = fundraising_goal or 10000 %}
+      {% set pct = (raised / goal * 100) | round(1) %}
+      <div class="flex items-baseline gap-1">
+        <span class="text-yellow-400 font-extrabold text-lg">${{ raised | comma }}</span>
+        <span class="text-yellow-100 text-xs">/ ${{ goal | comma }}</span>
+        <span class="ml-1 text-yellow-300 text-xs font-black">({{ pct }}%)</span>
       </div>
+      <div class="w-44 mt-1 h-2 bg-zinc-700 rounded-full overflow-hidden">
+        <div class="h-full bg-gradient-to-r from-yellow-500 to-yellow-300 transition-all duration-500 ease-out" style="width: {{ pct }}%;"></div>
+      </div>
+    </div>
+    <div class="flex gap-2 ml-4 flex-wrap justify-end">
+      {{ render_button('💸 Donate', '#donate', extra_classes='min-w-[7rem] bg-zinc-900 text-yellow-300 border border-yellow-400 font-bold hover:scale-105 transition-transform ring-1 ring-yellow-400/70', attrs={ "data_modal": "donation_modal" }) }}
+      {{ render_button('🌟 Sponsor', '#tiers', extra_classes='min-w-[7rem] bg-zinc-900 text-yellow-200 border border-yellow-400 font-bold hover:opacity-90 ring-1 ring-yellow-400/60') }}
+      {{ render_button('🏆 VIP Sponsor', '#tiers', extra_classes='min-w-[8rem] bg-black text-yellow-100 border border-yellow-400 font-bold shadow animate-pulse hover:scale-105 ring-2 ring-yellow-400/80') }}
+    </div>
+  </div>
+  <div class="hidden lg:block text-center py-1 text-xs italic text-yellow-200/80 tracking-wide drop-shadow border-t border-yellow-400/10" aria-label="Trust and credibility statement">
+    🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold Certified · Austin, TX · Est. 2023
+  </div>
+  {# === Mobile Menu (A11y & animated) === #}
+  <nav
+    id="mobile-menu"
+    x-show="mobileOpen"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 scale-90"
+    x-transition:enter-end="opacity-100 scale-100"
+    x-transition:leave="transition ease-in duration-100"
+    x-transition:leave-start="opacity-100 scale-100"
+    x-transition:leave-end="opacity-0 scale-90"
+    class="fixed inset-0 bg-black/95 backdrop-blur flex flex-col items-center justify-center gap-6 lg:hidden z-[60]"
+    aria-label="Mobile navigation menu"
+    role="menu"
+  >
+    <button @click="mobileOpen = false" aria-label="Close menu" class="absolute top-5 right-5 text-4xl text-yellow-300 hover:text-red-500 focus-visible:ring-2 ring-red-400 rounded" type="button">×</button>
+    {% for id, label in [('mission','Mission'),('tiers','Sponsorship Tiers'),('program-stats-calendar','Schedule')] %}
+      <a href="#{{ id }}" @click="mobileOpen = false" class="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent hover:scale-105 transition-transform duration-200" tabindex="0" role="menuitem">{{ label }}</a>
+    {% endfor %}
+    <div class="flex flex-col gap-2 mt-4 w-full items-center">
+      {{ render_button('🌟 Sponsor Now', '#tiers', size='lg', extra_classes='w-60 bg-gradient-to-r from-yellow-400 to-yellow-200 text-black') }}
+      {{ render_button('💸 Donate', '#donate', size='lg', extra_classes='w-60 bg-yellow-400 text-black') }}
     </div>
   </nav>
 </header>
 
-{# Floating Quick Donate #}
-<a href="#donate"
-   class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
-   data-open-donate-modal data-analytics="cta:quick-donate" aria-label="Quick donate button" hidden></a>
+<a href="#donate" class="fixed bottom-6 right-6 bg-yellow-400 px-6 py-3 rounded-full shadow-2xl animate-bounce lg:hidden font-bold text-black text-lg focus-visible:ring-4 ring-yellow-700 z-[99]" aria-label="Quick Donate">💸 Quick Donate</a>
 
-<script nonce="{{ NONCE }}">
-(() => {
-  if (window.__fcHeaderInit) return; window.__fcHeaderInit = true;
-  const id = '{{ _hdr_id }}';
-  const header = document.getElementById(id); if (!header) return;
-  const $ = (sel, ctx=document) => ctx.querySelector(sel);
-
-  /* Save-Data */
-  if (navigator.connection?.saveData) header.classList.add('save-data');
-
-  /* Idle preconnects */
-  (window.requestIdleCallback || ((cb)=>setTimeout(cb,1)))(() => {
-    ['https://js.stripe.com','/socket.io/'].forEach(h=>{
-      const l=document.createElement('link'); l.rel='preconnect'; l.href=h; l.crossOrigin=''; document.head.appendChild(l);
-    });
-  });
-
-  /* Theme */
-  const themeToggle = $(`#${id}-theme`);
-  function applyTheme(mode){
-    const root = document.documentElement;
-    root.dataset.theme = mode;
-    if (themeToggle) themeToggle.textContent = (mode === 'light') ? '🌙' : '☀️';
-    try { localStorage.setItem('fc_theme', mode); } catch(_) {}
-  }
-  try { applyTheme(localStorage.getItem('fc_theme') || document.documentElement.dataset.theme || 'dark'); } catch(_) {}
-  themeToggle?.addEventListener('click', () => {
-    const next = (document.documentElement.dataset.theme === 'light') ? 'dark' : 'light';
-    document.startViewTransition ? document.startViewTransition(()=>applyTheme(next)) : applyTheme(next);
-  });
-  addEventListener('storage',e=>{ if(e.key==='fc_theme'&&e.newValue){ applyTheme(e.newValue); } });
-
-  /* Announcement memory */
-  const ann = $(`#${id}-announcement`);
-  if (ann) {
-    const key = 'fc_announce_closed_' + (ann.dataset.key || 'default');
-    try { if (localStorage.getItem(key) === '1') ann.remove(); } catch(_) {}
-    ann.querySelector('[data-close-announcement]')?.addEventListener('click', ()=>{
-      try { localStorage.setItem(key,'1'); } catch(_) {}
-      ann.remove();
-      try { dispatchEvent(new CustomEvent('fc:sticky:measure')); } catch(_){}
-    });
-  }
-
-  /* Countdown */
-  const cd = $(`#${id}-countdown`);
-  if (cd && cd.dataset.deadline) {
-    const deadline = new Date(cd.dataset.deadline);
-    if (!isNaN(deadline)) {
-      const tick = () => {
-        if (document.hidden) return;
-        const now = new Date(); let diff = Math.max(0, deadline - now);
-        const d = Math.floor(diff/86400000); diff -= d*86400000;
-        const h = Math.floor(diff/3600000);  diff -= h*3600000;
-        const m = Math.floor(diff/60000);    diff -= m*60000;
-        const s = Math.floor(diff/1000);
-        cd.textContent = `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-      };
-      tick(); setInterval(tick, 1000);
-      document.addEventListener('visibilitychange', tick, { passive:true });
-    }
-  }
-
-  /* Height → consumers */
-  function pushHeaderHeight(){
-    try {
-      const h = Math.ceil(header.getBoundingClientRect().height);
-      dispatchEvent(new CustomEvent('fc:header:height', { detail:{ height:h }}));
-      dispatchEvent(new CustomEvent('fc:sticky:measure'));
-    } catch(_){}
-  }
-  pushHeaderHeight();
-  if ('ResizeObserver' in window) new ResizeObserver(pushHeaderHeight).observe(header);
-  addEventListener('fc:donate:open', pushHeaderHeight);
-  addEventListener('fc:donate:close', pushHeaderHeight);
-
-  /* Shrink with hysteresis (no flicker) */
-  (function(){
-    let shrunk = false;
-    const SHRINK_ON = 64, UNSHRINK_AT = 20;
-    const apply = (s) => {
-      if (s === shrunk) return;
-      shrunk = s;
-      header.classList.toggle('is-shrunk', shrunk);
-      dispatchEvent(new CustomEvent(shrunk ? 'fc:header:shrink' : 'fc:header:unshrink'));
-    };
-    const onScroll = () => {
-      const y = window.scrollY || document.documentElement.scrollTop || 0;
-      if (y > SHRINK_ON) apply(true);
-      else if (y < UNSHRINK_AT) apply(false);
-    };
-    onScroll(); addEventListener('scroll', onScroll, { passive:true });
-  })();
-
-  /* Mobile sheet (focus trap-lite) */
-  (function(){
-    const openBtn  = $(`#${id}-toggle`);
-    const menu     = document.getElementById(`${id}-mobile`);
-    const closeBtn = document.getElementById(`${id}-close`);
-    let lastFocus = null;
-    if (menu && 'inert' in menu) menu.inert = true;
-    const focusables = () => menu.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])');
-    function open(){
-      if(!menu) return;
-      lastFocus = document.activeElement;
-      menu.hidden=false; document.body.style.overflow='hidden';
-      if('inert' in menu) menu.inert=false;
-      openBtn?.setAttribute('aria-expanded','true');
-      (focusables()[0] || menu).focus();
-      const onKey=(e)=>{ if(e.key==='Escape') close();
-        if(e.key==='Tab'){ const f=[...focusables()]; if(!f.length) return;
-          const first=f[0], last=f[f.length-1];
-          if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
-          else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
-        }
-      };
-      menu.__onKey=onKey; document.addEventListener('keydown', onKey);
-      dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'menu_open', area:'header' }}));
-    }
-    function close(){
-      if(!menu) return;
-      menu.hidden=true; document.body.style.overflow='';
-      if('inert' in menu) menu.inert=true;
-      openBtn?.setAttribute('aria-expanded','false'); lastFocus?.focus();
-      document.removeEventListener('keydown', menu.__onKey || (()=>{}));
-      dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'menu_close', area:'header' }}));
-    }
-    openBtn?.addEventListener('click', open);
-    closeBtn?.addEventListener('click', close);
-    menu?.addEventListener('click', (e)=>{ if(e.target===menu) close(); });
-    menu?.querySelectorAll('a,button').forEach(el => el.addEventListener('click', close));
-  })();
-
-  /* Smart Donate */
-  const HAS_STRIPE = {{ 'true' if stripe_publishable_key else 'false' }};
-  const SPL        = '{{ stripe_payment_link|e }}';
-  function smartDonate(){ if (HAS_STRIPE && SPL){ location.href=SPL; return; } window.openDonationModal(); }
-  window.openDonationModal = window.openDonationModal || function(){
-    dispatchEvent(new CustomEvent('fc:donate:open'));
-    const dlg = document.getElementById('donation-modal');
-    if (dlg?.showModal) { try{ dlg.showModal(); return; }catch(_){} }
-    document.querySelector('[data-fc-modal="donation"]')?.click();
-  };
-  document.querySelectorAll('[data-open-donate-modal]').forEach(el=>{
-    el.addEventListener('click', (e)=>{ e.preventDefault(); smartDonate(); });
-  });
-
-  /* Mini meter + polling + hero sync */
-  const meter = {
-    fill:  $('#hdr-meter .fill', header),
-    pct:   $('#hdr-pct', header),
-    raised:$('#hdr-raised', header),
-    goal:  $('#hdr-goal', header),
-    sr:    $('#hdr-sr', header),
-  };
-  const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-  const fmt$ = n => '$' + nf.format(Math.round(+n||0));
-  let last = { raised: {{ funds_raised|int }}, goal: {{ fundraising_goal|int }} };
-
-  function setMeter(raised=last.raised, goal=last.goal){
-    last.raised = +raised||0; last.goal = Math.max(0,+goal||0);
-    const p = Math.max(0, Math.min(100, last.goal ? (last.raised/last.goal*100) : 0));
-    if (meter.fill) meter.fill.style.width = p.toFixed(1)+'%';
-    if (meter.pct)  meter.pct.textContent  = p.toFixed(0) + '%';
-    if (meter.raised) meter.raised.textContent = fmt$(last.raised);
-    if (meter.goal)   meter.goal.textContent   = fmt$(last.goal);
-    if (meter.sr)     meter.sr.textContent     = `Raised ${fmt$(last.raised)} of ${fmt$(last.goal)} (${p.toFixed(0)}%)`;
-    try { if (window.updateHeroMeter) window.updateHeroMeter(last.raised, last.goal); } catch(_){}
-  }
-
-  let gotLive=false;
-  addEventListener('fc:meter:update', (ev)=> { gotLive=true; const d=ev.detail||{}; setMeter(d.raised, d.goal); }, { passive:true });
-
-  setTimeout(()=>{
-    if (gotLive) return;
-    const url = header.dataset.statsUrl || '/api/stats';
-    (async function poll(){
-      try{
-        if (document.hidden) return setTimeout(poll, (navigator.connection?.saveData?30000:15000));
-        const r = await fetch(url, { headers:{Accept:'application/json'} });
-        if (r.ok){ const j = await r.json(); setMeter(j.raised ?? j.funds_raised, j.goal ?? j.fundraising_goal); }
-      }catch{}
-      setTimeout(poll, (navigator.connection?.saveData?30000:15000));
-    })();
-  }, 1200);
-
-  /* Scroll-spy */
-  (function(){
-    const ids = ['mission','program-stats-calendar','tiers','sponsor-hub','sponsor-wall','newsletter'];
-    const map = new Map(ids.map(i => [i, document.querySelector(`.hdr-nav a[href="#${i}"]`)]));
-    if (!('IntersectionObserver' in window)) return;
-    const links = Array.from(map.values()).filter(Boolean); if (!links.length) return;
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent=>{
-        const a = map.get(ent.target.id); if (!a) return;
-        if (ent.isIntersecting){
-          links.forEach(x=>{ x.classList.remove('active'); x.removeAttribute('aria-current'); });
-          a.classList.add('active'); a.setAttribute('aria-current','page');
-        }
-      });
-    }, { rootMargin: '-25% 0px -60% 0px', threshold: .01 });
-    ids.forEach(i=>{ const sec=document.getElementById(i); if (sec) io.observe(sec); });
-  })();
-
-  /* VIP pulse */
-  addEventListener('fc:vip:hit', () => {
-    try{
-      meter.fill?.classList.add('pulse'); setTimeout(()=>meter.fill?.classList.remove('pulse'), 1400);
-    }catch{}
-  }, { passive:true });
-
-  /* noopener on new tabs */
-  document.addEventListener('click', e => {
-    const a = e.target.closest && e.target.closest('a[target="_blank"]');
-    if (a && (!a.rel || !/\bnoopener\b/.test(a.rel))) a.rel = (a.rel? a.rel+' ':'') + 'noopener noreferrer';
-  }, { passive:true });
-
-  /* Floating Quick Donate toggler */
-  if (!document.body.hasAttribute('data-no-float')) {
-    const f = document.querySelector('[data-analytics="cta:quick-donate"]');
-    if (f) { f.hidden = false; f.textContent = '💸 Quick Donate'; f.addEventListener('click', (e)=>{ e.preventDefault(); smartDonate(); }); }
-  }
-})();
-</script>
-
-
-<script nonce="{{ NONCE }}">
-(() => {
-  if (window.__fcHeaderInit) return; window.__fcHeaderInit = true;
-  const id = '{{ _hdr_id }}';
-  const header = document.getElementById(id); if (!header) return;
-  const $ = (sel, ctx=document) => ctx.querySelector(sel);
-
-  /* Save-Data */
-  if (navigator.connection?.saveData) header.classList.add('save-data');
-
-  /* Idle preconnect */
-  (window.requestIdleCallback || ((cb)=>setTimeout(cb,1)))(() => {
-    ['https://js.stripe.com','/socket.io/'].forEach(h=>{
-      const l=document.createElement('link'); l.rel='preconnect'; l.href=h; l.crossOrigin=''; document.head.appendChild(l);
-    });
-  });
-
-  /* Theme */
-  const themeToggle = $(`#${id}-theme`);
-  function applyTheme(mode){
-    const root = document.documentElement;
-    root.dataset.theme = mode;
-    themeToggle?.setAttribute('aria-pressed', mode === 'dark' ? 'true' : 'false');
-    if (themeToggle) themeToggle.textContent = (mode === 'light') ? '🌙' : '☀️';
-    try { localStorage.setItem('fc_theme', mode); } catch(_) {}
-  }
-  try { applyTheme(localStorage.getItem('fc_theme') || document.documentElement.dataset.theme || 'dark'); } catch(_) {}
-  themeToggle?.addEventListener('click', () => {
-    const next = (document.documentElement.dataset.theme === 'light') ? 'dark' : 'light';
-    document.startViewTransition ? document.startViewTransition(()=>applyTheme(next)) : applyTheme(next);
-  });
-  addEventListener('storage',e=>{ if(e.key==='fc_theme'&&e.newValue){ applyTheme(e.newValue); } });
-
-  /* Announcement memory */
-  const ann = $(`#${id}-announcement`);
-  if (ann) {
-    const key = 'fc_announce_closed_' + (ann.dataset.key || 'default');
-    try { if (localStorage.getItem(key) === '1') ann.remove(); } catch(_) {}
-    ann.querySelector('[data-close-announcement]')?.addEventListener('click', ()=>{
-      try { localStorage.setItem(key,'1'); } catch(_) {}
-      ann.remove();
-      try { dispatchEvent(new CustomEvent('fc:sticky:measure')); } catch(_){}
-    });
-  }
-
-  /* Countdown */
-  const cd = $(`#${id}-countdown`);
-  if (cd && cd.dataset.deadline) {
-    const deadline = new Date(cd.dataset.deadline);
-    if (!isNaN(deadline)) {
-      const tick = () => {
-        if (document.hidden) return;
-        const now = new Date(); let diff = Math.max(0, deadline - now);
-        const d = Math.floor(diff/86400000); diff -= d*86400000;
-        const h = Math.floor(diff/3600000);  diff -= h*3600000;
-        const m = Math.floor(diff/60000);    diff -= m*60000;
-        const s = Math.floor(diff/1000);
-        cd.textContent = `${d}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-      };
-      tick(); setInterval(tick, 1000);
-      document.addEventListener('visibilitychange', tick, { passive:true });
-    }
-  }
-
-  /* Height → consumers */
-  function pushHeaderHeight(){
-    try {
-      const h = Math.ceil(header.getBoundingClientRect().height);
-      dispatchEvent(new CustomEvent('fc:header:height', { detail:{ height:h }}));
-      dispatchEvent(new CustomEvent('fc:sticky:measure'));
-    } catch(_){}
-  }
-  pushHeaderHeight();
-  if ('ResizeObserver' in window) new ResizeObserver(pushHeaderHeight).observe(header);
-  addEventListener('fc:donate:open', pushHeaderHeight);
-  addEventListener('fc:donate:close', pushHeaderHeight);
-
-  /* Shrink with hysteresis (no flicker) */
-  (function(){
-    let shrunk = false;
-    const SHRINK_ON = 64, UNSHRINK_AT = 20;
-    const apply = (s) => {
-      if (s === shrunk) return;
-      shrunk = s;
-      header.classList.toggle('is-shrunk', shrunk);
-      dispatchEvent(new CustomEvent(shrunk ? 'fc:header:shrink' : 'fc:header:unshrink'));
-    };
-    const onScroll = () => {
-      const y = window.scrollY || document.documentElement.scrollTop || 0;
-      if (y > SHRINK_ON) apply(true);
-      else if (y < UNSHRINK_AT) apply(false);
-    };
-    onScroll(); addEventListener('scroll', onScroll, { passive:true });
-  })();
-
-  /* Mobile sheet (focus trap-lite) */
-  (function(){
-    const openBtn  = $(`#${id}-toggle`);
-    const menu     = document.getElementById(`${id}-mobile`);
-    const closeBtn = document.getElementById(`${id}-close`);
-    let lastFocus = null;
-    if (menu && 'inert' in menu) menu.inert = true;
-    const focusables = () => menu.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])');
-
-    function open(){
-      if(!menu) return;
-      lastFocus = document.activeElement;
-      menu.hidden=false; document.body.style.overflow='hidden';
-      if('inert' in menu) menu.inert=false;
-      openBtn?.setAttribute('aria-expanded','true');
-      (focusables()[0] || menu).focus();
-      const onKey=(e)=>{ if(e.key==='Escape') close();
-        if(e.key==='Tab'){ const f=[...focusables()]; if(!f.length) return;
-          const first=f[0], last=f[f.length-1];
-          if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
-          else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
-        }
-      };
-      menu.__onKey=onKey; document.addEventListener('keydown', onKey);
-      dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'menu_open', area:'header' }}));
-    }
-    function close(){
-      if(!menu) return;
-      menu.hidden=true; document.body.style.overflow='';
-      if('inert' in menu) menu.inert=true;
-      openBtn?.setAttribute('aria-expanded','false'); lastFocus?.focus();
-      document.removeEventListener('keydown', menu.__onKey || (()=>{}));
-      dispatchEvent(new CustomEvent('fc:analytics', { detail:{ event:'menu_close', area:'header' }}));
-    }
-    openBtn?.addEventListener('click', open);
-    closeBtn?.addEventListener('click', close);
-    menu?.addEventListener('click', (e)=>{ if(e.target===menu) close(); });
-    menu?.querySelectorAll('a,button').forEach(el => el.addEventListener('click', close));
-  })();
-
-  /* Smart Donate */
-  const HAS_STRIPE = {{ 'true' if stripe_publishable_key else 'false' }};
-  const SPL        = '{{ stripe_payment_link|e }}';
-  function smartDonate(){ if (HAS_STRIPE && SPL){ location.href=SPL; return; } window.openDonationModal(); }
-  window.openDonationModal = window.openDonationModal || function(){
-    dispatchEvent(new CustomEvent('fc:donate:open'));
-    const dlg = document.getElementById('donation-modal');
-    if (dlg?.showModal) { try{ dlg.showModal(); return; }catch(_){} }
-    document.querySelector('[data-fc-modal="donation"]')?.click();
-  };
-  document.querySelectorAll('[data-open-donate-modal]').forEach(el=>{
-    el.addEventListener('click', (e)=>{ e.preventDefault(); smartDonate(); });
-  });
-
-  /* Meter + polling + hero sync */
-  const meter = {
-    wrap:  document.getElementById('hdr-meter'),
-    fill:  $('#hdr-meter .fill', header),
-    pct:   $('#hdr-pct', header),
-    raised:$('#hdr-raised', header),
-    goal:  $('#hdr-goal', header),
-    sr:    $('#hdr-sr', header),
-  };
-  const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-  const fmt$ = n => '$' + nf.format(Math.round(+n||0));
-  let last = { raised: {{ funds_raised|int }}, goal: {{ fundraising_goal|int }} };
-
-  function setMeter(raised=last.raised, goal=last.goal){
-    last.raised = +raised||0; last.goal = Math.max(0,+goal||0);
-    const p = Math.max(0, Math.min(100, last.goal ? (last.raised/last.goal*100) : 0));
-    if (meter.fill) meter.fill.style.width = p.toFixed(1)+'%';
-    if (meter.pct)  meter.pct.textContent  = p.toFixed(0) + '%';
-    if (meter.wrap) meter.wrap.setAttribute('aria-valuenow', p.toFixed(1));
-    if (meter.raised) meter.raised.textContent = fmt$(last.raised);
-    if (meter.goal)   meter.goal.textContent   = fmt$(last.goal);
-    if (meter.sr)     meter.sr.textContent     = `Raised ${fmt$(last.raised)} of ${fmt$(last.goal)} (${p.toFixed(0)}%)`;
-    try { if (window.updateHeroMeter) window.updateHeroMeter(last.raised, last.goal); } catch(_){}
-  }
-
-  let gotLive=false;
-  addEventListener('fc:meter:update', (ev)=> { gotLive=true; const d=ev.detail||{}; setMeter(d.raised, d.goal); }, { passive:true });
-
-  setTimeout(()=>{
-    if (gotLive) return;
-    const url = header.dataset.statsUrl || '/api/stats';
-    (async function poll(){
-      try{
-        if (document.hidden) return setTimeout(poll, (navigator.connection?.saveData?30000:15000));
-        const r = await fetch(url, { headers:{Accept:'application/json'} });
-        if (r.ok){ const j = await r.json(); setMeter(j.raised ?? j.funds_raised, j.goal ?? j.fundraising_goal); }
-      }catch{}
-      setTimeout(poll, (navigator.connection?.saveData?30000:15000));
-    })();
-  }, 1200);
-
-  /* Scroll-spy */
-  (function(){
-    const ids = ['mission','program-stats-calendar','tiers','sponsor-hub','sponsor-wall','newsletter'];
-    const map = new Map(ids.map(i => [i, document.querySelector(`.hdr-nav a[href="#${i}"]`)]));
-    if (!('IntersectionObserver' in window)) return;
-    const links = Array.from(map.values()).filter(Boolean); if (!links.length) return;
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent=>{
-        const a = map.get(ent.target.id); if (!a) return;
-        if (ent.isIntersecting){
-          links.forEach(x=>{ x.classList.remove('active'); x.removeAttribute('aria-current'); });
-          a.classList.add('active'); a.setAttribute('aria-current','page');
-        }
-      });
-    }, { rootMargin: '-25% 0px -60% 0px', threshold: .01 });
-    ids.forEach(i=>{ const sec=document.getElementById(i); if (sec) io.observe(sec); });
-  })();
-
-  /* VIP pulse */
-  addEventListener('fc:vip:hit', () => {
-    try{
-      meter.fill?.classList.add('pulse'); setTimeout(()=>meter.fill?.classList.remove('pulse'), 1400);
-    }catch{}
-  }, { passive:true });
-
-  /* Safety: force noopener on new tabs */
-  document.addEventListener('click', e => {
-    const a = e.target.closest && e.target.closest('a[target="_blank"]');
-    if (a && (!a.rel || !/\bnoopener\b/.test(a.rel))) a.rel = (a.rel? a.rel+' ':'') + 'noopener noreferrer';
-  }, { passive:true });
-
-  /* Quick Donate pill */
-  if (!document.body.hasAttribute('data-no-float')) {
-    const f = document.querySelector('[data-analytics="cta:quick-donate"]');
-    if (f) { f.hidden = false; f.textContent = '💸 Quick Donate'; f.addEventListener('click', (e)=>{ e.preventDefault(); const HAS={{ 'true' if stripe_publishable_key else 'false' }}; const SPL='{{ stripe_payment_link|e }}'; HAS && SPL ? location.assign(SPL) : window.openDonationModal(); }); }
-  }
-})();
-</script>
+{% if confetti_triggered %}{{ launch_confetti() }}{% endif %}
 

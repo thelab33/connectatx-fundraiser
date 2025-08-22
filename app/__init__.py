@@ -1,448 +1,312 @@
-# app/__init__.py
-from __future__ import annotations
-
-import logging, os, time, secrets, re
-from datetime import datetime, timezone
-from importlib import import_module
+from __future__ import annotations  # For forward compatibility with type annotations
+import logging
+import os
+from typing import Any, Optional, Type
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Type, Iterable
 from uuid import uuid4
-from app.blueprints import health
+from importlib import import_module
 from dotenv import load_dotenv
-from flask import Flask, g, jsonify, request, url_for
-from werkzeug.exceptions import HTTPException, InternalServerError
-from werkzeug.routing import BuildError
+from flask import Flask, g, jsonify, request
+from flask_cors import CORS
+from werkzeug.exceptions import HTTPException
+from flask_wtf.csrf import CSRFProtect
 
+# Load environment variables from .env
 load_dotenv()
+
+# Project root directory (connectatx-fundraiser/)
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Core extensions (note: no 'migrate' here anymore)
-from app.extensions import db, socketio, mail, csrf, cors, login_manager, babel
+# Core extensions (must exist)
+from app.extensions import db, migrate, socketio, mail
 
-# Optional extras
+# Optional extensions setup
+USE_LOGIN = USE_BABEL = USE_CLI = False
+
+# ─────────────────────────────────────────────────────────────
+# Optional Extension Configurations
+# ─────────────────────────────────────────────────────────────
+
 try:
-    from flask_compress import Compress
-except Exception:  # pragma: no cover
-    Compress = None
+    from flask_login import LoginManager, current_user
+    login_manager: Optional[LoginManager] = LoginManager()
+    USE_LOGIN = True
+except ImportError:
+    login_manager = None
+
 try:
-    from flask_talisman import Talisman
-except Exception:  # pragma: no cover
-    Talisman = None
+    from flask_babel import Babel, _ as _t
+    USE_BABEL = True
+except ImportError:
+    Babel = None
+    _t = lambda s: s
+
 try:
-    from flask_wtf.csrf import generate_csrf
-except Exception:  # pragma: no cover
-    generate_csrf = None
+    from app.cli import starforge
+    USE_CLI = True
+except ImportError:
+    starforge = None
 
-# Sentry (optional)
-try:
-    import sentry_sdk
-    from sentry_sdk.integrations.flask import FlaskIntegration
-    from sentry_sdk.integrations.logging import LoggingIntegration
-    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-except Exception:  # pragma: no cover
-    sentry_sdk = None  # type: ignore
+# ─────────────────────────────────────────────────────────────
+# Helper functions
+# ─────────────────────────────────────────────────────────────
 
-# Flask-Migrate (use the class directly)
-from flask_migrate import Migrate
-
-ConfigLike = str | Type[Any]
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────────────────────────────────────
-def _resolve_config(target: ConfigLike | None) -> ConfigLike:
-    """Resolve a config class path or object; allow legacy env value fixup."""
-    if target is None:
-        target = os.getenv("FLASK_CONFIG", "app.config.DevelopmentConfig")
-    if isinstance(target, str) and target == "app.config.config.DevelopmentConfig":
-        return "app.config.DevelopmentConfig"
+def _resolve_config(target: str | Type[Any]) -> str | Type[Any]:
+    """Resolve a dotted path or config class to be used by Flask."""
+    if isinstance(target, str):
+        if target == "app.config.config.DevelopmentConfig":
+            return "app.config.DevelopmentConfig"
+        return target
     return target
 
 def _json_error(message: str, status: int, **extra: Any):
-    return jsonify({"status": "error", "message": message, **extra}), status
+    """Return a structured JSON error response."""
+    payload = {"status": "error", "message": message, **extra}
+    return jsonify(payload), status
 
-def _mtime_or_now(path: Path) -> int:
+def _file_mtime_version(path: Path) -> int:
+    """Return the file's last modified timestamp."""
     try:
         return int(path.stat().st_mtime)
     except Exception:
-        return int(datetime.now(timezone.utc).timestamp())
-
-class _RequestIDFilter(logging.Filter):
-    """Inject g.request_id into all records as 'request_id'."""
-    def filter(self, record: logging.LogRecord) -> bool:
-        try:
-            rid = getattr(g, "request_id", "-")
-        except Exception:
-            rid = "-"
-        setattr(record, "request_id", rid)
-        return True
+        return int(datetime.utcnow().timestamp())
 
 def _configure_logging(app: Flask) -> None:
-    # Ensure a formatter with request_id is used
-    fmt = "%(asctime)s [%(levelname)s] %(name)s [rid=%(request_id)s]: %(message)s"
+    """Configure logging for the app."""
     root = logging.getLogger()
     if not root.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(logging.Formatter(fmt))
-        handler.addFilter(_RequestIDFilter())
-        root.addHandler(handler)
-        root.setLevel(app.config.get("LOG_LEVEL", "INFO"))
-    else:
-        # Add filter + formatter to existing handlers
-        for h in root.handlers:
-            h.addFilter(_RequestIDFilter())
-            if not isinstance(h.formatter, logging.Formatter) or "%(request_id)s" not in (h.formatter._fmt or ""):
-                h.setFormatter(logging.Formatter(fmt))
-
+        logging.basicConfig(
+            level=app.config.get("LOG_LEVEL", "INFO"),
+            format="%(asctime)s [%(levelname)s] %(message)s",
+        )
     logging.getLogger("werkzeug").setLevel(app.config.get("WERKZEUG_LOG_LEVEL", "WARNING"))
-    app.logger.info("Loaded config: %s | DEBUG=%s", app.config.get("ENV", "?"), app.debug)
-    app.logger.info("DB: %s", app.config.get("SQLALCHEMY_DATABASE_URI", "<unset>"))
+    logging.info("Loaded configuration: %s | DEBUG=%s", app.config.get("ENV", "unknown"), app.debug)
+    logging.info("DB: %s", app.config.get("SQLALCHEMY_DATABASE_URI", "<unset>"))
 
-def _parse_cors_origins(env: str) -> str | list[str]:
-    default_prod = os.getenv("PRIMARY_ORIGIN", "https://connect-atx-elite.com")
-    raw = os.getenv("CORS_ORIGINS", "*" if env != "production" else default_prod)
-    if isinstance(raw, str) and raw not in {"*", ""} and "," in raw:
-        return [o.strip() for o in raw.split(",") if o.strip()]
-    return raw
+# ─────────────────────────────────────────────────────────────
+# Flask Application Factory
+# ─────────────────────────────────────────────────────────────
 
-def _iter_candidates(x: str | Iterable[str]) -> list[str]:
-    if isinstance(x, str) and "|" in x:
-        return [p.strip() for p in x.split("|") if p.strip()]
-    if isinstance(x, str):
-        return [x]
-    return list(x)
-
-def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefix: str | None) -> bool:
-    """Import a module and register a blueprint by attribute name(s)."""
-    disable = {p.strip().lower() for p in os.getenv("DISABLE_BPS", "").split(",") if p.strip()}
-    mod_key = dotted.split(".")[-1].lower()
-    if mod_key in disable:
-        app.logger.info("⏭️  Disabled module: %s", dotted)
-        return False
-
-    try:
-        mod = import_module(dotted)
-    except Exception as e:
-        app.logger.warning("⚠️  Import failed: %s → %s", dotted, e)
-        return False
-
-    from flask import Blueprint as _BP  # local import to avoid cycles
-
-    wanted = _iter_candidates(attr) + ["bp", "api_bp", "main_bp", "admin_bp"]
-    bp = None
-    for name in wanted:
-        cand = getattr(mod, name, None)
-        if cand and isinstance(cand, _BP):
-            bp = cand
-            break
-
-    if not bp:
-        app.logger.warning("⚠️  No blueprint attr found in %s (tried: %s)", dotted, ", ".join(wanted))
-        return False
-
-    if bp.name in app.blueprints:
-        app.logger.info("⏭️  Already registered: %s", bp.name)
-        return False
-
-    try:
-        app.register_blueprint(bp, url_prefix=url_prefix or getattr(bp, "url_prefix", None))
-        app.logger.info("🧩 Registered: %-20s → %s", bp.name, url_prefix or "/")
-        return True
-    except Exception as exc:
-        app.logger.error("❌ Failed to register %s:%s: %s", dotted, bp.name, exc, exc_info=True)
-        return False
-
-# Regex for auto-nonce injection on stray tags (optional, cheap, guarded)
-SCRIPT_TAG = re.compile(r"(<script\b(?![^>]*\bnonce=)[^>]*>)", re.IGNORECASE)
-STYLE_TAG  = re.compile(r"(<style\b(?![^>]*\bnonce=)[^>]*>)",  re.IGNORECASE)
-
-# ─────────────────────────────────────────────────────────────────────────────
-# App Factory
-# ─────────────────────────────────────────────────────────────────────────────
-def create_app(config_class: ConfigLike | None = None) -> Flask:
+def create_app(config_class: str | Type[Any] | None = None) -> Flask:
+    """Create and configure the Starforge Flask app."""
     app = Flask(
         __name__,
         static_folder=str(BASE_DIR / "app/static"),
         template_folder=str(BASE_DIR / "app/templates"),
     )
 
-    # Load config
-    cfg = _resolve_config(config_class)
+    # Initialize CSRFProtection after the app is created
+    csrf = CSRFProtect()
+    csrf.init_app(app)  # Initialize CSRFProtect here
+
+    # 1) Config Loading
+    default_cfg = os.getenv("FLASK_CONFIG", "app.config.DevelopmentConfig")
+    target_cfg = _resolve_config(config_class or default_cfg)
     try:
-        app.config.from_object(cfg)
-    except Exception as exc:
-        fallback = "app.config.DevelopmentConfig"
-        if isinstance(cfg, str) and cfg != fallback:
-            app.config.from_object(fallback)
+        app.config.from_object(target_cfg)
+    except (ImportError, AttributeError, ModuleNotFoundError) as exc:
+        legacy = "app.config.config.DevelopmentConfig"
+        if isinstance(target_cfg, str) and target_cfg != legacy:
+            try:
+                app.config.from_object(legacy)
+            except Exception:
+                raise RuntimeError(f"❌ Invalid FLASK_CONFIG '{target_cfg}': {exc}") from exc
         else:
-            raise RuntimeError(f"❌ Invalid FLASK_CONFIG '{cfg}': {exc}") from exc
+            raise RuntimeError(f"❌ Invalid FLASK_CONFIG '{target_cfg}': {exc}") from exc
 
-    # Sensible defaults
-    app.config.setdefault("JSON_SORT_KEYS", False)
-    app.config.setdefault("JSON_AS_ASCII", False)
-    app.config.setdefault("PROPAGATE_EXCEPTIONS", False)
-    app.config.setdefault("AUTO_NONCE_HTML", True)
-    app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
-    app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
-    app.config.setdefault("SESSION_COOKIE_SECURE", app.config.get("ENV") == "production")
-
+    # 2) Logging Configuration
     _configure_logging(app)
 
-    # Sentry (auto-init if DSN present)
-    dsn = os.getenv("SENTRY_DSN", "").strip()
-    if dsn and sentry_sdk:
+    # 3) CORS Setup
+    default_origin = "*" if app.config.get("ENV") != "production" else os.getenv(
+        "PRIMARY_ORIGIN", "https://connect-atx-elite.com"
+    )
+    cors_origins = os.getenv("CORS_ORIGINS", default_origin)
+    CORS(app, supports_credentials=True, resources={r"/*": {"origins": cors_origins}})
+
+    # 4) Security headers / CSP (optional)
+    if app.config.get("ENV") == "production":
         try:
-            sentry_sdk.init(
-                dsn=dsn,
-                integrations=[
-                    FlaskIntegration(),
-                    LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
-                    SqlalchemyIntegration(),
-                ],
-                traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
-                profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
-                send_default_pii=False,
-                environment=app.config.get("ENV", "development"),
-                release=os.getenv("GIT_COMMIT"),
-            )
-            app.logger.info("🪶 Sentry initialized")
-        except Exception as e:
-            app.logger.warning("Sentry init failed: %s", e)
+            from flask_talisman import Talisman
+            Talisman(app, content_security_policy=None)
+        except ImportError:
+            logging.warning("⚠️ flask-talisman not installed – skipping CSP setup")
 
-    # CORS
-    cors_origins = _parse_cors_origins(app.config.get("ENV", "development"))
-    if cors:
-        cors.init_app(
-            app,
-            supports_credentials=True,
-            resources={r"/api/*": {"origins": cors_origins}},
-            expose_headers=["X-Request-ID"],
-            allow_headers=["Content-Type", "Authorization"],
-            methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
-        )
-
-    # Security headers / CSP (Talisman optional; we still set precise headers below)
-    if app.config.get("ENV") == "production" and Talisman:
-        Talisman(app, content_security_policy=None)
-
-    # Extensions
-    if csrf:
-        csrf.init_app(app)
+    # 5) Initialize Extensions
     db.init_app(app)
-
-    # ✅ Migrations (SQLite-friendly batching + type diffs)
-    Migrate(app, db, compare_type=True, render_as_batch=True)
-
-    app.socketio = socketio
-    socketio.init_app(app, cors_allowed_origins=cors_origins if cors_origins else "*")
+    migrate.init_app(app, db)
+    socketio.init_app(app, cors_allowed_origins=cors_origins)
     mail.init_app(app)
-    if Compress:
-        Compress(app)
 
-    # ✅ CLI commands (import after db/init so they can use models)
-    try:
-        from app.cli.db_tools import dbcli
-        app.cli.add_command(dbcli)
-    except Exception as e:
-        app.logger.warning("⚠️ dbcli not available: %s", e)
-
-    # Request bootstrap (nonce, request id, timing)
+    # 6) Request ID middleware
     @app.before_request
-    def _gen_nonce():
-        g.csp_nonce = secrets.token_urlsafe(16)
+    def _assign_request_id() -> None:
         g.request_id = request.headers.get("X-Request-ID", uuid4().hex)
-        g._start_ts = time.perf_counter()
-        # Sentry per-request tagging
-        try:
-            if sentry_sdk:
-                with sentry_sdk.configure_scope() as scope:
-                    scope.set_tag("request_id", g.request_id)
-                    scope.set_tag("endpoint", request.endpoint or "")
-                    scope.set_user({"ip_address": request.access_route[0] if request.access_route else request.remote_addr})
-        except Exception:
-            pass
 
-    # Template access to nonce (both csp_nonce() and NONCE)
-    @app.context_processor
-    def inject_csp():
-        return {
-            "csp_nonce": lambda: getattr(g, "csp_nonce", ""),
-            "NONCE": getattr(g, "csp_nonce", ""),
-        }
-
-    # Security headers after each response (incl. CSP)
     @app.after_request
-    def _std_headers(resp):
-        nonce = getattr(g, "csp_nonce", "")
-
-        # Build CSP with payment + websocket + CDN allowances
-        stripe_js = "https://js.stripe.com"
-        stripe_api = "https://api.stripe.com"
-        paypal_core = "https://www.paypal.com"
-        paypal_all  = "https://*.paypal.com"
-        paypal_api_live = "https://api-m.paypal.com"
-        paypal_api_sbx  = "https://api-m.sandbox.paypal.com"
-        socketio_cdn = "https://cdn.socket.io"
-
-        csp = (
-            "default-src 'self'; "
-            f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' {stripe_js} {paypal_core} {paypal_all} {socketio_cdn}; "
-            f"connect-src 'self' {stripe_api} {paypal_api_live} {paypal_api_sbx} wss:; "
-            "img-src 'self' data: blob: https:; "
-            f"style-src 'self' 'nonce-{nonce}' 'unsafe-inline'; "
-            "font-src 'self' https: data:; "
-            f"frame-src 'self' {stripe_js} https://checkout.stripe.com {paypal_core} {paypal_all}; "
-            "frame-ancestors 'none'; "
-            "base-uri 'self'; "
-            "object-src 'none'; "
-            "form-action 'self' https://checkout.stripe.com https://www.paypal.com;"
-        )
-        resp.headers.setdefault("Content-Security-Policy", csp)
-        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        resp.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=()")
-        resp.headers.setdefault("X-Frame-Options", "DENY")
+    def _inject_request_id(resp):
+        resp.headers.setdefault("X-Request-ID", getattr(g, "request_id", uuid4().hex))
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
-        resp.headers.setdefault("X-Request-ID", g.request_id)
-
-        # HSTS (HTTPS only)
-        if request.is_secure or app.config.get("PREFERRED_URL_SCHEME") == "https":
-            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
-
-        # Server-Timing
-        try:
-            dur_ms = (time.perf_counter() - g._start_ts) * 1000.0
-            resp.headers.setdefault("Server-Timing", f"app;dur={dur_ms:.1f}")
-        except Exception:
-            pass
-
-        # Optional: auto-inject nonce into stray tags in HTML bodies
-        try:
-            if (
-                app.config.get("AUTO_NONCE_HTML", True)
-                and nonce
-                and resp.mimetype == "text/html"
-                and resp.direct_passthrough is False
-            ):
-                text = resp.get_data(as_text=True)
-                if "<script" in text or "<style" in text:
-                    def _add_nonce(m):
-                        tag = m.group(1)
-                        return tag[:-1] + f' nonce="{nonce}">'
-                    text = SCRIPT_TAG.sub(_add_nonce, text)
-                    text = STYLE_TAG.sub(_add_nonce, text)
-                    resp.set_data(text)
-        except Exception:
-            pass
-
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         return resp
 
-    # Login
-    if login_manager:
+    # 7) Login (optional)
+    if USE_LOGIN and login_manager:
         login_manager.init_app(app)
-        login_manager.login_view = "main.home"
         try:
-            from app.models.user import User  # optional
-        except Exception:
-            User = None  # type: ignore
+            from app.models.user import User
+        except Exception as exc:
+            logging.warning("Login enabled but User model import failed: %s", exc)
+            User = None
 
         @login_manager.user_loader
-        def load_user(uid: str):
-            return User.query.get(int(uid)) if User else None
-
-    if babel:
-        babel.init_app(app)
-
-    # Base context that never breaks templates
-    @app.context_processor
-    def _base_ctx():
-        def has_endpoint(name: str) -> bool:
-            return name in app.view_functions
-
-        def safe_url_for(endpoint: str, **values: Any) -> str:
+        def load_user(user_id: str):
+            if not User:
+                return None
             try:
-                return url_for(endpoint, **values)
-            except (BuildError, Exception):
+                return User.query.get(int(user_id))
+            except Exception:
+                return None
+
+        @app.context_processor
+        def _inject_user() -> dict[str, Any]:
+            return {"current_user": current_user}
+    else:
+        @app.context_processor
+        def _inject_user() -> dict[str, Any]:
+            class _Anon:
+                is_authenticated = False
+                def __bool__(self) -> bool:
+                    return False
+            return {"current_user": _Anon()}
+
+    # 8) Babel (optional)
+    if USE_BABEL and Babel:
+        babel = Babel(app)
+
+        @app.context_processor
+        def _inject_babel() -> dict[str, Any]:
+            return {"_": _t}
+    else:
+        @app.context_processor
+        def _inject_noop() -> dict[str, Any]:
+            return {"_": (lambda s: s)}
+
+    # 9) CLI Commands (optional)
+    if USE_CLI and starforge:
+        app.cli.add_command(starforge)
+
+    # 10) Template Context: env, now, team, asset_version
+    @app.context_processor
+    def _inject_env() -> dict[str, Any]:
+        return {"app_env": app.config.get("ENV"), "app_config": app.config}
+
+    @app.context_processor
+    def _inject_now() -> dict[str, Any]:
+        return {"now": datetime.utcnow}
+
+    @app.context_processor
+    def _inject_team() -> dict[str, Any]:
+        class _Empty:
+            def __getattr__(self, _):  
+                return None
+            def __str__(self) -> str:
                 return ""
+        return {"team": _Empty()}
 
-        static_root = Path(app.static_folder)
-        css = static_root / "css" / "tailwind.min.css"
-        js  = static_root / "js"  / "bundle.min.js"
-        asset_version = max(_mtime_or_now(css), _mtime_or_now(js))
+    @app.context_processor
+    def _inject_asset_versions() -> dict[str, Any]:
+        css = Path(app.static_folder or "app/static") / "css" / "tailwind.min.css"
+        js = Path(app.static_folder or "app/static") / "js" / "main.js"
+        return {"asset_version": max(_file_mtime_version(css), _file_mtime_version(js))}
 
-        class _Obj(dict):
-            __getattr__ = dict.get
+    # 11) Jinja Filters
+    def _comma_like(val: Any) -> Any:
+        try:
+            return f"{int(val):,}"
+        except (ValueError, TypeError):
+            try:
+                return f"{float(val):,}"
+            except (ValueError, TypeError):
+                return val
 
-        team_default = _Obj(team_name="Connect ATX Elite", theme_color="#facc15")
-        return {
-            "app_env": app.config.get("ENV"),
-            "app_config": app.config,
-            "now": lambda: datetime.now(timezone.utc),
-            "has_endpoint": has_endpoint,
-            "safe_url_for": safe_url_for,
-            "asset_version": asset_version,
-            "team": team_default,  # overridden by real team in views when available
-        }
+    app.add_template_filter(_comma_like, "comma")
 
-    # JSON errors (API-friendly)
+    try:
+        from .filters import commafy  
+        app.jinja_env.filters["commafy"] = commafy
+    except Exception:
+        app.jinja_env.filters["commafy"] = _comma_like  
+
+    # 12) Error Handling
     def _wants_json() -> bool:
-        accept = (request.headers.get("Accept") or "").lower()
-        return "application/json" in accept or request.path.startswith("/api") or request.is_json
+        return "application/json" in request.headers.get("Accept", "") or request.path.startswith("/api")
 
     @app.errorhandler(HTTPException)
-    def _http_err(err):
-        return _json_error(err.description or err.name, err.code, request_id=g.request_id) if _wants_json() else err
+    def _handle_http_exc(err: HTTPException):
+        if _wants_json():
+            return _json_error(err.description or err.name, err.code or 500)
+        return err
 
     @app.errorhandler(Exception)
-    def _uncaught(err):
-        app.logger.exception("Unhandled error: %s", err)
-        return _json_error("Internal Server Error", 500, request_id=g.request_id) if _wants_json() else InternalServerError()
+    def _handle_uncaught(err: Exception):
+        logging.exception("Unhandled error: %s", err)
+        if _wants_json():
+            return _json_error("Internal Server Error", 500, request_id=getattr(g, "request_id", None))
+        return err
 
-    # Blueprints (attr supports fallbacks: bp|api_bp|main_bp)
-    blueprints = [
-        ("app.routes.main",            "main_bp|bp", "/"),
-        ("app.routes.api",             "bp|api_bp",  "/api"),
-        ("app.admin.routes",           "bp|admin_bp","/admin"),
-        ("app.blueprints.fc_payments", "bp",         "/payments"),
-        ("app.blueprints.fc_metrics",  "bp",         "/metrics"),
-    ]
-    for dotted, attr, prefix in blueprints:
-        _safe_register(app, dotted, attr, prefix)
+    # 13) Register Blueprints After Configuration to Prevent Circular Imports
+    from app.routes.main import main_bp  # Ensure correct import of main_bp
+    app.register_blueprint(main_bp)
 
-    # Health & Version
+    # Register other optional blueprints dynamically
+    for dotted, prefix in (("app.api", "/api"), ("app.sms", "/sms")):
+        try:
+            mod = import_module(dotted)
+            bp = getattr(mod, "api_bp", None) or getattr(mod, "bp", None)
+            if not bp:
+                raise AttributeError("No blueprint named 'api_bp' or 'bp'")
+            app.register_blueprint(bp, url_prefix=prefix)
+        except (ModuleNotFoundError, AttributeError) as exc:
+            logging.warning("⚠️ Blueprint %s not registered: %s", dotted, exc)
+
+    try:
+        admin_bp = import_module("app.admin.routes").admin
+        app.register_blueprint(admin_bp, url_prefix="/admin")
+    except (ModuleNotFoundError, AttributeError) as exc:
+        logging.info("Admin dashboard not found – skipping (%s)", exc)
+
+    # 14) Health & Version Endpoints
     @app.get("/healthz")
     def _healthz():
-        return {"status": "ok", "message": "FundChamps Flask live!", "request_id": g.request_id}
+        return {
+            "status": "ok",
+            "message": "Starforge Flask live!",
+            "request_id": getattr(g, "request_id", None),
+        }
 
     @app.get("/version")
     def _version():
-        return {"version": os.getenv("GIT_COMMIT", "dev"), "env": app.config.get("ENV")}
+        return {
+            "version": os.getenv("GIT_COMMIT", "dev"),
+            "env": app.config.get("ENV"),
+        }
 
-    # CSRF cookie (if flask-wtf installed)
-    if csrf and generate_csrf:
-        @app.after_request
-        def inject_csrf_cookie(resp):
-            try:
-                resp.set_cookie(
-                    "csrf_token",
-                    generate_csrf(),
-                    samesite="Lax",
-                    secure=(app.config.get("ENV") == "production"),
-                )
-            except Exception:
-                pass
-            return resp
-
-    # Launch banner
-    stripe_ok = bool(os.getenv("STRIPE_SECRET_KEY"))
-    paypal_ok = bool(os.getenv("PAYPAL_CLIENT_ID") and os.getenv("PAYPAL_SECRET"))
+    # 15) Launch Banner
     print(
-        "┌────────────────────────────────────────────┐\n"
-        "│  🌟 FundChamps Flask: Ready to Launch       │\n"
-        f"│  ENV = {app.config.get('ENV','unknown'):<12}   DEBUG = {str(app.debug):<5}   │\n"
-        f"│  Stripe={'ON ' if stripe_ok else 'OFF'}  PayPal={'ON ' if paypal_ok else 'OFF'}          │\n"
-        f"│  Blueprints: {len(app.blueprints):<3}                         │\n"
-        "└────────────────────────────────────────────┘"
+        "\n".join(
+            (
+                "┌────────────────────────────────────────────┐",
+                "│  🌟 Starforge SaaS: Flask Ready to Launch  │",
+                f"│  ENV = {app.config.get('ENV', 'unknown'):<12}   DEBUG = {str(app.debug):<5}   │",
+                "└────────────────────────────────────────────┘",
+            )
+        )
     )
 
     return app
+
+# Export the create_app function for use
+__all__ = ["create_app"]
 

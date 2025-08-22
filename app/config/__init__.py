@@ -1,55 +1,48 @@
-# app/config/__init__.py
-from __future__ import annotations
-
-"""
-Config entrypoint for the app.
-
-Usage in factory:
-    app.config.from_object("app.config.config.DevelopmentConfig")
-or pick by env:
-    from app.config import get_config
-    app.config.from_object(get_config())
-
-Also exposes TEAM_CONFIG (merged env/file/defaults) for templates/views.
-"""
-
 import os
-from typing import Type, Dict
+from app.config.config import DevelopmentConfig, ProductionConfig
 
-# Concrete config classes
-from .config import DevelopmentConfig, TestingConfig, ProductionConfig
+# Optional: add TestingConfig, StagingConfig, etc., as needed
+try:
+    from app.config.config import TestingConfig
+except ImportError:
+    TestingConfig = None
+    print("⚠️ TestingConfig not found. Defaulting to development config.")
 
-# TEAM config (content + helpers live here, not in models)
-from .team_config import TEAM_CONFIG, get_team_config  # noqa: F401
+# Try importing team config (handle failure gracefully)
+try:
+    from app.config.team_config import TEAM_CONFIG
+except ImportError:
+    TEAM_CONFIG = {}
+    try:
+        # Log the warning within Flask's app context if available
+        from flask import current_app
+        current_app.logger.warning("⚠️ TEAM_CONFIG not found, using empty config.")
+    except Exception:
+        print("⚠️ TEAM_CONFIG not found, using empty config.")
 
-# Public mapping for convenience (e.g., CLI, tests)
-config_by_name: Dict[str, Type[object]] = {
+# Master config map, adding optional configurations if available
+CONFIGS = {
     "development": DevelopmentConfig,
-    "testing": TestingConfig,
     "production": ProductionConfig,
 }
 
-def get_config(env: str | None = None) -> Type[object]:
-    """
-    Return a config class based on ENV/FLASK_ENV or provided name.
-    Defaults to DevelopmentConfig.
-    """
-    name = (env or os.getenv("ENV") or os.getenv("FLASK_ENV") or "development").lower()
-    return config_by_name.get(name, DevelopmentConfig)
+# If TestingConfig is available, add it to the map
+if TestingConfig:
+    CONFIGS["testing"] = TestingConfig
 
-# Handy shorthands if you like importing symbols
+# Always include TEAM_CONFIG in the config dictionary
+CONFIGS["team_config"] = TEAM_CONFIG
+
+def get_config(env: str = None) -> object:
+    """
+    Returns the config class based on environment variable or argument.
+    Defaults to 'development' if not specified or unknown.
+    """
+    env = env or os.getenv("FLASK_ENV", "development")
+    # Ensure 'development' config is the fallback if unknown env
+    return CONFIGS.get(env, DevelopmentConfig)
+
+# Shorthand for quick import elsewhere
 config = get_config()
 team_config = TEAM_CONFIG
-
-__all__ = [
-    "DevelopmentConfig",
-    "TestingConfig",
-    "ProductionConfig",
-    "config_by_name",
-    "get_config",
-    "config",
-    "TEAM_CONFIG",
-    "team_config",
-    "get_team_config",
-]
 

@@ -1,0 +1,65 @@
+{# ==========================================================================
+   FundChamps — MVP Home (Flask)
+   - Assembles premium partials in archetype order
+   - CSP-safe: assumes base.html injects NONCE via csp_nonce()
+   - Swap/trim sections by editing the includes below
+   ========================================================================== #}
+{% extends "base.html" %}
+
+{% block content %}
+  {# --- SEO DonateAction JSON-LD --- #}
+  {% include "partials/seo_jsonld_donate_action.html" ignore missing %}
+
+  {# --- Hero (LCP) --- #}
+  {% include "partials/hero_and_fundraiser.html" ignore missing %}
+  
+  {# --- Impact + Tiers --- #}
+  {% include "partials/impact_lockers_premium.html" ignore missing %}
+  {% include "partials/tiers.html" ignore missing %}
+
+  {# --- About (mini card) --- #}
+  {% include "partials/about_card.html" ignore missing %}
+
+  {# --- Extra meter (OFF by default). Turn on by passing show_extra_meter=True in context
+     or test via ?meter=1 locally. --- #}
+  {% set SHOW_EXTRA_METER =
+      (show_extra_meter if show_extra_meter is defined else
+       (request.args.get('meter') in ('1','true','yes') if request is defined else false)) %}
+  {% if SHOW_EXTRA_METER %}
+    {% include "partials/fundraiser_meter.html" ignore missing %}
+  {% endif %}
+
+  {# --- Allocation + Sponsor Highlights --- #}
+  {% include "partials/funds_allocation_bar_premium.html" ignore missing %}
+  {% if sponsors_total and sponsors_total > 0 %}
+    {% include "partials/sponsor_ticker.html" ignore missing %}
+  {% endif %}
+
+  {# --- Program stats / schedule --- #}
+  {% include "partials/program_stats_and_calendar.html" ignore missing %}
+
+  {# --- Community & Support --- #}
+  {% include "partials/newsletter.html" ignore missing %}
+  {% include "partials/impact_challenge_coaches_premium.html" ignore missing %}
+
+  {# --- Sponsor Wall (widget) only if there are sponsors --- #}
+  {% if sponsors_sorted and sponsors_sorted|length > 0 %}
+    {% include "partials/sponsor_wall_widget.html" ignore missing %}
+  {% endif %}
+
+  {# --- Sponsor Form (money form stays BEFORE footer) --- #}
+  {% include "partials/sponsor_form.html" ignore missing %}
+
+  {# --- Utilities (public) --- #}
+  {% include "partials/ai_concierge.html" ignore missing %}
+
+  {# --- Footer --- #}
+  {% include "partials/footer.html" ignore missing %}
+
+  {# --- Admin onboarding popover: DEV/admin only (hidden from public) --- #}
+  {% if (session and session.get('is_admin')) or (request and request.remote_addr in ['127.0.0.1','::1']) %}
+    {% include "partials/admin_onboarding_popover.html" ignore missing %}
+  {% endif %}
+{% endblock %}
+
+

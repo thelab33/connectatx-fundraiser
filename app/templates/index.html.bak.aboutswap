@@ -1,0 +1,59 @@
+{# ==========================================================================
+   FundChamps — MVP Home (Flask)
+   - Assembles premium partials in archetype order
+   - CSP-safe: assumes base.html injects NONCE via csp_nonce()
+   - Swap/trim sections by editing the includes below
+   ========================================================================== #}
+{% extends "base.html" %}
+
+{% block content %}
+<!-- SEO DonateAction JSON-LD -->
+{% include "partials/seo_jsonld_donate_action.html" ignore missing %}
+
+<!-- Announcement + Header -->
+{% include "partials/header_and_announcement.html" ignore missing %}
+
+<!-- Hero (LCP) -->
+{% include "partials/hero_and_fundraiser.html" ignore missing %}
+
+<!-- Live sponsor ticker (header rail) -->
+{% include "partials/header_sponsor_ticker.html" ignore missing %}
+
+<!-- Fundraising meters (main + mini) -->
+{% include "partials/meter_strip.html" ignore missing %}
+{% include "partials/fundraiser_meter.html" ignore missing %}
+
+<!-- Impact Storytelling -->
+{% include "partials/impact_lockers_premium.html" ignore missing %}
+{% include "partials/impact_challenge_coaches_premium.html" ignore missing %}
+
+<!-- Allocation + Sponsor Highlights -->
+{% include "partials/funds_allocation_bar_premium.html" ignore missing %}
+{% include "partials/sponsor_spotlight.html" ignore missing %}
+{% include "partials/sponsor_ticker.html" ignore missing %}
+
+<!-- Tiers + Sponsor Form -->
+{% include "partials/tiers.html" ignore missing %}
+{% include "partials/sponsor_form.html" ignore missing %}
+
+<!-- Community & Support -->
+{% include "partials/newsletter.html" ignore missing %}
+{% include "partials/program_stats_and_calendar.html" ignore missing %}
+{% include "partials/testimonial_scrollbar.html" ignore missing %}
+
+<!-- Sponsor Wall -->
+{% include "partials/sponsor_wall_widget.html" ignore missing %}
+{% include "partials/sponsor_wall.html" ignore missing %}
+
+<!-- About -->
+{% include "partials/about_section.html" ignore missing %}
+
+<!-- Sticky CTA / Utilities -->
+{% include "partials/sticky_cta_manager.html" ignore missing %}
+{% include "partials/back_to_top.html" ignore missing %}
+{% include "partials/admin_onboarding_popover.html" ignore missing %}
+{% include "partials/ai_concierge.html" ignore missing %}
+
+<!-- Footer -->
+{% include "partials/footer.html" ignore missing %}
+{% endblock %}

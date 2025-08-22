@@ -1,5 +1,0 @@
-{
-  "app/__init__.py": true,
-  "app/factory.py": false,
-  "wsgi.py": true
-}

@@ -1,84 +1,96 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{# =========================================================================================
-   testimonial_scrollbar.html — Subtle Testimonial Scroller
-   - Thin horizontal strip with sliding testimonials
-   - Appears when scrolling, hides after idle or further scroll
-   - CSP-safe + a11y friendly
-   ========================================================================================= #}
+{% set challenge = challenge if challenge is defined and challenge else {} %}
+{% set author = challenge.author if challenge and challenge.author else "Team Parent, Class of 2030" %}
+{% set detail = challenge.detail if challenge and challenge.detail else "We missed practices due to lack of funding for gym rentals last season. Sponsors make all the difference!" %}
 
-{% set testimonials = testimonials if testimonials is defined and testimonials else [
-  "⭐️ \"This team changed my son’s life — discipline & brotherhood.\"",
-  "🙌 \"Community-driven and family-focused. Love it!\"",
-  "🏀 \"Best program we’ve been part of. Truly elite.\"",
-  "💡 \"Sponsors here really make an impact.\""
-] %}
-
-<div id="fc-testimonial-scrollbar"
-     class="fixed top-0 left-0 z-[70] w-full hidden opacity-0 transition-opacity duration-700 ease-out"
-     aria-live="polite" role="region" aria-label="Testimonials">
-  <style nonce="{{ NONCE }}">
-    #fc-testimonial-scrollbar .wrap{
-      background:rgba(15,15,15,.86);
-      backdrop-filter:blur(6px) saturate(120%);
-      color:#fefce8;
-      font-size:.85rem;
-      padding:.35rem 0;
-      overflow:hidden;
-      white-space:nowrap;
-      border-bottom:1px solid rgba(250,204,21,.28);
-    }
-    #fc-testimonial-scrollbar .track{
-      display:inline-flex;
-      gap:2rem;
-      padding-left:100%;
-      animation:scroll-left var(--fc-speed,24s) linear infinite;
-    }
-    @keyframes scroll-left{ to{ transform:translateX(-100%) } }
-    @media(prefers-reduced-motion:reduce){
-      #fc-testimonial-scrollbar .track{ animation:none!important }
-    }
-  </style>
-
-  <div class="wrap">
-    <div class="track">
-      {% for t in testimonials %}
-        <span>{{ t }}</span>
-      {% endfor %}
-    </div>
+<section
+  id="starforge-testimonial-pop"
+  class="starforge-popover absolute left-1/2 top-full -translate-x-1/2 mt-3 w-80 bg-black/95 text-yellow-200 rounded-xl px-5 py-4 shadow-xl z-50 hidden animate-fade-in"
+  tabindex="-1"
+  aria-hidden="true"
+  role="dialog"
+  aria-modal="false"
+  aria-label="Testimonial"
+>
+  <!-- Pointer Arrow -->
+  <div class="absolute top-[-14px] left-1/2 -translate-x-1/2 w-6 h-6 pointer-events-none">
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+      <polygon points="12,0 24,24 0,24" fill="#facc15" opacity="0.8" />
+    </svg>
   </div>
-</div>
 
-<script nonce="{{ NONCE }}">
-(() => {
-  const bar = document.getElementById('fc-testimonial-scrollbar');
-  if (!bar || bar.__init) return; bar.__init = true;
+  <!-- Testimonial Content -->
+  <strong class="block text-yellow-400 mb-1">{{ author }}</strong>
+  <div class="text-base leading-relaxed">{{ detail }}</div>
 
-  let lastY = window.scrollY, visible = false, hideTimer;
+  <!-- Optional Close Button -->
+  <button
+    type="button"
+    onclick="closeTestimonialPopover()"
+    class="absolute top-2 right-2 text-yellow-400 hover:text-red-500 text-lg font-bold rounded-full focus:outline-none focus:ring-2 focus:ring-yellow-500"
+    aria-label="Close testimonial"
+  >
+    ×
+  </button>
+</section>
 
-  function showBar(){
-    if (!visible){
-      bar.classList.remove('hidden');
-      requestAnimationFrame(()=>bar.classList.add('opacity-100'));
-      visible = true;
-    }
-    clearTimeout(hideTimer);
-    hideTimer = setTimeout(hideBar, 3000); // auto-hide after 3s idle
+<style>
+  /* Popover fade-in animation */
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
   }
-  function hideBar(){
-    if (visible){
-      bar.classList.remove('opacity-100');
-      bar.addEventListener('transitionend', ()=>bar.classList.add('hidden'), {once:true});
-      visible = false;
-    }
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
   }
 
-  window.addEventListener('scroll', () => {
-    const dy = Math.abs(window.scrollY - lastY);
-    if (dy > 30){ // only trigger if scrolled enough
-      showBar();
-      lastY = window.scrollY;
-    }
-  }, {passive:true});
-})();
+  /* Optional shadow effect for the testimonial box */
+  .starforge-popover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+  
+  /* Custom focus outline for accessibility */
+  .starforge-popover:focus-visible {
+    outline: 3px solid #facc15;
+  }
+  
+  /* Accessibility: Ensure the close button is visible on focus */
+  .starforge-popover button:focus {
+    outline: 3px solid #facc15;
+  }
+</style>
+
+<script>
+  // Optional script to toggle visibility (if needed for further enhancement)
+  document.addEventListener('DOMContentLoaded', () => {
+    const popover = document.getElementById('starforge-testimonial-pop');
+    const closeButton = popover.querySelector('button');
+
+    // Close the popover on pressing Escape key
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !popover.classList.contains('hidden')) {
+        closeTestimonialPopover();
+      }
+    });
+
+    // Close the popover via button click
+    closeButton.addEventListener('click', closeTestimonialPopover);
+  });
+
+  // Function to close the popover
+  function closeTestimonialPopover() {
+    const popover = document.getElementById('starforge-testimonial-pop');
+    popover.classList.add('hidden');
+    popover.setAttribute('aria-hidden', 'true');
+    popover.setAttribute('aria-modal', 'false');
+  }
+
+  // Function to open the popover
+  function openTestimonialPopover() {
+    const popover = document.getElementById('starforge-testimonial-pop');
+    popover.classList.remove('hidden');
+    popover.setAttribute('aria-hidden', 'false');
+    popover.setAttribute('aria-modal', 'true');
+    popover.focus();
+  }
 </script>
 

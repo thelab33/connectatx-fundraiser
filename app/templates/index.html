@@ -1,178 +1,54 @@
-{# =====================================================================
-   FundChamps — Full Prestige Home (SV-Premium, Lean, Donate-ready)
-   - Single CSS payload comes from base.html
-   - Feature toggles via querystring or flags
-   - LCP-friendly hero + accessible lazy schedule
-   - Uses merged About component: partials/about_section.html
-   ===================================================================== #}
 {% extends "base.html" %}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _q = request.args if request is defined else {} %}
 
-{# ---------- Brand/name fallbacks ---------- #}
-{% set _brand_name = _brand_name if _brand_name is defined
-  else (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-
-{# ---------- Robust query/flag toggles ---------- #}
-{% set _OFF = ['0','false','off','no','disable'] %}
-{% set _ON  = ['1','true','on','yes','enable',''] %}
-
-{% set SHOW_IMPACT     = (show_impact if show_impact is defined else (_q.get('impact') not in _OFF)) %}
-{% set SHOW_ALLOCATION = (show_allocation if show_allocation is defined else (_q.get('alloc') not in _OFF)) %}
-{% set SHOW_TIERS      = (show_tiers if show_tiers is defined else (_q.get('tiers') not in _OFF)) %}
-{% set SHOW_ABOUT      = (show_about if show_about is defined else (_q.get('about') not in _OFF)) %}
-{% set SHOW_SCHEDULE   = (show_schedule if show_schedule is defined else (_q.get('sched') not in _OFF)) %}
-{% set SHOW_NEWSLETTER = (show_newsletter if show_newsletter is defined else (_q.get('news') not in _OFF)) %}
-{% set SHOW_WALL       = (show_wall if show_wall is defined else (_q.get('wall') not in _OFF)) %}
-{% set LAZY_SCHEDULE   = (lazy_schedule if lazy_schedule is defined else true) %}
-
-{# About variant: 'section' | 'card' | 'both' #}
-{% set about_variant = about_variant if about_variant is defined
-  else (_q.get('aboutv') if _q.get('aboutv') in ['card','section','both'] else 'section') %}
-
-{# ---------- Page head (tiny, CSP-safe) ---------- #}
-{% block head %}
-  {{ super() }}
-  {% if url_for is defined %}
-    <link rel="preload" as="image" href="{{ url_for('static', filename='basketball-accent.svg') }}">
-  {% endif %}
-  <style nonce="{{ NONCE }}">
-    @keyframes spin-slow { to { transform: rotate(360deg) } }
-    .animate-spin-slow { animation: spin-slow 16s linear infinite }
-    .animate-spin-reverse-slow { animation: spin-slow 18s linear infinite reverse }
-    .bg-clip-text-transparent { -webkit-background-clip:text; background-clip:text; color:transparent }
-    .shadow-gold { box-shadow: 0 10px 25px rgba(250,204,21,.18), inset 0 0 0 1px rgba(250,204,21,.15) }
-    @keyframes pop { 0% { transform: scale(.98); opacity:0 } 100% { transform: scale(1); opacity:1 } }
-    .animate-pop { animation: pop .35s ease-out both }
-    @keyframes bounceIn { 0% { transform: translateY(6px); opacity:0 } 100% { transform: translateY(0); opacity:1 } }
-    .animate-bounce-in { animation: bounceIn .5s cubic-bezier(.2,.8,.2,1) both }
-    .player-mosaic { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem }
-    @media (min-width:640px) { .player-mosaic { grid-template-columns:repeat(5,minmax(0,1fr)) } }
-  </style>
-
-  {# Idle preconnects (Stripe/YouTube) for faster subsequent interactions #}
-  <script nonce="{{ NONCE }}">
-    (requestIdleCallback||setTimeout)(function(){
-      ['https://js.stripe.com','https://www.youtube-nocookie.com'].forEach(function(h){
-        try{ var l=document.createElement('link'); l.rel='preconnect'; l.href=h; l.crossOrigin=''; document.head.appendChild(l); }catch(_){}
-      });
-    },1);
-  </script>
+{% block title %}
+  {{ _("Home") }} · {{ team.team_name | default("Connect ATX Elite", true) }}
 {% endblock %}
 
-{# ---------- Accessible H1 (consumed by base.html) ---------- #}
-{% block h1 %}{{ _brand_name }} — Fuel the season. Fund the future.{% endblock %}
+{# ---- HERO SECTION ---- #}
+{% block hero %}
+  {% include "partials/hero_and_fundraiser.html" ignore missing %}
+{% endblock %}
 
 {% block content %}
+  <main class="flex flex-col gap-20 max-w-6xl mx-auto w-full px-4 sm:px-8" role="main" tabindex="-1">
+    {# ---- Dynamic Page Sections ---- #}
+    {% set page_sections = [
+      {"id": "mission", "label": _("Our Mission"), "partial": "partials/mission_section.html"},
+      {"id": "tiers", "label": _("Sponsorship Tiers"), "partial": "partials/tiers.html"},
+      {"id": "digital-hub", "label": _("Digital Hub"), "partial": "partials/digital_hub.html"},
+      {"id": "about", "label": _("About Connect ATX Elite"), "partial": "partials/about_section.html"},
+      {"id": "sponsor-spotlight", "label": _("Sponsor Spotlight"), "partial": "partials/sponsor_spotlight.html"},
+      {"id": "program-stats-calendar", "label": _("Program Stats & Schedule"), "partial": "partials/program_stats_and_calendar.html"},
+      {"id": "testimonial-popover", "label": _("What Families Say"), "partial": "partials/testimonial_popover.html"},
+      {"id": "back-to-top", "label": _("Back to Top"), "partial": "partials/back_to_top.html"},
+      {"id": "flash-and-onboarding", "label": _("Flash & Onboarding"), "partial": "partials/flash_and_onboarding.html"},
+      {"id": "sponsor-wall", "label": _("Sponsor Wall"), "partial": "partials/sponsor_wall.html"}
+    ] %}
 
-  {# --- SEO Schema (DonateAction) --- #}
-  {% include "partials/seo_jsonld_donate_action.html" ignore missing %}
-
-  {# --- Hero & Fundraiser (LCP focus) --- #}
-  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-
-  {# --- Impact Buckets & Funds Allocation --- #}
-  {% if SHOW_IMPACT %}
-    {% include "partials/impact_lockers_premium.html" ignore missing with context %}
-  {% endif %}
-  {% if SHOW_ALLOCATION %}
-    {% include "partials/funds_allocation_bar_premium.html" ignore missing with context %}
-  {% endif %}
-
-  {# --- Donation Modal (focus-trapped) --- #}
-  {% include "partials/donation_modal.html" ignore missing with context %}
-
-  {# --- Dedicated Donate Page CTA --- #}
-  <section aria-labelledby="donate-cta-heading" class="container mx-auto my-10 max-w-3xl px-4 sm:px-6 lg:px-8">
-    <h2 id="donate-cta-heading" class="sr-only">Donate page call to action</h2>
-    <a
-      href="{{ url_for('main.donate') if (url_for is defined and has_endpoint('main.donate')) else '/donate' }}"
-      class="btn-primary px-6 py-3 rounded-full inline-flex items-center gap-2"
-      data-ripple
-      aria-describedby="donate-cta-note"
-    >
-      💛 Visit Full Donate Page
-    </a>
-    <p id="donate-cta-note" class="mt-2 text-sm text-zinc-400">
-      Secure checkout • Receipts by email • Supports one-time and recurring gifts
-    </p>
-  </section>
-
-  {# --- Sponsorship Tiers --- #}
-  {% if SHOW_TIERS %}
-    {% include "partials/tiers.html" ignore missing with context %}
-  {% endif %}
-
-  {# --- About (merged component) --- #}
-  {% if SHOW_ABOUT %}
-    {# Save the merged component as partials/about_section.html #}
-    {% include "partials/about_section.html" ignore missing with context %}
-  {% endif %}
-
-  {# --- Schedule (lazy with accessible skeleton) --- #}
-  {% if SHOW_SCHEDULE %}
-    {% set sched_fragment = (safe_url_for('program.schedule_fragment') if (safe_url_for is defined and has_endpoint('program.schedule_fragment')) else None) %}
-    {% if LAZY_SCHEDULE and sched_fragment %}
+    {% for section in page_sections %}
       <section
-        id="program-stats-calendar"
-        class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 py-10"
-        aria-busy="true"
-        aria-live="polite"
-        data-lazy-fragment="{{ sched_fragment }}"
+        id="{{ section.id }}"
+        aria-labelledby="{{ section.id }}-heading"
+        class="pb-8 scroll-mt-20"
+        role="region"
+        tabindex="-1"
       >
-        <div class="glass-card p-6 text-sm text-zinc-300" role="status">
-          <p>Loading schedule &amp; calendar…</p>
-          <div class="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3" aria-hidden="true">
-            <div class="h-24 rounded-lg bg-white/[.06] animate-pulse"></div>
-            <div class="h-24 rounded-lg bg-white/[.06] animate-pulse"></div>
-            <div class="h-24 rounded-lg bg-white/[.06] animate-pulse"></div>
-          </div>
-        </div>
+        <h2 id="{{ section.id }}-heading" class="sr-only">{{ section.label }}</h2>
+        {% include section.partial ignore missing %}
       </section>
-      <script nonce="{{ NONCE }}">
-        (function(){
-          var el=document.getElementById('program-stats-calendar'); if(!el) return;
-          var url=el.getAttribute('data-lazy-fragment'); if(!url) return;
-          function swap(html){ try{ el.outerHTML=html; }catch(_){} }
-          function load(){
-            if(window.htmx){ try{ htmx.ajax('GET', url, { target:'#program-stats-calendar', swap:'outerHTML' }); return; }catch(_){} }
-            fetch(url, { credentials:'same-origin' }).then(function(r){ return r.text(); }).then(swap).catch(function(){ el.removeAttribute('aria-busy'); });
-          }
-          if('IntersectionObserver' in window){
-            var io=new IntersectionObserver(function(ents){ if(ents.some(function(e){return e.isIntersecting;})){ load(); io.disconnect(); }},{ rootMargin:'200px 0px' });
-            io.observe(el);
-          } else { load(); }
-        })();
-      </script>
-      <noscript>
-        {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
-      </noscript>
-    {% else %}
-      {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
+    {% endfor %}
+
+    {# ---- Optional CTA Block ---- #}
+    {% block extra_cta %}
+      {# Place sticky banners, promos, or A/B messages here #}
+    {% endblock %}
+
+    {# ---- Admin-Only Onboarding Popover ---- #}
+    {% if current_user and current_user.is_authenticated and current_user.is_admin %}
+      <div id="admin-onboarding" class="relative z-40">
+        {% include "partials/admin_onboarding_popover.html" ignore missing %}
+      </div>
     {% endif %}
-  {% endif %}
-
-  {# --- Sponsor Wall or Newsletter --- #}
-  {% if SHOW_WALL and sponsors_sorted and sponsors_sorted|length > 0 %}
-    {% include "partials/sponsor_wall_widget.html" ignore missing with context %}
-    {% include "partials/sponsor_hub.html" ignore missing with context %}
-  {% elif SHOW_NEWSLETTER %}
-    {% include "partials/newsletter.html" ignore missing with context %}
-  {% endif %}
-
-  {# --- Sponsor Form --- #}
-  {% include "partials/sponsor_form.html" ignore missing with context %}
-
-  {# --- AI Concierge --- #}
-  {% include "partials/ai_concierge.html" ignore missing with context %}
-
-  {# --- Footer --- #}
-  {% include "partials/footer.html" ignore missing with context %}
-
-  {# --- Admin Onboarding (only for admins) --- #}
-  {% if (session and session.get('is_admin')) %}
-    {% include "partials/admin_onboarding_popover.html" ignore missing with context %}
-  {% endif %}
-
+  </main>
 {% endblock %}
 
