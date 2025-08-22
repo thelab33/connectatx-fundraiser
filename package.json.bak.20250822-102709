@@ -19,8 +19,6 @@
     "css:build": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/tailwind.min.css --minify",
     "css:dev": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/tailwind.min.css -w",
     "css:verify": "node scripts/check_css.js",
-    "lhci:collect": "lhci collect --numberOfRuns=1 --settings.preset=lighthouse:default",
-    "lhci:assert": "lhci assert || true",
     "preview:css": "tailwindcss -i app/static/css/input.css --minify --watch --config tailwind.config.cjs | browser-sync start --server app/static --files app/static/css/tailwind.min.css",
     "js:build": "node build.js",
     "js:build:dev": "cross-env NODE_ENV=development node build.js",
@@ -749,9 +747,6 @@
     "@axe-core/playwright": "^4.10.2",
     "@lhci/cli": "^0.13.0",
     "@playwright/test": "^1.54.2",
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/typography": "^0.5.16",
     "autoprefixer": "^10.4.21",
     "cssnano": "^7.1.0",
     "eslint": "^9.33.0",
@@ -759,18 +754,13 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-unused-imports": "^4.2.0",
     "htmlhint": "^1.6.3",
-    "lint-staged": "^15.2.10",
     "postcss": "^8.5.6",
     "postcss-safe-parser": "^6.0.0",
     "postcss-scss": "^4.0.9",
     "stylelint": "^16.23.1",
     "stylelint-config-standard": "^39.0.0",
-    "tailwindcss": "^3.4.17"
-  },
-  "overrides": {
-    "rimraf": "^5.0.5",
-    "glob": "^10.4.5",
-    "tailwindcss": "^3.4.13"
+    "tailwindcss": "^4.1.12",
+    "lint-staged": "^15.2.10"
   },
   "lint-staged": {
     "*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}": [
@@ -803,3 +793,4 @@
   },
   "homepage": "https://github.com/thelab33/connectatx-fundraiser#readme"
 }
+

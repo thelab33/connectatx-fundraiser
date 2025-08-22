@@ -1,0 +1,375 @@
+{# =========================
+   base.html — FundChamps SaaS Base (SV-polished)
+   - Uses local CSS: brand.tokens.css, tailwind.min.css, output.css, fc_prestige.css
+   - CSP-safe (NONCE on inline <script>)
+   ========================= #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+
+{# Optional cache-bust: set ASSET_VER in config/env if you like #}
+{% set _ver = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
+{% set href_tokens   = url_for('static', filename='css/brand.tokens.css', v=_ver) if _ver else url_for('static', filename='css/brand.tokens.css') %}
+{% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver)  if _ver else url_for('static', filename='css/tailwind.min.css') %}
+{% set href_output   = url_for('static', filename='css/output.css', v=_ver)        if _ver else url_for('static', filename='css/output.css') %}
+{% set href_theme    = url_for('static', filename='css/fc_prestige.css', v=_ver)   if _ver else url_for('static', filename='css/fc_prestige.css') %}
+{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
+
+<!doctype html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="theme-color" content="#0b0b0c" id="meta-theme-color" />
+    <title>{% block title %}Connect ATX Elite{% endblock %}</title>
+
+    {% block meta %}{% endblock %}
+    {% block head %}{% endblock %}
+
+    {# ---- CSS: tokens → framework → compiled → theme overrides ---- #}
+    <link rel="preload" as="style" href="{{ href_tailwind }}" />
+    <link rel="stylesheet" href="{{ href_tokens }}" />
+    <link rel="stylesheet" href="{{ href_tailwind }}" />
+    <link rel="stylesheet" href="{{ href_output }}" />
+    <link rel="stylesheet" href="{{ href_theme }}" />
+  </head>
+  <body class="min-h-full bg-zinc-950 text-zinc-100 selection:bg-yellow-300/30">
+    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-zinc-900 px-3 py-2 rounded">
+      Skip to content
+    </a>
+
+    {% include "partials/header_and_announcement.html" ignore missing with context %}
+
+    {# Shared polite live region for realtime updates #}
+    <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+
+    {% block hero %}{% endblock %}
+
+    <main id="main" role="main" class="relative">
+      <h1 class="sr-only">{% block h1 %}Connect ATX Elite{% endblock %}</h1>
+      {% block content %}{% endblock %}
+    </main>
+
+    {% include "partials/footer.html" ignore missing with context %}
+    {% include "partials/back_to_top.html" ignore missing with context %}
+
+    {% block global_modals %}
+      {% include "partials/donation_modal.html" ignore missing with context %}
+    {% endblock %}
+
+    {# Your app bundle (external) #}
+    <script src="{{ js_href }}" defer nonce="{{ NONCE }}"></script>
+
+    {# 🔌 Socket.IO bridge #}
+    <script nonce="{{ NONCE }}">
+(function () {
+  if (window.__fcSocketInit) return; window.__fcSocketInit = true;
+  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  const vis = () => !document.hidden;
+  const dispatch = (name, detail) => { try { window.dispatchEvent(new CustomEvent(name, { detail })); } catch {} };
+  const now = () => Date.now();
+
+  let socket = null, reconnectAttempts = 0, lastSeq = -1;
+  let lastRaised = 0, lastGoal = 0, lastEmittedTs = 0;
+
+  function emitMeter(raised, goal, extra = {}) {
+    if (typeof extra.seq === 'number' && extra.seq <= lastSeq) return;
+    if (typeof extra.seq === 'number') lastSeq = extra.seq;
+    if (raised === lastRaised && goal === lastGoal) return;
+    lastRaised = raised; lastGoal = goal;
+
+    const payload = { raised, goal, sponsorName: extra.sponsorName, seq: extra.seq, ts: now() };
+    dispatch('fc:meter:update', payload);
+    dispatch('fc:funds:update', payload);
+
+    const sr = document.getElementById('sr-live');
+    if (sr) sr.textContent = `Funds updated. ${Math.round((raised/Math.max(goal||1,1))*100)} percent of goal.`;
+  }
+
+  function connect() {
+    if (!window.io || socket) return;
+    socket = window.io({ path: '/socket.io', transports: ['websocket'], timeout: saveData ? 8000 : 4000, reconnection: false, autoConnect: false });
+
+    function open() {
+      if (!vis()) { document.addEventListener('visibilitychange', open, { once: true }); return; }
+      try { socket.connect(); } catch {}
+    }
+
+    socket.on('connect', () => { reconnectAttempts = 0; dispatch('fc:analytics', { event: 'socket_connect', area: 'realtime' }); });
+    socket.on('disconnect', (reason) => { dispatch('fc:analytics', { event: 'socket_disconnect', area: 'realtime', reason }); scheduleReconnect(); });
+
+    socket.on('funds:update', (data) => {
+      const raised = Number(data?.raised ?? lastRaised ?? 0);
+      const goal   = Number(data?.goal   ?? lastGoal   ?? 0);
+      const t = now();
+      if (t - lastEmittedTs < (saveData ? 1500 : 350)) return;
+      lastEmittedTs = t;
+      emitMeter(raised, goal, { sponsorName: data?.sponsorName, seq: data?.seq });
+    });
+
+    socket.on('sponsor:vip', (data) => {
+      dispatch('fc:sponsor:vip', data || {});
+      const el = document.getElementById('vip-leaderboard');
+      if (el && window.htmx) window.htmx.trigger(el, 'refresh');
+    });
+
+    open();
+    document.addEventListener('visibilitychange', () => {
+      if (!socket) return;
+      if (document.hidden) { try { socket.close(); } catch {} } else { scheduleReconnect(100); }
+    });
+  }
+
+  function scheduleReconnect(minDelay) {
+    if (!window.io) return;
+    if (socket) { try { socket.close(); } catch {} socket = null; }
+    const base = saveData ? 2000 : 600, jitter = Math.random() * 200;
+    reconnectAttempts++;
+    const backoff = Math.min(6000, Math.pow(2, Math.min(reconnectAttempts, 5)) * base) + jitter;
+    setTimeout(connect, Math.max(minDelay || 0, backoff));
+  }
+
+  (window.requestIdleCallback || setTimeout)(() => {
+    try { const l = document.createElement('link'); l.rel = 'preconnect'; l.href = '/socket.io/'; l.crossOrigin = ''; document.head.appendChild(l); } catch {}
+    connect();
+  }, 1);
+
+  (function fallbackPolling(){
+    let ok = true;
+    setInterval(async () => {
+      if (socket && socket.connected) return;
+      if (!vis()) return;
+      try {
+        const res = await fetch('/api/stats', { headers: { 'Accept': 'application/json' }});
+        if (!res.ok) throw new Error('http');
+        const j = await res.json();
+        emitMeter(Number(j.raised ?? j.funds_raised ?? 0), Number(j.goal ?? j.fundraising_goal ?? 0), {});
+        if (!ok) { ok = true; dispatch('fc:analytics', { event: 'poll_recovered', area: 'realtime' }); }
+      } catch {
+        if (ok) { ok = false; dispatch('fc:analytics', { event: 'poll_failed', area: 'realtime' }); }
+      }
+    }, saveData ? 30000 : 15000);
+  })();
+})();
+    </script>
+
+    {# 🔁 Bridge: normalize updates #}
+    <script nonce="{{ NONCE }}">
+(() => {
+  const syncMeters = (raised, goal) => window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised, goal }}));
+  window.addEventListener('fc:funds:update', ev => {
+    const d = ev.detail || {};
+    if (d.raised != null || d.goal != null) syncMeters(d.raised, d.goal);
+  });
+  if (window.htmx) {
+    document.body.addEventListener('htmx:afterSwap', e => {
+      if (e.target && e.target.id === 'fundraiser-meter') {
+        try {
+          const raised = parseFloat(e.target.dataset.raised || '0');
+          const goal   = parseFloat(e.target.dataset.goal   || '0');
+          syncMeters(raised, goal);
+        } catch(_) {}
+      }
+    });
+  }
+})();
+    </script>
+
+    {# 🧠 Optimistic UI #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcOptimisticInit) return; window.__fcOptimisticInit = true;
+  let optimistic = 0, timer = null;
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-amount]'); if (!btn) return;
+    optimistic += Number(btn.dataset.amount || 0);
+    const cur = (window.getHeroMeter && window.getHeroMeter()) || {};
+    const raised = (cur.raised || 0) + optimistic; const goal = cur.goal || 0;
+    window.updateHeroMeter && window.updateHeroMeter(raised, goal);
+    window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised, goal }}));
+    clearTimeout(timer); timer = setTimeout(() => { optimistic = 0; }, 12000);
+  });
+  window.addEventListener('fc:meter:update', () => { optimistic = 0; });
+})();
+    </script>
+
+    {# 🧠 Title pulse #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcTitlePulse) return; window.__fcTitlePulse = true;
+  const baseTitle = document.title; let pulseTimer = null;
+  function pulseTitle(pct){ document.title = `⭐ ${Math.round(pct)}% • ${baseTitle}`; clearTimeout(pulseTimer); pulseTimer = setTimeout(()=> { document.title = baseTitle; }, 4000); }
+  window.addEventListener('fc:meter:update', (e)=>{
+    const d = e.detail || {}; const p = Math.max(0, Math.min(100, (d.raised/Math.max(d.goal||1,1))*100));
+    pulseTitle(p);
+  }, { passive:true });
+})();
+    </script>
+
+    {# 🧠 Sponsor ticker #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fc-tickerQueue) return; window.__fc-tickerQueue = true;
+  const q = []; let draining = false;
+  window.addEventListener('fc:funds:update', (e)=>{
+    const name = e.detail && e.detail.sponsorName; if (!name) return;
+    q.push(String(name)); if (!draining) drain();
+  });
+  function drain(){
+    const el = document.getElementById('fc-ticker'); if (!el) return;
+    draining = true; const name = q.shift();
+    if (name) {
+      const safe = name.replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+      el.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
+      setTimeout(drain, 1500);
+    } else { draining = false; }
+  }
+})();
+    </script>
+
+    {# 🧠 Motion/Save-Data tuning #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcMotionTuner) return; window.__fcMotionTuner = true;
+  const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) document.documentElement.classList.add('reduced-motion');
+  if (navigator.connection && navigator.connection.saveData) document.documentElement.classList.add('save-data');
+})();
+    </script>
+
+    {# 🧠 VIP leaderboard auto-refresh (HTMX) #}
+    <script nonce="{{ NONCE }}">
+(function(){
+  if (window.__fcLbHook) return; window.__fcLbHook = true;
+  const panel = document.getElementById('vip-leaderboard'); if (!panel || !window.htmx) return;
+  const io = new IntersectionObserver((entries)=>{ const ent = entries[0]; if (!ent) return; panel.__isVisible = ent.isIntersecting; }, { threshold: 0.1 });
+  io.observe(panel);
+  let debounce = null;
+  window.addEventListener('fc:meter:update', () => {
+    if (!panel.__isVisible) return;
+    clearTimeout(debounce);
+    debounce = setTimeout(() => window.htmx.trigger(panel, 'refresh'), 600);
+  }, { passive:true });
+})();
+    </script>
+
+    {# =====================================================================
+       ⭐ SV Upscale — 5 feature add-ons
+       1) Header micro-meter (#hdr-meter) support
+       2) Reveal-on-scroll (.fc-reveal)
+       3) Anchor scroll-spy for in-page sections
+       4) Back-to-top progress ring sync
+       5) Deep-link donate + theme-color polish
+       ===================================================================== #}
+    <script nonce="{{ NONCE }}">
+(() => {
+  /* (1) Header micro-meter */
+  if (!window.__fcHdrMeter) {
+    window.__fcHdrMeter = true;
+    const hdr = document.getElementById('hdr-meter');
+    if (hdr) {
+      const track = hdr.querySelector('.track') || Object.assign(document.createElement('div'), { className:'track relative h-[6px] bg-white/20 rounded-full overflow-hidden' });
+      if (!hdr.querySelector('.track')) hdr.appendChild(track);
+      const fill  = track.querySelector('.fill') || Object.assign(document.createElement('div'), { className:'fill', style:'width:0%' });
+      if (!track.querySelector('.fill')) track.appendChild(fill);
+      const sr    = hdr.querySelector('.sr')   || Object.assign(document.createElement('span'), { className:'sr' });
+      if (!hdr.querySelector('.sr')) hdr.appendChild(sr);
+      const pctLabel = hdr.querySelector('[data-hdr-pct]');
+
+      const set = (raised, goal) => {
+        const pct = Math.max(0, Math.min(100, (raised/Math.max(goal||1,1))*100));
+        fill.style.width = pct.toFixed(1) + '%';
+        if (pctLabel) pctLabel.textContent = pct.toFixed(0) + '%';
+        sr.textContent = `${Math.round(pct)} percent of goal`;
+      };
+      addEventListener('fc:meter:update', e => {
+        const d = e.detail || {};
+        set(+d.raised || 0, +d.goal || 1);
+      }, { passive:true });
+    }
+  }
+
+  /* (2) Reveal-on-scroll */
+  if (!window.__fcReveal) {
+    window.__fcReveal = true;
+    const els = Array.from(document.querySelectorAll('.fc-reveal'));
+    if ('IntersectionObserver' in window) {
+      const io = new IntersectionObserver((ents) => {
+        ents.forEach(ent => ent.isIntersecting && ent.target.classList.add('is-visible'));
+      }, { rootMargin: '0px 0px -10% 0px', threshold: 0.08 });
+      els.forEach(el => io.observe(el));
+    } else {
+      els.forEach(el => el.classList.add('is-visible'));
+    }
+  }
+
+  /* (3) Anchor scroll-spy (lightweight) */
+  if (!window.__fcSpy) {
+    window.__fcSpy = true;
+    const targets = ['mission','program-stats','tiers','sponsor-hub','sponsor-spotlight','sponsor-wall-widget','sponsor-wall','newsletter'];
+    const links = Array.from(document.querySelectorAll('a[href^="#"]')).filter(a => targets.includes(a.getAttribute('href').slice(1)));
+    if (links.length) {
+      const map = new Map(links.map(l => [l.getAttribute('href').slice(1), l]));
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(ent => {
+          const id = ent.target.id, link = map.get(id); if (!link) return;
+          if (ent.isIntersecting) {
+            links.forEach(a => { a.classList.remove('active'); a.removeAttribute('aria-current'); });
+            link.classList.add('active'); link.setAttribute('aria-current', 'page');
+          }
+        });
+      }, { rootMargin: '-25% 0px -60% 0px', threshold: 0.01 });
+      map.forEach((_, id) => { const sec = document.getElementById(id); if (sec) io.observe(sec); });
+    }
+  }
+
+  /* (4) Back-to-top progress ring sync */
+  if (!window.__fcTopRing) {
+    window.__fcTopRing = true;
+    const ring = document.querySelector('#back-to-top .ring-wrap');
+    if (ring) {
+      const onScroll = () => {
+        const h = document.documentElement;
+        const p = (h.scrollTop) / Math.max(1, (h.scrollHeight - h.clientHeight));
+        ring.style.setProperty('--p', (p * 100).toFixed(1) + '%');
+      };
+      addEventListener('scroll', onScroll, { passive:true });
+      onScroll();
+    }
+  }
+
+  /* (5) Deep-link donate + theme-color polish */
+  if (!window.__fcDeepLink) {
+    window.__fcDeepLink = true;
+
+    // Set theme-color to site background (keeps mobile address bar seamless)
+    try {
+      const meta = document.getElementById('meta-theme-color') || document.querySelector('meta[name="theme-color"]');
+      const bg = getComputedStyle(document.documentElement).getPropertyValue('--fc-bg-900').trim() || '#0b0b0c';
+      if (meta) meta.setAttribute('content', bg || '#0b0b0c');
+    } catch {}
+
+    // Handle ?donate=### or #donate
+    try {
+      const url = new URL(location.href);
+      const amt = url.searchParams.get('donate') || url.searchParams.get('amount');
+      const wantsDonate = !!amt || (location.hash.toLowerCase() === '#donate');
+      if (wantsDonate) {
+        const hero = document.getElementById('fc-hero');
+        hero && hero.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setTimeout(() => {
+          // Fire a semantic event pages/partials can react to (modal, redirect, etc.)
+          dispatchEvent(new CustomEvent('fc:open:donation', { detail: { amount: amt ? Number(amt) : 0 }}));
+          // Fallback: click the hero donate button if present
+          document.getElementById('fc-donate')?.click();
+        }, 180);
+      }
+    } catch {}
+  }
+})();
+    </script>
+
+    {% block scripts %}{% endblock %}
+    <script src="{{ url_for(static, filename=js/tiers-elite.js) }}" nonce="{{ NONCE|default() }}"></script>
+  </body>
+</html>
+
