@@ -1,10 +1,123 @@
 /* =========================================================================
-   FundChamps — Prestige SV Styles
-   app/static/css/fc_prestige.css
-   Silicon Valley–grade progressive enhancement layer
+   FundChamps • Prestige Theme (Elite)
+   - Apple/Nike polish • Dark-first • Motion-safe • CSP-friendly
+   - Pairs with Base Refactor + hero_and_fundraiser.html
+   - Brand accent is provided via :root --brand (set in base.html)
    ========================================================================= */
 
-/* ===== Hero (Prestige SV) ===== */
+/* ---------------------- Core Tokens & Globals ---------------------- */
+:root{
+  --fc-brand: var(--brand, #facc15);
+  --fc-brand-600: color-mix(in srgb, var(--fc-brand) 78%, #000 0%);
+  --fc-bg-900:#0b0b0c; --fc-bg-800:#111113;
+  --fc-card: rgb(255 255 255 / 4%);
+  --fc-border: rgb(255 255 255 / 10%);
+  --fc-ring: color-mix(in srgb, var(--fc-brand) 65%, transparent);
+  --fc-text: #e5e7eb;
+  --fc-text-dim: #cbd5e1;
+  --fc-shadow: 0 10px 30px rgb(0 0 0 / 35%);
+  --radius-lg: 16px; --radius-xl: 20px; --radius-2xl: 24px;
+
+  /* Fluid type (nice, restrained) */
+  --step--2: clamp(.70rem, .67rem + .2vw, .78rem);
+  --step--1: clamp(.82rem, .78rem + .3vw, .92rem);
+  --step-0 : clamp(.95rem, .90rem + .35vw, 1.05rem);
+  --step-1 : clamp(1.10rem, 1.02rem + .45vw, 1.25rem);
+  --step-2 : clamp(1.32rem, 1.18rem + .7vw, 1.55rem);
+  --step-3 : clamp(1.58rem, 1.36rem + .95vw, 1.95rem);
+  --step-4 : clamp(1.92rem, 1.58rem + 1.4vw, 2.44rem);
+  --step-5 : clamp(2.30rem, 1.82rem + 2.0vw, 3.05rem);
+}
+
+html{ scroll-behavior:smooth; }
+
+body{
+  color:var(--fc-text);
+  background: radial-gradient(80% 60% at 50% 0%, #1a1a1a 0%, var(--fc-bg-900) 60%) fixed;
+  font-size: var(--step-0);
+  font-feature-settings: "ss01","ss02","cv01","cv02","tnum";
+  -webkit-font-smoothing: antialiased;  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizelegibility;
+}
+.reduced-motion *{ animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; }
+
+/* Subtle selection using brand */
+::selection{ background: color-mix(in srgb, var(--fc-brand) 24%, transparent); color:#111; }
+
+/* ====================================================================
+   MICRO-TYPOGRAPHY: headlines & lead
+   ==================================================================== */
+h1,.h1{ font-size:var(--step-5); letter-spacing:-.02em; line-height:1.02; font-weight:800; }
+h2,.h2{ font-size:var(--step-4); letter-spacing:-.01em; line-height:1.06; font-weight:800; }
+h3,.h3{ font-size:var(--step-3); letter-spacing:-.01em; line-height:1.12; font-weight:700; }
+.lead{ font-size:var(--step-1); color:var(--fc-text-dim); }
+
+/* Small utility trims */
+.text-dim{ color:var(--fc-text-dim); }
+.ring-brand{ box-shadow: 0 0 0 3px var(--fc-ring); }
+
+/* =========================================================================
+   CARDS / SURFACES
+   ========================================================================= */
+.fc-card{
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(255 255 255 / 3%)) padding-box,
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--fc-brand) 35%, transparent), transparent) border-box;
+  border: 1px solid var(--fc-border);
+  border-radius: var(--radius-xl);
+  backdrop-filter: blur(8px) saturate(115%);
+  box-shadow: var(--fc-shadow);
+}
+
+.fc-card--elevated{
+  box-shadow: 0 20px 50px rgb(0 0 0 / 55%), inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+
+/* =========================================================================
+   BUTTONS (Nike/Apple vibe)
+   ========================================================================= */
+.fc-btn{
+  display:inline-flex; align-items:center; gap:.55rem; font-weight:800;
+  padding:.7rem 1.1rem; border-radius:999px; position:relative; will-change:transform,box-shadow;
+  transition: transform .16s ease, box-shadow .2s ease, filter .2s ease;
+}
+.fc-btn:active{ transform: translateY(1px) scale(.997); }
+
+.fc-btn-primary{
+  color:#0b0b0c;
+  background: linear-gradient(180deg, var(--fc-brand), var(--fc-brand-600));
+  text-shadow: 0 1px 0 rgb(255 255 255 / 35%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 22%), 0 10px 30px color-mix(in srgb, var(--fc-brand) 25%, transparent);
+}
+.fc-btn-primary:hover{ filter:brightness(1.07); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 26%), 0 14px 36px color-mix(in srgb, var(--fc-brand) 32%, transparent); }
+
+.fc-btn-ghost{
+  color:#fff; background: rgb(255 255 255 / 6%); border:1px solid rgb(255 255 255 / 12%);
+}
+.fc-btn-ghost:hover{ background: rgb(255 255 255 / 12%); }
+
+/* Subtle ripple hook (base.html injects minimal JS) */
+.fc-ripple{ position:absolute; border-radius:9999px; transform:scale(0); opacity:.35;
+  background: radial-gradient(circle, rgb(255 255 255 / 50%), rgb(255 255 255 / 5%));
+  animation: fc-ripple .45s ease-out forwards; pointer-events:none }
+
+@keyframes fc-ripple{ to{ transform:scale(1); opacity:0 } }
+
+/* =========================================================================
+   HEADER: compact sticky shadow + mini meter
+   ========================================================================= */
+header.sticky{ backdrop-filter: blur(10px) saturate(115%); background: rgb(11 11 12 / 55%); border-bottom:1px solid rgb(255 255 255 / 8%); }
+.fc-sticky-shadow { box-shadow: 0 10px 30px rgb(0 0 0 / 35%); }
+
+#hdr-meter{ display:flex; align-items:center; gap:.55rem }
+#hdr-meter .track{ width:160px; height:8px; border-radius:999px; background:rgb(255 255 255 / 10%); overflow:hidden }
+#hdr-meter .fill{ height:100%; background:linear-gradient(90deg, var(--fc-brand), #fffbe6); }
+
+/* =========================================================================
+   HERO (Prestige SV) — keeps your classes & expands them
+   ========================================================================= */
+
+/* ===== Your pasted block (kept, lightly annotated) ===== */
 #fc-hero{
   --hero-img-opacity: 1;
   --hero-grad-top: .40;
@@ -19,10 +132,11 @@
   background: rgb(255 255 255 / 6%);
   border: 1px solid rgb(255 255 255 / 10%);
   box-shadow: 0 10px 40px -10px rgb(0 0 0 / 50%);
+  border-radius: var(--radius-2xl);
 }
 
 #fc-hero .fc-hero-title-gradient{
-  background-image: linear-gradient(90deg, var(--fc-hero-accent, #facc15), #fff);
+  background-image: linear-gradient(90deg, var(--fc-hero-accent, var(--fc-brand)), #fff); background-clip:text; color:transparent;
 }
 
 #fc-hero .fc-hero-grad{
@@ -31,12 +145,11 @@
     rgb(0 0 0 / var(--hero-grad-top)) 0%,
     rgb(0 0 0 / var(--hero-grad-mid)) 36%,
     rgb(12 12 12 / var(--hero-grad-bot)) 100%
-  ); inset: 0;
-  position: absolute;
+  ); inset: 0; position: absolute;
 }
 
 #fc-hero .fc-hero-glow{
-  box-shadow: 0 0 120px 40px color-mix(in oklab, var(--fc-hero-accent, #facc15) 22%, transparent) inset; inset:0;
+  box-shadow: 0 0 120px 40px color-mix(in oklab, var(--fc-hero-accent, var(--fc-brand)) 22%, transparent) inset; inset:0;
   pointer-events:none; position:absolute;
 }
 
@@ -45,28 +158,27 @@
     radial-gradient(transparent 60%, rgb(0 0 0 / 45%)),
     url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2248%22 height=%2248%22 viewBox=%220 0 48 48%22><rect width=%2248%22 height=%2248%22 fill=%22none%22/><circle cx=%226%22 cy=%226%22 r=%221%22 fill=%22%23fff%22 fill-opacity=%220.06%22/></svg>');
   background-size: cover, 48px 48px; inset:0;
-  opacity: var(--hero-noise);
-  pointer-events:none; position:absolute;
+  opacity: var(--hero-noise); pointer-events:none; position:absolute;
 }
 
 #fc-hero .heat-layer{
-  background: radial-gradient(120% 80% at 50% 0%, var(--fc-hero-accent, #facc15) 0%, transparent 60%); inset:0;
+  background: radial-gradient(120% 80% at 50% 0%, var(--fc-hero-accent, var(--fc-brand)) 0%, transparent 60%); inset:0;
   opacity: calc(0.12 + 0.28 * var(--heat));
-  pointer-events:none; position:absolute;
-  transition: opacity .6s ease;
+  pointer-events:none; position:absolute; transition: opacity .6s ease;
 }
 
 /* Progress bar shine */
 @keyframes fc-shine { 0%{ transform: translateX(-100%) } 100%{ transform: translateX(100%) } }
 
-#fc-hero .fc-shine{ animation: fc-shine 3s linear infinite;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 90%), transparent); mix-blend-mode: overlay;
-  opacity: .2;
+#fc-hero .fc-shine{
+  animation: fc-shine 3s linear infinite;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 90%), transparent);
+  mix-blend-mode: overlay; opacity: .2;
 }
 
 /* Gradient fill for bar */
 #fc-hero .fc-bar{
-  background: linear-gradient(90deg, var(--fc-hero-accent, #facc15), #22c55e);
+  background: linear-gradient(90deg, var(--fc-hero-accent, var(--fc-brand)), #22c55e);
 }
 
 /* Ticker */
@@ -84,9 +196,9 @@
 }
 .tier-pulse{ animation: tier-pulse 2.5s ease-in-out infinite; }
 
-/* =========================================================================
-   Global Palette + Background
-   ========================================================================= */
+/* =====================================================================
+   Global Palette + Background (from your snippet)
+   ===================================================================== */
 :root {
   --fc-amber: #facc15;
   --fc-amber-600: #d1a90d;
@@ -95,90 +207,43 @@
   --fc-card: rgb(255 255 255 / 4%);
   --fc-ring: rgb(250 204 21 / 65%);
 }
-html { scroll-behavior: smooth; }
 body { background: radial-gradient(80% 60% at 50% 0%, #1a1a1a 0%, #0b0b0c 60%) fixed; }
 
-/* =========================================================================
-   Card + Accessibility + Sticky header
-   ========================================================================= */
-.fc-card {
-  backdrop-filter: blur(6px);
-  background: linear-gradient(180deg, rgb(255 255 255 / 6%), rgb(255 255 255 / 3%)) padding-box,
-              radial-gradient(120% 120% at 0% 0%, rgb(250 204 21 / 35%), rgb(250 204 21 / 0%)) border-box;
-  border: 1px solid rgb(255 255 255 / 8%);
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgb(250 204 21 / 8%);
+/* =====================================================================
+   Misc polish from your snippet + refinements
+   ===================================================================== */
+.fc-meter-track{ background:rgb(255 255 255 / 8%); border-radius:999px; height:10px; overflow:hidden }
+.fc-meter-fill { background:linear-gradient(90deg,var(--fc-amber),#fffbe6); border-radius:999px; height:100% }
+
+.fc-badge{ display:inline-flex; align-items:center; gap:.4rem;
+  background:rgb(250 204 21 / 12%); border:1px solid rgb(250 204 21 / 35%);
+  border-radius:999px; font-size:.75rem; font-weight:700; padding:.15rem .5rem; color:#fff;
 }
 
-a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
-  border-radius: 12px;
-  box-shadow: 0 0 0 3px var(--fc-ring);
-  outline: none;
-}
-.fc-sticky-shadow { box-shadow: 0 10px 30px rgb(0 0 0 / 35%); }
+/* Reveal */
+.fc-reveal{ opacity:0; transform:translateY(16px); transition:opacity .6s ease, transform .6s ease }
+.fc-reveal.is-visible{ opacity:1; transform:none }
 
-/* =========================================================================
-   Progress meter enhancements
-   ========================================================================= */
-.fc-meter-track{background:rgb(255 255 255 / 8%);border-radius:999px;height:10px;overflow:hidden}
-.fc-meter-fill{background:linear-gradient(90deg,var(--fc-amber),#fffbe6);border-radius:999px;height:100%}
+/* Back-to-top (basketball) — kept from your snippet, minor tidy */
+#back-to-top{ will-change: opacity, transform; }
+#back-to-top:active{ transform: scale(.97); }
 
-/* Small badges */
-.fc-badge{align-items:center;background:rgb(250 204 21 / 12%);border:1px solid rgb(250 204 21 / 35%);border-radius:999px;display:inline-flex;font-size:.75rem;font-weight:600;gap:.4rem;padding:.15rem .5rem}
+@media (prefers-reduced-motion: reduce){ #back-to-top{ transition:none!important; } }
 
-/* Reveal animation */
-.fc-reveal{opacity:0;transform:translateY(16px);transition:opacity .6s ease,transform .6s ease}
-.fc-reveal.is-visible{opacity:1;transform:none}
-
-/* =========================================================================
-   Buttons
-   ========================================================================= */
-.fc-btn{align-items:center;border-radius:999px;display:inline-flex;font-weight:700;gap:.55rem;padding:.7rem 1.1rem;position:relative}
-.fc-btn-primary{background:linear-gradient(180deg,var(--fc-amber),var(--fc-amber-600));color:#0b0b0c}
-.fc-btn-primary:hover{filter:brightness(1.08)}
-.fc-btn-ghost{background:rgb(255 255 255 / 6%);border:1px solid rgb(255 255 255 / 12%);color:#fff}
-.fc-btn-ghost:hover{background:rgb(255 255 255 / 12%)}
-
-/* =========================================================================
-   Mini header meter
-   ========================================================================= */
-#hdr-meter{align-items:center;display:flex;gap:.55rem}
-#hdr-meter .track{width:160px}
-#hdr-meter .sr{height:1px;left:-9999px;overflow:hidden;position:absolute;top:auto;width:1px}
-
-/* =========================================================================
-   Back-to-top Basketball Button
-   ========================================================================= */
-#back-to-top { will-change: opacity, transform; }
-#back-to-top:active { transform: scale(.97); }
-
-@media (prefers-reduced-motion: reduce){ #back-to-top{ transition: none !important; } }
-
-/* Basketball ball + progress ring */
 #back-to-top .ring-wrap{
-  --p: 0%;
-  --ring-thickness: 3px;
+  --p:0%; --ring-thickness:3px;
 
-  background: conic-gradient(#fde047 var(--p), transparent 0); border-radius: 9999px;
-  display: inline-grid; height: 34px;
-          mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness))); place-items: center;
-  position: relative;
-  width: 34px;
+  background: conic-gradient(#fde047 var(--p), transparent 0);
+  border-radius:9999px; display:inline-grid; height:34px; width:34px; place-items:center;
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--ring-thickness)), #000 calc(100% - var(--ring-thickness)));
 }
 
 #back-to-top .ball{
-  background: radial-gradient(120% 120% at 30% 30%, #ffd166 0 25%, #f59e0b 58%, #ea580c 100%); border-radius: 9999px;
-  box-shadow: inset 0 0 0 1.25px rgb(0 0 0 / 35%),
-              0 2px 6px rgb(0 0 0 / 35%); height: 26px;
-  position: relative;
-  transition: transform .15s ease;
-  width: 26px; z-index: 1;
+  width:26px; height:26px; border-radius:9999px; position:relative; z-index:1; transition: transform .15s ease;
+  background: radial-gradient(120% 120% at 30% 30%, #ffd166 0 25%, #f59e0b 58%, #ea580c 100%);
+  box-shadow: inset 0 0 0 1.25px rgb(0 0 0 / 35%), 0 2px 6px rgb(0 0 0 / 35%);
 }
-
-#back-to-top .ball::before,
-#back-to-top .ball::after{ border-radius:9999px;
-  content:""; inset:0; pointer-events:none; position:absolute;
-}
+#back-to-top .ball::before, #back-to-top .ball::after{ content:""; position:absolute; inset:0; border-radius:9999px; pointer-events:none; }
 
 #back-to-top .ball::before{
   background:
@@ -192,15 +257,84 @@ a:focus-visible, button:focus-visible, [tabindex]:focus-visible {
     radial-gradient(120% 90% at 80% 80%, transparent 60%, #7c2d12 60.8% 62%, transparent 62.8%) no-repeat;
 }
 
-@media (pointer:fine){
-  #back-to-top:hover .ball{ transform: translateY(-1px); }
+@media (pointer:fine){ #back-to-top:hover .ball{ transform: translateY(-1px); } }
+
+/* Hero glass frame + donate extras from your snippet */
+.hero-glass::before{
+  content:""; position:absolute; inset:0;
+  background: linear-gradient(to bottom, rgb(11 12 15 / 90%), transparent 20%, transparent 80%, rgb(11 12 15 / 90%));
+  pointer-events:none;
 }
 
-.hero-glass::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgb(11 12 15 / 90%),transparent 20%,transparent 80%,rgb(11 12 15 / 90%));pointer-events:none;}
-.donate-btn:hover{box-shadow:0 0 12px 2px color-mix(in srgb,var(--fc-brand) 60%,transparent);transform:translateY(-1px);transition:all .25s ease;}
-.fund-meter{background:linear-gradient(90deg,var(--fc-brand) 0%,#22c55e 50%,var(--fc-brand) 100%);background-size:200% 100%;animation:flow 3s linear infinite}
+.donate-btn:hover{
+  box-shadow: 0 0 12px 2px color-mix(in srgb, var(--fc-brand) 60%, transparent);
+  transform: translateY(-1px); transition: all .25s ease;
+}
 
-@keyframes flow{0%{background-position:0 0}100%{background-position:200% 0}}
-.sponsor-marquee{display:flex;overflow:hidden;gap:2rem}.sponsor-marquee>div{flex-shrink:0;animation:scrollX 30s linear infinite}
+.fund-meter{
+  background: linear-gradient(90deg, var(--fc-brand) 0%, #22c55e 50%, var(--fc-brand) 100%);
+  background-size: 200% 100%; animation: flow 3s linear infinite;
+}
 
-@keyframes scrollX{from{transform:translateX(100%)}to{transform:translateX(-100%)}}
+@keyframes flow{ 0%{ background-position:0 0 } 100%{ background-position:200% 0 } }
+.sponsor-marquee{ display:flex; overflow:hidden; gap:2rem }
+.sponsor-marquee>div{ flex-shrink:0; animation: scrollX 30s linear infinite }
+
+@keyframes scrollX{ from{ transform:translateX(100%) } to{ transform:translateX(-100%) } }
+
+/* =========================================================================
+   “Nike/Apple” micro-details: focus, inputs, tables
+   ========================================================================= */
+:where(a,button,[role="button"],input,select,textarea):focus-visible{
+  outline: none; box-shadow: 0 0 0 3px var(--fc-ring);
+  border-radius: 12px;
+}
+
+input,select,textarea{
+  background: rgb(255 255 255 / 6%); border:1px solid rgb(255 255 255 / 12%);
+  color:#fff; border-radius: 12px; padding:.7rem .9rem;
+}
+input::placeholder, textarea::placeholder{ color: rgb(255 255 255 / 45%); }
+
+input:focus,select:focus,textarea:focus{
+  border-color: color-mix(in srgb, var(--fc-brand) 50%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--fc-brand) 25%, transparent);
+}
+
+table.fc-table{
+  width:100%; border-collapse:separate; border-spacing:0 8px;
+}
+.fc-table th{ text-align:left; color:#e5e7eb; font-weight:700; padding:.6rem .8rem; }
+
+.fc-table td{
+  padding:.6rem .8rem; background: rgb(255 255 255 / 5%); border:1px solid rgb(255 255 255 / 8%);
+}
+.fc-table tr{ border-radius: 12px; overflow:hidden }
+
+/* =========================================================================
+   Reveal-on-scroll helper (matches base IntersectionObserver hooks)
+   ========================================================================= */
+[data-reveal]{ opacity:0; transform:translateY(10px); transition:opacity .4s ease, transform .4s ease; }
+[data-reveal].is-in{ opacity:1; transform:none; }
+
+/* =========================================================================
+   High-contrast assist (auto when forced-colors)
+   ========================================================================= */
+@media (forced-colors: active){
+  *{ forced-color-adjust:auto; }
+  .fc-btn-primary{ background: ButtonFace; color: ButtonText; border: 1px solid ButtonText; }
+  .fc-card{ background: Canvas; color: CanvasText; border-color: GrayText; }
+}
+
+/* =========================================================================
+   Print polish
+   ========================================================================= */
+@media print{
+  header, .no-print{ display:none !important; }
+  body{ background:#fff !important; color:#000 !important; }
+}
+
+/* =========================================================================
+   End • Prestige Elite
+   ========================================================================= */
+

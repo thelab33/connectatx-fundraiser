@@ -1,20 +1,48 @@
-// tailwind.config.cjs — FundChamps Prestige (SV-Grade)
+// tailwind.config.cjs — FundChamps Prestige (SV-Grade, v4.x)
+/** @type {import('tailwindcss').Config} */
 
+const plugin = require("tailwindcss/plugin");
 const forms = require("@tailwindcss/forms");
 const typography = require("@tailwindcss/typography");
 const aspect = require("@tailwindcss/aspect-ratio");
 
-/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: ["class", ".dark"],
+
+  // -------------------------------------------------------------------
+  //  Content Sources (Jinja, JS, Python strings)
+  // -------------------------------------------------------------------
   content: [
     "./app/templates/**/*.{html,jinja,jinja2}",
     "./app/templates/partials/**/*.{html,jinja,jinja2}",
     "./app/templates/macros/**/*.{html,jinja,jinja2}",
     "./app/templates/admin/**/*.{html,jinja,jinja2}",
+    "./partials_bundle*/app/templates/**/*.{html,jinja,jinja2}",
     "./app/static/js/**/*.{js,ts,mjs}",
     "./app/**/*.py"
   ],
+
+  // -------------------------------------------------------------------
+  //  Safelist (Critical utilities Tailwind purge must always keep)
+  // -------------------------------------------------------------------
+  safelist: [
+    // regex patterns (v4 allows this)
+    { pattern: /backdrop-blur.*/ },   // keep all backdrop-blur variants
+    { pattern: /blur.*/ },            // keep regular blur utilities
+    { pattern: /bg-gradient-to-.*/ }, // gradients
+    { pattern: /from-.*/ },           // gradient-from colors
+    { pattern: /via-.*/ },            // gradient-via colors
+    { pattern: /to-.*/ },             // gradient-to colors
+    { pattern: /z-.*/ },              // z-index utilities
+    { pattern: /ring-.*/ },           // rings
+    { pattern: /text-(zinc|yellow).*/ }, // text colors
+    { pattern: /(w|max-w|h)-\[.*\]/ },   // arbitrary width/height
+    { pattern: /will-change.*/ }      // will-change
+  ],
+
+  // -------------------------------------------------------------------
+  //  Theme Customization
+  // -------------------------------------------------------------------
   theme: {
     container: {
       center: true,
@@ -28,8 +56,8 @@ module.exports = {
         "2xl": "1440px"
       }
     },
+
     extend: {
-      // ------------------ Brand System ------------------
       fontFamily: {
         sans: ["Inter","Montserrat","Roboto","Segoe UI","Arial","sans-serif"]
       },
@@ -38,26 +66,17 @@ module.exports = {
         "primary-gold": "#fbbf24",
         "primary-yellow": "#fde68a",
         "brand-black": "#09090b",
-
-        // Semantic brand tokens → matches :root in brand.tokens.css
         surface: "var(--fc-surface, #ffffff)",
         text: "var(--fc-text, #111111)",
         accent: "var(--fc-accent, #facc15)",
-
-        brand: {
-          DEFAULT: "rgb(var(--fc-brand-rgb, 250 204 21) / <alpha-value>)"
-        }
+        brand: { DEFAULT: "rgb(var(--fc-brand-rgb, 250 204 21) / <alpha-value>)" }
       },
-
-      // ------------------ Effects ------------------
       boxShadow: {
         "gold-glow": "0 0 8px 2px #facc15, 0 0 24px 0 #fde68a44",
         glass: "0 4px 32px 0 rgba(250,204,21,0.06), 0 1.5px 4.5px rgba(60,60,60,0.05)",
         "xl-gold": "0 20px 25px -5px rgba(250, 204, 21, 0.4), 0 10px 10px -5px rgba(250, 204, 21, 0.2)",
         "inner-glow": "inset 0 0 15px #facc15cc"
       },
-
-      // ------------------ Animations ------------------
       keyframes: {
         kenburns: {
           "0%": { transform: "scale(1.12) translateY(6px)", opacity: "0.94" },
@@ -85,16 +104,12 @@ module.exports = {
         sparkle: "sparkle 1.3s ease-in-out infinite",
         "fade-in": "fade-in 1.5s cubic-bezier(.39,.575,.565,1) both"
       },
-
-      // ------------------ Gradients ------------------
       backgroundImage: {
         "gold-gradient": "linear-gradient(90deg, #facc15 0%, #fbbf24 100%)",
         "amber-gradient": "linear-gradient(45deg, #fbbf24 0%, #fde68a 100%)",
         "brand-glass":
           "linear-gradient(180deg, rgba(20,20,20,.70), rgba(20,20,20,.86)), linear-gradient(125deg, color-mix(in srgb, var(--fc-brand, #facc15) 28%, transparent), rgba(255,255,255,.03))"
       },
-
-      // ------------------ Utilities ------------------
       ringColor: {
         DEFAULT: "#facc15",
         "primary-focus": "#fbbf24",
@@ -105,21 +120,12 @@ module.exports = {
         brand: ["2px solid rgb(var(--fc-brand-rgb, 250 204 21) / 1)", "4px"]
       },
       transitionProperty: {
-        colors: "color, background-color, border-color, text-decoration-color, fill, stroke",
+        colors:
+          "color, background-color, border-color, text-decoration-color, fill, stroke",
         shadow: "box-shadow",
         opacity: "opacity"
       },
-      transitionTimingFunction: {
-        "ease-in-out": "cubic-bezier(0.4, 0, 0.2, 1)"
-      },
-      zIndex: {
-        99: "99",
-        999: "999",
-        9999: "9999",
-        99999: "99999"
-      },
-
-      // ------------------ Typography ------------------
+      zIndex: { 99: "99", 999: "999", 9999: "9999", 99999: "99999" },
       typography: (theme) => ({
         DEFAULT: {
           css: {
@@ -141,10 +147,44 @@ module.exports = {
       })
     }
   },
+
+  // -------------------------------------------------------------------
+  //  Plugins
+  // -------------------------------------------------------------------
   plugins: [
     forms({ strategy: "class" }),
     typography,
-    aspect
+    aspect,
+
+    plugin(function fcPrestige({ addUtilities, addVariant }) {
+      addVariant("hocus", ["&:hover", "&:focus-visible"]);
+      addVariant("supports-blur", "@supports (backdrop-filter: blur(1px))");
+      addVariant("no-supports-blur", "@supports not (backdrop-filter: blur(1px))");
+
+      addUtilities({
+        ".glass-card": {
+          backgroundColor: "rgba(11,11,12,0.60)",
+          border: "1px solid rgba(255,255,255,.10)",
+          boxShadow:
+            "0 20px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04)",
+          "-webkit-backdrop-filter": "blur(18px) saturate(1.05)",
+          "backdrop-filter": "blur(18px) saturate(1.05)"
+        },
+        ".focus-ring-brand": {
+          outline: "2px solid rgb(var(--fc-brand-rgb, 250 204 21) / 1)",
+          "outline-offset": "4px"
+        },
+        ".scrollbar-none": {
+          "scrollbar-width": "none",
+          "-ms-overflow-style": "none"
+        },
+        ".scrollbar-none::-webkit-scrollbar": { display: "none" },
+        ".safe-py": {
+          "padding-top": "max(1rem, env(safe-area-inset-top))",
+          "padding-bottom": "max(1rem, env(safe-area-inset-bottom))"
+        }
+      });
+    })
   ]
 };
 

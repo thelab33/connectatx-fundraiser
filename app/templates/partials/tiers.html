@@ -1,4 +1,7 @@
-{# ================== Sponsorship Tiers — FundChamps Elite (SV Pro v2.2) ================== #}
+{# ================== Sponsorship Tiers + Minimal FAQ — FundChamps Elite (SV Pro v3.0) ================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+
+{# ---- Tiers setup ---- #}
 {% set brand_color       = (team.theme_color if team and team.theme_color else '#facc15') %}
 {% set donate_init_url   = (safe_url_for('donate.initiate') if (safe_url_for is defined and has_endpoint('donate.initiate')) else '/donate/initiate') %}
 {% set tiers_stats_url   = (safe_url_for('tiers.stats')      if (safe_url_for is defined and has_endpoint('tiers.stats'))      else '/tiers/stats') %}
@@ -8,7 +11,7 @@
 
 <section
   id="tiers"
-  class="bg-zinc-950 py-14 text-zinc-100 sm:py-16"
+  class="bg-zinc-950 fc-section py-14 sm:py-16 text-zinc-100"
   aria-labelledby="tiers-heading"
   role="region"
   tabindex="-1"
@@ -19,81 +22,106 @@
   style="
     --fc-brand: {{ brand_color }};
     --fc-brand-200: color-mix(in srgb, {{ brand_color }} 20%, transparent);
-    --fc-glass: rgba(17,17,17,.58);
     --fc-spot-x: 50%;
     --fc-spot-y: 0%;
   "
 >
   <style nonce="{{ NONCE }}">
     /* ===== Scoped to #tiers only ===== */
+    #tiers .section-head{
+      display:flex; align-items:baseline; justify-content:space-between; gap:.75rem;
+    }
+    #tiers .heading{
+      font-weight: 1000; letter-spacing: -.02em;
+      font-size: clamp(1.6rem, 2.8vw, 2.25rem);
+      background-image: linear-gradient(180deg,#fff 0%, color-mix(in srgb, var(--fc-brand) 72%, #fff) 100%);
+      -webkit-background-clip:text; background-clip:text; color:transparent;
+      text-shadow: 0 0 .5px rgba(0,0,0,.65), 0 12px 28px rgba(0,0,0,.35);
+    }
+    @supports not ((-webkit-background-clip:text) or (background-clip:text)){
+      #tiers .heading{ color: var(--fc-brand); background:none; text-shadow:none; }
+    }
+
+    /* Grid perf + containment */
+    #tiers .fc-tiers{ content-visibility:auto; contain-intrinsic-size: 600px; }
     #tiers .grid { contain: layout paint; }
+
+    /* Flip cards */
     #tiers .flip-card { perspective: 1800px; min-height: 400px; cursor: pointer; touch-action: manipulation; position: relative; }
-    #tiers .flip-card-inner { position: relative; width: 100%; height: 100%; min-height: 372px;
-      transform-style: preserve-3d; transition: transform .7s cubic-bezier(.4,1.6,.6,1); }
-    #tiers .flip-card.card-flipped .flip-card-inner,
-    #tiers .flip-card:focus-visible .flip-card-inner,
-    #tiers .flip-card:hover .flip-card-inner { transform: rotateY(180deg); }
+    #tiers .flip-card-inner { position: relative; width: 100%; height: 100%; min-height: 372px; transform-style: preserve-3d; transition: transform .7s cubic-bezier(.4,1.6,.6,1); }
+    #tiers .flip-card.card-flipped .flip-card-inner { transform: rotateY(180deg); }
     #tiers .flip-card-front, #tiers .flip-card-back { position:absolute; inset:0; backface-visibility:hidden; border-radius: 1rem; overflow: hidden; z-index:1; }
     #tiers .flip-card-back { transform: rotateY(180deg); display:flex; flex-direction:column; align-items:center; justify-content:center; }
 
-    /* ===== Premium glass plate + spotlight + highlight ring ===== */
+    /* Premium glass + spotlight */
     #tiers .glassy-card{
-      background: var(--fc-glass);
+      background: rgba(17,17,17,.58);
       backdrop-filter: blur(16px) saturate(120%); -webkit-backdrop-filter: blur(16px) saturate(120%);
       position: relative; isolation:isolate;
       border:1px solid color-mix(in srgb, var(--fc-brand) 26%, transparent);
       box-shadow: 0 10px 34px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06);
     }
-    /* spotlight follows cursor (motion-safe) */
     #tiers .glassy-card::before{
       content:""; position:absolute; inset:-1px; border-radius: inherit; pointer-events:none; z-index:0;
       background:
-        radial-gradient(160% 90% at var(--fc-spot-x) var(--fc-spot-y),
-          color-mix(in srgb, var(--fc-brand) 26%, transparent),
-          transparent 55%)
-        ,linear-gradient(to top, rgba(255,255,255,.04), transparent 50%);
+        radial-gradient(160% 90% at var(--fc-spot-x) var(--fc-spot-y), color-mix(in srgb, var(--fc-brand) 26%, transparent), transparent 55%),
+        linear-gradient(to top, rgba(255,255,255,.04), transparent 50%);
       filter: blur(18px); opacity:.45;
     }
-    /* soft top sheen */
     #tiers .glassy-card::after{
       content:""; position:absolute; inset:0 0 auto 0; height:38%;
       background: linear-gradient(to bottom, rgba(255,255,255,.06), transparent);
       pointer-events:none;
     }
 
-    /* price & badges */
+    /* Price & badges */
     #tiers .price { font-variant-numeric: tabular-nums; }
     #tiers .badge { border: 1px solid var(--fc-brand-200); background: rgba(250,204,21,.10); }
 
-    /* sold out state */
+    /* Sold-out */
     #tiers .soldout { pointer-events:none; opacity:.58; filter:saturate(.6); }
-    #tiers .ribbon{
-      position:absolute; top:12px; right:-42px; transform:rotate(35deg);
-      background: linear-gradient(90deg, #eab308, #fde68a); color:#111;
-      font-weight:900; font-size:11px; letter-spacing:.02em;
-      padding:.25rem 2.25rem; box-shadow:0 6px 22px rgba(234,179,8,.25);
-    }
+    #tiers .ribbon{ position:absolute; top:12px; right:-42px; transform:rotate(35deg);
+      background: linear-gradient(90deg, #eab308, #fde68a); color:#111; font-weight:900; font-size:11px; letter-spacing:.02em; padding:.25rem 2.25rem; box-shadow:0 6px 22px rgba(234,179,8,.25); }
 
-    /* interaction polish */
+    /* Interaction polish */
     #tiers .pulse { animation: tiers-pulse 1100ms ease-out 1; }
     @keyframes tiers-pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.03)} }
 
-    /* motion/contrast guards */
-    @media (prefers-reduced-motion: reduce){
-      #tiers .flip-card-inner { transition: none !important; }
-      #tiers .flip-card:hover .flip-card-inner, #tiers .flip-card:focus-visible .flip-card-inner { transform: none !important; }
-      #tiers .pulse { animation: none !important; }
-    }
+    /* Flip cards */
+#tiers .flip-card { perspective: 1800px; min-height: 400px; cursor: pointer; touch-action: manipulation; position: relative; }
+#tiers .flip-card-inner {
+  position: relative; width: 100%; height: 100%; min-height: 372px;
+  transform-style: preserve-3d; will-change: transform;
+  transition: transform .7s cubic-bezier(.4,1.6,.6,1);
+}
+#tiers .flip-card-front, #tiers .flip-card-back {
+  position:absolute; inset:0; backface-visibility:hidden; border-radius: 1rem; overflow: hidden; z-index:1;
+}
+#tiers .flip-card-back { transform: rotateY(180deg); display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+/* 🔁 Re-enable hover + focus-visible + programmatic flip */
+#tiers .flip-card.card-flipped .flip-card-inner,
+#tiers .flip-card:focus-visible .flip-card-inner,
+#tiers .flip-card:hover .flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* Motion guard: keep transform (instant flip), just remove animation */
+@media (prefers-reduced-motion: reduce){
+  #tiers .flip-card-inner { transition: none !important; }
+  /* do NOT set transform:none — still allow flipping */
+}
+
     @media (prefers-contrast: more){
       #tiers .glassy-card{ backdrop-filter:none; -webkit-backdrop-filter:none; background:#111; }
     }
   </style>
 
   <div class="container mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-    <h2 id="tiers-heading" class="text-3xl font-extrabold tracking-tight text-yellow-300 sm:text-4xl" tabindex="0" aria-label="Sponsorship Tiers">
-      Sponsorship&nbsp;Tiers
-    </h2>
-    <p class="sr-only">Press Enter to flip a card and see details.</p>
+    <div class="section-head">
+      <h2 id="tiers-heading" class="heading" tabindex="0" aria-label="Sponsorship Tiers">Sponsorship&nbsp;Tiers</h2>
+      <p class="sr-only">Press Enter/Space on a card to flip and see details.</p>
+    </div>
 
     {% set tiers = tiers if tiers is defined and tiers else [
       {"title":"Platinum","amount":"5,000+","benefits":["Logo on jerseys","Shout-outs on social","VIP invites"],"emoji":"🏆","badge":"VIP","fomo":"Only 2 Platinum spots left!","slots_left":2,"price_id":None},
@@ -103,7 +131,7 @@
       {"title":"Custom","amount":"Custom","benefits":["Tailored benefits","Personalized impact"],"emoji":"✨","fomo":"We build a package for you.","slots_left":999,"price_id":None}
     ] %}
 
-    <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3" role="list" aria-label="Available sponsorship tiers">
+    <div class="fc-tiers gap-6 grid lg:grid-cols-3 mt-8 sm:grid-cols-2" role="list" aria-label="Available sponsorship tiers">
       {% for tier in tiers %}
         {% set is_premium = tier.title in ['Gold','Platinum','VIP'] %}
         {% set amt_clean = 'custom' if tier.amount|string|lower == 'custom' else (tier.amount|string|replace('+','')|replace(',','')) %}
@@ -155,7 +183,7 @@
                 </div>
               </div>
 
-              <ul id="tier-{{ loop.index }}-benefits" class="mt-4 space-y-2 text-sm">
+              <ul id="tier-{{ loop.index }}-benefits" class="mt-4 space-y-2 text-sm tier-perks">
                 {% for ben in tier.benefits %}
                 <li class="flex items-start gap-2">
                   <svg viewBox="0 0 20 20" class="mt-0.5 h-4 w-4" fill="currentColor" aria-hidden="true">
@@ -196,34 +224,22 @@
       {% endfor %}
     </div>
 
-    <div class="mt-10 rounded-xl border border-[color:var(--fc-brand-200)] bg-yellow-400/10 px-4 py-3 font-semibold text-yellow-200 shadow-inner">
-      Every sponsorship powers <span class="underline underline-offset-2">gym access, travel, and academic support</span> for our team.
-      <a href="mailto:team@connectatxelite.org?subject=Invoice%20Request%20—%20Sponsorship" class="ml-2 underline underline-offset-2">Need an invoice?</a>
-    </div>
-
-    <div class="mt-6">
-      <button id="tiers-faq-toggle" class="inline-flex items-center gap-2 rounded-lg border border-[color:var(--fc-brand-200)] bg-zinc-900/70 px-4 py-2 font-semibold hover:bg-zinc-900 focus:outline-none focus:ring-2 focus:ring-yellow-300" aria-expanded="false" aria-controls="tiers-faq-body" type="button" tabindex="0">
-        <span id="tiers-faq-icon" aria-hidden="true">▶</span><span>Frequently Asked Questions</span>
-      </button>
-      <div id="tiers-faq-body" class="mt-3 hidden rounded-lg border border-[color:var(--fc-brand-200)] bg-black/50 p-4" aria-live="polite" hidden>
-        <p><strong>Can I sponsor anonymously?</strong> Yes — just let us know.</p>
-        <p class="mt-1"><strong>Where does my sponsorship go?</strong> 100% supports gym rental, travel, academics, and gear.</p>
-        <p class="mt-1"><strong>How do I sponsor?</strong> Click a tier button or email us.</p>
+{# ---- NEW: Gap Filler Message Card ---- #}
+      <div class="relative bg-fc-surface rounded-2xl p-6 shadow-inner flex items-center justify-center text-center">
+        <p class="text-fc-text/80 text-sm md:text-base leading-snug">
+          <span class="font-medium text-white">Every sponsorship</span> powers gym access, travel, and academic support for our team.  
+          <a href="mailto:info@connectatx.com?subject=Sponsorship Invoice" class="text-yellow-400 hover:underline ml-1">Need an invoice?</a>
+        </p>
       </div>
-    </div>
 
-    <noscript><div class="mt-6 text-sm text-yellow-200/90">JavaScript is disabled. Please contact us to sponsor or visit the Donate page.</div></noscript>
+    </div>
   </div>
 </section>
-
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+<script nonce="{{ NONCE }}">
 (() => {
   if (window.__tiersBound) return; window.__tiersBound = true;
 
   const root   = document.getElementById('tiers');
-  const faqT   = document.getElementById('tiers-faq-toggle');
-  const faqB   = document.getElementById('tiers-faq-body');
-  const faqI   = document.getElementById('tiers-faq-icon');
   const donateUrl = root?.dataset?.donateUrl || '/donate/initiate';
   const statsUrl  = root?.dataset?.statsUrl  || '/tiers/stats';
   const HAS_STRIPE = root?.dataset?.hasStripe === '1';
@@ -248,7 +264,7 @@
   // flip behavior with ARIA
   document.addEventListener('click', (e) => {
     const card = e.target.closest('.flip-card'); if (!card) return;
-    if (e.target.closest('button,[data-tier-cta]')) return;
+    if (e.target.closest('button,[data-tier-cta]')) return; // don't flip when pressing CTA
     toggleCard(card);
   });
   document.addEventListener('keydown', (e) => {
@@ -330,20 +346,6 @@
     startCheckout({ tier: title, amount, card });
   });
 
-  // FAQ toggle (persisted)
-  if (faqT && faqB) {
-    const key = 'fc:tiers:faq';
-    const setState = (expanded) => {
-      faqT.setAttribute('aria-expanded', String(expanded));
-      faqB.hidden = !expanded; faqB.classList.toggle('hidden', !expanded);
-      if (faqI) faqI.textContent = expanded ? '▼' : '▶';
-      try { localStorage.setItem(key, expanded ? '1' : '0'); } catch {}
-    };
-    try { setState(localStorage.getItem(key) === '1'); } catch { setState(false); }
-    faqT.addEventListener('click', () => setState(faqT.getAttribute('aria-expanded') !== 'true'));
-    faqT.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setState(faqT.getAttribute('aria-expanded') !== 'true'); }});
-  }
-
   // Live slot polling (optional) — expects [{ title, slots_left }]
   setTimeout(() => {
     const poll = async () => {
@@ -376,7 +378,7 @@
 })();
 </script>
 
-<script type="application/ld+json" nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+<script type="application/ld+json" nonce="{{ NONCE }}">
 {
   "@context": "https://schema.org",
   "@type": "OfferCatalog",
@@ -399,4 +401,5 @@
   ]
 }
 </script>
+</section>
 

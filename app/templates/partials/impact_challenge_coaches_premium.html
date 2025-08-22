@@ -38,7 +38,7 @@
          aria-labelledby="impactcc-heading"
          style="--fc-brand: {{ brand_color }};">
 
-  <style nonce="{{ __nonce }}">
+  <style nonce="{{ NONCE }}">
     /* ===== Scope: #impact-challenge-coaches ===== */
     #impact-challenge-coaches::before{
       content:""; position:absolute; inset:-28% -8% auto;
@@ -165,7 +165,7 @@
   </div>
 </section>
 
-{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ __nonce }}">{% endif %}
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
 (() => {
   const root = document.getElementById('impact-challenge-coaches'); if (!root || root.__init) return; root.__init = true;
 

@@ -7,7 +7,7 @@
    - Honeypot anti-spam, URL param capture (utm/ref), basic client-side validation
    ============================================================================= #}
 
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{% include "shared/ui_bootstrap.html" ignore missing with context %}
 
 {# ---- Nonce + safe fallbacks ---- #}
 {% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
@@ -223,7 +223,7 @@
   </form>
 
   {# ---------- Inline JS (CSP nonce) ---------- #}
-  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ __nonce }}">{% endif %}
+  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
   (() => {
     const form   = document.getElementById('sponsor-donation-form');
     if (!form || form.__init) return; form.__init = true;
@@ -381,7 +381,7 @@
   })();
   {% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
 
-  <style nonce="{{ __nonce }}">
+  <style nonce="{{ NONCE }}">
     @keyframes fc-pulse { 0%{transform:scale(.98);opacity:.6} 60%{transform:scale(1.02);opacity:1} 100%{transform:scale(1)} }
   </style>
 

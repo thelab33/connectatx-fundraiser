@@ -25,7 +25,7 @@
 <section
   id="{{ impact_lockers_id }}"
   data-ui="{{ _ui_slug }}"
-  class="relative mx-auto w-full max-w-7xl px-4 sm:px-6"
+  class="fc-section max-w-7xl mx-auto px-4 relative sm:px-6 w-full"
   aria-labelledby="{{ impact_lockers_id }}-heading"
   data-demo="{{ 'true' if is_demo else 'false' }}"
   {%- if stats_url %} data-stats-url="{{ stats_url }}"{% endif -%}
@@ -104,7 +104,7 @@
       Buckets are being configured. Please check back soon!
     </div>
   {% else %}
-    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+    <div class="fc-buckets gap-6 grid lg:grid-cols-3 md:grid-cols-2">
       {% for b in buckets %}
         {% set alloc = (b.allocated or 0) | float %}
         {% set total = (b.total or 0) | float %}

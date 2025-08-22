@@ -6,7 +6,7 @@
    - Socket.IO + Custom events (`fc:vip`) ready
    ============================================================================= #}
 
-{% include "partials/ui_bootstrap.html" ignore missing with context %}
+{% include "shared/ui_bootstrap.html" ignore missing with context %}
 
 {# ---------- Nonce + Config ---------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}

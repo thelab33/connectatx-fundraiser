@@ -1,15 +1,6 @@
 {# =============================================================================
    donation_modal.html — FundChamps • Deluxe Donation Modal (Elite • CSP-safe)
-   Self-contained: markup + minimal CSS + JS (no external deps)
-   -----------------------------------------------------------------------------
-   Features:
-   • Presets + custom amount, fee-cover toggle, live summary + VIP badge
-   • Three payment paths: Stripe Card, Stripe Payment Request (Apple/Google Pay),
-     and PayPal (Orders v2) — each gracefully degrades when unavailable
-   • A11y: focus trap, roles/labels, keyboard escape/close, aria-live errors
-   • Events: fc:donation:success, fc:meter:update, fc:donate:open, fc:donate:close
-   • Global opener: window.openDonationModal({ amount?, name?, email? })
-   • CSP nonce via {{ NONCE }} — no inline eval or unsafe strings
+   Refactor: scroll lock + a11y + guards + input hardening
    ============================================================================= #}
 
 {# ---------- Safe fallbacks & tokens ---------- #}
@@ -171,7 +162,6 @@
   #donation-modal[open] #donate-box{ animation: dm-pop .22s cubic-bezier(.18,.89,.32,1.28) }
   @keyframes dm-pop{ from{opacity:0; transform:translateY(6px) scale(.98)} to{opacity:1; transform:none} }
   .pm-tab[data-active="true"]{ outline: 2px solid color-mix(in srgb, var(--fc-brand) 55%, #fde68a) }
-
   @media (prefers-reduced-motion: reduce){
     #donation-modal[open] #donate-box{ animation: none !important; }
   }
@@ -181,6 +171,40 @@
 (() => {
   const dlg = document.getElementById('donation-modal');
   if (!dlg || dlg.__init) return; dlg.__init = true;
+
+  // --------------- Utilities ---------------
+  const sr = document.getElementById('sr-live');
+  const announce = (t)=>{ try{ if(sr){ sr.textContent=t } }catch(_){} };
+  const reduceMotion = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Robust scroll lock (no layout jump, restores position)
+  const ScrollGuard = (() => {
+    let y = 0, pr = 0, hadLock = false;
+    const barW = () => Math.max(0, window.innerWidth - document.documentElement.clientWidth);
+    return {
+      lock(){
+        if (hadLock) return;
+        y = window.scrollY || document.documentElement.scrollTop || 0;
+        pr = barW();
+        document.documentElement.classList.add('overflow-hidden');
+        document.body.classList.add('overflow-hidden');
+        document.body.style.top = `-${y}px`;
+        document.body.style.position = 'fixed';
+        if (pr) document.body.style.paddingRight = pr + 'px';
+        hadLock = true;
+      },
+      unlock(){
+        if (!hadLock) return;
+        document.documentElement.classList.remove('overflow-hidden');
+        document.body.classList.remove('overflow-hidden');
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.paddingRight = '';
+        window.scrollTo(0, y);
+        hadLock = false;
+      }
+    };
+  })();
 
   const getCSRF = () =>
     (document.cookie.match(/(?:^|;\\s*)csrf_token=([^;]+)/)?.[1] ||
@@ -223,7 +247,13 @@
   const feeFor = (n)=> { const pct=0.029, fix=0.30; return +(n*pct + fix).toFixed(2); }; // Stripe-like
   const setBusy = (on)=> [payCardBtn, payPPBtn].forEach(b => b && (b.disabled = on, b.classList.toggle('opacity-60', on)));
   const showErr = (m='Something went wrong.')=> { err.textContent = m; };
-  const clearErr= ()=> err.textContent = '';
+  const clearErr= ()=> { err.textContent = ''; };
+
+  function sanitizeAmountInput(){
+    const raw = (custom.value||'').replace(/[^\d.]/g,'');
+    const parts = raw.split('.');
+    custom.value = parts.length > 1 ? parts[0] + '.' + parts.slice(1).join('').replace(/\./g,'') : parts[0];
+  }
 
   function getAmount(){
     const btn = amountBtns.find(b => b.classList.contains('is-on'));
@@ -243,17 +273,14 @@
     vipBadge.classList.toggle('hidden', base < VIP);
   }
 
-  // Amount interactions
+  // Amount interactions (hardened)
   amountBtns.forEach(b => b.addEventListener('click', () => {
     amountBtns.forEach(x => x.classList.remove('is-on'));
     b.classList.add('is-on');
     custom.value = '';
-    paint();
+    clearErr(); paint();
   }));
-  custom.addEventListener('input', () => {
-    amountBtns.forEach(x => x.classList.remove('is-on'));
-    paint();
-  });
+  custom.addEventListener('input', () => { sanitizeAmountInput(); amountBtns.forEach(x => x.classList.remove('is-on')); paint(); });
   feeCb.addEventListener('change', paint);
 
   // Default selected button
@@ -292,6 +319,7 @@
     return () => container.removeEventListener('keydown', onKey);
   }
   let untrap = null;
+  let lastFocus = null;
 
   // Open/Close
   function openModal(prefill){
@@ -303,49 +331,83 @@
       if (prefill.email) mailI.value = prefill.email;
       paint();
     }
-    dlg.classList.remove('closed'); document.body.style.overflow='hidden';
-    untrap = trap(box); setTimeout(()=> box.focus(), 0);
+    dlg.classList.remove('closed');
+    lastFocus = document.activeElement;
+    ScrollGuard.lock();
+    untrap = trap(box);
+    if (!reduceMotion) setTimeout(()=> box.focus(), 0);
+    announce('Donation dialog opened.');
     window.dispatchEvent(new CustomEvent('fc:donate:open'));
   }
   function closeModal(){
-    dlg.classList.add('closed'); try{ dlg.close?.(); }catch{}
-    document.body.style.overflow=''; clearErr();
+    dlg.classList.add('closed');
+    try{ dlg.close?.(); }catch{}
+    ScrollGuard.unlock();
+    clearErr();
     untrap && untrap(); untrap = null;
+    lastFocus?.focus?.();
+    announce('Donation dialog closed.');
     window.dispatchEvent(new CustomEvent('fc:donate:close'));
   }
+
   document.addEventListener('click', (e) => {
     if (e.target.closest('[data-open-donate-modal]')) { e.preventDefault(); openModal(); }
     if (e.target.closest('[data-close]'))            { e.preventDefault(); closeModal(); }
   });
   dlg.addEventListener('click', (e)=>{ if (e.target === dlg) closeModal(); });
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && dlg.open) closeModal(); });
+  dlg.addEventListener('close', ScrollGuard.unlock);
+  dlg.addEventListener('cancel', (e)=>{ e.preventDefault(); closeModal(); });
+
+  // Observer failsafe (unlock if dialog toggled externally)
+  new MutationObserver(() => { if (!dlg.open || dlg.classList.contains('closed')) ScrollGuard.unlock(); })
+    .observe(dlg, { attributes: true, attributeFilter: ['open','class'] });
 
   // Public API
   window.openDonationModal = (opts)=> openModal(opts||{});
 
   // -------------- Stripe (Card + Payment Request) --------------
-  let stripe, elements, card, pr, prButton;
+  let stripe, elements, card, pr, prButton, stripeReady = false;
   const CARD_EL   = document.getElementById('card-element');
   const PRB_MOUNT = document.getElementById('payment-request-button');
 
   async function ensureStripe(){
-    if (!window.Stripe) return null;
-    if (stripe) return stripe;
-    // create a lightweight PI to get publishable key back (server should return it)
+    if (!window.Stripe){
+      showErr('Card payments are currently unavailable. Please try PayPal or later.');
+      return null;
+    }
+    if (stripeReady) return stripe;
+
+    // bootstrap with a lightweight PI to receive publishable key
     const { total } = getAmount();
-    const res = await fetch(ENDPOINTS.stripeIntent, {
-      method: 'POST',
-      headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
-      body: JSON.stringify({ amount: total })
-    });
-    const data = await res.json().catch(()=>({}));
-    if (!res.ok || !data.client_secret || !data.publishable_key) throw new Error(data.error?.message || 'Stripe init failed');
-    stripe = Stripe(data.publishable_key);
-    elements = stripe.elements();
-    card = elements.create('card', { hidePostalCode: true });
-    card.mount(CARD_EL);
-    setupPaymentRequest();
-    return stripe;
+    let res, data;
+    try{
+      res = await fetch(ENDPOINTS.stripeIntent, {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        body: JSON.stringify({ amount: total })
+      });
+      data = await res.json().catch(()=>({}));
+      if (!res.ok || !data.client_secret || !data.publishable_key) throw 0;
+    } catch {
+      showErr('Unable to initialize card payments right now.');
+      return null;
+    }
+
+    try{
+      stripe = Stripe(data.publishable_key);
+      elements = stripe.elements();
+      if (!card){
+        card = elements.create('card', { hidePostalCode: true });
+        card.mount(CARD_EL);
+      }
+      await setupPaymentRequest(); // harmless if unavailable
+      stripeReady = true;
+      return stripe;
+    }catch{
+      showErr('Card entry failed to load.');
+      return null;
+    }
   }
 
   async function createPI(){
@@ -369,7 +431,7 @@
     });
     const data = await res.json().catch(()=>({}));
     if (!res.ok || !data.client_secret) throw new Error(data.error?.message || 'Payment failed');
-    if (!stripe) stripe = Stripe(data.publishable_key);
+    if (!stripe && data.publishable_key) stripe = Stripe(data.publishable_key);
     return data.client_secret;
   }
 
@@ -378,14 +440,15 @@
     const { base, total } = getAmount();
     if (!isFinite(total) || total < MIN) { showErr(`Minimum is $${MIN}.`); return; }
     try {
-      await ensureStripe();
+      const s = await ensureStripe();
+      if (!s) return;
       const clientSecret = await createPI();
       const billing_details = {
         name: nameI.value || undefined,
         email: mailI.value || undefined
       };
       setBusy(true);
-      const { error: se } = await stripe.confirmCardPayment(clientSecret, {
+      const { error: se } = await s.confirmCardPayment(clientSecret, {
         payment_method: { card, billing_details }
       });
       setBusy(false);
@@ -395,33 +458,35 @@
   });
 
   async function setupPaymentRequest(){
-    if (!stripe || !PRB_MOUNT) return;
+    if (!stripe || !PRB_MOUNT || pr) return;
     const { total } = getAmount();
-    pr = stripe.paymentRequest({
-      country:'US', currency:'usd',
-      total:{ label: {{ team_name|tojson if tojson is defined else '"' ~ team_name ~ '"' }}, amount: cents(total) },
-      requestPayerEmail:true, requestPayerName:true
-    });
-    const can = await pr.canMakePayment();
-    if (can) {
-      prbTab?.classList.remove('hidden');
-      const els = elements || stripe.elements();
-      prButton = els.create('paymentRequestButton', { paymentRequest: pr });
-      PRB_MOUNT.innerHTML = '';
-      prButton.mount('#payment-request-button');
-      pr.on('paymentmethod', async (ev) => {
-        try {
-          const clientSecret = await createPI();
-          const { error: se } = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions:false });
-          if (se) { ev.complete('fail'); showErr(se.message || 'Payment failed.'); return; }
-          ev.complete('success');
-          const { error } = await stripe.confirmCardPayment(clientSecret);
-          if (error) { showErr(error.message || 'Payment failed.'); return; }
-          const { base, total } = getAmount();
-          handleSuccess({ amount: base, total });
-        } catch (e){ ev.complete('fail'); showErr(e.message || 'Payment failed.'); }
+    try{
+      pr = stripe.paymentRequest({
+        country:'US', currency:'usd',
+        total:{ label: {{ team_name|tojson if tojson is defined else '"' ~ team_name ~ '"' }}, amount: cents(total) },
+        requestPayerEmail:true, requestPayerName:true
       });
-    }
+      const can = await pr.canMakePayment();
+      if (can) {
+        prbTab?.classList.remove('hidden');
+        const els = elements || stripe.elements();
+        prButton = els.create('paymentRequestButton', { paymentRequest: pr });
+        PRB_MOUNT.innerHTML = '';
+        prButton.mount('#payment-request-button');
+        pr.on('paymentmethod', async (ev) => {
+          try {
+            const clientSecret = await createPI();
+            const { error: se } = await stripe.confirmCardPayment(clientSecret, { payment_method: ev.paymentMethod.id }, { handleActions:false });
+            if (se) { ev.complete('fail'); showErr(se.message || 'Payment failed.'); return; }
+            ev.complete('success');
+            const { error } = await stripe.confirmCardPayment(clientSecret);
+            if (error) { showErr(error.message || 'Payment failed.'); return; }
+            const { base, total } = getAmount();
+            handleSuccess({ amount: base, total });
+          } catch (e){ ev.complete('fail'); showErr(e.message || 'Payment failed.'); }
+        });
+      }
+    }catch{ /* ignore */ }
   }
 
   // -------------- PayPal (Orders v2) --------------
@@ -463,7 +528,10 @@
       // Optimistic meter bump (raise by amount; downstream can reconcile)
       window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised: amount } }));
       noteI.value = '';
-      setTimeout(() => { successBox.classList.add('hidden'); try{ dlg.close?.(); }catch{} document.body.style.overflow=''; }, 1100);
+      setTimeout(() => {
+        successBox.classList.add('hidden');
+        closeModal();
+      }, reduceMotion ? 200 : 1100);
     } catch {}
   }
 

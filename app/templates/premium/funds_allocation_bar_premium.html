@@ -35,7 +35,7 @@
   data-default='{{ default_alloc|tojson }}'
   data-initial='{{ {"raised": raised, "goal": goal}|tojson }}'
   role="region" aria-labelledby="{{ _alloc_id }}-title" aria-live="polite">
-  <style nonce="{{ NONCE }}" nonce="{{ NONCE }}">
+  <style nonce="{{ NONCE }}">
     /* ===== Scope: #{{ _alloc_id }} ===== */
     #{{ _alloc_id }} .wrap{max-width:72rem;margin:0 auto;padding:.75rem 1rem;display:grid;gap:.5rem}
     #{{ _alloc_id }} .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem}
@@ -88,7 +88,7 @@
   </div>
 </section>
 
-<script nonce="{{ csp_nonce() if csp_nonce is defined else '' }}">
+<script nonce="{{ NONCE }}">
 (() => {
   const id = "{{ _alloc_id }}";
   const root = document.getElementById(id); if (!root || root.__init) return; root.__init = true;

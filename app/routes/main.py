@@ -305,6 +305,32 @@ def become_sponsor():
         return render_template("become_sponsor.html", form=form), 400
 
     return render_template("become_sponsor.html", form=form)
+    
+# ── Static Pages ───────────────────────────────────────────────────
+
+@bp.get("/about")
+def about():
+    """About & Mission page."""
+    try:
+        context: Dict[str, Any] = dict(
+            team=TEAM_CONFIG,
+            about=_generate_about_section(TEAM_CONFIG),
+            mission=_generate_mission_section(TEAM_CONFIG, _generate_impact_stats(TEAM_CONFIG)),
+            faqs=[
+                {"q": "What’s our mission?", "a": "To shape leaders, scholars, and athletes in our community."},
+                {"q": "How are funds used?", "a": "Gym time, travel, uniforms, tutoring — always updated live."},
+            ],
+        )
+        resp = make_response(render_template("about.html", **context))
+        resp.cache_control.no_cache = True
+        resp.cache_control.no_store = True
+        resp.cache_control.must_revalidate = True
+        resp.set_etag(sha1(str(context).encode("utf-8")).hexdigest()[:12])
+        return resp
+    except Exception:
+        current_app.logger.exception("ℹ️ Error rendering About page")
+        return render_template("error.html", message="About page temporarily unavailable."), 500
+
 
 @bp.get("/sponsors")
 def sponsor_list():

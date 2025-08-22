@@ -1,53 +1,61 @@
 {
   "type": "module",
   "private": true,
+  "name": "connectatx-fundraiser",
+  "version": "1.0.0",
+  "description": "Production-ready Flask app for Connect ATX Elite, featuring: - Modular app factory pattern - SQLAlchemy ORM & migrations - Flask-SocketIO for realtime - TailwindCSS & modular partials - Clean blueprints for API, SMS, and more",
   "engines": {
     "node": ">=18.0.0"
   },
   "scripts": {
+    "preinstall": "node -e \"const v=process.versions.node.split('.')[0]; if(+v<18){console.error('Node >= 18 required'); process.exit(1)}\"",
     "dev": "npm-run-all --parallel css:dev js:watch serve:flask",
     "preview": "npm-run-all --parallel preview:css preview:js preview:flask",
     "serve:flask": "cross-env FLASK_APP=app:create_app FLASK_ENV=development flask run --reload",
     "preview:flask": "flask run --reload --debugger",
     "build": "npm run lint && npm run format && npm run css:build && npm run js:build:prod && npm run css:verify",
     "build:fast": "npm run css:build && npm run js:build:prod && npm run css:verify",
+    "start": "npm run preview",
     "css:build": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/tailwind.min.css --minify",
     "css:dev": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/tailwind.min.css -w",
     "css:verify": "node scripts/check_css.js",
-    "preview:css": "tailwindcss -i app/static/css/input.css --minify --watch --config tailwind.config.cjs | browser-sync start --server 'app/static' --files 'app/static/css/tailwind.min.css'",
+    "lhci:collect": "lhci collect --numberOfRuns=1 --settings.preset=lighthouse:default",
+    "lhci:assert": "lhci assert || true",
+    "preview:css": "tailwindcss -i app/static/css/input.css --minify --watch --config tailwind.config.cjs | browser-sync start --server app/static --files app/static/css/tailwind.min.css",
     "js:build": "node build.js",
     "js:build:dev": "cross-env NODE_ENV=development node build.js",
     "js:build:prod": "cross-env NODE_ENV=production node build.js",
     "js:watch": "cross-env NODE_ENV=development node build.js --watch",
     "preview:js": "esbuild app/static/js/app.entry.js --bundle --format=esm --sourcemap --outfile=app/static/js/main.js --watch --servedir=app/static",
     "lint": "npm-run-all lint:css lint:js lint:html lint:md",
-    "lint:css": "stylelint 'app/static/css/**/*.css' --fix --config stylelint.config.cjs --ignore-path .stylelintignore",
-    "lint:js": "eslint 'app/static/js/**/*.js' --max-warnings=0",
-    "lint:html": "htmlhint --config .htmlhintrc 'app/templates/**/*.html' || true",
+    "lint:css": "stylelint \"app/static/css/**/*.css\" --fix --config stylelint.config.cjs --ignore-path .stylelintignore",
+    "lint:js": "eslint \"app/static/js/**/*.js\" --max-warnings=0",
+    "lint:html": "htmlhint --config .htmlhintrc \"app/templates/**/*.html\" || true",
     "lint:md": "markdownlint README.md \"docs/**/*.md\" \"app/**/*.md\" --ignore-path .markdownlintignore",
-    "lint:css:check": "stylelint 'app/static/css/**/*.css' --config stylelint.config.cjs --ignore-path .stylelintignore",
-    "lint:js:check": "eslint 'app/static/js/**/*.js'",
-    "format": "prettier --write \"**/*.{js,css,html,jinja,jinja2,py,json,md}\"",
-    "format:check": "prettier --check \"**/*.{js,css,html,jinja,jinja2,py,json,md}\"",
-    "audit:deps": "npm outdated || echo '✅ All dependencies up to date!'",
+    "lint:css:check": "stylelint \"app/static/css/**/*.css\" --config stylelint.config.cjs --ignore-path .stylelintignore",
+    "lint:js:check": "eslint \"app/static/js/**/*.js\"",
+    "format": "prettier --write \"**/*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}\"",
+    "format:check": "prettier --check \"**/*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}\"",
+    "audit:deps": "npm outdated || echo \"✅ All dependencies up to date!\"",
     "audit:css": "npm run lint:css:check || true",
     "audit:js": "npm run lint:js:check || true",
     "audit:html": "npm run lint:html || true",
     "audit:md": "npm run lint:md || true",
     "audit:bundle": "source-map-explorer app/static/js/bundle.min.js || true",
     "audit:full": "npm run lint && npm run format:check && npm run audit:css && npm run audit:js && npm run audit:html && npm run audit:md && npm run audit:deps",
-    "clean:dist": "rm -rf .cache dist *.log app/static/css/*.map app/static/js/*.map app/static/js/main.bundle.js",
-    "clean:hard": "rm -rf node_modules .cache dist *.log app/static/css/tailwind.min.css app/static/css/globals.css app/static/css/*.map app/static/js/*.map app/static/js/main.bundle.js",
+    "clean:dist": "rimraf .cache dist *.log \"app/static/css/*.map\" \"app/static/js/*.map\" app/static/js/main.bundle.js",
+    "clean:hard": "rimraf node_modules .cache dist *.log app/static/css/tailwind.min.css app/static/css/globals.css \"app/static/css/*.map\" \"app/static/js/*.map\" app/static/js/main.bundle.js",
     "prepare": "husky install || true",
     "update:browsers": "npx update-browserslist-db@latest",
     "svgo:all": "svgo -f app/static/images --recursive --config=svgo.config.json",
-    "a11y:test": "pa11y-ci 'http://localhost:5000' --config .pa11yci",
-    "a11y:report": "pa11y-ci 'http://localhost:5000' --reporter html --config .pa11yci",
+    "a11y:test": "pa11y-ci \"http://localhost:5000\" --config .pa11yci",
+    "a11y:report": "pa11y-ci \"http://localhost:5000\" --reporter html --config .pa11yci",
+    "security": "npm audit --audit-level=high || true",
+    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags",
+    "release:minor": "npm version minor -m \"chore(release): %s\" && git push --follow-tags",
+    "release:major": "npm version major -m \"chore(release): %s\" && git push --follow-tags",
     "test": "node -e \"process.exit(0)\""
   },
-  "name": "connectatx-fundraiser",
-  "version": "1.0.0",
-  "description": "Production-ready Flask app for Connect ATX Elite, featuring: - Modular app factory pattern - SQLAlchemy ORM & migrations - Flask-SocketIO for realtime - TailwindCSS & modular partials - Clean blueprints for API, SMS, and more",
   "main": ".eslintrc.js",
   "directories": {
     "test": "tests"
@@ -487,7 +495,6 @@
     "once": "^1.4.0",
     "onetime": "^5.1.2",
     "open": "^8.4.2",
-    "opn": "^5.3.0",
     "optionator": "^0.9.4",
     "ora": "^5.4.1",
     "own-keys": "^1.0.1",
@@ -550,8 +557,6 @@
     "postcss-reduce-initial": "^7.0.4",
     "postcss-reduce-transforms": "^7.0.1",
     "postcss-resolve-nested-selector": "^0.1.6",
-    "postcss-safe-parser": "^7.0.1",
-    "postcss-scss": "^4.0.9",
     "postcss-selector-parser": "^6.0.10",
     "postcss-sorting": "^9.1.0",
     "postcss-svgo": "^7.1.0",
@@ -744,6 +749,9 @@
     "@axe-core/playwright": "^4.10.2",
     "@lhci/cli": "^0.13.0",
     "@playwright/test": "^1.54.2",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
     "autoprefixer": "^10.4.21",
     "cssnano": "^7.1.0",
     "eslint": "^9.33.0",
@@ -751,11 +759,38 @@
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-unused-imports": "^4.2.0",
     "htmlhint": "^1.6.3",
+    "lint-staged": "^15.2.10",
     "postcss": "^8.5.6",
+    "postcss-safe-parser": "^6.0.0",
+    "postcss-scss": "^4.0.9",
     "stylelint": "^16.23.1",
     "stylelint-config-standard": "^39.0.0",
-    "tailwindcss": "^4.1.12"
+    "tailwindcss": "^3.4.17"
   },
+  "overrides": {
+    "rimraf": "^5.0.5",
+    "glob": "^10.4.5",
+    "tailwindcss": "^3.4.13"
+  },
+  "lint-staged": {
+    "*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}": [
+      "prettier --write"
+    ],
+    "app/static/css/**/*.css": [
+      "stylelint --fix --config stylelint.config.cjs --ignore-path .stylelintignore"
+    ],
+    "app/static/js/**/*.js": [
+      "eslint --max-warnings=0"
+    ],
+    "app/templates/**/*.html": [
+      "htmlhint --config .htmlhintrc || true"
+    ]
+  },
+  "browserslist": [
+    "defaults",
+    "not IE 11",
+    "maintained node versions"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thelab33/connectatx-fundraiser.git"

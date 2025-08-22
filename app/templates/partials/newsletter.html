@@ -1,311 +1,320 @@
-{# ============================================================================
-   newsletter.html — SV-Prestige "Hoops" (CSP-safe, popup-ready)
-   - Inline growth card + optional modal popup (time / scroll / exit-intent)
-   - Brand via --fc-brand; basketball-court lines + subtle hoop accent
-   - Zero-backend demo until newsletter_endpoint is set
-   - CSRF cookie support; honeypot; a11y modal/focus trap; duplicate guards
-   - LocalStorage keys per team: subscribed + dismissed; debug override: ?debug_newsletter=1
-   ============================================================================ #}
-{% set NONCE        = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set brand_color  = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set team_slug    = team.slug if team and team.slug is defined else 'default' %}
-{% set _uid         = 'nl-' ~ (range(1, 999999)|random) %}
-{% set endpoint     = newsletter_endpoint if newsletter_endpoint is defined else '' %}
-{% set privacy_url  = privacy_url if privacy_url is defined else '' %}
+<dialog
+  id="newsletter-modal"
+  class="fixed inset-0 z-[12000] flex hidden items-center justify-center bg-black/85 backdrop-blur-lg transition-opacity duration-500 opacity-0 pointer-events-none"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="newsletter-title"
+  tabindex="-1"
+>
+  <div
+    id="newsletter-box"
+    class="relative w-[95vw] max-w-sm rounded-3xl bg-zinc-900 p-6 sm:p-8 text-center font-geist text-yellow-100 shadow-2xl ring-4 ring-amber-400/40 ring-offset-4 ring-offset-zinc-900 opacity-0 scale-95 transition-transform duration-300 ease-out"
+    role="document"
+    tabindex="0"
+  >
+    <!-- Close button -->
+    <button
+      id="newsletter-close"
+      aria-label="Close newsletter signup"
+      class="absolute top-3 right-3 z-10 rounded-full bg-black/30 hover:bg-black/60 text-yellow-200 hover:text-yellow-100 w-11 h-11 flex items-center justify-center focus:ring-4 ring-amber-400 focus:outline-none"
+      type="button"
+    >
+      <span aria-hidden="true" class="text-3xl select-none">&times;</span>
+    </button>
 
-{# --- Popup triggers (override in view if you like) --- #}
-{% set nl_auto_ms      = nl_auto_ms|default(9000) %}
-{% set nl_scroll_pct   = nl_scroll_pct|default(55) %}
-{% set nl_exit_intent  = nl_exit_intent|default(true) %}
-{% set nl_disable_popup= nl_disable_popup|default(false) %}
-
-<section id="newsletter" data-ui="newsletter"
-         class="relative py-14 px-6 md:py-18 md:px-10"
-         style="--fc-brand: {{ brand_color }}; --fc-brand-200: color-mix(in srgb, {{ brand_color }} 22%, transparent)">
-  <style nonce="{{ NONCE }}">
-    /* ===== scoped to #newsletter ===== */
-    #newsletter{
-      position: relative;
-      background:
-        repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px, transparent 1px 80px),
-        repeating-linear-gradient(0deg,  rgba(255,255,255,.03) 0 1px, transparent 1px 80px),
-        radial-gradient(80% 120% at 50% -10%, color-mix(in srgb, var(--fc-brand) 10%, transparent), transparent 60%),
-        linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,0));
-      border-block: 1px solid color-mix(in srgb, var(--fc-brand) 18%, transparent);
-      overflow: clip;
-    }
-    #newsletter .wrap { max-width: 64rem; margin: 0 auto; text-align: center; }
-
-    /* Inline card */
-    #newsletter .card {
-      display:grid; gap: .9rem; justify-items:center; padding: 1.25rem 1.35rem;
-      background:
-        radial-gradient(120% 140% at 50% -40%, color-mix(in srgb, var(--fc-brand) 10%, transparent), transparent 60%),
-        linear-gradient(135deg, var(--fc-brand-200), rgba(255,255,255,.04));
-      border: 1px solid var(--fc-brand-200); border-radius: 1.25rem;
-      box-shadow: 0 18px 60px color-mix(in srgb, var(--fc-brand) 14%, transparent), inset 0 0 40px color-mix(in srgb, var(--fc-brand) 7%, transparent);
-      position: relative; overflow: hidden;
-    }
-    #newsletter .title { font-weight: 900; letter-spacing: .2px; }
-    #newsletter .sub { opacity:.86 }
-    #newsletter .form { display:flex; flex-wrap:wrap; gap:.6rem; margin-top:.9rem; align-items:stretch; justify-content:center; }
-    #newsletter .email {
-      flex:1 1 18rem; min-width:14rem; background: rgba(0,0,0,.45);
-      border:1px solid color-mix(in srgb, var(--fc-brand) 28%, transparent);
-      border-radius:.9rem; padding:.95rem 1rem; color:#fff; outline:none;
-      box-shadow:0 0 0 1px rgba(255,255,255,.06) inset; transition:border-color .2s ease;
-    }
-    #newsletter .email::placeholder{ color: rgba(255,255,255,.55) }
-    #newsletter .email:focus{ border-color: var(--fc-brand); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fc-brand) 30%, transparent); }
-    #newsletter .submit{
-      display:inline-flex; align-items:center; gap:.5rem;
-      background: var(--fc-brand); color:#111; font-weight:900; border-radius:.9rem; padding:.95rem 1.15rem;
-      border:1px solid color-mix(in srgb, var(--fc-brand) 35%, transparent);
-      box-shadow:0 10px 30px color-mix(in srgb, var(--fc-brand) 18%, transparent);
-      transition: transform .15s ease, filter .15s ease, box-shadow .15s ease;
-    }
-    #newsletter .submit:hover{ transform: translateY(-1px); filter: brightness(.98) }
-    #newsletter .submit[disabled]{ opacity:.7; cursor:not-allowed; }
-    #newsletter .spin{ width:1.05em;height:1.05em;border-radius:9999px;border:2px solid #111;border-top-color:transparent;display:inline-block;animation:nl-spin 1s linear infinite; }
-    @keyframes nl-spin { to { transform: rotate(360deg) } }
-    #newsletter .fine{ font-size:.82rem; opacity:.75; }
-    #newsletter .msg { margin-top:.75rem; font-weight:800; min-height: 1.25rem; }
-    #newsletter .ok  { color:#bef264 }  /* lime-300 */
-    #newsletter .bad { color:#fca5a5 }  /* rose-300 */
-    #newsletter .hp  { position:absolute; left:-10000px; width:1px; height:1px; overflow:hidden; }
-
-    /* Little hoop accent (SVG) */
-    #newsletter .hoop{
-      position:absolute; inset:auto -12px -12px auto; width:88px; opacity:.45; transform: rotate(-6deg);
-      filter: drop-shadow(0 2px 12px rgba(0,0,0,.4));
-    }
-
-    /* Modal shell */
-    .nl-modal-backdrop[hidden]{ display:none !important; }
-    .nl-modal-backdrop{
-      position:fixed; inset:0; z-index:9998; background: rgba(0,0,0,.55); backdrop-filter: blur(3px);
-      display:grid; place-items:center; padding: 24px;
-    }
-    .nl-modal{
-      width:min(560px, 92vw); border-radius: 1.25rem; border:1px solid var(--fc-brand-200); overflow:hidden;
-      background: linear-gradient(180deg, rgba(15,15,15,.92), rgba(15,15,15,.98)), linear-gradient(135deg, var(--fc-brand-200), rgba(255,255,255,.04));
-      box-shadow: 0 30px 120px color-mix(in srgb, var(--fc-brand) 20%, transparent), 0 10px 30px rgba(0,0,0,.5);
-      transform: translateY(8px) scale(.98); opacity:0; transition: transform .22s ease, opacity .2s ease;
-    }
-    .nl-modal[data-open]{ transform: none; opacity: 1; }
-    .nl-modal .hdr{
-      display:flex; align-items:center; justify-content:space-between; gap:12px;
-      padding: 14px 16px; border-bottom: 1px solid color-mix(in srgb, var(--fc-brand) 20%, transparent);
-    }
-    .nl-modal .hdr .ttl{ font-weight: 900; font-size: 1.05rem; letter-spacing:.2px; }
-    .nl-modal .xbtn{ appearance:none; border:0; background:transparent; color:#fff; font-size:1.25rem; line-height:1; padding:.25rem; border-radius:.5rem; }
-    .nl-modal .xbtn:hover{ background: rgba(255,255,255,.07); }
-    .nl-modal .body{ padding: 1rem; }
-    .nl-modal .foot{ padding: .6rem 1rem 1rem; }
-    @media (prefers-reduced-motion: reduce){ .nl-modal{ transition:none } .submit{ transition:none } }
-  </style>
-
-  <div class="wrap">
-    <div class="card">
-      <svg class="hoop" viewBox="0 0 120 120" aria-hidden="true">
-        <circle cx="60" cy="40" r="24" fill="none" stroke="white" stroke-opacity=".35" stroke-width="6"/>
-        <path d="M36 60 L84 60 L78 96 L42 96 Z" fill="none" stroke="white" stroke-opacity=".25" stroke-width="4"/>
-        <path d="M42 70 L78 70 M45 80 L75 80 M48 90 L72 90" stroke="white" stroke-opacity=".18" stroke-width="2"/>
-      </svg>
-
-      <h2 class="title text-2xl sm:text-3xl">
-        Join the <span style="color: var(--fc-brand)">Hoops Insider</span> — events, goals & wins
-      </h2>
-      <p class="sub">One or two emails a month. Unsubscribe anytime.</p>
-
-      <form id="{{ _uid }}-form" class="form" method="post"
-            {% if endpoint %} action="{{ endpoint }}" {% else %} action="#" {% endif %}
-            data-endpoint="{{ endpoint }}"
-            data-key="fc:nl:{{ team_slug }}"
-            novalidate>
-        <label for="{{ _uid }}-email" class="sr-only">Email</label>
-        <input id="{{ _uid }}-email" class="email" name="email" type="email" inputmode="email"
-               autocomplete="email" required placeholder="you@email.com" aria-describedby="{{ _uid }}-help" />
-        <input type="text" class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" />
-        <button id="{{ _uid }}-btn" type="submit" class="submit" aria-label="Subscribe to newsletter">
-          <span class="lbl">Subscribe</span>
-          <span class="spin" hidden aria-hidden="true"></span>
-        </button>
-        <div id="{{ _uid }}-msg" class="msg" role="status" aria-live="polite" aria-atomic="true"></div>
-        <p id="{{ _uid }}-help" class="fine">
-          We respect your privacy. No spam.
-          {% if privacy_url %}<a href="{{ privacy_url }}" class="underline" target="_blank" rel="noopener">Privacy</a>{% endif %}
-        </p>
-      </form>
+    <!-- Animated Basketball SVG -->
+    <div
+      class="mx-auto mb-5 flex justify-center cursor-pointer"
+      tabindex="0"
+      role="img"
+      aria-label="Spinning basketball icon"
+    >
+      <span id="newsletter-ball" class="inline-block h-16 w-16" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" class="h-16 w-16 animate-spin-slow" aria-hidden="true">
+          <circle cx="24" cy="24" r="22" fill="#FBBF24" stroke="#F59E0B" stroke-width="3"/>
+          <path d="M24 2v44M2 24h44" stroke="#78350F" stroke-width="2"/>
+          <path d="M10 10c9 9 19 29 28 28M38 10C29 19 9 29 10 38" stroke="#92400E" stroke-width="2"/>
+        </svg>
+      </span>
     </div>
-  </div>
 
-  {# ======== Modal popup (same form experience, shares storage keys) ======== #}
-  <div id="{{ _uid }}-backdrop" class="nl-modal-backdrop" hidden aria-hidden="true">
-    <div id="{{ _uid }}-modal" class="nl-modal" role="dialog" aria-labelledby="{{ _uid }}-ttl" aria-modal="true" tabindex="-1">
-      <div class="hdr">
-        <div id="{{ _uid }}-ttl" class="ttl">Get team updates & exclusive wins</div>
-        <button class="xbtn" type="button" data-close aria-label="Close">✕</button>
+    <!-- Heading & onboarding tooltip -->
+    <h2
+      id="newsletter-title"
+      class="mb-2 text-3xl font-extrabold text-yellow-300 flex flex-col items-center gap-1 tracking-tight relative group"
+    >
+      Stay in the Loop with
+      <span class="text-amber-400" aria-live="polite">
+        {{ team.team_name or "Connect ATX Elite" }}
+      </span>
+      <span
+        class="text-xs font-normal text-amber-200 block max-w-xs absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-yellow-900/90 px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity text-center pointer-events-none select-none"
+        role="tooltip"
+      >
+        Get exclusive updates &amp; help our team shine! ✨
+      </span>
+    </h2>
+
+    <p class="mb-8 text-base opacity-90 max-w-[90%] mx-auto">
+      Get <strong class="font-bold text-yellow-200">exclusive updates, game invites,</strong> and ways to help <strong>{{ team.team_name or "Connect ATX Elite" }}</strong> shine.<br />
+      <span class="font-semibold text-yellow-200">One email a month, no spam.</span>
+    </p>
+
+    <!-- Form -->
+    <form
+      id="newsletter-form"
+      novalidate
+      autocomplete="off"
+      aria-describedby="newsletter-desc"
+      class="relative"
+      role="form"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span id="newsletter-desc" class="sr-only">Email address field and subscribe button</span>
+      <div class="relative flex items-center justify-center w-[90%] mx-auto">
+        <input
+          id="newsletter-email"
+          name="email"
+          type="email"
+          placeholder="your@email.com"
+          required
+          autocomplete="email"
+          class="peer w-full rounded-full bg-yellow-50 py-3 px-5 text-zinc-900 shadow-sm opacity-90 focus:ring-2 focus:ring-yellow-300 outline-none transition"
+          aria-describedby="email-error"
+          aria-required="true"
+          aria-invalid="false"
+          inputmode="email"
+        />
+        <span
+          class="absolute right-5 top-1/2 -translate-y-1/2 text-2xl text-yellow-400 peer-focus:text-amber-500 select-none"
+          aria-hidden="true"
+        >🏀</span>
       </div>
-      <div class="body">
-        {# We keep a second minimal form inside modal to avoid DOM moves; unique ids per _uid #}
-        <form id="{{ _uid }}-mform" class="form" method="post"
-              {% if endpoint %} action="{{ endpoint }}" {% else %} action="#" {% endif %}
-              data-endpoint="{{ endpoint }}"
-              data-key="fc:nl:{{ team_slug }}"
-              novalidate>
-          <label for="{{ _uid }}-memail" class="sr-only">Email</label>
-          <input id="{{ _uid }}-memail" class="email" name="email" type="email" inputmode="email"
-                 autocomplete="email" required placeholder="you@email.com" />
-          <input type="text" class="hp" name="company" tabindex="-1" autocomplete="off" aria-hidden="true" />
-          <button id="{{ _uid }}-mbtn" type="submit" class="submit" aria-label="Subscribe to newsletter">
-            <span class="lbl">Subscribe</span><span class="spin" hidden aria-hidden="true"></span>
-          </button>
-          <div id="{{ _uid }}-mmsg" class="msg" role="status" aria-live="polite" aria-atomic="true"></div>
-        </form>
-      </div>
-      <div class="foot fine">Pro hoops energy. Real community impact.</div>
-    </div>
+
+      <!-- Invite a friend (optional) -->
+      <input
+        id="newsletter-invite"
+        name="invite"
+        type="email"
+        placeholder="Friend’s email (optional)"
+        class="mt-3 w-full rounded-full bg-yellow-50 py-2 px-5 text-zinc-900 opacity-80 shadow-sm"
+        inputmode="email"
+        aria-label="Invite a friend"
+      >
+
+      <!-- Error message -->
+      <p
+        id="email-error"
+        class="mt-2 min-h-[1.25rem] text-sm font-bold text-red-600 sr-only"
+        role="alert"
+        aria-live="assertive"
+      ></p>
+
+      <!-- Submit button -->
+      <button
+        type="submit"
+        class="mt-6 relative overflow-hidden rounded-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-10 py-3 font-bold text-zinc-900 shadow-lg transition-all duration-300 ease-in-out basketball-btn-glow focus-visible:ring-4 focus-visible:ring-yellow-400 active:scale-95"
+        aria-live="polite"
+      >
+        Subscribe
+        <span
+          id="swish-confetti"
+          class="absolute left-1/2 top-1/2 pointer-events-none opacity-0 text-3xl -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700 select-none"
+          aria-hidden="true"
+        >🏆🎉</span>
+      </button>
+
+      <!-- Thank you message -->
+      <p
+        id="newsletter-thankyou"
+        aria-live="polite"
+        class="mt-6 hidden text-lg font-semibold tracking-wide text-cyan-400 animate-pulse select-none"
+      >
+        Swish! Never miss an invite—welcome to the fam!
+      </p>
+
+      <!-- Opt-out button -->
+      <button
+        id="newsletter-nothanks"
+        type="button"
+        class="mt-4 block mx-auto text-sm text-yellow-300 hover:underline focus:underline focus:outline-none select-none"
+        tabindex="0"
+      >
+        No thanks, maybe later
+      </button>
+    </form>
   </div>
+</dialog>
 
-  <script nonce="{{ NONCE }}">
-    (() => {
-      /* ===== duplicate guard ===== */
-      const ID = '{{ _uid }}'; if (window.__nlBound && window.__nlBound[ID]) return;
-      window.__nlBound = window.__nlBound || {}; window.__nlBound[ID] = true;
+<style>
+  #newsletter-modal:not(.hidden) { opacity: 1; pointer-events: auto; transition: opacity 0.4s; }
+  #newsletter-box.animate-popIn { opacity: 1 !important; transform: scale(1) !important; }
+  #newsletter-box.animate-popOut { opacity: 0 !important; transform: scale(0.95) !important; }
+  .animate-spin-slow { animation: spin 3.8s linear infinite; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .ripple-effect { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple 600ms linear forwards; pointer-events: none; background-color: rgba(251,191,36,0.4);}
+  @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+  .bounce-temp { animation: bounce 600ms ease forwards; }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10%); } }
+  #email-error:not(:empty) { display: block !important; }
+  .confetti-piece { position: fixed; width: 8px; height: 8px; border-radius: 2px; opacity: 0.9; pointer-events: none; z-index: 15000; filter: drop-shadow(0 0 1px #fff9) drop-shadow(0 0 2px #facc15aa); animation: confetti-spin 8s linear infinite; }
+  @keyframes confetti-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 
-      const reduce = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-      const force  = /[?&]debug_newsletter=1/.test(location.search);
-      const DISABLE_POPUP = {{ 'true' if nl_disable_popup else 'false' }};
-      const AUTO_MS   = {{ nl_auto_ms|int }};
-      const SCROLL_PCT= {{ nl_scroll_pct|int }};
-      const EXIT_INT  = {{ 'true' if nl_exit_intent else 'false' }};
+<script type="module">
+  (() => {
+    const modal = document.getElementById('newsletter-modal');
+    const box = document.getElementById('newsletter-box');
+    const closeBtn = document.getElementById('newsletter-close');
+    const form = document.getElementById('newsletter-form');
+    const emailInp = document.getElementById('newsletter-email');
+    const friendInp = document.getElementById('newsletter-invite');
+    const errEl = document.getElementById('email-error');
+    const thanksEl = document.getElementById('newsletter-thankyou');
+    const confettiEmoji = document.getElementById('swish-confetti');
+    const noThanks = document.getElementById('newsletter-nothanks');
+    const ball = document.getElementById('newsletter-ball');
+    let lastFocus = null, debounceTimeout = null;
 
-      /* ===== nodes (inline) ===== */
-      const form  = document.getElementById(ID+'-form');
-      const email = document.getElementById(ID+'-email');
-      const btn   = document.getElementById(ID+'-btn');
-      const msg   = document.getElementById(ID+'-msg');
+    const validEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-      /* ===== nodes (modal) ===== */
-      const backdrop = document.getElementById(ID+'-backdrop');
-      const modal    = document.getElementById(ID+'-modal');
-      const mform    = document.getElementById(ID+'-mform');
-      const memail   = document.getElementById(ID+'-memail');
-      const mbtn     = document.getElementById(ID+'-mbtn');
-      const mmsg     = document.getElementById(ID+'-mmsg');
+    function openModal() {
+      lastFocus = document.activeElement;
+      modal.classList.remove('hidden');
+      modal.style.opacity = '1';
+      box.classList.remove('animate-popOut');
+      box.classList.add('animate-popIn');
+      modal.showModal?.();
+      document.body.style.overflow = 'hidden';
+      emailInp.focus();
+      window.dispatchEvent(new CustomEvent('newsletterModalViewed'));
+    }
 
-      /* ===== helpers ===== */
-      const getStoreKey = (el) => el?.dataset?.key || 'fc:nl:default';
-      const subscribed  = (key) => { try { return localStorage.getItem(key)==='1'; } catch { return false; } };
-      const dismissed   = (key) => { try { return sessionStorage.getItem(key+':dismiss')==='1'; } catch { return false; } };
-      const markSub     = (key) => { try { localStorage.setItem(key,'1'); } catch {} };
-      const markDismiss = (key) => { try { sessionStorage.setItem(key+':dismiss','1'); } catch {} };
-      const getCSRF = () => { try { const m=document.cookie.match(/(?:^|; )csrf_token=([^;]+)/); return m?decodeURIComponent(m[1]):''; } catch { return ''; } };
-      const announce = (node, text, ok) => { if(!node) return; node.textContent=text; node.classList.toggle('ok',!!ok); node.classList.toggle('bad',!ok); };
-      const busy = (btn, on) => {
-        if (!btn) return; const spin=btn.querySelector('.spin'), lbl=btn.querySelector('.lbl');
-        if (on) { btn.setAttribute('disabled','true'); if(spin) spin.hidden=false; if(lbl) lbl.textContent='Subscribing…'; }
-        else { btn.removeAttribute('disabled'); if(spin) spin.hidden=true; if(lbl) lbl.textContent='Subscribe'; }
-      };
-      const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v||'');
+    function closeModal() {
+      box.classList.remove('animate-popIn');
+      box.classList.add('animate-popOut');
+      modal.style.opacity = '0';
+      setTimeout(() => {
+        modal.close?.();
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        errEl.textContent = '';
+        errEl.classList.add('sr-only');
+        thanksEl.classList.add('hidden');
+        form.reset();
+        confettiEmoji.style.opacity = 0;
+        emailInp.disabled = false;
+        form.querySelector('button[type="submit"]').classList.remove('opacity-60', 'pointer-events-none');
+        lastFocus?.focus();
+      }, 350);
+    }
 
-      /* ===== core submit (shared) ===== */
-      function bindForm(scope){
-        const f=scope.form, em=scope.email, b=scope.btn, m=scope.msg;
-        const endpoint = f?.dataset?.endpoint || '';
-        const storeKey = getStoreKey(f);
-        // Respect prior success
-        if (!force && subscribed(storeKey)) {
-          if (em) em.disabled = true; if (b) b.disabled = true;
-          announce(m, 'You’re on the list — thank you! 💛', true);
+    emailInp.addEventListener('input', () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        const val = emailInp.value.trim();
+        if (!val) {
+          errEl.textContent = '';
+          emailInp.setAttribute('aria-invalid', 'false');
+        } else if (!validEmail(val)) {
+          errEl.textContent = 'Please enter a valid email address.';
+          errEl.classList.remove('sr-only');
+          emailInp.setAttribute('aria-invalid', 'true');
+        } else {
+          errEl.textContent = '';
+          errEl.classList.add('sr-only');
+          emailInp.setAttribute('aria-invalid', 'false');
         }
-        f?.addEventListener('submit', async (e)=>{
-          e.preventDefault(); if(!f||!em||!b) return;
-          const hp = f.querySelector('.hp'); if (hp && hp.value){ announce(m,'You’re in! (Thanks)',true); f.reset(); return; }
-          const val = (em.value||'').trim(); if (!validEmail(val)){ em.setAttribute('aria-invalid','true'); announce(m,'Please enter a valid email.',false); return; }
-          em.removeAttribute('aria-invalid');
-          // Demo path
-          if (!endpoint){
-            busy(b,true);
-            setTimeout(()=>{ busy(b,false); announce(m,'You’re in! Check your inbox for a welcome note. (Demo)',true);
-              markSub(storeKey); try { f.reset(); } catch {}
-              window.dispatchEvent(new CustomEvent('fc:newsletter:subscribed',{ detail:{ email: val, demo:true }}));
-              closeModal(); }, 480);
-            return;
-          }
-          // Real fetch
-          busy(b,true);
-          try{
-            const r = await fetch(endpoint,{
-              method:'POST', credentials:'same-origin',
-              headers:{ 'Content-Type':'application/json', 'Accept':'application/json', 'X-Requested-With':'XMLHttpRequest', 'X-CSRFToken': getCSRF() },
-              body: JSON.stringify({ email: val, page_url: location.href, referrer: document.referrer || null, team: '{{ team_slug }}', ts: Date.now() })
-            });
-            if (r.ok){
-              announce(m,'You’re in! Check your inbox for a welcome note.',true);
-              markSub(storeKey); try { f.reset(); } catch {}
-              window.dispatchEvent(new CustomEvent('fc:newsletter:subscribed',{ detail:{ email: val }}));
-              closeModal();
-            } else {
-              announce(m, (r.status===409?'You’re already subscribed — thank you!': (r.status===400?'That email doesn’t look valid.':'Could not subscribe right now. Please try again.')) , r.status===409);
-            }
-          }catch{ announce(m,'Network error. Please try again.',false); }
-          finally{ busy(b,false); }
-        });
+      }, 400);
+    });
+
+    if (!sessionStorage.getItem('newsletter_shown') && !sessionStorage.getItem('newsletter_optout')) {
+      setTimeout(() => { openModal(); sessionStorage.setItem('newsletter_shown', '1'); }, 10000);
+    }
+
+    closeBtn.addEventListener('click', closeModal);
+    noThanks.addEventListener('click', e => {
+      e.preventDefault();
+      sessionStorage.setItem('newsletter_optout', '1');
+      closeModal();
+      window.dispatchEvent(new CustomEvent('newsletterModalOptout'));
+    });
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+    modal.addEventListener('keydown', e => {
+      if (e.key !== 'Tab') return;
+      const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    form.querySelector('button[type="submit"]').addEventListener('click', e => {
+      const btn = e.currentTarget;
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-effect';
+      btn.appendChild(ripple);
+      const rect = btn.getBoundingClientRect();
+      ripple.style.left = `${e.clientX - rect.left}px`;
+      ripple.style.top = `${e.clientY - rect.top}px`;
+      setTimeout(() => ripple.remove(), 600);
+    });
+
+    ball.addEventListener('click', () => {
+      ball.classList.add('bounce-temp');
+      setTimeout(() => ball.classList.remove('bounce-temp'), 600);
+    });
+    ball.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ball.click(); } });
+
+    function launchConfetti() {
+      const confettiCount = 24;
+      const colors = ['#FBBF24', '#FACC15', '#FFD700', '#FFC107', '#FFEB3B'];
+      const btn = form.querySelector('button[type="submit"]');
+      const rect = btn.getBoundingClientRect();
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = `${rect.left + rect.width / 2}px`;
+        confetti.style.top = `${rect.top + rect.height / 2}px`;
+        document.body.appendChild(confetti);
+        const angle = Math.random() * 2 * Math.PI;
+        const velocity = Math.random() * 120 + 50;
+        confetti.animate([
+          { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+          { transform: `translate(${Math.cos(angle) * velocity}px, ${Math.sin(angle) * velocity}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+        ], { duration: 1500, easing: 'ease-out', fill: 'forwards' });
+        setTimeout(() => confetti.remove(), 1600);
       }
+    }
 
-      /* ===== modal controls + triggers ===== */
-      let lastFocus=null; let opened=false;
-      function openModal(){
-        if (DISABLE_POPUP) return;
-        const key=getStoreKey(form||mform);
-        if (!force && (subscribed(key) || dismissed(key))) return;
-        if (opened) return; opened = true;
-        backdrop?.removeAttribute('hidden'); backdrop?.setAttribute('aria-hidden','false');
-        modal?.setAttribute('data-open',''); lastFocus = document.activeElement;
-        (memail || email)?.focus?.();
-        document.body.style.overflow='hidden';
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const email = emailInp.value.trim(), invite = friendInp.value.trim();
+      if (!validEmail(email)) {
+        errEl.textContent = 'Please enter a valid email address.';
+        errEl.classList.remove('sr-only');
+        box.classList.add('ring-red-400');
+        setTimeout(() => box.classList.remove('ring-red-400'), 600);
+        return;
       }
-      function closeModal(){
-        if (!opened) return;
-        const key=getStoreKey(form||mform);
-        try { markDismiss(key); } catch {}
-        modal?.removeAttribute('data-open');
-        backdrop?.setAttribute('aria-hidden','true'); backdrop?.setAttribute('hidden','');
-        document.body.style.overflow='';
-        opened=false; lastFocus?.focus?.();
-      }
+      errEl.classList.add('sr-only');
+      emailInp.disabled = true;
+      form.querySelector('button[type="submit"]').classList.add('opacity-60', 'pointer-events-none');
+      confettiEmoji.style.opacity = 1;
+      form.querySelector('button[type="submit"]').classList.add('animate-bounce');
+      setTimeout(() => form.querySelector('button[type="submit"]').classList.remove('animate-bounce'), 900);
 
-      backdrop?.addEventListener('click', (e)=>{ if (e.target===backdrop) closeModal(); });
-      modal?.querySelector('[data-close]')?.addEventListener('click', closeModal);
-      document.addEventListener('keydown', (e)=>{ if(e.key==='Escape' && opened) closeModal(); });
-
-      // Expose a public opener
-      window.FC = Object.assign({}, window.FC||{}, { newsletter:{ open: openModal, close: closeModal }});
-      document.addEventListener('click',(e)=>{
-        const t=e.target.closest('[data-open-newsletter]'); if(t){ e.preventDefault(); openModal(); }
-      }, { capture:true });
-
-      // Triggers (only if not already subscribed/dismissed)
-      if (!DISABLE_POPUP && (force || !(subscribed(getStoreKey(form||mform)) || dismissed(getStoreKey(form||mform))))){
-        if (AUTO_MS>0){ setTimeout(()=>openModal(), AUTO_MS); }
-        if (SCROLL_PCT>0){
-          const onScroll=()=>{
-            const pct = (scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight))*100;
-            if (pct >= SCROLL_PCT){ openModal(); removeEventListener('scroll', onScroll, { passive:true }); }
-          }; addEventListener('scroll', onScroll, { passive:true });
-        }
-        if (EXIT_INT && !reduce){
-          const onLeave=(e)=>{ if(e.clientY<=0){ openModal(); removeEventListener('mouseout', onLeave); } };
-          addEventListener('mouseout', onLeave);
-        }
-      }
-
-      // Bind both forms
-      bindForm({ form, email, btn, msg });
-      bindForm({ form: mform, email: memail, btn: mbtn, msg: mmsg });
-    })();
-  </script>
-</section>
-
+      // API placeholder — replace with your backend call
+      setTimeout(() => {
+        thanksEl.classList.remove('hidden');
+        launchConfetti();
+        window.dispatchEvent(new CustomEvent('newsletterSubscribed', { detail: { email, invite } }));
+        setTimeout(closeModal, 1700);
+        confettiEmoji.style.opacity = 0;
+      }, 950);
+    });
+  })();
+</script>

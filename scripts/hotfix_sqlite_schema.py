@@ -1,49 +1,53 @@
-import sqlite3, os, sys
-DB = os.path.join(os.path.dirname(__file__), "..", "app", "data", "app.db")
-DB = os.path.abspath(DB)
+#!/usr/bin/env python3
+"""
+hotfix_sqlite_schema.py — Safe schema patcher for FundChamps SQLite DB.
+Run this to add missing columns or adjust schema without nuking data.
+"""
 
-def col_exists(cur, table, col):
-    cur.execute("PRAGMA table_info(%s)" % table)
-    return any(r[1] == col for r in cur.fetchall())
+import sqlite3
+from pathlib import Path
 
-def table_empty(cur, table):
-    cur.execute(f"SELECT COUNT(*) FROM {table}")
-    return cur.fetchone()[0] == 0
+DB_PATH = Path("app/data/app.db")
 
-def main():
-    print(f"[hotfix] DB: {DB}")
-    con = sqlite3.connect(DB)
-    cur = con.cursor()
+# List of patches: (table, column, SQL)
+PATCHES = [
+    (
+        "campaign_goals",
+        "total",
+        "ALTER TABLE campaign_goals ADD COLUMN total INTEGER DEFAULT 0",
+    ),
+    # Add future patches here as tuples
+]
 
-    # sponsors.status
-    if not col_exists(cur, "sponsors", "status"):
-        print("[hotfix] Adding sponsors.status (TEXT DEFAULT 'approved')")
-        cur.execute("ALTER TABLE sponsors ADD COLUMN status TEXT DEFAULT 'approved'")
+def apply_patches():
+    if not DB_PATH.exists():
+        print(f"❌ DB not found: {DB_PATH}")
+        return
 
-    # sponsors.deleted
-    if not col_exists(cur, "sponsors", "deleted"):
-        print("[hotfix] Adding sponsors.deleted (INTEGER DEFAULT 0)")
-        cur.execute("ALTER TABLE sponsors ADD COLUMN deleted INTEGER DEFAULT 0")
+    conn = sqlite3.connect(DB_PATH)
+    c = conn.cursor()
 
-    # campaign_goals.uuid
-    if not col_exists(cur, "campaign_goals", "uuid"):
-        print("[hotfix] Adding campaign_goals.uuid (TEXT)")
-        cur.execute("ALTER TABLE campaign_goals ADD COLUMN uuid TEXT")
+    for table, column, sql in PATCHES:
+        try:
+            # Check if column exists
+            c.execute(f"PRAGMA table_info({table});")
+            cols = [row[1] for row in c.fetchall()]
+            if column in cols:
+                print(f"ℹ️ {table}.{column} already exists, skipping")
+                continue
 
-    con.commit()
+            # Apply patch
+            print(f"➕ Adding {table}.{column} …")
+            c.execute(sql)
+            print(f"✅ Added {table}.{column}")
 
-    # Ensure one active goal exists
-    # If table has zero rows, insert a default active row.
-    if table_empty(cur, "campaign_goals"):
-        print("[hotfix] Seeding default active campaign goal (goal_amount=10000, total=0)")
-        cur.execute("""
-            INSERT INTO campaign_goals (uuid, goal_amount, total, active, created_at, updated_at, deleted)
-            VALUES ('seed-default', 10000, 0, 1, datetime('now'), datetime('now'), 0)
-        """)
-        con.commit()
+        except Exception as e:
+            print(f"⚠️ Error while patching {table}.{column}: {e}")
 
-    print("[hotfix] Done.")
-    con.close()
+    conn.commit()
+    conn.close()
+    print("🎉 Schema hotfix complete.")
 
 if __name__ == "__main__":
-    main()
+    apply_patches()
+

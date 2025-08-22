@@ -10,6 +10,27 @@
 {% set brand_color     = (team.theme_color if team and team.theme_color else '#facc15') %}
 {% set stats_url       = stats_url|default('/stats') %}
 {% set personas        = personas if personas is defined else ['Sponsor','Parent','Coach'] %}
+{% set contact_email   = contact_email if contact_email is defined and contact_email else 'hello@example.com' %}
+{% set include_faq_jsonld = include_faq_jsonld if include_faq_jsonld is defined else true %}
+
+{# --- Embedded FAQ KB (used for instant client-side answers) --- #}
+{% set faqs = faqs if faqs is defined and faqs else [
+  {"q":"Is my gift tax-deductible?",
+   "a":"**Yes.** Your contribution is made to our program and may be tax-deductible to the extent allowed by law. You’ll automatically receive an emailed receipt for your records.",
+   "k":["tax","deductible","write off","501","receipt"]},
+  {"q":"Where does my sponsorship go?",
+   "a":"**100%** supports gym rental, tournament travel, uniforms/gear, and academic tutoring. Our funds allocation bar updates in real time on this page.",
+   "k":["where","money","go","allocation","use of funds","transparency"]},
+  {"q":"Can I sponsor anonymously?",
+   "a":"**Absolutely.** Choose *anonymous* during checkout or tell us and we’ll omit your name/logo from public listings.",
+   "k":["anonymous","privacy","hide","name","logo"]},
+  {"q":"Do you support employer matching?",
+   "a":"**Yes.** Many sponsors double impact with employer matching. After checkout we send a receipt with the details your HR portal needs.",
+   "k":["employer match","company match","matching","double"]},
+  {"q":"Refunds or cancellations?",
+   "a":"If an event is cancelled or you donated in error, email **{{ contact_email }}** and we’ll make it right.",
+   "k":["refund","cancel","charge","mistake","error"]}
+] %}
 
 <!-- Floating Button -->
 <button
@@ -39,6 +60,7 @@
   data-stats-url="{{ stats_url }}"
   data-personas='{{ personas | tojson if tojson is defined else "[\"Sponsor\",\"Parent\",\"Coach\"]" }}'
   data-suggestions='["What’s our fundraising goal?","How do I become a sponsor?","When is the next event?","Where does my donation go?"]'
+  data-faqs='{{ faqs|tojson }}'
 >
   <div
     class="w-[92vw] min-w-[330px] max-w-lg rounded-2xl border border-yellow-400/20 bg-zinc-950 text-zinc-100 shadow-2xl"
@@ -100,7 +122,7 @@
         required
         inputmode="text"
         autocomplete="off"
-        placeholder="Type your question… (try /help)"
+        placeholder="Type your question… (try /faq or /help)"
         aria-required="true"
         class="flex-1 rounded-lg border border-yellow-400/30 bg-black/50 px-3 py-2 outline-none focus:ring-2 focus:ring-yellow-300"
       />
@@ -111,6 +133,21 @@
     <p id="ai-offline" class="hidden px-4 pb-3 text-xs text-amber-300" role="status">Offline — messages will queue and send when you’re back online.</p>
   </div>
 </dialog>
+
+{# Optional hidden SEO payload for “People Also Ask” without on-page FAQ block #}
+{% if include_faq_jsonld and faqs and faqs|length > 0 %}
+  <script type="application/ld+json" nonce="{{ NONCE }}">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {% for item in faqs %}
+      { "@type":"Question", "name": {{ item.q|tojson }}, "acceptedAnswer": { "@type":"Answer", "text": {{ item.a|tojson }} } }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+  </script>
+{% endif %}
 
 <style nonce="{{ NONCE }}">
   #ai-concierge{opacity:1;pointer-events:auto;transition:opacity .22s cubic-bezier(.4,0,.2,1)}
@@ -152,6 +189,7 @@
   const STATS_URL  = dlg.getAttribute('data-stats-url') || '/stats';
   const SUGGESTIONS= (()=>{ try { return JSON.parse(dlg.getAttribute('data-suggestions')||'[]'); } catch { return []; } })();
   const PERSONAS   = (()=>{ try { return JSON.parse(dlg.getAttribute('data-personas')||'[]'); } catch { return ['Sponsor','Parent','Coach']; } })();
+  const FAQS       = (()=>{ try { return JSON.parse(dlg.getAttribute('data-faqs')||'[]'); } catch { return []; } })();
 
   const STORAGE_KEY = `fc:ai:thread:${TEAM_ID}`;
   const QUEUE_KEY   = `fc:ai:queue:${TEAM_ID}`;
@@ -216,14 +254,15 @@
     announce(`Persona set to ${currentPersona}`);
   });
 
-  // Suggestions (trending)
+  // Suggestions (merge base + FAQ Qs, trend-weighted, dedup)
   function getTrends(){ try { const t = JSON.parse(localStorage.getItem(TRENDS_KEY)||'{}'); return t && typeof t==='object' ? t : {}; } catch{ return {}; } }
   function bumpTrend(text){ try { const t = getTrends(); t[text] = (t[text]||0)+1; localStorage.setItem(TRENDS_KEY, JSON.stringify(t)); } catch{} }
   function renderSuggestions(list){
+    const base = new Set([...(list||SUGGESTIONS), ...FAQS.map(f=>f.q)]);
+    const all = Array.from(base);
     const trends = getTrends();
-    const base = (list||SUGGESTIONS).slice();
-    base.sort((a,b)=>(trends[b]||0)-(trends[a]||0));
-    suggEl.innerHTML = base.map(t=>`<button type="button" class="rounded-full px-3 py-1 text-xs text-yellow-200 hover:bg-yellow-300/20">${escapeHtml(t)}</button>`).join('');
+    all.sort((a,b)=>(trends[b]||0)-(trends[a]||0));
+    suggEl.innerHTML = all.slice(0,10).map(t=>`<button type="button" class="rounded-full px-3 py-1 text-xs text-yellow-200 hover:bg-yellow-300/20">${escapeHtml(t)}</button>`).join('');
   }
   renderSuggestions();
   suggEl.addEventListener('click', (e)=>{ const b = e.target.closest('button'); if(!b) return; const txt = b.textContent.trim(); bumpTrend(txt); input.value = txt; send.disabled=false; form.requestSubmit?.(); });
@@ -314,12 +353,6 @@
     inp.click();
   });
 
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && !dlg.classList.contains('closed')) { e.preventDefault(); closeModal(); }
-    if ((e.metaKey || e.ctrlKey) && e.key === '/') { e.preventDefault(); dlg.classList.contains('closed') ? openModal() : closeModal(); }
-  });
-
   // Streaming writer (SSE via fetch)
   async function streamTo(resp, outEl, controller) {
     const reader = resp.body.getReader();
@@ -341,6 +374,34 @@
     }
   }
 
+  // ---- FAQ matcher (instant, client-side) ---------------------------------
+  const normalize = s => String(s||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').replace(/\s+/g,' ').trim();
+  const tokenize  = s => normalize(s).split(' ').filter(Boolean);
+  function scoreFAQ(q, item){
+    const qt = tokenize(q); const qi = new Set(qt);
+    const k  = (item.k||[]).map(normalize);
+    let score = 0;
+    // keyword overlaps
+    for (const kw of k){ if (qi.has(kw)) score += 3; }
+    // question token overlap (soft)
+    const it = new Set(tokenize(item.q));
+    let hits = 0; for (const t of it){ if (qi.has(t)) hits++; }
+    score += Math.min(3, hits);
+    // substring
+    if (normalize(q).includes(normalize(item.q).slice(0,18))) score += 2;
+    return score;
+  }
+  function matchFAQ(q){
+    if (!FAQS.length) return null;
+    let best = null, bestScore = 0;
+    for (const item of FAQS){
+      const s = scoreFAQ(q, item);
+      if (s > bestScore){ best = item; bestScore = s; }
+    }
+    // threshold tuned to avoid false positives
+    return bestScore >= 4 ? best : null;
+  }
+
   // Slash commands
   function trySlash(message){
     const m = message.trim();
@@ -348,8 +409,13 @@
     const cmd = m.split(/\s+/)[0].toLowerCase();
     if (cmd === '/donate' || cmd === '/sponsor') { window.openDonationModal?.(); window.location.hash = '#tiers'; return true; }
     if (cmd === '/schedule') { window.location.hash = '#program-stats-calendar'; return true; }
+    if (cmd === '/faq') {
+      const list = FAQS.map(f=>`• ${escapeHtml(f.q)}`).join('<br>');
+      appendHTML(`<p><strong>AI:</strong> Here are common questions:<br>${list}<br><em>Tip:</em> click a chip below or type your question.</p>`);
+      saveThread(); return true;
+    }
     if (cmd === '/help') {
-      appendHTML(`<p><strong>AI:</strong> Commands: <code>/donate</code>, <code>/sponsor</code>, <code>/schedule</code>, <code>/help</code>. Personas: ${PERSONAS.join(', ')}.</p>`);
+      appendHTML(`<p><strong>AI:</strong> Commands: <code>/donate</code>, <code>/sponsor</code>, <code>/schedule</code>, <code>/faq</code>, <code>/help</code>. Personas: ${PERSONAS.join(', ')}.</p>`);
       saveThread(); return true;
     }
     return false;
@@ -382,6 +448,16 @@
 
     // Minimal client pre-check (PII nudge)
     if (hasPII(trimmed)) { const ok = confirm('Your message looks like it includes contact info (email/phone). Share anyway?'); if (!ok) { typing.classList.add('hidden'); log.setAttribute('aria-busy','false'); return; } }
+
+    // Try **local FAQ** first
+    const hit = matchFAQ(trimmed);
+    if (hit){
+      const out = addAIBlock();
+      out.innerHTML = renderMarkdownSafe(hit.a + '\n\n*Need anything else? Try* `/donate` *,* `/schedule`*, or ask another question.*');
+      typing.classList.add('hidden'); log.setAttribute('aria-busy','false'); saveThread();
+      try { dispatchEvent(new CustomEvent('fc:ai:faq_hit', { detail: { q: hit.q } })); } catch {}
+      return;
+    }
 
     // Context envelope
     const ctx = {
@@ -466,7 +542,6 @@
       addUserBlock(message + ' *(queued)*'); enqueue(message); setOfflineUI(true); saveThread();
       input.value=''; send.disabled=true; return;
     }
-    // refresh stats snapshot occasionally
     if (!lastStats || (Date.now() % 3 === 0)) fetchStats();
     await sendMessage(message);
   });
@@ -478,3 +553,4 @@
 </script>
 
 </section>
+

@@ -1,299 +1,197 @@
+{# -----------------------------------------------------------------------------
+  Base layout — FundChamps Prestige Elite (SV-Premium, refined)
+  - CSP-safe NONCE, optional SRI + preconnects
+  - Single CSS payload (tailwind.min.css)
+  - Donate-aware SEO, OG/Twitter, canonical, theme-color sync
+  - Header shrink sentinel included (id="site-header-sentinel")
+----------------------------------------------------------------------------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _ver = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
-{% set href_tokens   = url_for('static', filename='css/brand.tokens.css', v=_ver) if _ver else url_for('static', filename='css/brand.tokens.css') %}
-{% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver)  if _ver else url_for('static', filename='css/tailwind.min.css') %}
-{% set href_output   = url_for('static', filename='css/output.css', v=_ver)        if _ver else url_for('static', filename='css/output.css') %}
-{% set href_theme    = url_for('static', filename='css/fc_prestige.css', v=_ver)   if _ver else url_for('static', filename='css/fc_prestige.css') %}
-{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
-{# Optional Subresource Integrity map: SRI = {'tokens':'', 'tailwind':'', 'output':'', 'theme':'', 'bundle':''} #}
 {% set SRI = SRI if SRI is defined else {} %}
+{% set _route = (request.endpoint if request is defined else '') %}
+{% set _TEAM = (team if team is defined else (_team if _team is defined else {})) %}
+{% set _brand_hex = _TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15' %}
+{% set _brand_name = _TEAM.team_name if _TEAM and _TEAM.team_name else 'Connect ATX Elite' %}
+{% set _brand_slug = (_TEAM.team_slug if _TEAM and _TEAM.team_slug else _brand_name)|lower|replace(' ', '-')|replace('--','-') %}
+{% set _title_default = _brand_name %}
+{% set _desc_default = 'Fuel the season. Fund the future.' %}
+{% set _is_donate = (_route == 'main.donate') %}
+{% set _page_title = ( (_is_donate and (_TEAM.og_title_donate if _TEAM and _TEAM.og_title_donate)) or
+                       (_TEAM.og_title if _TEAM and _TEAM.og_title) or
+                       (_is_donate and _brand_name ~ ' — Donate') or
+                       (_brand_name ~ ' — Fundraiser') ) %}
+{% set _page_desc = ( (_is_donate and (_TEAM.og_description_donate if _TEAM and _TEAM.og_description_donate)) or
+                      (_TEAM.og_description if _TEAM and _TEAM.og_description) or
+                      _desc_default ) %}
+{% set _hero_img = _TEAM.hero_image or _TEAM.hero_bg or 'images/hero.avif' %}
+{% set _og_img = _TEAM.og_image or 'images/og_default.jpg' %}
+
+{# Versioned asset URLs #}
+{% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver) if _ver else url_for('static', filename='css/tailwind.min.css') %}
+{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
+{% set js_donate     = url_for('static', filename='js/donate.min.js', v=_ver)      if _ver else url_for('static', filename='js/donate.min.js') %}
+
+{# Optional SRI #}
+{% set sri_css     = SRI.get('css/tailwind.min.css') if SRI else None %}
+{% set sri_js_main = SRI.get('js/bundle.min.js') if SRI else None %}
+{% set sri_js_don  = SRI.get('js/donate.min.js') if SRI else None %}
 
 <!doctype html>
-<html lang="en" class="h-full" data-theme="dark">
+<html
+  lang="en"
+  class="h-full antialiased scroll-smooth selection:bg-yellow-300/30"
+  data-theme="dark"
+  data-brand="{{ _brand_slug }}"
+  data-route="{{ _route|default('') }}"
+>
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#0b0b0c" id="meta-theme-color" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    {# Opt-in CSP meta for static hosting only; prefer server headers #}
-    {% if ENABLE_CSP_META %}<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">{% endif %}
-    <title>{% block title %}Connect ATX Elite{% endblock %}</title>
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    {% if request is defined %}
+      <link rel="canonical" href="{{ request.base_url }}" />
+      <meta property="og:url" content="{{ request.base_url }}" />
+    {% endif %}
 
-    {% block meta %}{% endblock %}
-    {% block head %}{% endblock %}
+    <title>{% block title %}{{ _page_title }}{% endblock %}</title>
+    <meta name="description" content="{{ _page_desc }}" />
 
-    {# Perf hints #}
+    {# --- OG/Twitter --- #}
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="{{ _brand_name }}" />
+    <meta property="og:title" content="{{ _page_title }}" />
+    <meta property="og:description" content="{{ _page_desc }}" />
+    <meta property="og:image" content="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ _page_title }}" />
+    <meta name="twitter:description" content="{{ _page_desc }}" />
+    <meta name="twitter:image" content="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+
+    {# Preconnects (idle) — Stripe, Socket, YouTube #}
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin>
     <link rel="preconnect" href="/socket.io/" crossorigin>
-    <link rel="dns-prefetch" href="/socket.io/">
-    <link rel="preload" as="style" href="{{ href_tailwind }}" {% if SRI.tailwind %}integrity="{{ SRI.tailwind }}" crossorigin="anonymous"{% endif %}>
-    <link rel="preload" as="script" href="{{ js_href }}" {% if SRI.bundle %}integrity="{{ SRI.bundle }}" crossorigin="anonymous"{% endif %}>
+    <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
 
-    {# CSS: tokens → framework → compiled → theme #}
-    <link rel="stylesheet" href="{{ href_tokens }}" {% if SRI.tokens %}integrity="{{ SRI.tokens }}" crossorigin="anonymous"{% endif %}/>
-    <link rel="stylesheet" href="{{ href_tailwind }}" {% if SRI.tailwind %}integrity="{{ SRI.tailwind }}" crossorigin="anonymous"{% endif %}/>
-    <link rel="stylesheet" href="{{ href_output }}" {% if SRI.output %}integrity="{{ SRI.output }}" crossorigin="anonymous"{% endif %}/>
-    <link rel="stylesheet" href="{{ href_theme }}"  {% if SRI.theme  %}integrity="{{ SRI.theme  }}" crossorigin="anonymous"{% endif %}/>
+    {# Useful LCP hint if hero image exists #}
+    {% if url_for is defined and _hero_img %}
+      <link rel="preload" as="image" href="{{ url_for('static', filename=_hero_img, v=_ver) if _ver else url_for('static', filename=_hero_img) }}" imagesizes="100vw">
+    {% endif %}
 
-    {# Progressive enhancement flags #}
-    <script nonce="{{ NONCE }}">
-      (function(){
-        try{
-          if (matchMedia('(prefers-reduced-motion: reduce)').matches) document.documentElement.classList.add('reduced-motion');
-          if (navigator.connection && navigator.connection.saveData)   document.documentElement.classList.add('save-data');
-        }catch(_){}
-      })();
-    </script>
-    <link id="elite-upgrades-css" rel="stylesheet" href="{{ url_for('static', filename='css/elite-upgrades.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/tiers-elite.css') }}">
+    {# --- SINGLE CSS PIPELINE --- #}
+    <link rel="preload" as="style" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
+    <link rel="stylesheet" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
+
+    {% block extra_css %}{% endblock %}
+    {% block head %}{% endblock %}
   </head>
 
-  <body class="min-h-full bg-zinc-950 text-zinc-100 selection:bg-yellow-300/30">
-    <a href="#main" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-zinc-900 px-3 py-2 rounded">Skip to content</a>
+  <body class="min-h-full bg-zinc-950 text-zinc-100">
+    <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Skip to content</a>
 
-    {# Shared polite live region for realtime updates #}
-    <div id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    {# Header shrink sentinel for IntersectionObserver logic #}
+    <div id="site-header-sentinel" class="h-0" aria-hidden="true"></div>
 
-    {# Global bootstrap tokens #}
-    {% include "partials/ui_bootstrap.html" ignore missing with context %}
-
-    {# Global header + announcement #}
+    {% include "shared/ui_bootstrap.html" ignore missing with context %}
     {% include "partials/header_and_announcement.html" ignore missing with context %}
-    {% include "partials/header_sponsor_ticker.html" ignore missing with context %}
 
-    {# Optional page hero #}
     {% block hero %}{% endblock %}
-
     <main id="main" role="main" class="relative">
-      <h1 class="sr-only">{% block h1 %}Connect ATX Elite{% endblock %}</h1>
+      <h1 class="sr-only">{% block h1 %}{{ _title_default }}{% endblock %}</h1>
       {% block content %}{% endblock %}
     </main>
 
-    {% include "partials/footer.html" ignore missing with context %}
     {% include "partials/back_to_top.html" ignore missing with context %}
     {% include "partials/sticky_cta_manager.html" ignore missing with context %}
 
-    {# App bundle #}
-    <script src="{{ js_href }}" defer nonce="{{ NONCE }}" {% if SRI.bundle %}integrity="{{ SRI.bundle }}" crossorigin="anonymous"{% endif %}></script>
+    {# --- Core JS --- #}
+    <script src="{{ js_href }}" defer nonce="{{ NONCE }}"{% if sri_js_main %} integrity="{{ sri_js_main }}" crossorigin="anonymous"{% endif %}></script>
+    {% if _is_donate %}
+      <script src="{{ js_donate }}" defer nonce="{{ NONCE }}"{% if sri_js_don %} integrity="{{ sri_js_don }}" crossorigin="anonymous"{% endif %}></script>
+    {% endif %}
+    {% block extra_js %}{% endblock %}
 
-    {# --- Security/Perf utilities (tiny, CSP-safe) --- #}
+    {# --- Elite polish (tokens + ripple + reveals + back-to-top ring) --- #}
     <script nonce="{{ NONCE }}">
-      // Ensure window.open has no opener; enforce rel=noopener on _blank links
-      (function(){
-        try{
-          const _open = window.open;
-          window.open = function(u,n,s){ const w = _open.call(window,u,n||'_blank',s); try{ if(w) w.opener=null; }catch(_){} return w; };
-        }catch(_){}
-        document.addEventListener('click', e => {
-          const a = e.target.closest && e.target.closest('a[target="_blank"]');
-          if (a && (!a.rel || !/\bnoopener\b/.test(a.rel))) a.rel = (a.rel? a.rel+' ':'') + 'noopener noreferrer';
-        }, { passive:true });
-      })();
-    </script>
+    (() => {
+      if (window.__fcPolish) return; window.__fcPolish = true;
 
-    {# --- Scroll restore on reload (path-scoped; respects anchors & motion) --- #}
-    <script nonce="{{ NONCE }}">
-      (function(){
-        const KEY = 'scroll:'+location.pathname+location.search;
-        try{ history.scrollRestoration = 'manual'; }catch(_){}
-        function restore(){
-          if (location.hash) return; // native anchor handling
-          const y = parseInt(sessionStorage.getItem(KEY)||'0',10) || 0;
-          if (!y) return;
-          requestAnimationFrame(()=>window.scrollTo(0,y));
-          setTimeout(()=>window.scrollTo(0,y),120); // second pass after late content
-        }
-        addEventListener('beforeunload', ()=> {
-          const y = window.pageYOffset || document.documentElement.scrollTop || 0;
-          try{ sessionStorage.setItem(KEY, String(y)); }catch(_){}
+      const css = `
+      :root{ --fc-brand: {{ _brand_hex }}; --fc-ring: color-mix(in srgb, var(--fc-brand) 65%, transparent); }
+      html{ font-size: clamp(15px, 1.04vw + 12px, 18px); text-rendering: optimizeLegibility; }
+      body{ letter-spacing: .002em; -webkit-font-smoothing: antialiased; }
+      .tabular-nums{ font-variant-numeric: tabular-nums; }
+      .optical-tight{ letter-spacing: -.01em; }
+      .fc-reveal{ opacity:0; transform:translateY(12px); transition:opacity .6s ease, transform .6s ease; }
+      .fc-reveal.is-in{ opacity:1; transform:none; }
+      .fc-focus{ outline:none; box-shadow: 0 0 0 0px transparent; }
+      .fc-focus:focus-visible{ box-shadow: 0 0 0 3px var(--fc-ring); border-radius: 12px; }
+      .fc-btn{ border-radius:999px; font-weight:800; position:relative; overflow:hidden; padding:.7rem 1.1rem; display:inline-flex; align-items:center; gap:.55rem; }
+      .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow:0 10px 30px rgb(250 204 21 / 15%); }
+      .fc-btn-ghost{ color:#fff; background: rgb(255 255 255 / 7%); border:1px solid rgb(255 255 255 / 15%); }
+      .fc-input{ background:rgb(255 255 255 / 6%); border:1px solid rgb(255 255 255 / 12%); border-radius:12px; padding:.65rem .85rem; color:#fff; }
+      .fc-input::placeholder{ color:rgb(255 255 255 /.55); }
+      `;
+      const style = document.createElement('style'); style.textContent=css; try{style.nonce='{{ NONCE }}';}catch(_){}
+      document.head.appendChild(style);
+
+      const $ = (s, r=document) => r.querySelector(s);
+      const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+      const clamp=(x,min,max)=>Math.min(Math.max(x,min),max);
+
+      // Ripple
+      function attachRipple(){
+        $$('.fc-btn,[data-ripple]').forEach(btn=>{
+          if (btn.__rip) return; btn.__rip = true;
+          btn.addEventListener('click', e=>{
+            const r = document.createElement('span'); r.className='fc-ripple';
+            const rect=btn.getBoundingClientRect();
+            const x=(e.clientX??(rect.left+rect.width/2))-rect.left;
+            const y=(e.clientY??(rect.top+rect.height/2))-rect.top;
+            const d=Math.max(rect.width,rect.height)*1.1;
+            Object.assign(r.style,{width:d+'px',height:d+'px',left:x+'px',top:y+'px'});
+            btn.appendChild(r);
+            r.animate([{transform:'translate(-50%,-50%) scale(0)',opacity:.35},{transform:'translate(-50%,-50%) scale(18)',opacity:0}],{duration:650,easing:'cubic-bezier(.22,1,.36,1)'}).onfinish=()=>r.remove();
+          }, {passive:true});
         });
-        document.addEventListener('DOMContentLoaded', restore, { once:true });
-        addEventListener('load', restore, { once:true });
-      })();
-    </script>
+      }
 
-    {# ─────────────────────────── Realtime + UX glue ───────────────────────── #}
+      // Reveal on scroll
+      function attachReveals(){
+        const els=$$('[data-reveal], .fc-reveal').filter(el=>!el.__reveal);
+        if(!els.length) return;
+        if(!('IntersectionObserver' in window)){ els.forEach(el=>el.classList.add('is-in')); return; }
+        const io=new IntersectionObserver(ents=>{
+          ents.forEach(ent=>{ if(ent.isIntersecting){ ent.target.classList.add('is-in'); io.unobserve(ent.target);} });
+        },{threshold:.14});
+        els.forEach(el=>{ el.classList.add('fc-reveal'); io.observe(el); el.__reveal=true; });
+      }
 
-    {# Socket.IO bridge + polling fallback -> emits fc:meter:update & fc:funds:update #}
-    <script nonce="{{ NONCE }}">
-      (function () {
-        if (window.__fcSocketInit) return; window.__fcSocketInit = true;
-        const saveData = !!(navigator.connection && navigator.connection.saveData);
-        const visible  = () => !document.hidden;
-        const emit = (n,d) => { try{ dispatchEvent(new CustomEvent(n,{detail:d})) }catch(_){} };
-        const sr = document.getElementById('sr-live');
-        let socket=null, reconnects=0, lastSeq=-1, last={raised:0, goal:0}, lastTs=0;
-
-        function pushMeter(raised, goal, extra){
-          if (typeof extra?.seq==='number' && extra.seq<=lastSeq) return;
-          if (typeof extra?.seq==='number') lastSeq = extra.seq;
-          if (raised===last.raised && goal===last.goal) return;
-          last={raised,goal};
-          const payload={raised,goal,sponsorName:extra?.sponsorName,seq:extra?.seq,ts:Date.now()};
-          emit('fc:meter:update', payload); emit('fc:funds:update', payload);
-          if (sr) sr.textContent = `Funds updated. ${Math.round((raised/Math.max(goal||1,1))*100)}% of goal.`;
-        }
-
-        function connect(){
-          if (!window.io || socket) return;
-          socket = window.io({ path:'/socket.io', transports:['websocket'], reconnection:false, autoConnect:false, timeout: saveData?8000:4000 });
-          const open = () => { if (visible()) try{ socket.connect(); }catch(_){} };
-          socket.on('connect', ()=>{ reconnects=0; emit('fc:analytics',{event:'socket_connect'}) });
-          socket.on('disconnect',()=>{ emit('fc:analytics',{event:'socket_disconnect'}); scheduleReconnect(); });
-          socket.on('funds:update', (d)=>{ const t=Date.now(); if (t-lastTs < (saveData?1500:350)) return; lastTs=t; pushMeter(+d?.raised||0, +d?.goal||0, { sponsorName:d?.sponsorName, seq:d?.seq }); });
-          socket.on('sponsor:vip', (d)=> emit('fc:sponsor:vip', d||{}));
-          open();
-          addEventListener('visibilitychange', ()=>{ if (!socket) return; if (document.hidden){ try{ socket.close(); }catch{} } else { scheduleReconnect(100); }});
-        }
-
-        function scheduleReconnect(min=0){
-          if (!window.io) return;
-          if (socket){ try{ socket.close(); }catch{} socket=null; }
-          const base = saveData?2000:600, jitter=Math.random()*200;
-          reconnects++; const delay = Math.min(6000, Math.pow(2, Math.min(reconnects,5))*base)+jitter;
-          setTimeout(connect, Math.max(min, delay));
-        }
-
-        (window.requestIdleCallback||setTimeout)(()=>{ try{ const l=document.createElement('link'); l.rel='preconnect'; l.href='/socket.io/'; l.crossOrigin=''; document.head.appendChild(l);}catch(_){} connect(); },1);
-
-        // Polling fallback (HEADless friendly)
-        (function poll(){
-          let ok=true;
-          setInterval(async()=> {
-            if (socket && socket.connected) return;
-            if (!visible()) return;
-            try{
-              const res = await fetch('/api/stats', { headers:{Accept:'application/json'} });
-              if (!res.ok) throw 0;
-              const j = await res.json();
-              pushMeter(+j.raised||+j.funds_raised||0, +j.goal||+j.fundraising_goal||0);
-              if (!ok){ ok=true; emit('fc:analytics',{event:'poll_recovered'}) }
-            }catch{ if (ok){ ok=false; emit('fc:analytics',{event:'poll_failed'}) } }
-          }, saveData?30000:15000);
-        })();
-      })();
-    </script>
-
-    {# Normalize updates to all meters (header, hero, etc.) #}
-    <script nonce="{{ NONCE }}">
+      // Back-to-top progress ring
       (function(){
-        if (window.__fcMeterBridge) return; window.__fcMeterBridge = true;
-        const sync = (r,g)=> dispatchEvent(new CustomEvent('fc:meter:update',{detail:{raised:r,goal:g}}));
-        addEventListener('fc:funds:update', e=>{ const d=e.detail||{}; if (d.raised!=null || d.goal!=null) sync(+d.raised||0,+d.goal||0); }, { passive:true });
-        if (window.htmx){
-          document.body.addEventListener('htmx:afterSwap', e=>{
-            if (e.target && e.target.id==='fundraiser-meter'){
-              const r=parseFloat(e.target.dataset.raised||'0'), g=parseFloat(e.target.dataset.goal||'0'); sync(r,g);
-            }
-          });
-        }
+        const btn=$('#back-to-top'); if(!btn) return; const ring=btn.querySelector('.ring-wrap'); if(!ring) return;
+        const tick=()=>{ const h=document.documentElement; const p=(h.scrollTop/(h.scrollHeight-h.clientHeight))*100;
+          ring.style.setProperty('--p',clamp(p,0,100)+'%');
+          btn.style.opacity=p>8?1:0; btn.style.transform=p>8?'translateY(0)':'translateY(8px)';
+        };
+        tick(); addEventListener('scroll',tick,{passive:true}); addEventListener('resize',tick,{passive:true});
       })();
-    </script>
 
-    {# Optimistic UI on quick-donate taps #}
-    <script nonce="{{ NONCE }}">
+      // Theme-color sync with current theme
       (function(){
-        if (window.__fcOptimistic) return; window.__fcOptimistic = true;
-        let delta=0, t=null;
-        document.addEventListener('click', e=>{
-          const b=e.target.closest?.('[data-amount]'); if(!b) return;
-          delta += +b.dataset.amount || 0;
-          const m=(window.getHeroMeter&&window.getHeroMeter())||{raised:0,goal:0};
-          const raised=(m.raised||0)+delta, goal=m.goal||0;
-          window.updateHeroMeter&&window.updateHeroMeter(raised,goal);
-          dispatchEvent(new CustomEvent('fc:meter:update',{detail:{raised,goal}}));
-          clearTimeout(t); t=setTimeout(()=>delta=0,12000);
-        }, { passive:true });
-        addEventListener('fc:meter:update', ()=> delta=0, { passive:true });
+        const meta = document.getElementById('meta-theme-color'); if(!meta) return;
+        function apply(){ meta.setAttribute('content', document.documentElement.dataset.theme==='light' ? '#fafafa' : '#0b0b0c'); }
+        apply(); addEventListener('storage', e=>{ if(e.key==='fc_theme') apply(); }, {passive:true});
       })();
+
+      attachRipple(); attachReveals();
+      document.addEventListener('DOMContentLoaded',()=>{ attachRipple(); attachReveals(); },{once:true});
+      document.addEventListener('htmx:afterSwap',()=>{ attachRipple(); attachReveals(); },{passive:true});
+    })();
     </script>
-
-    {# Title pulse on progress #}
-    <script nonce="{{ NONCE }}">
-      (function(){
-        if (window.__fcTitlePulse) return; window.__fcTitlePulse = true;
-        const BASE=document.title;
-        addEventListener('fc:meter:update', e=>{
-          const d=e.detail||{}, p=Math.max(0,Math.min(100,(d.raised/Math.max(d.goal||1,1))*100));
-          document.title=`⭐ ${Math.round(p)}% • ${BASE}`;
-          setTimeout(()=>document.title=BASE,4000);
-        }, { passive:true });
-      })();
-    </script>
-
-    {# Sponsor ticker hook #}
-    <script nonce="{{ NONCE }}">
-      (function(){
-        if (window.__fcTickerHook) return; window.__fcTickerHook = true;
-        const q=[]; let draining=false;
-        addEventListener('fc:funds:update', e=>{
-          const name=e.detail && e.detail.sponsorName; if(!name) return;
-          q.push(String(name)); if(!draining) drain();
-        }, { passive:true });
-        function drain(){
-          const el=document.getElementById('fc-ticker'); if(!el) return;
-          draining=true; const name=q.shift();
-          if(name){
-            const safe=name.replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-            el.insertAdjacentHTML('beforeend', `<span class="mx-6 text-xs text-zinc-300">🏅 ${safe}</span>`);
-            setTimeout(drain,1500);
-          } else { draining=false; }
-        }
-      })();
-    </script>
-
-    {# VIP leaderboard auto-refresh (HTMX) #}
-    <script nonce="{{ NONCE }}">
-      (function(){
-        if (window.__fcVipRefresh) return; window.__fcVipRefresh = true;
-        const panel=document.getElementById('vip-leaderboard'); if(!panel||!window.htmx) return;
-        const io=new IntersectionObserver((ents)=> panel.__visible = ents[0]?.isIntersecting, { threshold:.1 });
-        io.observe(panel);
-        let d=null; addEventListener('fc:meter:update', ()=>{
-          if(!panel.__visible) return; clearTimeout(d); d=setTimeout(()=> window.htmx.trigger(panel,'refresh'),600);
-        }, { passive:true });
-      })();
-    </script>
-
-    {# Upscale pack #}
-    <script nonce="{{ NONCE }}">
-      (function(){
-        if (!window.__fcUpscale) window.__fcUpscale = true; else return;
-
-        // Header micro-meter
-        (function(){
-          const hdr=document.getElementById('hdr-meter'); if(!hdr) return;
-          const fill=hdr.querySelector('.fill'), pctLbl=hdr.querySelector('[data-hdr-pct]'), sr=document.getElementById('hdr-sr');
-          addEventListener('fc:meter:update', e=>{
-            const d=e.detail||{}, pct=Math.max(0,Math.min(100,(d.raised/Math.max(d.goal||1,1))*100));
-            if(fill) fill.style.width=pct.toFixed(1)+'%';
-            if(pctLbl) pctLbl.textContent=pct.toFixed(0)+'%';
-            if(sr) sr.textContent=`Raised ${Math.round(pct)} percent`;
-          }, { passive:true });
-        })();
-
-        // Reveal-on-scroll
-        (function(){
-          const els=[...document.querySelectorAll('.fc-reveal')];
-          if(!('IntersectionObserver' in window)){ els.forEach(el=>el.classList.add('is-visible')); return; }
-          const io=new IntersectionObserver((ents)=>ents.forEach(en=>en.isIntersecting&&en.target.classList.add('is-visible')), { rootMargin:'0px 0px -10% 0px', threshold:.08 });
-          els.forEach(el=>io.observe(el));
-        })();
-
-        // Anchor scroll-spy
-        (function(){
-          const ids=['mission','program-stats','tiers','sponsor-hub','sponsor-spotlight','sponsor-wall-widget','sponsor-wall','newsletter'];
-          const links=[...document.querySelectorAll('a[href^="#"]')].filter(a=>ids.includes(a.getAttribute('href').slice(1)));
-          if(!links.length||!('IntersectionObserver' in window)) return;
-          const map=new Map(links.map(l=>[l.getAttribute('href').slice(1),l]));
-          const io=new IntersectionObserver((ents)=>{
-            ents.forEach(ent=>{
-              const id=ent.target.id, a=map.get(id); if(!a) return;
-              if(ent.isIntersecting){ links.forEach(x=>{x.classList.remove('active');x.removeAttribute('aria-current');}); a.classList.add('active'); a.setAttribute('aria-current','page'); }
-            });
-          }, { rootMargin:'-25% 0px -60% 0px', threshold:.01 });
-          map.forEach((_,id)=>{ const sec=document.getElementById(id); if(sec) io.observe(sec); });
-        })();
-
-        //
+    <style nonce="{{ NONCE }}">.fc-ripple{position:absolute;border-radius:9999px;transform:translate(-50%,-50%) scale(0);opacity:.35;background:#fff;pointer-events:none}</style>
+  </body>
+</html>
 

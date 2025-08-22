@@ -1,271 +1,683 @@
-<!-- FC:HERO_SV_ELITE — contained bg + green demo rail + live meter -->
+{# =====================================================================
+   FC HERO — ELITE / SaaS Wide v3.5 (legacy-chip title + glass + meter)
+   - Title variants: legacy-chip (default) or sv-gradient (?title_style=sv)
+   - Full-bleed hero w/ glass cover, tuned gradients, proportional meter
+   - Motion-safe, CSP-safe (NONCE), a11y-clean, SEO DonateAction
+   ===================================================================== #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set theme_hex = theme_hex|default('#facc15') %}
 {% set team_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
 {% set HERO_TITLE = hero_title if hero_title is defined and hero_title else 'Connect ATX Elite — Fundraiser' %}
 
-{# Numbers #}
+{# Title style switch: 'legacy-chip' (prev look) or 'sv-gradient' (current) #}
+{% set _qs_style = (request.args.get('title_style') if request is defined else none) %}
+{% set HERO_TITLE_STYLE = (_qs_style if _qs_style in ['legacy','legacy-chip','sv','sv-gradient'] else hero_title_style|default('legacy-chip')) %}
+{% if HERO_TITLE_STYLE in ['legacy'] %}{% set HERO_TITLE_STYLE = 'legacy-chip' %}{% endif %}
+{% if HERO_TITLE_STYLE in ['sv'] %}{% set HERO_TITLE_STYLE = 'sv-gradient' %}{% endif %}
+
+{# Numbers (hardened) #}
 {% set _fr = (funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is defined else 0.0 %}
 {% set _fg = (fundraising_goal|string)|replace('$','')|replace(',','')|float if fundraising_goal is defined and fundraising_goal else 10000.0 %}
 {% set funds_raised = _fr %}
 {% set fundraising_goal = (_fg if _fg > 0 else 1.0) %}
 {% set pct_raw = 100.0 * (funds_raised / fundraising_goal) %}
 {% set pct = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw)) | round(1) %}
+{% set deadline_dt = fundraiser_deadline|default('2025-12-31T23:59:59') %}
 
-{# Background source resolution #}
+{# Hero image + focus #}
 {% set _input_src = (
   (team.hero_bg if team and team.hero_bg is defined and team.hero_bg) or
   (team.hero_image if team and team.hero_image is defined and team.hero_image) or
-  (team.team_photo if team and team_photo is defined and team.team_photo) or
+  (team.team_photo if team and team.team_photo is defined and team.team_photo) or
   (team.photo_url if team and team.photo_url is defined and team.photo_url) or
-  'images/connect-atx-team.jpg'
-) %}
-{% set hero_bg = url_for('static', filename=_input_src.lstrip('/')) if '://' not in _input_src and not _input_src.startswith('data:') else _input_src %}
-{% set hero_fallback = url_for('static', filename='images/logo.webp') %}
+  'images/connect-atx-team.jpg') %}
+{% if '://' in _input_src or _input_src.startswith('data:') %}
+  {% set hero_bg = _input_src %}
+{% else %}
+  {% set hero_bg = (url_for('static', filename=_input_src.lstrip('/')) if url_for is defined else '/static/' ~ _input_src.lstrip('/')) %}
+{% endif %}
+{% set hero_fallback = (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
 {% set hero_focus = (team.hero_focus if team and team.hero_focus is defined and team.hero_focus else '50% 24%') %}
 
-<link rel="preload" as="image" href="{{ hero_bg }}" imagesizes="100vw">
+<link rel="preload" as="image" href="{{ hero_bg }}" imagesizes="100vw" fetchpriority="high" />
 
 <section id="fc-hero"
-  class="relative isolate overflow-hidden min-h-[82svh] sm:min-h-[88svh]"
+  class="relative isolate w-full min-h-[100dvh] motion-safe:scroll-mt-16"
   aria-labelledby="fc-hero-title"
-  style="--fc-hero-accent: {{ theme_hex }}; --hero-offset: clamp(3.25rem, 12vw, 10rem);">
+  data-deadline="{{ deadline_dt }}"
+  style="
+    --fc-hero-accent: {{ theme_hex }};
+    --glass-bg: rgba(12,12,14,.58);
+    --grad-top: rgba(0,0,0,.74);
+    --grad-mid: rgba(0,0,0,.42);
+    --grad-bot: rgba(0,0,0,.20);
+    --title-stroke: rgba(0,0,0,.66);
+    --hero-img-opacity: 1;
+    --meter-h: clamp(10px, 1.2vw, 14px);
+    --meter-shine: linear-gradient(90deg, rgba(255,255,255,.20), rgba(255,255,255,.06) 35%, rgba(255,255,255,.14));
+  ">
 
-  <!-- Background (strictly contained to hero) -->
-  <div class="absolute inset-0 -z-10 pointer-events-none bg-wrap">
-    <picture>
-      <img id="fc-hero-img" src="{{ hero_bg }}" data-fallback="{{ hero_fallback }}"
-           alt="{{ team_name }} team photo" width="1920" height="1080"
-           class="absolute inset-0 h-full w-full object-cover will-change-[transform,opacity]"
-           style="object-position: {{ hero_focus }}; filter: saturate(1.05) contrast(1.06);" loading="eager"
-           decoding="async" fetchpriority="high">
-    </picture>
-    <!-- readability & glass -->
-    <div class="absolute inset-0 bg-gradient-to-t from-black/55 via-black/30 to-black/10"></div>
-    <div class="absolute inset-0 backdrop-blur-[10px] sm:backdrop-blur-[14px] bg-white/0"></div>
+  <!-- Background stack -->
+  <div class="absolute inset-0 -z-10 pointer-events-none">
+    <img id="fc-hero-img" src="{{ hero_bg }}" data-fallback="{{ hero_fallback }}"
+         alt="{{ team_name }} team photo" width="1920" height="1080" decoding="async" fetchpriority="high"
+         class="absolute inset-0 h-full w-full object-cover will-change-[transform,opacity]"
+         style="object-position: {{ hero_focus }}; filter: saturate(1.04) contrast(1.06); opacity: var(--hero-img-opacity);">
+
+    <!-- Readability gradient (tuned for faces) -->
+    <div class="fc-hero-grad absolute inset-0"></div>
+
+    <!-- Global glass cover (ensures glass look over photo) -->
+    <div class="glass-cover absolute inset-0"></div>
+
+    <!-- Gentle heat vignette + noise for text stability -->
+    <div class="heat-layer absolute inset-0"></div>
+    <div class="noise-layer absolute inset-0"></div>
   </div>
 
-  <!-- Content -->
-  <div class="relative fc-section">
-    <div class="mx-auto fc-hero-card rounded-3xl p-5 sm:p-7 lg:p-8 max-w-5xl relative z-[1]"
-         style="margin-top: var(--hero-offset);">
-      <p id="sr-live" class="sr-only" aria-live="polite"></p>
-
-      <!-- Headline -->
-      <div class="flex flex-col items-center text-center gap-3 sm:gap-4">
-        <div class="fc-title-wrap">
-          <h1 id="fc-hero-title"
-              class="fc-title-glow text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
-            <span class="inline-block bg-clip-text text-transparent fc-hero-title-gradient fc-title-text">
-              {{ HERO_TITLE }}
-            </span>
-          </h1>
-        </div>
-
-        <p id="fc-ab-copy"
-           class="text-[13px] sm:text-base text-zinc-50/95 bg-black/35 backdrop-blur px-3 py-1 rounded-full ring-1 ring-white/10">
-          Fuel the season. Fund the future.
-        </p>
-
-        <!-- Countdown -->
-        <div class="grid grid-cols-4 gap-2 text-center select-none" role="timer" aria-live="polite">
-          {% for key in ['Days','Hrs','Min','Sec'] %}
-          <div class="rounded-lg bg-white/5 ring-1 ring-white/10 px-2 py-1.5 sm:px-3 sm:py-2">
-            <div class="fc-ct-num text-lg sm:text-2xl font-bold tabular-nums" id="fc-ct-{{ key|lower }}">00</div>
-            <div class="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-300">{{ key }}</div>
-          </div>
-          {% endfor %}
-        </div>
-      </div>
-
-      <!-- Body -->
-      <div class="mt-5 sm:mt-7 grid lg:grid-cols-5 items-stretch gap-5">
-        <!-- Progress -->
-        <section class="lg:col-span-3 h-full flex flex-col" aria-labelledby="fc-progress-title">
-          <div class="flex-1 rounded-2xl p-4 sm:p-5 ring-1 ring-white/10 bg-gradient-to-br from-white/5 to-white/0">
-            <h2 id="fc-progress-title" class="sr-only">Fundraising progress</h2>
-
-            <div class="flex items-end justify-between gap-4">
-              <div>
-                <div class="text-zinc-300 text-xs sm:text-sm">Raised</div>
-                <div class="text-2xl sm:text-4xl font-extrabold tabular-nums" id="fc-raised" aria-live="polite">
-                  ${{ ('%0.0f' % funds_raised) }}
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-zinc-300 text-xs sm:text-sm">Goal</div>
-                <div class="text-lg sm:text-2xl font-semibold tabular-nums" id="fc-goal">
-                  ${{ ('%0.0f' % fundraising_goal) }}
-                </div>
-              </div>
-            </div>
-
-            <!-- Rail + Fill -->
-            <div class="mt-3">
-              <div class="relative h-3 sm:h-4 w-full rounded-full overflow-hidden ring-1 ring-white/10"
-                   role="progressbar" aria-valuemin="0" aria-valuemax="100"
-                   aria-valuenow="{{ ('%.1f' % pct) }}" aria-label="Fundraising progress toward goal">
-                <!-- green/yellow demo rail -->
-                <div class="absolute inset-0 rail"></div>
-                <!-- live fill -->
-                <div id="fc-bar" class="h-full rounded-full fc-bar" style="width: {{ pct }}%;"></div>
-                <!-- specular line -->
-                <div class="absolute inset-0 fc-shine"></div>
-              </div>
-
-              <!-- Milestones -->
-              <div class="relative mt-2 sm:mt-3 flex justify-between text-[10px] sm:text-[11px] text-zinc-300">
-                {% for m in [25,50,75,100] %}
-                  <div class="group relative flex-1">
-                    <div class="h-2 sm:h-3 w-px mx-auto bg-white/20" aria-hidden="true"></div>
-                    <div class="absolute -top-6 sm:-top-7 left-1/2 -translate-x-1/2">
-                      <span class="inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 sm:px-2 sm:py-1 ring-1 ring-white/10 bg-white/5 group-[.active]:bg-white/10 group-[.active]:text-white"
-                            id="fc-ms-{{ m }}" aria-label="{{ m }} percent milestone">
-                        <span class="hidden sm:inline">Milestone</span> {{ m }}%
-                      </span>
-                    </div>
-                  </div>
-                {% endfor %}
-              </div>
-
-              <div class="mt-2 sm:mt-3 flex items-center justify-between">
-                <div class="text-xs sm:text-sm text-zinc-300">
-                  <span class="sr-only">Progress:</span>
-                  <span id="fc-pct" class="font-semibold tabular-nums">{{ ('%.1f' % pct) }}</span>% funded
-                </div>
-                <div class="text-xs sm:text-sm text-zinc-300">
-                  Deadline: <time id="fc-deadline" datetime="{{ fundraiser_deadline|default('2025-12-31T23:59:59') }}">
-                    {{ fundraiser_deadline|default('2025-12-31T23:59:59') }}
-                  </time>
-                </div>
-              </div>
-
-              <div id="fc-next" class="mt-1.5 sm:mt-2 text-[11px] sm:text-xs text-zinc-400"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- Quick actions -->
-        <aside class="lg:col-span-2 h-full flex flex-col" aria-labelledby="fc-quick-actions">
-          <div class="flex-1 rounded-2xl p-4 sm:p-5 ring-1 ring-white/10 bg-white/5 flex flex-col gap-3 sm:gap-4">
-            <h2 id="fc-quick-actions" class="sr-only">Quick actions</h2>
-
-            <div class="grid grid-cols-2 gap-2">
-              {% for amt in (quick_donate_amounts if quick_donate_amounts is defined else [25,50,100,250]) %}
-              <button type="button"
-                class="fc-cta rounded-2xl px-3 py-2.5 sm:py-3 text-xl sm:text-2xl font-extrabold tabular-nums leading-none
-                       bg-white/[.06] hover:bg-white/[.10] ring-1 ring-white/15 shadow-[inset_0_0_0_1px_rgba(255,255,255,.06)] transition"
-                style="color:#0b0b0c; background: color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 92%, transparent); text-shadow: 0 1px 0 rgba(255,255,255,.35);"
-                data-amount="{{ amt }}" aria-label="Quick donate {{ amt }} dollars">
-                ${{ amt }}
-              </button>
-              {% endfor %}
-            </div>
-
-            <div class="flex items-center justify-between -mt-0.5">
-              <a id="fc-share" href="{{ sponsor_list_href|default('/sponsors') }}"
-                 class="inline-flex items-center gap-1 text-[13px] sm:text-sm text-yellow-200/90 hover:text-yellow-200 underline underline-offset-2">
-                 🔗 Share
-              </a>
-              <span id="fc-share-ok" class="text-xs text-emerald-300 hidden">Link copied</span>
-            </div>
-
-            <div class="flex gap-2">
-              <button type="button" id="fc-donate"
-                      class="flex-1 rounded-xl px-4 py-2.5 sm:py-3 font-semibold bg-white/10 hover:bg-white/15 ring-1 ring-white/10">
-                💸 Quick Donate
-              </button>
-              <a href="{{ become_sponsor_href|default('/become-sponsor') }}"
-                 class="rounded-xl px-4 py-2.5 sm:py-3 font-semibold bg-emerald-500/90 hover:bg-emerald-500">
-                 🤝 Become a Sponsor
-              </a>
-            </div>
-
-            <div class="relative overflow-hidden rounded-xl ring-1 ring-white/10 bg-white/5">
-              <div class="ticker-row whitespace-nowrap will-change-transform py-1.5" id="fc-ticker" aria-label="Sponsor ticker">
-                {% for s in (sponsors if sponsors is defined and sponsors else ['TechNova','River BBQ','Sunrise Dental','Austin Realty']) %}
-                  <span class="mx-6 text-xs text-zinc-300">🏅 {{ s }}</span>
-                {% endfor %}
-                {% for s in (sponsors if sponsors is defined and sponsors else ['TechNova','River BBQ','Sunrise Dental','Austin Realty']) %}
-                  <span class="mx-6 text-xs text-zinc-300">🏅 {{ s }}</span>
-                {% endfor %}
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      <div class="mt-5 sm:mt-6 grid sm:grid-cols-3 gap-2.5 sm:gap-3 text-center">
-        <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-zinc-300">🎯 Goal tracking in real-time</div>
-        <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-zinc-300">🔒 Secure checkout</div>
-        <div class="rounded-xl ring-1 ring-white/10 bg-white/5 px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-zinc-300">✨ VIP shout-outs for top donors</div>
+  <!-- VIP Wide Banner -->
+  <div id="fc-vip-banner" class="pointer-events-none fixed left-0 right-0 top-3 z-40 hidden">
+    <div class="mx-auto w-[min(92rem,96vw)]">
+      <div class="rounded-2xl px-4 py-3 ring-1 ring-white/20 text-black text-center font-extrabold tracking-tight shadow-2xl"
+           style="background: linear-gradient(90deg,#fef08a, #a7f3d0);">
+        🥇 VIP SHOUT-OUT: <span id="fc-vip-name">A. Sponsor</span> just gave <span id="fc-vip-amt">$1,000</span>!
       </div>
     </div>
   </div>
 
+  <!-- Content -->
+  <div class="relative z-10">
+    <div class="mx-auto w-[min(90rem,95vw)] px-3 sm:px-6">
+      <!-- Glass card -->
+      <div class="mx-auto rounded-[28px] sm:rounded-[32px] lg:rounded-[36px] p-5 sm:p-8 lg:p-10 hero-glass"
+           style="background: var(--glass-bg); border: 1px solid rgba(255,255,255,.10);
+                  box-shadow: 0 28px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
+                  -webkit-backdrop-filter: blur(14px) saturate(1.04); backdrop-filter: blur(14px) saturate(1.04);">
+        <p id="sr-live" class="sr-only" aria-live="polite"></p>
+
+        <!-- Title + subline + countdown -->
+        <div class="flex flex-col items-center text-center gap-3 sm:gap-4">
+          {# ---- switchable title ---- #}
+          {% if HERO_TITLE_STYLE == 'legacy-chip' %}
+            <h1 id="fc-hero-title" class="legacy-chip-title" aria-label="{{ HERO_TITLE }}">
+              <span class="chip"><span class="txt">{{ HERO_TITLE }}</span></span>
+            </h1>
+          {% else %}
+            <h1 id="fc-hero-title"
+                class="fc-title-glow text-3xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight">
+              <span class="fc-hero-title-gradient">{{ HERO_TITLE }}</span>
+            </h1>
+          {% endif %}
+
+          <p class="text-[13px] sm:text-base text-zinc-50/95 bg-black/35 backdrop-blur px-3 py-1 rounded-full ring-1 ring-white/10">
+            Your <strong class="font-extrabold">$25</strong> covers <strong class="font-extrabold">1</strong> practice
+          </p>
+
+          <div class="grid grid-cols-4 gap-2 text-center select-none" role="timer" aria-live="polite">
+            {% for key in ['Days','Hrs','Min','Sec'] %}
+            <div class="rounded-xl bg-white/10 ring-1 ring-white/15 px-3 py-2">
+              <div class="text-xl sm:text-2xl font-black tabular-nums text-white" id="fc-ct-{{ key|lower }}">00</div>
+              <div class="text-[10px] sm:text-[11px] uppercase tracking-wider text-zinc-300">{{ key }}</div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Body -->
+        <div class="mt-6 sm:mt-8 grid grid-cols-12 gap-5 lg:gap-6 items-stretch">
+          <!-- Progress -->
+          <section class="col-span-12 lg:col-span-7 flex flex-col" aria-labelledby="fc-progress-title">
+            <div class="flex-1 rounded-2xl p-5 lg:p-6 ring-1 ring-white/10 bg-gradient-to-br from-white/8 to-white/0">
+              <h2 id="fc-progress-title" class="sr-only">Fundraising progress</h2>
+
+              <div class="flex items-end justify-between gap-4">
+                <div>
+                  <div class="text-zinc-300 text-xs sm:text-sm">Raised</div>
+                  <div class="text-3xl sm:text-4xl font-black tabular-nums text-white" id="fc-raised" aria-live="polite">
+                    ${{ ('%0.0f' % funds_raised) }}
+                  </div>
+                </div>
+                <div class="text-right">
+                  <div class="text-zinc-300 text-xs sm:text-sm">Goal</div>
+                  <div class="text-2xl sm:text-3xl font-extrabold tabular-nums text-white" id="fc-goal">
+                    ${{ ('%0.0f' % fundraising_goal) }}
+                  </div>
+                </div>
+              </div>
+
+              <!-- PROPORTIONAL METER -->
+              <div class="mt-3">
+                <div id="fundraiser-meter"
+                     class="relative w-full rounded-full overflow-hidden ring-1 ring-white/10"
+                     style="height: var(--meter-h);"
+                     data-raised="{{ funds_raised }}" data-goal="{{ fundraising_goal }}"
+                     role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                     aria-valuenow="{{ ('%.1f' % pct) }}" aria-label="Fundraising progress toward goal">
+                  <!-- base track -->
+                  <div class="absolute inset-0 opacity-35"
+                       style="background: linear-gradient(90deg,#eab308 0%, #84cc16 45%, #22c55e 100%);"></div>
+                  <!-- milestone ticks at 25/50/75/100 -->
+                  <div class="absolute inset-0 pointer-events-none"
+                       style="background-image: linear-gradient(to right, rgba(255,255,255,.18) 0 0);
+                              background-size: 25% 100%; mix-blend-mode: soft-light; opacity:.28;"></div>
+                  <!-- bar -->
+                  <div id="fc-bar" class="h-full rounded-full"
+                       style="width: {{ pct }}%; background: linear-gradient(90deg,#f2d14b 0%, #34d399 70%, #22c55e 100%);
+                              box-shadow: inset 0 0 0 1px rgba(255,255,255,.22), 0 6px 22px rgba(34,197,94,.35);
+                              transition: width .6s cubic-bezier(.2,.8,.2,1);"></div>
+                  <!-- shine -->
+                  <div class="absolute inset-0 fc-shine" style="background: var(--meter-shine)"></div>
+                </div>
+
+                <div class="mt-3 flex items-center justify-between">
+                  <div class="text-xs sm:text-sm text-zinc-200">
+                    <span class="sr-only">Progress:</span>
+                    <span id="fc-pct" class="font-extrabold tabular-nums">{{ ('%.1f' % pct) }}</span>% funded
+                  </div>
+                  <div class="text-xs sm:text-sm text-zinc-200">
+                    Deadline:
+                    <time id="fc-deadline" class="font-semibold" datetime="{{ deadline_dt }}">{{ deadline_dt }}</time>
+                  </div>
+                </div>
+
+                <div id="fc-next" class="mt-2 text-[12px] sm:text-sm text-zinc-300">
+                  {% set to25 = (fundraising_goal*0.25 - funds_raised) %}
+                  {{ 'Only $%0.0f to reach 25%%' % to25 if to25 > 0 else 'Great momentum — keep it rolling!' }}
+                </div>
+              </div>
+
+              <div class="mt-4 flex items-center gap-2 text-[11px] text-zinc-300" aria-hidden="true">
+                {% for m in [25,50,75,100] %}<span class="fc-badge">🎯 {{ m }}%</span>{% endfor %}
+              </div>
+            </div>
+          </section>
+
+          <!-- Quick actions -->
+          <aside class="col-span-12 lg:col-span-5 flex flex-col" aria-labelledby="fc-quick-actions">
+            <div class="flex-1 rounded-2xl p-5 lg:p-6 ring-1 ring-white/10 bg-white/5 flex flex-col gap-4">
+              <h2 id="fc-quick-actions" class="sr-only">Quick actions</h2>
+
+              <div class="grid grid-cols-4 gap-2">
+                {% for amt in (quick_donate_amounts if quick_donate_amounts is defined else [25,50,100,250]) %}
+                <button type="button"
+                  class="fc-btn fc-btn-primary w-full justify-center text-lg sm:text-xl font-black tabular-nums leading-none shadow-sm ring-1 ring-white/10 hover:scale-[1.02]"
+                  style="--brand: var(--fc-hero-accent, {{ theme_hex }});"
+                  data-amount="{{ amt }}" aria-label="Quick donate {{ amt }} dollars">
+                  <span class="sr-only">Donate</span>${{ amt }}<span class="sr-only"> now</span>
+                </button>
+                {% endfor %}
+              </div>
+
+              <div class="flex items-center justify-between -mt-1">
+                <button id="fc-share"
+                   class="inline-flex items-center gap-1 text-[13px] sm:text-sm text-yellow-200/95 hover:text-yellow-200 underline underline-offset-2">
+                   🔗 Share
+                </button>
+                <span id="fc-share-ok" class="text-xs text-emerald-300 hidden">Link copied</span>
+              </div>
+
+              <div class="flex gap-2">
+                <button type="button" id="fc-donate" class="fc-btn fc-btn-ghost flex-1 justify-center">💸 Quick Donate</button>
+                <a href="{{ become_sponsor_href|default('/become-sponsor') }}" class="fc-btn fc-btn-primary">🤝 Become a Sponsor</a>
+              </div>
+
+              <div class="rounded-xl ring-1 ring-white/10 bg-white/5 p-3">
+                <div class="text-[11px] sm:text-xs text-zinc-200/90 font-medium flex items-center justify-between">
+                  <span>Payments Secured • PCI-DSS</span><span>Apple/Google Pay • Card</span>
+                </div>
+                <div class="mt-2 relative overflow-hidden rounded-lg ring-1 ring-white/10 bg-white/5">
+                  <div class="whitespace-nowrap will-change-transform py-1.5 fc-marquee" id="fc-ticker" aria-label="Sponsor ticker">
+                    {% for s in (sponsors if sponsors is defined and sponsors else ['TechNova','River BBQ','Sunrise Dental','Austin Realty']) %}<span class="mx-6 text-xs text-zinc-300">🏅 {{ s }}</span>{% endfor %}
+                    {% for s in (sponsors if sponsors is defined and sponsors else ['TechNova','River BBQ','Sunrise Dental','Austin Realty']) %}<span class="mx-6 text-xs text-zinc-300">🏅 {{ s }}</span>{% endfor %}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+
+        <!-- Trust chips -->
+        <div class="mt-6 grid sm:grid-cols-3 gap-2.5 sm:gap-3 text-center">
+          <div class="rounded-xl ring-1 ring-white/10 bg-white/6 px-3 py-2 text-xs sm:text-sm text-zinc-200">📈 Goal tracking in real time</div>
+          <div class="rounded-xl ring-1 ring-white/10 bg-white/6 px-3 py-2 text-xs sm:text-sm text-zinc-200">🔒 Secure checkout</div>
+          <div class="rounded-xl ring-1 ring-white/10 bg-white/6 px-3 py-2 text-xs sm:text-sm text-zinc-200">✨ VIP shout-outs for top donors</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Local, scoped polish -->
   <style nonce="{{ NONCE }}">
-    /* containment to hero */
-    #fc-hero .bg-wrap { contain: paint; }
-    #fc-hero .fc-hero-card{
-      background: color-mix(in srgb, rgba(0,0,0,.60) 58%, transparent);
-      border: 1px solid rgba(255,255,255,.10);
-      box-shadow: 0 20px 50px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
-      -webkit-backdrop-filter: blur(18px) saturate(1.05); backdrop-filter: blur(18px) saturate(1.05);
+    /* Readability layers */
+    #fc-hero .fc-hero-grad{
+      background: linear-gradient(to bottom, var(--grad-top) 0%, var(--grad-mid) 40%, var(--grad-bot) 72%, rgba(0,0,0,.26) 100%);
+    }
+    #fc-hero .glass-cover{
+      background: rgba(0,0,0,.22);
+      -webkit-backdrop-filter: blur(8px) saturate(1.06);
+      backdrop-filter: blur(8px) saturate(1.06);
+    }
+    #fc-hero .heat-layer{
+      background:
+        radial-gradient(40% 30% at 50% 25%, rgba(0,0,0,.25), transparent 60%),
+        radial-gradient(50% 40% at 50% 65%, rgba(0,0,0,.18), transparent 70%);
+      mix-blend-mode: multiply;
+    }
+    #fc-hero .noise-layer{
+      opacity:.06;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.15'/></svg>");
+      background-size: 240px 240px;
     }
 
-    /* demo rail (soft green/yellow across full width) */
-    #fc-hero .rail{
-      background: linear-gradient(90deg,#eab308 0%, #84cc16 45%, #22c55e 100%);
-      opacity:.35;
+    /* Title — sv-gradient: prevent flicker (fallback color until gradient is ready) */
+    #fc-hero .fc-hero-title-gradient{ color:#fff; display:inline-block; }
+    @supports ((-webkit-background-clip:text) or (background-clip:text)) {
+      #fc-hero .fc-hero-title-gradient{
+        -webkit-background-clip:text; background-clip:text; color:transparent;
+        background-image: linear-gradient(180deg,#fff 0%, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 72%, #fff) 100%);
+      }
     }
-    /* live fill */
-    #fc-hero .fc-bar{
-      background: linear-gradient(90deg,#f2d14b 0%, #34d399 70%, #22c55e 100%);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.24), 0 6px 22px rgba(34,197,94,.35);
-      transition: width .5s ease;
-    }
-    #fc-hero .fc-shine{
-      background: linear-gradient(90deg, rgba(255,255,255,.20), rgba(255,255,255,.05) 35%, rgba(255,255,255,.18));
-      mix-blend-mode: soft-light;
-    }
-
-    /* title flair */
     #fc-hero .fc-title-glow{
-      text-shadow: 0 1px 0 rgba(0,0,0,.60), 0 16px 40px rgba(0,0,0,.45),
-                   0 0 26px color-mix(in oklab, var(--fc-hero-accent, {{ theme_hex }}) 30%, transparent);
+      text-shadow:
+        0 0 0.6px var(--title-stroke),
+        0 1px 0 rgba(0,0,0,.55),
+        0 16px 40px rgba(0,0,0,.45),
+        0 0 26px color-mix(in oklab, var(--fc-hero-accent, {{ theme_hex }}) 28%, transparent);
+    }
+
+    /* Title — legacy chip */
+    #fc-hero .legacy-chip-title{ display:flex; align-items:center; justify-content:center; }
+    #fc-hero .legacy-chip-title .chip{
+      display:inline-flex; align-items:center; justify-content:center;
+      border-radius: 9999px; padding:.4rem .9rem;
+      background: linear-gradient(180deg,#fde68a,#facc15);
+      box-shadow: 0 6px 22px rgba(250,204,21,.25), inset 0 1px 0 rgba(255,255,255,.4);
+      border: 1px solid rgba(255,255,255,.35);
+      transform: translateZ(0);
+    }
+    #fc-hero .legacy-chip-title .txt{
+      font-size: clamp(1.4rem, 2.6vw + .6rem, 2.8rem);
+      line-height: 1.15; font-weight: 900; color:#0b0b0c;
+      text-shadow: 0 1px 0 rgba(255,255,255,.45);
+      white-space: nowrap;
+    }
+
+    /* Meter shine + marquee */
+    #fc-hero .fc-shine{ mix-blend-mode: soft-light; }
+    #fc-hero .fc-marquee{ display:inline-block; animation: fc-marq 28s linear infinite; }
+    @keyframes fc-marq{ from{ transform: translateX(0) } to{ transform: translateX(-50%) } }
+
+    /* Scoped buttons (safety if global CSS missing) */
+    #fc-hero .fc-btn{ display:inline-flex; align-items:center; gap:.5rem; border-radius:.75rem; padding:.75rem 1rem; font-weight:800 }
+    #fc-hero .fc-btn-primary{ background: linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; text-shadow:0 1px 0 rgba(255,255,255,.35) }
+    #fc-hero .fc-btn-primary:hover{ filter: brightness(1.03) }
+    #fc-hero .fc-btn-ghost{ background: rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.10) }
+    #fc-hero .fc-btn-ghost:hover{ background: rgba(255,255,255,.14) }
+
+    /* Motion/contrast guards */
+    @media (prefers-reduced-motion: reduce){
+      #fc-hero .fc-marquee{ animation: none !important; }
+      #fc-hero #fc-hero-img{ transform:none !important; }
+    }
+    @media (prefers-contrast: more){
+      #fc-hero .glass-cover{ -webkit-backdrop-filter:none; backdrop-filter:none; background: rgba(0,0,0,.55); }
     }
   </style>
 
+  <!-- DonateAction JSON-LD -->
+  <script type="application/ld+json" nonce="{{ NONCE }}">
+    { "@context": "https://schema.org", "@type": "DonateAction",
+      "name": "Donate to {{ team_name }}",
+      "recipient": { "@type": "SportsTeam", "name": "{{ team_name }}" },
+      "object": { "@type": "Project", "name": "{{ HERO_TITLE }}" },
+      "target": "/donate", "actionStatus": "PotentialActionStatus" }
+  </script>
+
+  <!-- Logic: parallax, countdown, share, payments, VIP, auto-contrast, meter -->
   <script nonce="{{ NONCE }}">
   (() => {
-    if (window.__fcHeroInit) return; window.__fcHeroInit = true;
-
-    const $ = (s,r=document)=>r.querySelector(s);
-    const img = $('#fc-hero-img');
-    const hero = $('#fc-hero');
-
-    // keep image contained + safe parallax only while hero is in view
-    const prefersReduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (window.__fcHeroEliteInit) return; window.__fcHeroEliteInit = true;
+    const hero = document.getElementById('fc-hero');
+    const img  = document.getElementById('fc-hero-img');
+    const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     const clamp = (x,min,max)=>Math.min(Math.max(x,min),max);
 
+    // Image fallback
+    img?.addEventListener('error', ()=>{ const f=img?.dataset?.fallback; if(f && img.src !== f) img.src = f; });
+
+    // Parallax (subtle + rAF)
+    let ticking=false;
     function parallax(){
       if (!img || prefersReduce) return;
-      const rect = hero.getBoundingClientRect();
-      if (rect.bottom < 0 || rect.top > window.innerHeight) return;
-      const amount = clamp((window.innerHeight/2 - rect.top) * 0.04, -60, 60);
-      img.style.transform = `translateY(${amount}px) scale(1.02)`;
+      if (ticking) return; ticking=true;
+      requestAnimationFrame(()=>{
+        const rect = hero.getBoundingClientRect();
+        if (!(rect.bottom < 0 || rect.top > innerHeight)) {
+          const amt = clamp((innerHeight/2 - rect.top) * 0.035, -50, 50);
+          img.style.transform = `translateY(${amt}px) scale(1.03)`;
+        }
+        ticking=false;
+      });
     }
     addEventListener('scroll', parallax, {passive:true});
     addEventListener('resize', parallax, {passive:true});
-    img?.addEventListener('load', ()=>{ img.style.opacity='1'; parallax(); }, {once:true});
+    img?.addEventListener('load', parallax, {once:true});
 
-    // milestone activation + % text
-    const pct = {{ pct|float }};
-    ['25','50','75','100'].forEach(m=>{
-      const el = document.getElementById('fc-ms-'+m);
-      const wrap = el?.closest('.group'); if (wrap) wrap.classList.toggle('active', pct >= (+m - 0.01));
-    });
-    const pctEl = document.getElementById('fc-pct'); if (pctEl) pctEl.textContent = pct.toFixed(1);
+    // Countdown
+    const deadlineISO = hero?.dataset?.deadline;
+    function updateCountdown(){
+      if(!deadlineISO) return;
+      const t = new Date(deadlineISO).getTime() - Date.now();
+      const dd = Math.max(0, Math.floor(t/86400000));
+      const hh = Math.max(0, Math.floor((t%86400000)/3600000));
+      const mm = Math.max(0, Math.floor((t%3600000)/60000));
+      const ss = Math.max(0, Math.floor((t%60000)/1000));
+      const set = (id,v)=>{ const el=document.getElementById(id); if(el){ el.textContent=String(v).padStart(2,'0'); } };
+      set('fc-ct-days', dd); set('fc-ct-hrs', hh); set('fc-ct-min', mm); set('fc-ct-sec', ss);
+    }
+    updateCountdown(); setInterval(updateCountdown, 1000);
+
+    // Share copy
+    const shareBtn = document.getElementById('fc-share');
+    const shareOk  = document.getElementById('fc-share-ok');
+    shareBtn?.addEventListener('click', async () => {
+      try{ await navigator.clipboard.writeText(location.href); shareOk?.classList.remove('hidden'); setTimeout(()=>shareOk?.classList.add('hidden'), 1800); }catch{}
+    }, {passive:true});
+
+    // Payments
+    async function getCfg(){ try{ const r=await fetch('/api/payments/config',{headers:{'accept':'application/json'}}); if(!r.ok) throw 0; return await r.json(); }catch{ return {}; } }
+    async function pay(amount){
+      const c=await getCfg(); const link=c.payment_link_url||c.link||null; const hasPK=!!(c.publishable_key||c.pk||'');
+      const cents=Math.max(0,Math.round((Number(amount)||0)*100));
+      if(hasPK && link){ location.assign(link+(link.includes('?')?'&':'?')+'client_reference_id='+encodeURIComponent(String(cents||0))); return; }
+      location.assign('/donate?amount='+encodeURIComponent(String(amount||0)));
+    }
+    document.querySelectorAll('[data-amount]').forEach(b=>b.addEventListener('click',()=>pay(+b.getAttribute('data-amount')||0),{passive:true}));
+    document.getElementById('fc-donate')?.addEventListener('click',()=>pay(0),{passive:true});
+
+    // VIP banner
+    const banner = document.getElementById('fc-vip-banner');
+    const nameEl = document.getElementById('fc-vip-name');
+    const amtEl  = document.getElementById('fc-vip-amt');
+    const ticker = document.getElementById('fc-ticker');
+    function showVip({name='VIP Donor', amount=0}={}){
+      if(nameEl) nameEl.textContent = String(name);
+      if(amtEl)  amtEl.textContent  = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(amount);
+      banner?.classList.remove('hidden');
+      banner?.animate([{opacity:0, transform:'translateY(-12px)'},{opacity:1, transform:'translateY(0)'}],{duration:260, easing:'ease-out'});
+      setTimeout(()=>banner?.animate([{opacity:1},{opacity:0}],{duration:300, easing:'ease-in'}).onfinish=()=>banner?.classList.add('hidden'), 4200);
+      if(ticker){ const chip=document.createElement('span'); chip.className='mx-6 text-xs text-zinc-300'; chip.textContent=`🥇 ${name}`; ticker.appendChild(chip); }
+      const sr = document.getElementById('sr-live'); if(sr) sr.textContent = `VIP: ${name} donated ${amtEl?.textContent||''}`;
+    }
+    addEventListener('fc:vip:hit', (e)=>showVip(e.detail||{}));
+
+    // Auto-contrast for overlays based on image luminance
+    const imgLuminanceTune = () => {
+      try{
+        const c=document.createElement('canvas'); const w=c.width=64, h=c.height=36;
+        const ctx=c.getContext('2d', {willReadFrequently:true});
+        const x=img.naturalWidth*0.33, y=img.naturalHeight*0.18;
+        ctx.drawImage(img, x, y, img.naturalWidth*0.34, img.naturalHeight*0.34, 0, 0, w, h);
+        const data=ctx.getImageData(0,0,w,h).data;
+        let L=0; for(let i=0;i<data.length;i+=4){ const r=data[i]/255, g=data[i+1]/255, b=data[i+2]/255; L+=0.2126*r+0.7152*g+0.0722*b; }
+        L/= (w*h);
+        if(L>0.55){
+          hero.style.setProperty('--glass-bg','rgba(0,0,0,.64)');
+          hero.style.setProperty('--grad-top','rgba(0,0,0,.70)');
+          hero.style.setProperty('--grad-mid','rgba(0,0,0,.42)');
+          hero.style.setProperty('--grad-bot','rgba(0,0,0,.24)');
+          hero.style.setProperty('--title-stroke','rgba(0,0,0,.75)');
+          hero.style.setProperty('--hero-img-opacity','0.96');
+        } else if(L<0.28){
+          hero.style.setProperty('--glass-bg','rgba(0,0,0,.48)');
+          hero.style.setProperty('--grad-top','rgba(0,0,0,.56)');
+          hero.style.setProperty('--grad-mid','rgba(0,0,0,.30)');
+          hero.style.setProperty('--grad-bot','rgba(0,0,0,.14)');
+          hero.style.setProperty('--title-stroke','rgba(0,0,0,.55)');
+          hero.style.setProperty('--hero-img-opacity','1');
+        }
+      }catch{}
+    };
+    img?.addEventListener('load', imgLuminanceTune, {once:true});
+
+    // Expose meter helpers
+    window.getHeroMeter = () => {
+      const wrap=document.getElementById('fundraiser-meter');
+      return { raised: +(wrap?.dataset?.raised||0), goal: +(wrap?.dataset?.goal||0) };
+    };
+    window.updateHeroMeter = (raised,goal) => {
+      const wrap=document.getElementById('fundraiser-meter'); if(!wrap) return;
+      wrap.dataset.raised=String(raised); wrap.dataset.goal=String(goal||0);
+      const p = Math.max(0, Math.min(100, (raised/Math.max(goal||1,1))*100));
+      const bar=document.getElementById('fc-bar'); if(bar) bar.style.width = p.toFixed(1)+'%';
+      const pct=document.getElementById('fc-pct'); if(pct) pct.textContent = p.toFixed(1);
+      wrap.setAttribute('aria-valuenow', p.toFixed(1));
+      document.getElementById('fc-raised')?.replaceChildren('$'+Math.round(raised).toLocaleString());
+      document.getElementById('fc-goal')?.replaceChildren('$'+Math.round(goal).toLocaleString());
+    };
+
+    // Motion-safe: stop marquee when reduced-motion
+    if (prefersReduce) {
+      try { document.querySelector('.fc-marquee')?.style?.setProperty('animation', 'none', 'important'); } catch(_) {}
+    }
   })();
   </script>
 </section>
+
+
+  <!-- Local, scoped polish (visibility helpers) -->
+  <style nonce="{{ NONCE }}">
+    /* Readability layers */
+    #fc-hero .fc-hero-grad{
+      background: linear-gradient(to bottom, var(--grad-top) 0%, var(--grad-mid) 40%, var(--grad-bot) 72%, rgba(0,0,0,.26) 100%);
+    }
+    /* The glass cover guarantees a glass look even when background pipelines change */
+    #fc-hero .glass-cover{
+      background: rgba(0,0,0,.22);
+      -webkit-backdrop-filter: blur(8px) saturate(1.06);
+      backdrop-filter: blur(8px) saturate(1.06);
+    }
+    #fc-hero .heat-layer{
+      background:
+        radial-gradient(40% 30% at 50% 25%, rgba(0,0,0,.25), transparent 60%),
+        radial-gradient(50% 40% at 50% 65%, rgba(0,0,0,.18), transparent 70%);
+      mix-blend-mode: multiply;
+    }
+    #fc-hero .noise-layer{
+      opacity:.06;
+      background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.15'/></svg>");
+      background-size: 240px 240px;
+    }
+
+    /* Title legibility: micro-stroke + glow (sv-gradient style) */
+    #fc-hero .fc-title-glow{
+      text-shadow:
+        0 0 0.6px var(--title-stroke),
+        0 1px 0 rgba(0,0,0,.55),
+        0 16px 40px rgba(0,0,0,.45),
+        0 0 26px color-mix(in oklab, var(--fc-hero-accent, {{ theme_hex }}) 28%, transparent);
+    }
+    #fc-hero .fc-hero-title-gradient{
+      background-image: linear-gradient(180deg,#fff 0%, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 72%, #fff) 100%);
+    }
+
+    /* ----- Legacy “belted chip” title (previous look) ----- */
+    #fc-hero .legacy-chip-title{ text-align:center; }
+    #fc-hero .legacy-chip-title .chip{
+      position:relative; display:inline-block;
+      padding:.55rem .95rem; border-radius:1rem;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.02)),
+        linear-gradient(90deg, color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 86%, #fff) 0%, #fff7cc 100%);
+      box-shadow:
+        0 12px 36px rgba(0,0,0,.35),
+        inset 0 0 0 1px rgba(0,0,0,.25),
+        inset 0 1px 0 rgba(255,255,255,.22);
+      backdrop-filter: blur(4px) saturate(1.02);
+    }
+    #fc-hero .legacy-chip-title .chip::before{
+      content:""; position:absolute; inset:2px 6px auto 6px; height:34%;
+      background: linear-gradient(180deg, rgba(255,255,255,.50), rgba(255,255,255,0));
+      border-radius:.75rem; opacity:.55; pointer-events:none;
+    }
+    #fc-hero .legacy-chip-title .txt{
+      display:block; font-weight:900; letter-spacing:-.02em; line-height:1.06;
+      font-size: clamp(28px, 5.2vw, 56px); color:#0b0c0f;
+      text-shadow:
+        0 .5px 0 rgba(255,255,255,.65),
+        0 1px 0 rgba(255,255,255,.35),
+        0 2px 12px rgba(0,0,0,.25);
+    }
+    @media (min-width:640px){
+      #fc-hero .legacy-chip-title .chip{ padding:.7rem 1.15rem; border-radius:1.25rem; }
+    }
+
+    /* Meter shine + marquee */
+    #fc-hero .fc-shine{ mix-blend-mode: soft-light; }
+    #fc-hero .fc-marquee{ display:inline-block; animation: fc-marq 28s linear infinite; }
+    @keyframes fc-marq{ from{ transform: translateX(0) } to{ transform: translateX(-50%) } }
+
+    /* Scoped buttons (in case global fc_prestige.css is absent) */
+    #fc-hero .fc-btn{ display:inline-flex; align-items:center; gap:.5rem; border-radius:.75rem; padding:.75rem 1rem; font-weight:600 }
+    #fc-hero .fc-btn-primary{ background: color-mix(in srgb, var(--fc-hero-accent, {{ theme_hex }}) 94%, transparent); color:#0b0b0c; text-shadow:0 1px 0 rgba(255,255,255,.35) }
+    #fc-hero .fc-btn-primary:hover{ filter: brightness(1.03) }
+    #fc-hero .fc-btn-ghost{ background: rgba(255,255,255,.10); color:#fff; border:1px solid rgba(255,255,255,.10) }
+    #fc-hero .fc-btn-ghost:hover{ background: rgba(255,255,255,.14) }
+  </style>
+
+  <!-- DonateAction JSON-LD -->
+  <script type="application/ld+json" nonce="{{ NONCE }}">
+    { "@context": "https://schema.org", "@type": "DonateAction",
+      "name": "Donate to {{ team_name }}",
+      "recipient": { "@type": "SportsTeam", "name": "{{ team_name }}" },
+      "object": { "@type": "Project", "name": "{{ HERO_TITLE }}" },
+      "target": "/donate", "actionStatus": "PotentialActionStatus" }
+  </script>
+
+  <!-- Logic: parallax, countdown, share, payments, VIP, auto-contrast -->
+  <script nonce="{{ NONCE }}">
+  (() => {
+    if (window.__fcHeroEliteInit) return; window.__fcHeroEliteInit = true;
+    const hero = document.getElementById('fc-hero');
+    const img  = document.getElementById('fc-hero-img');
+    const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const clamp = (x,min,max)=>Math.min(Math.max(x,min),max);
+
+    // Fallback
+    img?.addEventListener('error', ()=>{ const f=img?.dataset?.fallback; if(f && img.src !== f) img.src = f; });
+
+    // Parallax (subtle)
+    function parallax(){
+      if (!img || prefersReduce) return;
+      const rect = hero.getBoundingClientRect();
+      if (rect.bottom < 0 || rect.top > innerHeight) return;
+      const amt = clamp((innerHeight/2 - rect.top) * 0.035, -50, 50);
+      img.style.transform = `translateY(${amt}px) scale(1.03)`;
+    }
+    addEventListener('scroll', parallax, {passive:true});
+    addEventListener('resize', parallax, {passive:true});
+    img?.addEventListener('load', parallax, {once:true});
+
+    // Countdown
+    const deadlineISO = hero?.dataset?.deadline;
+    function updateCountdown(){
+      if(!deadlineISO) return;
+      const t = new Date(deadlineISO).getTime() - Date.now();
+      const dd = Math.max(0, Math.floor(t/86400000));
+      const hh = Math.max(0, Math.floor((t%86400000)/3600000));
+      const mm = Math.max(0, Math.floor((t%3600000)/60000));
+      const ss = Math.max(0, Math.floor((t%60000)/1000));
+      const set = (id,v)=>{ const el=document.getElementById(id); if(el){ el.textContent=String(v).padStart(2,'0'); } };
+      set('fc-ct-days', dd); set('fc-ct-hrs', hh); set('fc-ct-min', mm); set('fc-ct-sec', ss);
+    }
+    updateCountdown(); setInterval(updateCountdown, 1000);
+
+    // Share copy
+    const shareBtn = document.getElementById('fc-share');
+    const shareOk  = document.getElementById('fc-share-ok');
+    shareBtn?.addEventListener('click', async () => {
+      try{ await navigator.clipboard.writeText(location.href); shareOk?.classList.remove('hidden'); setTimeout(()=>shareOk?.classList.add('hidden'), 1800); }catch{}
+    }, {passive:true});
+
+    // Payments
+    async function getCfg(){ try{ const r=await fetch('/api/payments/config',{headers:{'accept':'application/json'}}); if(!r.ok) throw 0; return await r.json(); }catch{ return {}; } }
+    async function pay(amount){
+      const c=await getCfg(); const link=c.payment_link_url||c.link||null; const hasPK=!!(c.publishable_key||c.pk||'');
+      const cents=Math.max(0,Math.round((Number(amount)||0)*100));
+      if(hasPK && link){ location.assign(link+(link.includes('?')?'&':'?')+'client_reference_id='+encodeURIComponent(String(cents||0))); return; }
+      location.assign('/donate?amount='+encodeURIComponent(String(amount||0)));
+    }
+    document.querySelectorAll('[data-amount]').forEach(b=>b.addEventListener('click',()=>pay(+b.getAttribute('data-amount')||0),{passive:true}));
+    document.getElementById('fc-donate')?.addEventListener('click',()=>pay(0),{passive:true});
+
+    // VIP banner
+    const banner = document.getElementById('fc-vip-banner');
+    const nameEl = document.getElementById('fc-vip-name');
+    const amtEl  = document.getElementById('fc-vip-amt');
+    const ticker = document.getElementById('fc-ticker');
+    function showVip({name='VIP Donor', amount=0}={}){
+      if(nameEl) nameEl.textContent = String(name);
+      if(amtEl)  amtEl.textContent  = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD'}).format(amount);
+      banner?.classList.remove('hidden');
+      banner?.animate([{opacity:0, transform:'translateY(-12px)'},{opacity:1, transform:'translateY(0)'}],{duration:260, easing:'ease-out'});
+      setTimeout(()=>banner?.animate([{opacity:1},{opacity:0}],{duration:300, easing:'ease-in'}).onfinish=()=>banner?.classList.add('hidden'), 4200);
+      if(ticker){ const chip=document.createElement('span'); chip.className='mx-6 text-xs text-zinc-300'; chip.textContent=`🥇 ${name}`; ticker.appendChild(chip); }
+      const sr = document.getElementById('sr-live'); if(sr) sr.textContent = `VIP: ${name} donated ${amtEl?.textContent||''}`;
+    }
+    addEventListener('fc:vip:hit', (e)=>showVip(e.detail||{}));
+
+    // Auto-contrast for overlays (best-effort; ignores cross-origin taint)
+    try{
+      img?.addEventListener('load', () => {
+        const c=document.createElement('canvas'); const w=c.width=64, h=c.height=36;
+        const ctx=c.getContext('2d', {willReadFrequently:true});
+        const x=img.naturalWidth*0.33, y=img.naturalHeight*0.18;
+        ctx.drawImage(img, x, y, img.naturalWidth*0.34, img.naturalHeight*0.34, 0, 0, w, h);
+        const data=ctx.getImageData(0,0,w,h).data;
+        let L=0; for(let i=0;i<data.length;i+=4){ const r=data[i]/255, g=data[i+1]/255, b=data[i+2]/255; L+=0.2126*r+0.7152*g+0.0722*b; }
+        L/= (w*h);
+        if(L>0.55){
+          hero.style.setProperty('--glass-bg','rgba(0,0,0,.64)');
+          hero.style.setProperty('--grad-top','rgba(0,0,0,.70)');
+          hero.style.setProperty('--grad-mid','rgba(0,0,0,.42)');
+          hero.style.setProperty('--grad-bot','rgba(0,0,0,.24)');
+          hero.style.setProperty('--title-stroke','rgba(0,0,0,.75)');
+          hero.style.setProperty('--hero-img-opacity','0.96');
+        } else if(L<0.28){
+          hero.style.setProperty('--glass-bg','rgba(0,0,0,.48)');
+          hero.style.setProperty('--grad-top','rgba(0,0,0,.56)');
+          hero.style.setProperty('--grad-mid','rgba(0,0,0,.30)');
+          hero.style.setProperty('--grad-bot','rgba(0,0,0,.14)');
+          hero.style.setProperty('--title-stroke','rgba(0,0,0,.55)');
+          hero.style.setProperty('--hero-img-opacity','1');
+        }
+      }, {once:true});
+    }catch{}
+
+    // Meter helpers
+    window.getHeroMeter = () => {
+      const wrap=document.getElementById('fundraiser-meter');
+      return { raised: +(wrap?.dataset?.raised||0), goal: +(wrap?.dataset?.goal||0) };
+    };
+    window.updateHeroMeter = (raised,goal) => {
+      const wrap=document.getElementById('fundraiser-meter'); if(!wrap) return;
+      wrap.dataset.raised=String(raised); wrap.dataset.goal=String(goal||0);
+      const p = Math.max(0, Math.min(100, (raised/Math.max(goal||1,1))*100));
+      const bar=document.getElementById('fc-bar'); if(bar) bar.style.width = p.toFixed(1)+'%';
+      const pct=document.getElementById('fc-pct'); if(pct) pct.textContent = p.toFixed(1);
+      wrap.setAttribute('aria-valuenow', p.toFixed(1));
+    };
+
+    // Motion-safe
+    if (prefersReduce) {
+      try { document.querySelector('.fc-marquee')?.style?.setProperty('animation','none','important'); } catch(_) {}
+    }
+  })();
+  </script>
+
+<style nonce="{{ NONCE }}">
+
+
+</style>
+</section>
+
