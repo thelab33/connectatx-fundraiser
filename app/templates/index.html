@@ -1,54 +1,139 @@
 {% extends "base.html" %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _q = request.args if request is defined else {} %}
 
-{% block title %}
-  {{ _("Home") }} · {{ team.team_name | default("Connect ATX Elite", true) }}
-{% endblock %}
+{# ---------- Brand/name fallbacks ---------- #}
+{% set _brand_name = _brand_name if _brand_name is defined
+  else (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
 
-{# ---- HERO SECTION ---- #}
-{% block hero %}
-  {% include "partials/hero_and_fundraiser.html" ignore missing %}
+{# ---------- Show/Hide Flags Based on Query Params ---------- #}
+{% set SHOW_IMPACT     = (show_impact     if show_impact     is defined else (_q.get('impact') not in _OFF)) %}
+{% set SHOW_ALLOCATION = (show_allocation if show_allocation is defined else (_q.get('alloc')  not in _OFF)) %}
+{% set SHOW_TIERS      = (show_tiers      if show_tiers      is defined else (_q.get('tiers')  not in _OFF)) %}
+{% set SHOW_ABOUT      = (show_about      if show_about      is defined else (_q.get('about')  not in _OFF)) %}
+
+{% block head %}
+  {{ super() }}
+  <style nonce="{{ NONCE }}">
+    /* ===== SV-Elite polish tokens (keeps Tailwind happy) ===== */
+    :root{
+      --fc-gold: #facc15;
+      --fc-amber: #f59e0b;
+      --fc-surface: rgba(255,255,255,.06);
+    }
+
+    /* ===== Sponsor Leaderboard (premium) ===== */
+    .fc-ticker {
+      position: sticky; top: 0; z-index: 40;
+      background: linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.72));
+      border-bottom: 1px solid rgba(255,255,255,.12);
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+      backdrop-filter: blur(10px) saturate(140%);
+      box-shadow: 0 6px 28px rgba(0,0,0,.35);
+    }
+    .fc-ticker__rail { display:flex; gap:1.5rem; white-space:nowrap; padding:.55rem 1rem; }
+    .fc-ticker__rail .pill {
+      display:inline-flex; align-items:center; gap:.45rem;
+      padding:.35rem .6rem; border-radius:999px; font-weight:700;
+      background: var(--fc-surface);
+      border: 1px solid rgba(255,255,255,.10);
+    }
+    .fc-ticker__rail .headline {
+      color: #fde68a; font-weight:800; letter-spacing:.01em;
+      text-shadow: 0 0 10px rgba(250,204,21,.35);
+    }
+
+    /* marquee (paused on hover; motion-safe) */
+    @keyframes fc-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+    .fc-marquee { animation: fc-marquee 26s linear infinite; }
+    .fc-ticker:hover .fc-marquee { animation-play-state: paused; }
+    @media (prefers-reduced-motion: reduce){
+      .fc-marquee { animation: none !important; }
+    }
+
+    /* tier accents */
+    .tier-plat { color:#e0e7ff; }
+    .tier-gold { color:#fde68a; }
+    .tier-silver{ color:#d1d5db; }
+    .tier-bronze{ color:#fbbf24; }
+
+    /* micro pop-in used across page */
+    @keyframes pop { 0%{transform:scale(.98);opacity:0} 100%{transform:scale(1);opacity:1} }
+    .animate-pop { animation: pop .35s ease-out both; }
+  </style>
 {% endblock %}
 
 {% block content %}
-  <main class="flex flex-col gap-20 max-w-6xl mx-auto w-full px-4 sm:px-8" role="main" tabindex="-1">
-    {# ---- Dynamic Page Sections ---- #}
-    {% set page_sections = [
-      {"id": "mission", "label": _("Our Mission"), "partial": "partials/mission_section.html"},
-      {"id": "tiers", "label": _("Sponsorship Tiers"), "partial": "partials/tiers.html"},
-      {"id": "digital-hub", "label": _("Digital Hub"), "partial": "partials/digital_hub.html"},
-      {"id": "about", "label": _("About Connect ATX Elite"), "partial": "partials/about_section.html"},
-      {"id": "sponsor-spotlight", "label": _("Sponsor Spotlight"), "partial": "partials/sponsor_spotlight.html"},
-      {"id": "program-stats-calendar", "label": _("Program Stats & Schedule"), "partial": "partials/program_stats_and_calendar.html"},
-      {"id": "testimonial-popover", "label": _("What Families Say"), "partial": "partials/testimonial_popover.html"},
-      {"id": "back-to-top", "label": _("Back to Top"), "partial": "partials/back_to_top.html"},
-      {"id": "flash-and-onboarding", "label": _("Flash & Onboarding"), "partial": "partials/flash_and_onboarding.html"},
-      {"id": "sponsor-wall", "label": _("Sponsor Wall"), "partial": "partials/sponsor_wall.html"}
-    ] %}
 
-    {% for section in page_sections %}
-      <section
-        id="{{ section.id }}"
-        aria-labelledby="{{ section.id }}-heading"
-        class="pb-8 scroll-mt-20"
-        role="region"
-        tabindex="-1"
-      >
-        <h2 id="{{ section.id }}-heading" class="sr-only">{{ section.label }}</h2>
-        {% include section.partial ignore missing %}
-      </section>
-    {% endfor %}
+  {# ===== Sponsor Leaderboard (HTMX live feed) ===== #}
+  {# expects /api/shoutouts -> [{sponsor,msg,tier}, ...] #}
+  <section id="sponsor-leaderboard" class="fc-ticker" aria-live="polite" aria-label="Live sponsor shoutouts">
+    <div class="overflow-hidden">
+      <div class="fc-ticker__rail fc-marquee"
+           hx-get="/api/shoutouts"
+           hx-trigger="load, every 8s"
+           hx-swap="outerHTML"
+           role="list">
+        <span class="pill headline">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
 
-    {# ---- Optional CTA Block ---- #}
-    {% block extra_cta %}
-      {# Place sticky banners, promos, or A/B messages here #}
-    {% endblock %}
-
-    {# ---- Admin-Only Onboarding Popover ---- #}
-    {% if current_user and current_user.is_authenticated and current_user.is_admin %}
-      <div id="admin-onboarding" class="relative z-40">
-        {% include "partials/admin_onboarding_popover.html" ignore missing %}
+        {# optional server-rendered seeds if provided in context #}
+        {% for s in (shoutouts or []) %}
+          <span role="listitem" class="pill">
+            {% set t = (s.tier or 'General') | lower %}
+            {% if t == 'platinum' %}<span class="tier-plat">✨</span>
+            {% elif t == 'gold' %}<span class="tier-gold">🏅</span>
+            {% elif t == 'silver' %}<span class="tier-silver">🎉</span>
+            {% elif t == 'bronze' %}<span class="tier-bronze">🥉</span>
+            {% else %}🔥{% endif %}
+            <span class="text-white">{{ s.sponsor }}</span> {{ s.msg }}
+          </span>
+        {% endfor %}
       </div>
-    {% endif %}
-  </main>
+    </div>
+  </section>
+
+  <!-- Hero Section with Fundraising Progress and CTA -->
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+
+  <!-- Impact Buckets Section -->
+    <style>.impact-card:hover{transform:translateY(-4px);box-shadow:0 6px 14px rgba(0,0,0,.35)}.impact-card .title:before{margin-right:.4em}</style>
+  {% if SHOW_IMPACT %}
+    {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+  {% endif %}
+
+  <!-- Dedicated Donate Page CTA -->
+  <section aria-labelledby="donate-cta-heading" class="my-10 max-w-3xl mx-auto text-center animate-pop">
+    <h2 id="donate-cta-heading" class="sr-only">Donate page call to action</h2>
+    <a href="{{ url_for('main.donate') }}"
+       class="btn btn-primary btn-lg rounded-full inline-flex items-center gap-2">
+      💛 Donate Now
+    </a>
+    <p id="donate-cta-note" class="mt-2 text-sm text-gray-400">
+      Secure checkout • Receipts by email • One-time and recurring gifts supported
+    </p>
+  </section>
+
+  <!-- Sponsor Tiers Section (VIP, Gold, Silver) -->
+  {% if SHOW_TIERS %}
+    {% include "partials/tiers.html" ignore missing with context %}
+  {% endif %}
+
+  <!-- About Section (Mission Statement) -->
+  {% if SHOW_ABOUT %}
+    {% include "partials/about_section.html" ignore missing with context %}
+    {% include "partials/ai_concierge.html" ignore missing with context %}
+  {% endif %}
+
+  {# Confetti on ticker update (SV-Elite flourish). Safe when NONCE present. #}
+  <script nonce="{{ NONCE }}">
+    document.addEventListener("htmx:afterSwap", (e) => {
+      if (e.target && e.target.classList && e.target.classList.contains("fc-marquee")) {
+        // soft celebratory burst when new shoutouts load
+        import("https://cdn.skypack.dev/canvas-confetti").then(({default:confetti})=>{
+          confetti({ particleCount: 36, spread: 60, startVelocity: 32, origin: { y: 0.18 } });
+        }).catch(()=>{});
+      }
+    });
+  </script>
 {% endblock %}
 

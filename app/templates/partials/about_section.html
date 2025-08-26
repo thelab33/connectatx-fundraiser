@@ -1,152 +1,279 @@
-{% from "macros/ui.html" import render_button %}
-{% from "macros/confetti.html" import launch_confetti %}
+{# ================================
+   about_section.html — SV-ELITE (Production v2)
+   - Grid-fixed, image mosaic, motion-safe counters
+   - CSP-safe modal with focus trap + hooks
+   - Uses global tokens (fc-*)
+   ================================ #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _team = team if team is defined and team else none %}
+{% set TEAM_NAME   = _team.team_name if _team and _team.team_name else "Connect ATX Elite" %}
+{% set REGION      = _team.region     if _team and _team.region     else "Austin, TX" %}
+{% set MISSION_TXT = _team.mission    if _team and _team.mission    else
+"Beyond basketball—we’re shaping leaders, scholars, and role models for our community." %}
 
-{# --- Dynamic Vars & Fallbacks --- #}
-{% set player_team = team.team_name if team and team.team_name is defined else 'Connect ATX Elite' %}
-{% set team_league = team.league if team and team.league is defined else 'AAU' %}
-{% set team_region = team.region if team and team.region is defined else 'Austin, TX' %}
-{% set founder_last = team.founder_lastname if team and team.founder_lastname is defined else 'Smith' %}
-{% set img_src = team.img if team and team.img else 'images/fallback.jpg' %}
-{% set img_src = img_src if '://' in img_src else url_for('static', filename=img_src) %}
-{% set rings_img = 'images/team-rings.webp' %}
-{% set rings_img = rings_img if '://' in rings_img else url_for('static', filename=rings_img) %}
-{% set video_src = team.story_video if team and team.story_video else 'videos/story.mp4' %}
-{% set video_poster = team.story_poster if team and team.story_poster else 'images/video_poster.jpg' %}
-{% set kvue_url = team.kvue_url if team and team.kvue_url else 'https://www.kvue.com/video/default-url' %}
-{% set youtube_id = team.youtube_id if team and team.youtube_id else 'dQw4w9WgXcQ' %}
-{% set testimonials = testimonials if testimonials is defined and testimonials else [
-  {"quote": "Winning felt amazing — but it’s being part of a team that believes in you that means the most.", "author": player_team ~ " Player, Class of 2030"},
-  {"quote": "I never thought my child would love both books and basketball this much.", "author": "Happy Parent"},
-  {"quote": "The coaches and families here really care. My son found his tribe.", "author": "Team Parent"}
+{# Safe asset helper: works with or without Flask url_for #}
+{% macro asset(path) -%}
+  {%- set p = path|string -%}
+  {%- if '://' in p or p.startswith('data:') -%}{{ p }}
+  {%- else -%}
+    {%- if url_for is defined -%}{{ url_for('static', filename=p.lstrip('/')) }}
+    {%- else -%}/static/{{ p.lstrip('/') }}{%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{# Allow overrides from context #}
+{% set STATS = STATS if STATS is defined and STATS else [
+  {"icon":"🏀","label":"Regionals record","value": _team.regionals_record if _team and _team.regionals_record else "15"},
+  {"icon":"🏆","label":"Championships","value": _team.championships if _team and _team.championships else "3"},
+  {"icon":"🎓","label":"Top academic athletes","value": _team.top_academic if _team and _team.top_academic else "12"}
 ] %}
+{% set IMG1 = IMG1 if IMG1 is defined and IMG1 else (_team.img1 if _team and _team.img1 else 'images/player1.webp') %}
+{% set IMG2 = IMG2 if IMG2 is defined and IMG2 else (_team.img2 if _team and _team.img2 else 'images/player2.webp') %}
+{% set IMG3 = IMG3 if IMG3 is defined and IMG3 else (_team.img3 if _team and _team.img3 else 'images/player3.webp') %}
+{% set VIDEO_URL = VIDEO_URL if VIDEO_URL is defined and VIDEO_URL
+  else (_team.video_url if _team and _team.video_url else 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1') %}
+{% set SHOW_VIDEO = SHOW_VIDEO if SHOW_VIDEO is defined else True %}
 
-<section
-  id="about-families"
-  class="relative py-16 sm:py-20 px-4 sm:px-8 max-w-7xl mx-auto bg-gradient-to-b from-zinc-950 via-black to-zinc-950 text-white rounded-3xl shadow-lg shadow-yellow-600/30 ring-2 ring-yellow-400/20 overflow-hidden"
-  itemscope itemtype="https://schema.org/SportsTeam"
-  aria-labelledby="about-main-heading"
-  tabindex="-1"
->
-  <meta itemprop="name" content="{{ player_team }}" />
-  <meta itemprop="areaServed" content="{{ team_region }}" />
-  <meta itemprop="memberOf" content="{{ team_league }}" />
+<section id="fc-about" class="relative bg-fc-surface text-fc-text py-14 sm:py-20" aria-labelledby="fc-about-title">
+  <style nonce="{{ NONCE }}">
+    /* Scoped to #fc-about only */
+    #fc-about .mosaic { position: relative; }
+    #fc-about .mosaic-grid {
+      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: .75rem;
+      content-visibility: auto; contain-intrinsic-size: 520px;
+    }
+    #fc-about .tile { position: relative; overflow: hidden; border-radius: .9rem; }
+    #fc-about .tile img {
+      width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 50% 50%;
+    }
+    /* Ken Burns (motion-safe) */
+    @media (prefers-reduced-motion: no-preference) {
+      #fc-about .tile img { animation: about-ken 14s ease-in-out infinite alternate; }
+      @keyframes about-ken { from { transform: scale(1.03) } to { transform: scale(1.12) } }
+    }
+    /* Ambient sheen + ring */
+    #fc-about .tile::after {
+      content:""; position:absolute; inset:0; pointer-events:none;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%);
+      opacity:.6;
+    }
+    #fc-about .tile .ring {
+      position:absolute; inset:0; border-radius:inherit;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    /* Play overlay button */
+    #fc-about .play-btn {
+      position:absolute; inset:auto auto 10px 10px;
+      display:inline-flex; align-items:center; gap:.5rem;
+      padding:.55rem .8rem; border-radius:.75rem;
+      background: rgba(17,17,17,.6); color:#fff;
+      border:1px solid rgba(255,255,255,.12);
+      backdrop-filter: blur(6px) saturate(120%);
+      -webkit-backdrop-filter: blur(6px) saturate(120%);
+      font-weight: 700; font-size: .9rem;
+    }
+    /* Focus ring */
+    #fc-about .focusable:focus-visible{ outline: none; box-shadow: 0 0 0 .18rem rgba(250,204,21,.8) }
+  </style>
 
-  <!-- Decorative Watermarks -->
-  <img src="{{ img_src }}" alt="" aria-hidden="true"
-       class="absolute left-6 top-12 w-20 md:w-28 opacity-30 pointer-events-none select-none blur-sm rounded-lg" loading="lazy" decoding="async" />
-  <img src="{{ img_src }}" alt="" aria-hidden="true"
-       class="absolute right-6 bottom-12 w-16 md:w-24 opacity-20 pointer-events-none select-none blur-sm rounded-md" loading="lazy" decoding="async" />
+  <div class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6">
+    <div class="grid gap-10 md:grid-cols-2 items-start">
+      <!-- Copy / Mission -->
+      <div>
+        <h2 id="fc-about-title" class="text-2xl md:text-3xl font-extrabold tracking-tight mb-2 optical-tight">
+          Our Mission <span class="sr-only">— {{ TEAM_NAME }} ({{ REGION }})</span>
+        </h2>
+        <p class="text-fc-text/90 leading-relaxed mb-5 text-pretty">{{ MISSION_TXT }}</p>
 
-  <h2 id="about-main-heading"
-      class="text-4xl md:text-5xl font-extrabold text-center bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-200 bg-clip-text text-transparent animate-shine drop-shadow-xl mb-7 outline-none"
-      tabindex="0">
-    About {{ player_team }} — Our Mission &amp; Voices
-  </h2>
-
-  <div class="relative z-10 flex flex-col lg:flex-row items-start gap-14">
-    <!-- About Card -->
-    <article class="flex-1 max-w-xl mx-auto text-center lg:text-left space-y-8">
-      <ul class="flex flex-wrap justify-center lg:justify-start gap-3 mb-3" aria-label="Team attributes">
-        <li class="inline-flex items-center px-4 py-1.5 rounded-full bg-black/80 text-yellow-200 font-bold text-sm uppercase shadow-sm select-none">{{ player_team }}</li>
-        <li class="inline-flex items-center px-4 py-1.5 rounded-full bg-yellow-300/80 text-yellow-900 font-semibold text-sm uppercase shadow-sm select-none">{{ team_league }} Proud</li>
-        <li class="inline-flex items-center px-4 py-1.5 rounded-full bg-indigo-900/80 text-yellow-100 font-semibold text-sm uppercase shadow-sm select-none">Community Powered</li>
-      </ul>
-      <p class="text-lg md:text-xl font-semibold text-white/90 leading-relaxed max-w-md mx-auto lg:mx-0">
-        <strong class="text-yellow-400">{{ player_team }}</strong> isn’t just a team — it’s a <span class="text-yellow-200 font-extrabold">family movement</span> in <span class="text-amber-200">{{ team_region }}</span> where kids and parents find a second home.<br>
-        <span class="mt-3 block">We build <span class="text-yellow-400">teamwork</span>, <span class="text-yellow-300">respect</span>, and <span class="text-amber-300">championship character</span> for life.</span>
-      </p>
-      <div class="bg-zinc-900/90 rounded-2xl p-6 shadow-md text-base text-white/80 max-w-md mx-auto lg:mx-0">
-        Founded by the <strong class="text-yellow-300">{{ founder_last }}</strong> family, our <strong class="text-yellow-200">{{ team_league }}</strong> program began as a dad’s dream for his son — and grew into a thriving community.<br>
-        <span class="mt-2 block text-amber-200 font-bold leading-tight">Coaches, volunteers, and sponsors shape every student’s journey — every child matters here.</span>
-      </div>
-      <!-- Story Modal Trigger -->
-      <div class="mt-8">
-        {{ render_button(label='▶️ Watch Our Story', extra_classes='gap-3 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 px-8 py-4 text-lg font-extrabold text-black shadow-lg hover:scale-105 focus-visible:ring-4 focus-visible:ring-yellow-300 transition animate-pulse', href='#', type='button', attrs={ "id": 'story-btn', "aria_haspopup": 'dialog', "aria_controls": 'story-modal', "aria_expanded": 'false' }) }}
-      </div>
-    </article>
-
-    <!-- Testimonials Card -->
-    <section class="flex-1 max-w-xl mx-auto mt-8 lg:mt-0" role="region" aria-label="Testimonials" tabindex="0">
-      <h3 class="mb-7 text-3xl font-extrabold text-center bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-500 bg-clip-text text-transparent drop-shadow-xl">
-        💬 What Families Say
-      </h3>
-      <div id="testimonial-carousel" class="relative" aria-live="polite" aria-atomic="true" tabindex="0">
-        <figure class="bg-zinc-900/90 rounded-3xl shadow-2xl px-8 py-10 text-center min-h-[170px] transition-all" aria-label="Testimonial quote and author">
-          <blockquote id="carousel-quote" class="mb-4 text-xl font-semibold italic text-yellow-100 leading-relaxed"></blockquote>
-          <figcaption id="carousel-author" class="font-bold text-yellow-300 text-base"></figcaption>
-          <img src="{{ rings_img }}" alt="" aria-hidden="true" class="mx-auto mt-5 h-12 w-12 rounded-full object-cover opacity-70 shadow-inner" loading="lazy" decoding="async" />
-        </figure>
-        <nav class="mt-6 flex justify-center gap-3" aria-label="Select testimonial">
-          {% for i in range(testimonials|length) %}
-          <button class="dot h-3 w-3 rounded-full bg-yellow-300/70 transition-colors focus-visible:ring-2 focus-visible:ring-yellow-300"
-                  data-idx="{{ i }}" aria-label="Show testimonial {{ i + 1 }}"
-                  {% if not i %} aria-current="true" {% else %} tabindex="-1" {% endif %}
-                  type="button"></button>
+        <!-- Counters (reduced-motion aware; IO-triggered) -->
+        <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {% for s in STATS %}
+          <div class="rounded-xl border border-fc-border/80 bg-fc-elev/70 p-3">
+            <dt class="text-[12px] text-fc-text/70">{{ s.icon }} {{ s.label }}</dt>
+            <dd class="mt-1 text-xl font-semibold tracking-tight tabular-nums">
+              <span class="fc-counter" data-target="{{ (s.value|string)|replace('–','-') }}">{{ s.value }}</span>
+            </dd>
+          </div>
           {% endfor %}
-        </nav>
-        <button id="copy-quote" class="absolute right-6 bottom-6 text-sm text-yellow-300 underline hover:text-yellow-200 transition focus-visible:ring-2 focus-visible:ring-yellow-300 bg-black/50 px-4 py-2 rounded-xl" aria-label="Copy quote to clipboard" type="button">
-          Copy Quote
-        </button>
-        <span id="copy-toast" class="pointer-events-none fixed bottom-10 left-1/2 -translate-x-1/2 rounded-2xl bg-yellow-400 px-4 py-2 font-bold text-black opacity-0 shadow-md transition-opacity duration-300">Copied!</span>
+        </dl>
+
+        <!-- Secondary CTAs -->
+        <div class="mt-6 flex flex-wrap gap-3">
+          <a href="#tiers"
+             class="inline-flex items-center rounded-xl px-4 py-2 bg-fc-brand text-black font-semibold shadow transition
+                    focus:outline-none focus:ring-2 focus:ring-fc-brand focus:ring-offset-2 focus:ring-offset-fc-surface hover:opacity-90"
+             data-analytics="about:tiers">
+            View Sponsorship Tiers
+          </a>
+          <a href="#sponsor-form"
+             class="inline-flex items-center rounded-xl px-4 py-2 bg-fc-elev border border-fc-border text-fc-text transition
+                    focus:outline-none focus:ring-2 focus:ring-fc-brand focus:ring-offset-2 focus:ring-offset-fc-surface hover:bg-fc-elev/80"
+             data-analytics="about:sponsor">
+            Sponsor a Champion
+          </a>
+        </div>
       </div>
-    </section>
+
+      <!-- Image Mosaic + Play -->
+      <div class="mosaic">
+        <div class="mosaic-grid">
+          <figure class="tile col-span-1 row-span-3">
+            <img src="{{ asset(IMG1) }}" alt="Practice and teamwork — {{ TEAM_NAME }}" loading="lazy" decoding="async" fetchpriority="low">
+            <span class="ring" aria-hidden="true"></span>
+          </figure>
+          <figure class="tile">
+            <img src="{{ asset(IMG2) }}" alt="Game day moments — {{ TEAM_NAME }}" loading="lazy" decoding="async" fetchpriority="low">
+            <span class="ring" aria-hidden="true"></span>
+          </figure>
+          <figure class="tile">
+            <img src="{{ asset(IMG3) }}" alt="Classroom excellence — {{ TEAM_NAME }}" loading="lazy" decoding="async" fetchpriority="low">
+            <span class="ring" aria-hidden="true"></span>
+          </figure>
+        </div>
+
+        {% if SHOW_VIDEO %}
+        <button
+          type="button"
+          id="fc-video-open"
+          class="play-btn focusable"
+          aria-haspopup="dialog"
+          aria-controls="fc-video-modal"
+          aria-expanded="false"
+          data-modal-target="fc-video-modal"
+          data-video-src="{{ VIDEO_URL }}"
+          data-analytics="about:watch">
+          ▶ <span>Watch Our Story</span>
+        </button>
+        <noscript>
+          <p class="mt-2">
+            <a class="underline text-fc-brand" href="{{ VIDEO_URL }}">Watch Our Story (opens video)</a>
+          </p>
+        </noscript>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Video Modal (CSP-safe, focus trapped) --- #}
+  <div id="fc-video-modal"
+       class="fixed inset-0 z-[1000] hidden"
+       role="dialog"
+       aria-modal="true"
+       aria-labelledby="fc-video-title"
+       aria-describedby="fc-video-desc">
+    <div class="absolute inset-0 bg-black/70 supports-[backdrop-filter:blur(2px)]:backdrop-blur-sm" data-modal-overlay></div>
+
+    <div class="relative mx-auto max-w-4xl mt-16 rounded-2xl bg-fc-surface border border-fc-border shadow-2xl focus:outline-none"
+         role="document" tabindex="-1">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-fc-border">
+        <h3 id="fc-video-title" class="text-lg font-semibold">Our Story — {{ TEAM_NAME }}</h3>
+        <button type="button"
+                class="rounded-lg px-3 py-1 bg-fc-elev border border-fc-border hover:bg-fc-elev/80"
+                data-modal-close="fc-video-modal" aria-label="Close video">✕</button>
+      </div>
+
+      <p id="fc-video-desc" class="sr-only">Video modal showing {{ TEAM_NAME }} mission film</p>
+
+      <div class="aspect-video">
+        <iframe
+          title="Our Story — {{ TEAM_NAME }}"
+          class="w-full h-full rounded-b-2xl"
+          src=""
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          allowfullscreen
+          loading="lazy"
+          referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- Story Modal (outside main section for overlay) -->
-<dialog id="story-modal"
-        class="fixed inset-0 z-[12000] hidden items-center justify-center bg-black/90 backdrop-blur-lg transition-opacity duration-200"
-        aria-modal="true" aria-labelledby="story-title" role="dialog" tabindex="-1">
-  <div id="story-box"
-       class="relative w-[95vw] max-w-3xl scale-95 opacity-0 rounded-3xl bg-black/95 shadow-2xl p-6 md:p-10 transition-all duration-300 focus:outline-none"
-       role="document" tabindex="0">
-    <button id="story-close"
-            class="absolute top-5 right-5 text-4xl text-yellow-200 hover:text-yellow-300 focus-visible:ring-4 focus-visible:ring-yellow-300 rounded-lg"
-            aria-label="Close story modal" type="button">×</button>
-    <h2 id="story-title"
-        class="mb-4 text-center text-2xl md:text-3xl font-extrabold bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 bg-clip-text text-transparent drop-shadow animate-shine">
-      Our Story: On &amp; Off the Court
-    </h2>
-    {% set tabs = [
-      {'id':'myvideo','label':'🎥 Team Video'},
-      {'id':'kvue', 'label':'📺 KVUE News'},
-      {'id':'yt', 'label':'🏀 YouTube'}
-    ] %}
-    <nav class="mb-6 flex flex-wrap justify-center gap-4 md:gap-6" aria-label="Video sources" role="tablist">
-      {% for t in tabs %}
-      <button id="tab-{{ t.id }}"
-              class="tab-btn rounded-full py-2 px-6 font-semibold text-base shadow transition focus-visible:ring-4 focus-visible:ring-yellow-300 {% if loop.first %}bg-yellow-400 text-black{% else %}bg-zinc-800 text-yellow-300{% endif %}"
-              data-idx="{{ loop.index0 }}" role="tab" aria-controls="panel-{{ t.id }}"
-              {% if loop.first %} aria-selected="true" {% else %} aria-selected="false" tabindex="-1" {% endif %}
-              type="button">
-        {{ t.label }}
-      </button>
-      {% endfor %}
-    </nav>
-    {% for t in tabs %}
-    <div id="panel-{{ t.id }}"
-         role="tabpanel"
-         class="panel {% if not loop.first %}hidden{% endif %} w-full max-w-3xl aspect-video mx-auto rounded-2xl overflow-hidden focus:outline-none"
-         aria-labelledby="tab-{{ t.id }}" tabindex="0">
-      {% if t.id == 'myvideo' %}
-      <video controls preload="none" poster="{{ video_poster }}" class="h-full w-full bg-black rounded-2xl">
-        <source src="{{ video_src }}" type="video/mp4" />
-        Sorry, your browser doesn’t support embedded videos.
-      </video>
-      {% elif t.id == 'kvue' %}
-      <iframe src="{{ kvue_url }}" class="h-full w-full rounded-2xl" allowfullscreen loading="lazy" referrerpolicy="no-referrer"></iframe>
-      {% else %}
-      <iframe src="https://www.youtube.com/embed/{{ youtube_id }}" class="h-full w-full rounded-2xl" allowfullscreen loading="lazy" referrerpolicy="no-referrer"></iframe>
-      {% endif %}
-    </div>
-    {% endfor %}
-    <p class="mt-6 text-center text-xs text-zinc-400 select-none"><strong>{{ player_team }}</strong> &nbsp;|&nbsp; Family-run · Community-powered · Champions rising</p>
-  </div>
-</dialog>
+{# --- JS: modal + counters (CSP nonce) --- #}
+<script nonce="{{ NONCE }}">
+(() => {
+  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-<style>
-@keyframes shine { 0%{ background-position:-200px; } 100%{ background-position:200px; } }
-.animate-shine { background-size: 200% auto; animation: shine 2.5s linear infinite; }
-@media (max-width:900px) { .panel { min-height:220px; } }
-</style>
+  // Counter animation: numeric only
+  function animateCounter(el){
+    const raw = (el.getAttribute('data-target') || el.textContent || '').trim();
+    if(!/^\d+(\.\d+)?$/.test(raw)){ el.textContent = raw; return; }
+    if(prefersReduce){ el.textContent = Number(raw).toLocaleString(); return; }
+    const target = parseFloat(raw);
+    let start=null, dur=900;
+    const step=(ts)=>{ if(!start) start=ts; const p=Math.min(1,(ts-start)/dur);
+      el.textContent = Math.floor(target*p).toLocaleString();
+      if(p<1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+  function initCounters(){ document.querySelectorAll('.fc-counter').forEach(animateCounter); }
+
+  // IO gate
+  (function(){
+    const sect = document.getElementById('fc-about');
+    if('IntersectionObserver' in window && sect){
+      let ran=false;
+      const io=new IntersectionObserver((entries)=>{
+        if(!ran && entries.some(e=>e.isIntersecting)){ ran=true; initCounters(); io.disconnect(); }
+      },{threshold:0.2});
+      io.observe(sect);
+    } else { initCounters(); }
+  })();
+
+  // Modal + focus trap
+  const openBtn = document.getElementById('fc-video-open');
+  const modal   = document.getElementById('fc-video-modal');
+  if (!openBtn || !modal) return;
+
+  const iframe  = modal.querySelector('iframe');
+  const overlay = modal.querySelector('[data-modal-overlay]');
+  const closeBtn= modal.querySelector('[data-modal-close]');
+  let lastFocus = null;
+
+  const focusables = (root) => Array.from(root.querySelectorAll(
+    'a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])'
+  )).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+
+  function lockBody(){ document.documentElement.style.overflow = 'hidden'; }
+  function unlockBody(){ document.documentElement.style.overflow = ''; }
+
+  function trapTab(e){
+    if(e.key !== 'Tab') return;
+    const f = focusables(modal); if(!f.length) return;
+    const first=f[0], last=f[f.length-1];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+  }
+  function escClose(e){ if(e.key==='Escape') close(); }
+
+  function open(){
+    lastFocus = document.activeElement;
+    modal.classList.remove('hidden');
+    openBtn.setAttribute('aria-expanded','true');
+    const src = openBtn.getAttribute('data-video-src') || '';
+    if(iframe) iframe.src = src;
+    lockBody();
+    (focusables(modal)[0] || modal).focus();
+    document.addEventListener('keydown', trapTab, { passive:false });
+    document.addEventListener('keydown', escClose, { passive:false });
+    try{ document.dispatchEvent(new CustomEvent('fc:video:open', { detail:{ src } })); }catch(_){}
+  }
+
+  function close(){
+    modal.classList.add('hidden');
+    openBtn.setAttribute('aria-expanded','false');
+    if(iframe) iframe.src = '';
+    unlockBody();
+    document.removeEventListener('keydown', trapTab);
+    document.removeEventListener('keydown', escClose);
+    if(lastFocus && lastFocus.focus) lastFocus.focus();
+    try{ document.dispatchEvent(new CustomEvent('fc:video:close')); }catch(_){}
+  }
+
+  openBtn.addEventListener('click', open, { passive:true });
+  (closeBtn || modal).addEventListener('click', (e) => {
+    if(e.target === overlay || e.currentTarget === closeBtn) close();
+  });
+})();
+</script>
 

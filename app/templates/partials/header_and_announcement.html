@@ -1,140 +1,186 @@
-{% from "macros/ui.html" import render_button %}
-{% from "macros/progress.html" import progress_meter %}
-{% from "macros/confetti.html" import launch_confetti %}
+{# =========================
+   Header — MVP v1.4 (FundChamps LEFT • Meter+CTA CENTER • Team RIGHT)
+   - Premium: rainbow wordmark, glow pulse, micro-interactions
+   - Safe fallbacks: SVG preferred, graceful text fallback
+   ========================= #}
+{% set NONCE    = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
+{% set _team    = team if team is defined and team else none %}
 
-<header
-  id="site-header"
-  class="sticky top-0 z-50 bg-black/90 backdrop-blur-xl shadow-2xl border-b border-yellow-400/20 transition-all duration-300"
-  x-data="{ mobileOpen: false }"
-  @keydown.window.escape="mobileOpen = false"
-  itemscope itemtype="https://schema.org/Organization"
-  itemprop="brand"
-  role="banner"
->
-  {# === Live Sponsor Ticker === #}
-  {% include "partials/header_sponsor_ticker.html" ignore missing %}
+{# Platform brand #}
+{% set platform_name  = platform_name if platform_name is defined and platform_name else 'FundChamps' %}
+{% set platform_url   = platform_url if platform_url is defined and platform_url else '/' %}
+{% set _p_logo_svg    = 'images/fundchamps-logo.svg' %}
+{% set platform_logo_svg = (url_for('static', filename=_p_logo_svg) if url_for is defined else '/static/' ~ _p_logo_svg) %}
 
-  {# === Announcement Bar (dynamic, e.g. for promo/updates) === #}
-  {% if announcement and announcement.visible %}
-    <div
-      id="announcement-bar"
-      class="flex justify-center items-center gap-2 py-2 px-4 text-sm font-semibold bg-gradient-to-r from-yellow-500 to-yellow-100 text-black shadow-inner border-b border-yellow-400/30"
-      hx-get="{{ url_for('main.announcement_partial') }}"
-      hx-trigger="every 5m"
-      hx-swap="outerHTML"
-      role="status"
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      <span>{{ announcement.message|safe }}</span>
-      {% if announcement.cta and announcement.cta_url %}
-        <a
-          href="{{ announcement.cta_url }}"
-          class="underline font-bold hover:no-underline focus-visible:ring-2 ring-black rounded transition-colors duration-200"
-          target="_blank"
-          rel="noopener noreferrer"
-        >{{ announcement.cta }}</a>
-      {% endif %}
-      <button
-        @click="$el.parentElement.remove()"
-        aria-label="Close announcement"
-        class="ml-2 rounded hover:bg-red-100/50 hover:text-red-700 focus-visible:ring-2 ring-red-600 text-xl leading-none px-2 py-1 select-none"
-        type="button"
-      >×</button>
-    </div>
-  {% endif %}
+{# Team bits #}
+{% set team_name   = _team.team_name if _team and _team.team_name is defined else 'Connect ATX Elite' %}
+{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
+{% set stripe_payment_link = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
 
-  {# === Fundraising Countdown Bar === #}
-  {% if fundraising_deadline %}
-    <div
-      class="text-xs font-bold bg-yellow-800 text-yellow-100 py-1 text-center animate-pulse tracking-wide border-b border-yellow-400/10"
-      aria-live="polite"
-      aria-atomic="true"
-      role="region"
-      aria-label="Fundraising deadline countdown"
-    >
-      ⏰ <span id="header-countdown">{{ fundraising_deadline|countdown }}</span> left — help us reach our goal!
-    </div>
-  {% endif %}
+{# Meter math #}
+{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set _raw_pct = (funds_raised / (fundraising_goal if fundraising_goal else 1) * 100) %}
+{% set pct = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
 
-  {# === Main Nav & Progress === #}
-  <div class="max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap items-center justify-between px-4 md:px-6 py-3 gap-x-4 gap-y-3">
-    <a
-      href="{{ url_for('main.home') }}"
-      class="flex items-center gap-2 flex-shrink-0 group focus-visible:ring-2 ring-yellow-300 rounded-lg"
-    >
-      <img
-        src="{{ logo_src }}"
-        alt="{{ (team.team_name if team and team.team_name else 'Connect ATX Elite') ~ ' logo' }}"
-        class="h-10 w-10 md:h-11 md:w-11 rounded-full ring-2 ring-yellow-300 shadow-md bg-white transition-transform duration-300 group-hover:scale-110"
-        loading="eager"
-        decoding="async"
-        onerror="this.onerror=null;this.src='/static/images/logo.webp';"
-        itemprop="logo"
-      />
-      <span class="text-xl md:text-2xl font-extrabold bg-gradient-to-r from-yellow-300 via-yellow-100 to-yellow-50 bg-clip-text text-transparent drop-shadow">
-        {{ team.team_name or 'Connect ATX Elite' }}
-      </span>
-    </a>
-    <nav class="hidden lg:flex items-center gap-5 text-zinc-200 font-semibold ml-6" aria-label="Primary navigation">
-      {% for id, label in [('mission','Mission'),('tiers','Sponsorship Tiers'),('program-stats-calendar','Schedule')] %}
-        <a
-          href="#{{ id }}"
-          class="relative px-3 py-1 rounded hover:text-yellow-300 focus-visible:ring-2 ring-yellow-400 transition-colors group"
-        >
-          {{ label }}
-          <span class="absolute bottom-0 left-0 h-0.5 w-full bg-yellow-300 scale-x-0 group-hover:scale-x-100 transition-transform origin-left duration-300"></span>
+{# Team logo #}
+{% set _logo = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
+{% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
+
+<header id="{{ _hdr_id }}" role="banner"
+  class="sticky top-0 z-50 border-b border-white/10"
+  style="--fc-brand: {{ brand_color }};">
+  <style nonce="{{ NONCE }}">
+    #{{ _hdr_id }} {
+      isolation: isolate;
+      background: linear-gradient(180deg, rgb(0 0 0 /.8), rgb(0 0 0 /.65));
+      backdrop-filter: blur(14px) saturate(140%);
+      -webkit-backdrop-filter: blur(14px) saturate(140%);
+      padding-left: max(0px, env(safe-area-inset-left));
+      padding-right: max(0px, env(safe-area-inset-right));
+    }
+    #{{ _hdr_id }} .container { width:min(86rem,94vw); margin-inline:auto; }
+
+    /* LEFT brand */
+    .fc-brand { display:inline-flex; align-items:center; gap:.55rem; }
+    .fc-brand .logo { height:clamp(40px,4.5vw,58px); width:auto; }
+    .fc-brand .word {
+      font-weight:900; letter-spacing:-.02em;
+      font-size:clamp(20px,2vw,30px);
+      background: linear-gradient(90deg,#f87171,#facc15,#4ade80,#38bdf8,#a78bfa);
+      background-size:200% auto;
+      animation: rainbow-shift 8s linear infinite, rainbow-glow 2.5s ease-in-out infinite;
+      -webkit-background-clip:text; background-clip:text;
+      color:transparent; white-space:nowrap;
+    }
+    @keyframes rainbow-shift { to { background-position:200% center; } }
+    @keyframes rainbow-glow {
+      0%,100% { text-shadow:0 0 6px rgba(255,255,255,.15); }
+      50%     { text-shadow:0 0 16px rgba(255,255,255,.35); }
+    }
+
+    /* Team chip */
+    .legacy-chip {
+      position:relative; padding:.42rem .72rem; border-radius:1rem;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),
+                 linear-gradient(90deg,var(--fc-brand),#fff7cc);
+      box-shadow:0 8px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2);
+      backdrop-filter: blur(3px);
+    }
+    .legacy-chip .txt { font-weight:900; letter-spacing:-.02em; font-size:clamp(16px,1.6vw,22px); color:#0b0c0f; }
+
+    /* Meter */
+    .hdr-center { display:flex; align-items:center; justify-content:center; gap:.9rem; }
+    .hdr-meter { display:flex; align-items:center; gap:.5rem; }
+    .hdr-meter .track {
+      width:180px; height:10px; border-radius:9999px; overflow:hidden;
+      background: rgb(255 255 255 / 12%);
+      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 9%);
+    }
+    .hdr-meter .fill {
+      height:100%; width:{{ pct|round(1) }}%;
+      background: linear-gradient(90deg,#fffbe6,var(--fc-brand),#f59e0b);
+      transition:width .6s cubic-bezier(.22,1,.36,1);
+      box-shadow:0 0 6px rgba(255,255,255,.4);
+    }
+    .hdr-meter .pct {
+      font-variant-numeric: tabular-nums;
+      font-size:12px; color:#fde68a;
+      min-width:3.2ch; text-align:right;
+    }
+
+    /* CTA */
+    .fc-btn { display:inline-flex; align-items:center; gap:.5rem; border-radius:999px; padding:.7rem 1rem; font-weight:800; }
+    .fc-btn-primary {
+      background:linear-gradient(180deg,#fde047,#facc15);
+      color:#0b0b0c; box-shadow:0 10px 30px rgba(250,204,21,.3);
+      transition: transform .25s ease;
+    }
+    .fc-btn-primary:hover { transform: translateY(-1px) scale(1.02); }
+
+    /* Layout */
+    .hdr-grid { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; }
+    @media (max-width:720px){ .hdr-meter .track{width:140px;} }
+    @media (max-width:520px){
+      .hdr-center{gap:.6rem;} .hdr-meter .track{width:110px;}
+      .legacy-chip{display:none;}
+    }
+
+    /* Shrink */
+    #{{ _hdr_id }}.is-shrunk {
+      backdrop-filter:blur(16px) saturate(160%);
+      -webkit-backdrop-filter:blur(16px) saturate(160%);
+      box-shadow:0 8px 30px rgb(0 0 0 /.35);
+    }
+  </style>
+
+  <div class="container">
+    <div class="hdr-grid px-4 lg:px-6 py-3">
+
+      {# LEFT: brand #}
+      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home">
+        <img src="{{ platform_logo_svg }}" alt="{{ platform_name }} logo"
+             class="logo" loading="eager" decoding="async" fetchpriority="high"
+             onerror="this.style.display='none';var s=this.nextElementSibling;s&&s.classList.remove('hidden')" />
+        <span class="word hidden">{{ platform_name }}</span>
+      </a>
+
+      {# CENTER: meter + CTA #}
+      <div class="hdr-center">
+        <div id="hdr-meter" class="hdr-meter" role="meter"
+             aria-valuemin="0" aria-valuemax="100"
+             aria-valuenow="{{ pct|round(1) }}"
+             aria-live="polite">
+          <div class="track"><div class="fill"></div></div>
+          <span class="pct">{{ pct|round(0) }}%</span>
+        </div>
+        <a {% if stripe_payment_link %} href="{{ stripe_payment_link }}" {% else %} href="#donate" data-open-donate-modal {% endif %}
+           class="fc-btn fc-btn-primary" aria-label="Sponsor gym time securely">
+          💛 Sponsor A Champion
         </a>
-      {% endfor %}
-    </nav>
-    <div class="ml-auto lg:ml-6 flex flex-col items-start justify-center min-w-[11rem] shrink-0" aria-label="Fundraising progress" role="region">
-      {% set raised = funds_raised or 4200 %}
-      {% set goal = fundraising_goal or 10000 %}
-      {% set pct = (raised / goal * 100) | round(1) %}
-      <div class="flex items-baseline gap-1">
-        <span class="text-yellow-400 font-extrabold text-lg">${{ raised | comma }}</span>
-        <span class="text-yellow-100 text-xs">/ ${{ goal | comma }}</span>
-        <span class="ml-1 text-yellow-300 text-xs font-black">({{ pct }}%)</span>
       </div>
-      <div class="w-44 mt-1 h-2 bg-zinc-700 rounded-full overflow-hidden">
-        <div class="h-full bg-gradient-to-r from-yellow-500 to-yellow-300 transition-all duration-500 ease-out" style="width: {{ pct }}%;"></div>
-      </div>
-    </div>
-    <div class="flex gap-2 ml-4 flex-wrap justify-end">
-      {{ render_button('💸 Donate', '#donate', extra_classes='min-w-[7rem] bg-zinc-900 text-yellow-300 border border-yellow-400 font-bold hover:scale-105 transition-transform ring-1 ring-yellow-400/70', attrs={ "data_modal": "donation_modal" }) }}
-      {{ render_button('🌟 Sponsor', '#tiers', extra_classes='min-w-[7rem] bg-zinc-900 text-yellow-200 border border-yellow-400 font-bold hover:opacity-90 ring-1 ring-yellow-400/60') }}
-      {{ render_button('🏆 VIP Sponsor', '#tiers', extra_classes='min-w-[8rem] bg-black text-yellow-100 border border-yellow-400 font-bold shadow animate-pulse hover:scale-105 ring-2 ring-yellow-400/80') }}
+
+      {# RIGHT: team logo #}
+      <a href="{{ home_url|default('/') }}" class="flex items-center gap-3 justify-self-end" aria-label="{{ team_name }} home">
+        <img src="{{ logoSrc }}" alt="{{ team_name }} logo"
+             class="h-10 w-10 rounded-xl ring-1 ring-white/10"
+             loading="eager" decoding="async"/>
+        <span class="legacy-chip"><span class="txt">{{ team_name }}</span></span>
+      </a>
+
     </div>
   </div>
-  <div class="hidden lg:block text-center py-1 text-xs italic text-yellow-200/80 tracking-wide drop-shadow border-t border-yellow-400/10" aria-label="Trust and credibility statement">
-    🏅 Trusted by 500+ Families · 3.5 GPA Avg · AAU Gold Certified · Austin, TX · Est. 2023
-  </div>
-  {# === Mobile Menu (A11y & animated) === #}
-  <nav
-    id="mobile-menu"
-    x-show="mobileOpen"
-    x-transition:enter="transition ease-out duration-200"
-    x-transition:enter-start="opacity-0 scale-90"
-    x-transition:enter-end="opacity-100 scale-100"
-    x-transition:leave="transition ease-in duration-100"
-    x-transition:leave-start="opacity-100 scale-100"
-    x-transition:leave-end="opacity-0 scale-90"
-    class="fixed inset-0 bg-black/95 backdrop-blur flex flex-col items-center justify-center gap-6 lg:hidden z-[60]"
-    aria-label="Mobile navigation menu"
-    role="menu"
-  >
-    <button @click="mobileOpen = false" aria-label="Close menu" class="absolute top-5 right-5 text-4xl text-yellow-300 hover:text-red-500 focus-visible:ring-2 ring-red-400 rounded" type="button">×</button>
-    {% for id, label in [('mission','Mission'),('tiers','Sponsorship Tiers'),('program-stats-calendar','Schedule')] %}
-      <a href="#{{ id }}" @click="mobileOpen = false" class="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-yellow-200 bg-clip-text text-transparent hover:scale-105 transition-transform duration-200" tabindex="0" role="menuitem">{{ label }}</a>
-    {% endfor %}
-    <div class="flex flex-col gap-2 mt-4 w-full items-center">
-      {{ render_button('🌟 Sponsor Now', '#tiers', size='lg', extra_classes='w-60 bg-gradient-to-r from-yellow-400 to-yellow-200 text-black') }}
-      {{ render_button('💸 Donate', '#donate', size='lg', extra_classes='w-60 bg-yellow-400 text-black') }}
-    </div>
-  </nav>
+
+  <script nonce="{{ NONCE }}">
+    (() => {
+      if (window.__fcHeaderMVP_14) return; window.__fcHeaderMVP_14 = true;
+      const hdr=document.getElementById('{{ _hdr_id }}');
+      const fill=hdr.querySelector('#hdr-meter .fill');
+      const pctTxt=hdr.querySelector('#hdr-meter .pct');
+      const track=hdr.querySelector('#hdr-meter');
+
+      /* shrink */
+      let s=false; const ON=64, OFF=20;
+      const on=()=>{ const y=scrollY||document.documentElement.scrollTop||0;
+        if(y>ON && !s){s=true;hdr.classList.add('is-shrunk');}
+        else if(y<OFF && s){s=false;hdr.classList.remove('is-shrunk');}};
+      on(); addEventListener('scroll', on, {passive:true});
+
+      /* live meter */
+      function setMeter(r,g){
+        const goal=Math.max(0,+g||0), raised=Math.max(0,+r||0);
+        const p=Math.max(0,Math.min(100,goal?(raised/goal*100):0));
+        if(fill) fill.style.width=p.toFixed(1)+'%';
+        if(pctTxt) pctTxt.textContent=p.toFixed(0)+'%';
+        if(track) track.setAttribute('aria-valuenow',p.toFixed(1));
+      }
+      addEventListener('fc:meter:update',(e)=>{const d=e.detail||{};setMeter(d.raised,d.goal);},{passive:true});
+    })();
+  </script>
 </header>
 
-<a href="#donate" class="fixed bottom-6 right-6 bg-yellow-400 px-6 py-3 rounded-full shadow-2xl animate-bounce lg:hidden font-bold text-black text-lg focus-visible:ring-4 ring-yellow-700 z-[99]" aria-label="Quick Donate">💸 Quick Donate</a>
-
-{% if confetti_triggered %}{{ launch_confetti() }}{% endif %}
+{# Quick donate pill #}
+<a href="#donate" class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
+   data-open-donate-modal data-analytics="cta:quick-donate" aria-label="Quick donate button" hidden></a>
 

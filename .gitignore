@@ -1,15 +1,55 @@
-# Python/Flask
+# =========================
+# Python / Flask
+# =========================
 instance/
-*.pyc
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.bak*
+*.db
+*.sqlite
+*.sqlite3
+
+# Local env/config
 .env
 .env.*
-# Node
+*.env
+
+# Flask app data
+app/data/
+app/data/*.db
+
+# =========================
+# Node / Frontend
+# =========================
 node_modules/
 web-frontend/node_modules/
+dist/
+build/
+
+# Logs
 *.log
-# VS Code
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Bundled / compiled JS
+app/static/js/bundle*.js
+app/static/js/*.min.js
+app/static/js/vendor/
+*.map
+
+# Generated CSS
+*.min.css
+app/static/css/output.css
+app/static/css/archive/
+
+# =========================
+# Editor / IDE
+# =========================
 .vscode/
+<<<<<<< HEAD
 node_modules/
 app/data/
 app/data/app.db
@@ -18,3 +58,24 @@ __pycache__/
 *.pyc
 .venv/
 .venv/
+=======
+.DS_Store
+Thumbs.db
+
+# =========================
+# FundChamps hard-ignore
+# =========================
+app/templates/_unused/
+app/static/_unused/
+pa11y-report.html
+
+>>>>>>> rescue-wip
+_archive/
+backups/
+starforge-archive/
+starforge-backup-*/
+partials_bundle_*/
+migrations.backup.*/
+app/static/_unused/
+app/data/*.db
+instance/*.db

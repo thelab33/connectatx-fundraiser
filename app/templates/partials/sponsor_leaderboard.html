@@ -1,0 +1,46 @@
+<div id="sponsor-leaderboard" class="sticky top-0 z-40 w-full border-b border-yellow-400/20 bg-black/80 backdrop-blur">
+  <div class="flex overflow-x-auto whitespace-nowrap px-4 py-2 text-sm font-bold text-yellow-300 gap-6">
+    <span class="text-yellow-400">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+  </div>
+</div>
+<link rel="preconnect" href="/socket.io/" crossorigin>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module">
+  const rail = document.querySelector('#sponsor-leaderboard .flex');
+  // marquee feel + hover pause
+  rail.style.animation = 'ticker 20s linear infinite';
+  rail.addEventListener('mouseenter', ()=> rail.style.animationPlayState='paused');
+  rail.addEventListener('mouseleave', ()=> rail.style.animationPlayState='running');
+
+  // seed from API (first paint)
+  fetch('/api/shoutouts').then(r=>r.json()).then(list=>{
+    list.reverse().forEach(addItem);
+  }).catch(()=>{});
+
+  // live push
+  const socket = io({ transports: ['websocket','polling'] });
+  socket.on('new_shoutout', addItem);
+
+  async function addItem(data){
+    const span = document.createElement('span');
+    span.className = 'inline-flex items-center gap-2';
+    span.dataset.tier = (data.tier || 'General');
+    const badge = ({Platinum:"✨", Gold:"🏅", Silver:"🎉", Bronze:"🔥"})[data.tier] || "🔥";
+    span.innerHTML = `${badge} <span class="text-white">${escapeHtml(data.sponsor||'Anonymous')}</span> ${escapeHtml(data.msg||'supported the team!')}`;
+    rail.prepend(span);
+    // confetti burst (lightweight ESM)
+    try {
+      const {default: confetti} = await import('https://cdn.skypack.dev/canvas-confetti');
+      confetti({ particleCount: 60, spread: 90, origin: { y: 0.2 } });
+    } catch(e) {}
+  }
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+</script>
+<style>
+  #sponsor-leaderboard .flex{ will-change: transform; }
+  @keyframes ticker{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
+  [data-tier="Platinum"]{ color:#e0e7ff; font-weight:900; text-shadow:0 0 12px #a78bfa; }
+  [data-tier="Gold"]{ color:#fde68a; text-shadow:0 0 8px #facc15; }
+  [data-tier="Silver"]{ color:#d1d5db; }
+  [data-tier="Bronze"]{ color:#fbbf24; }
+</style>

@@ -1,0 +1,276 @@
+<h2 class="sr-only">Layout Bands</h2>
+<section data-ui="{{ (name|default('layout_bands'))|replace('_','-') }}" class="block">
+{# =============================================================================
+   app/templates/partials/layout_bands.html
+   FundChamps • Elite Section Bands (Prestige)
+   - Idempotent & CSP-safe (NONCE or script_open macro)
+   - Auto-adjusted anchor offsets
+   - Real-time header height adjustments
+   - Accessible anchors for in-page links
+   ============================================================================= #}
+
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
+
+<section id="__fc-bands" aria-hidden="true" hidden></section>
+
+<style nonce="{{ NONCE }}">
+  :root{
+    --fc-brand: {{ brand_color }};
+    --fc-surface-0: #0b0b0c;
+    --fc-surface-1: #121214;
+    --fc-surface-2: #16161a;
+    --fc-border: color-mix(in srgb, var(--fc-brand) 18%, transparent);
+    --fc-anchor-offset: 84px; /* Dynamically updated by script */
+  }
+
+  /* ==== Section “bands” =================================================== */
+  .fc-band {
+    padding-block: clamp(40px, 6vw, 72px);
+    border-top: 1px solid var(--fc-border);
+    background: var(--fc-surface-0);
+  }
+
+  .fc-band--alt {
+    background: var(--fc-surface-1);
+  }
+
+  .fc-band--plain {
+    background: var(--fc-surface-0);
+  }
+
+  .fc-band--tint {
+    background: linear-gradient(180deg, color-mix(in srgb, var(--fc-brand) 6%, transparent), transparent);
+  }
+
+  .fc-band--brand {
+    background: radial-gradient(80% 120% at 50% -10%, color-mix(in srgb, var(--fc-brand) 10%, transparent), transparent 70%);
+  }
+
+  .fc-band--no-border {
+    border-top: 0;
+  }
+
+  .fc-band--tight {
+    padding-block: clamp(28px, 4.5vw, 48px);
+  }
+
+  .fc-band--loose {
+    padding-block: clamp(64px, 8vw, 96px);
+  }
+
+  /* Container */
+  .fc-container {
+    width: min(1180px, 100%);
+    margin-inline: auto;
+    padding-inline: clamp(16px, 3vw, 32px);
+  }
+
+  .fc-container--narrow {
+    width: min(880px, 100%);
+  }
+
+  .fc-container--wide {
+    width: min(1380px, 100%);
+  }
+
+  /* Vertical rhythm */
+  .fc-stack > * + * {
+    margin-top: clamp(12px, 1.5vw, 18px);
+  }
+
+  /* ===== Headings ========================================================= */
+  .fc-eyebrow {
+    font-size: .75rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: #a3a3a3;
+  }
+
+  .fc-h1 {
+    font-weight: 900;
+    font-size: clamp(26px, 3.2vw, 40px);
+    color: #fde68a;
+    letter-spacing: .2px;
+  }
+
+  .fc-h2 {
+    font-weight: 800;
+    font-size: clamp(22px, 2.6vw, 32px);
+    color: #fde68a;
+    letter-spacing: .2px;
+  }
+
+  .fc-sub {
+    color: #d4d4d8;
+    margin-top: .35rem;
+  }
+
+  /* Linkable heading anchor (auto-injected) */
+  .fc-heading-anchor {
+    opacity: 0;
+    margin-left: .5rem;
+    font-size: .9em;
+    text-decoration: none;
+    color: #f5e7a4;
+    border-radius: .4rem;
+    padding: .1rem .35rem;
+    border: 1px solid transparent;
+  }
+
+  .fc-heading-anchor:focus {
+    outline: none;
+    border-color: color-mix(in srgb, var(--fc-brand) 30%, transparent);
+  }
+
+  .fc-band :is(h1, h2, h3)[id]:hover .fc-heading-anchor {
+    opacity: 1;
+  }
+
+  @media (hover: none) {
+    .fc-heading-anchor {
+      opacity: 1;
+    }
+  }
+
+  /* Anchor offset so in-page links don't sit under sticky UI */
+  [id] {
+    scroll-margin-top: var(--fc-anchor-offset, 84px);
+  }
+
+  /* Kill accidental big outer margins from partials */
+  .fc-band > *:first-child {
+    margin-top: 0;
+  }
+
+  .fc-band > *:last-child {
+    margin-bottom: 0;
+  }
+
+  /* Target highlight (when navigating to #id) */
+  :target {
+    scroll-margin-top: calc(var(--fc-anchor-offset, 84px) + 6px);
+  }
+
+  :target[data-highlight],
+  :is(h1, h2, h3):target {
+    outline: 2px solid color-mix(in srgb, var(--fc-brand) 35%, transparent);
+    outline-offset: .25rem;
+    border-radius: .4rem;
+  }
+
+  /* Print: remove big paddings/borders */
+  @media print {
+    .fc-band {
+      padding-block: 16px;
+      border: 0;
+      background: #fff;
+    }
+
+    .fc-container {
+      padding-inline: 0;
+    }
+  }
+</style>
+
+{% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
+(() => {
+  if (window.__fcBandsBound) return; window.__fcBandsBound = true;
+
+  const d = document, r = d.documentElement;
+
+  /* ---------------- Anchor offset (sticky header + sticky CTA) ------------ */
+  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches === true;
+
+  function numberFromVar(name) {
+    const v = getComputedStyle(r).getPropertyValue(name).trim();
+    const n = parseFloat(v); return Number.isFinite(n) ? n : 0;
+  }
+
+  function headerEl() {
+    return d.querySelector('[data-sticky-header], #site-header');
+  }
+
+  function stickyHeight() {
+    // size of any sticky CTA reserved in :root by other partials (e.g., Sticky CTA Manager)
+    return numberFromVar('--fc-sticky-h');
+  }
+
+  function computeOffset(explicit) {
+    const headerH = (typeof explicit === 'number') ? explicit :
+      (() => { const h = headerEl(); return h ? Math.ceil(h.getBoundingClientRect().height) : 0; })();
+    const offset = Math.max(0, headerH + stickyHeight());
+    r.style.setProperty('--fc-anchor-offset', offset + 'px');
+  }
+  computeOffset();
+
+  // Track header size changes with ResizeObserver (fallback to resize)
+  try {
+    const hdr = headerEl();
+    if (hdr && 'ResizeObserver' in window) {
+      const ro = new ResizeObserver(() => computeOffset());
+      ro.observe(hdr);
+      addEventListener('beforeunload', () => ro.disconnect(), { once: true });
+    } else {
+      addEventListener('resize', () => computeOffset(), { passive: true });
+      addEventListener('orientationchange', () => computeOffset());
+    }
+  } catch { /* no-op */ }
+
+  // Allow external components to inform height or extra padding
+  addEventListener('fc:header:height', (ev) => {
+    const h = (ev.detail && typeof ev.detail.height === 'number') ? ev.detail.height : undefined;
+    computeOffset(h);
+  });
+
+  // Recompute when sticky CTA opens/closes
+  ['fc:donate:open', 'fc:donate:close'].forEach(ev => addEventListener(ev, () => computeOffset()));
+
+  /* ---------------- Auto-inject heading anchors --------------------------- */
+  function injectAnchors(scope = d) {
+    if (scope.querySelector?.('[data-no-anchors]')) return;
+    scope.querySelectorAll('.fc-band :is(h2, h3)[id]').forEach(h => {
+      if (h.querySelector('.fc-heading-anchor')) return;
+      const a = d.createElement('a');
+      a.className = 'fc-heading-anchor';
+      a.href = '#' + h.id;
+      a.setAttribute('aria-label', 'Link to section ' + (h.textContent || '').trim());
+      a.textContent = '§';
+      h.appendChild(a);
+    });
+  }
+  injectAnchors();
+  addEventListener('htmx:afterSwap', (e) => injectAnchors(e.target || d));
+  addEventListener('htmx:afterSettle', (e) => injectAnchors(e.target || d));
+
+  /* ---------------- In-page anchor smoothing with offset ------------------ */
+  function anchorClick(e) {
+    const a = e.target.closest('a[href^="#"]'); if (!a) return;
+    const id = a.getAttribute('href') || '';
+    if (id === '#' || id.length < 2) return;
+    const el = d.getElementById(id.slice(1)); if (!el) return;
+    e.preventDefault();
+
+    // Let the browser update the hash for back/forward nav
+    if (history && history.pushState) { history.pushState(null, '', id); } else { location.hash = id; }
+
+    const top = el.getBoundingClientRect().top + window.pageYOffset - (parseFloat(getComputedStyle(r).getPropertyValue('--fc-anchor-offset')) || 0);
+    if (prefersReduce) { window.scrollTo(0, Math.max(0, top)); return; }
+    try { window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' }); }
+    catch { window.scrollTo(0, Math.max(0, top)); }
+  }
+  d.addEventListener('click', anchorClick, { passive: false });
+
+  // On load with a hash, nudge into view with correct offset
+  if (location.hash && d.getElementById(location.hash.slice(1))) {
+    requestAnimationFrame(() => {
+      const el = d.getElementById(location.hash.slice(1));
+      const top = el.getBoundingClientRect().top + window.pageYOffset - (parseFloat(getComputedStyle(r).getPropertyValue('--fc-anchor-offset')) || 0);
+      window.scrollTo(0, Math.max(0, top));
+    });
+  }
+
+})();
+{% if script_close is defined %}{{ script_close() }}{% else %}</script>{% endif %}
+</section>
+

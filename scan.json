@@ -1,0 +1,98 @@
+{
+  "partials/meter_strip.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/fundraiser_meter.html": [
+    "home.html"
+  ],
+  "partials/funds_allocation_bar_premium.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/funds_allocation_bar.html": [
+    "home.html"
+  ],
+  "partials/sponsor_ticker.html": [
+    "home.html"
+  ],
+  "partials/tiers.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/program_stats_and_calendar.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/impact_lockers_premium.html": [
+    "home.html"
+  ],
+  "partials/impact_lockers.html": [
+    "home.html"
+  ],
+  "partials/sponsors_hub.html": [
+    "home.html"
+  ],
+  "partials/sponsor_spotlight_widget.html": [
+    "home.html"
+  ],
+  "partials/sponsor_wall_widget.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/about_section.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/impact_challenge_coaches_premium.html": [
+    "home.html",
+    "index.html"
+  ],
+  "partials/digital_hub.html": [
+    "home.html"
+  ],
+  "partials/header_and_announcement.html": [
+    "base.html"
+  ],
+  "partials/flash_and_onboarding_premium.html": [
+    "base.html"
+  ],
+  "partials/footer.html": [
+    "base.html"
+  ],
+  "partials/back_to_top.html": [
+    "base.html"
+  ],
+  "partials/donation_modal.html": [
+    "base.html"
+  ],
+  "partials/hero_and_fundraiser.html": [
+    "index.html"
+  ],
+  "partials/ui_bootstrap.html": [
+    "index.html",
+    "partials/meter_strip.html",
+    "partials/fundraiser_meter.html",
+    "partials/about_section.html",
+    "partials/admin_onboarding_popover.html",
+    "partials/sponsor_wall_widget.html"
+  ],
+  "partials/layout_bands.html": [
+    "index.html"
+  ],
+  "partials/sponsor_hub.html": [
+    "index.html"
+  ],
+  "partials/sponsor_wall.html": [
+    "index.html"
+  ],
+  "partials/sponsor_spotlight.html": [
+    "index.html"
+  ],
+  "partials/newsletter.html": [
+    "index.html"
+  ],
+  "partials/ai_concierge.html": [
+    "index.html"
+  ]
+}

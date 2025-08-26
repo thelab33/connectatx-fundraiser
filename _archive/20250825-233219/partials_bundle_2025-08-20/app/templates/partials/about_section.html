@@ -1,0 +1,20 @@
+{# --- Full About + Mission Block (mosaic, counters, video modal) --- #}
+<section id='fc-about' class='relative bg-fc-surface py-16 sm:py-24 text-fc-text'>
+  <div class='max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-10'>
+    <div>
+      <h2 class='text-3xl md:text-4xl font-bold mb-4'>Our Mission</h2>
+      <p class='mb-6'>We’re building more than a basketball program — we’re shaping leaders, scholars, and role models in the Austin community.</p>
+      <ul class='space-y-3'>
+        <li>🏀 <strong>15–3</strong> Regionals record</li>
+        <li>🏆 <strong>3 Championships</strong> last season</li>
+        <li>🎓 <strong>Top 1% academic athletes</strong></li>
+      </ul>
+    </div>
+    <div class='grid grid-cols-2 gap-4'>
+      <img src='{{ url_for("static", filename="images/player1.webp") }}' class='rounded-xl object-cover'>
+      <img src='{{ url_for("static", filename="images/player2.webp") }}' class='rounded-xl object-cover'>
+      <img src='{{ url_for("static", filename="images/player3.webp") }}' class='rounded-xl object-cover'>
+      <button class='col-span-2 bg-fc-brand text-black py-2 rounded-lg hover:opacity-90' data-modal-target='video-modal'>▶ Watch Our Story</button>
+    </div>
+  </div>
+</section>

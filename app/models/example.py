@@ -1,6 +1,7 @@
-from app import db
+# Temporary stub so imports don't fail during launch
+class Example:
+    id = 1
+    name = "Placeholder Example"
 
-class Example(db.Model):
-    __tablename__='examples'
-    id=db.Column(db.Integer, primary_key=True)
-    name=db.Column(db.String(120))
+    def __repr__(self):
+        return f"<Example {self.id}: {self.name}>"
