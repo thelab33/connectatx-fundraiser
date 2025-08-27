@@ -1,10 +1,49 @@
-- name: Audit partials
-  run: python scripts/polish_partials.py --scan --check-csp --a11y --strict --report-md=partials_report.md --json-report=scan.json
-- name: Upload report
-  uses: actions/upload-artifact@v4
-  with:
-    name: partials-audit
-    path: |
-      partials_report.md
-      scan.json
+# .github/workflows/ci.yml
+name: ci
+on: [push]
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PNPM
+        uses: pnpm/action-setup@v4
+        with: { version: 9 }
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'pnpm', cache-dependency-path: 'web/pnpm-lock.yaml' }
+
+      - name: Setup Python (uv)
+        uses: astral-sh/setup-uv@v3
+        with: { python-version: '3.12' }
+
+      - name: Install Python deps
+        run: uv venv && uv pip install -r requirements.txt
+
+      - name: Lint & Test (Python)
+        run: uv run ruff check . && uv run pytest -q
+
+      - name: Web install/lint/test/build
+        working-directory: web
+        run: |
+          pnpm i --frozen-lockfile
+          pnpm eslint . --max-warnings=0
+          pnpm vitest run
+          pnpm build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@v4
+        with: { name: web-dist, path: web/dist }
+
+  deploy:
+    needs: build-test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: Deploy
+        run: flyctl deploy --remote-only
 

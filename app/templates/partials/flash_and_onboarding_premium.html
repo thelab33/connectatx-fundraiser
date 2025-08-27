@@ -6,7 +6,7 @@
   - HTMX-aware actions (optional hx-post on toast button)
   ============================================================================= #}
 
-<section data-ui="flash-and-onboarding" class="block">
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block" data-ui="flash-and-onboarding" >
   {# ---------- Safe helpers & routes ---------- #}
   {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
   {% set _csrf = (csrf_token() if csrf_token is defined else '') %}

@@ -52,8 +52,8 @@
   {% endif %}
 {% endfor %}
 
-<section data-ui="{{ (name|default('sponsors_hub'))|replace('_','-') }}" class="block">
-  <section id="{{ sponsors_hub_id }}"
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block" data-ui="{{ (name|default('sponsors_hub'))|replace('_','-') }}" >
+  <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6" id="{{ sponsors_hub_id }}"
            class="mx-auto w-full max-w-6xl px-4 md:px-6"
            data-brand-color="{{ brand_color }}"
            data-initial-sponsors='{{ sponsors_sorted|tojson }}'
@@ -153,7 +153,7 @@
 
     {# ===================== INLINE WALL ===================== #}
     {% if show_inline_wall %}
-    <section aria-labelledby="{{ sponsors_hub_id }}-wall-heading">
+    <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6" aria-labelledby="{{ sponsors_hub_id }}-wall-heading">
       <h2 id="{{ sponsors_hub_id }}-wall-heading" class="mb-3 text-center text-xl font-black text-yellow-300">Our Sponsors</h2>
 
       <div class="mb-4 flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
@@ -198,7 +198,7 @@
 
     {# ===================== FLOATING DRAWER ===================== #}
     {% if show_floating %}
-    <section class="sw" id="{{ sponsors_hub_id }}-sw" role="dialog" aria-modal="true" aria-labelledby="{{ sponsors_hub_id }}-sw-title" aria-describedby="{{ sponsors_hub_id }}-sw-desc" aria-hidden="true" tabindex="-1">
+    <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 sw"  id="{{ sponsors_hub_id }}-sw" role="dialog" aria-modal="true" aria-labelledby="{{ sponsors_hub_id }}-sw-title" aria-describedby="{{ sponsors_hub_id }}-sw-desc" aria-hidden="true" tabindex="-1">
       <header class="flex items-center justify-between rounded-t-3xl border-b border-yellow-400/30 px-6 py-4" style="background: linear-gradient(90deg, color-mix(in srgb, var(--fc-brand) 18%, #000), transparent)">
         <h2 id="{{ sponsors_hub_id }}-sw-title" class="flex items-center gap-2 text-xl font-extrabold tracking-tight"><span class="text-2xl" aria-hidden="true">🙌</span><span class="text-yellow-300">Meet Our Champions</span></h2>
         <button type="button" class="ml-2 rounded-full p-1 text-yellow-300 transition hover:bg-yellow-400/10 focus:outline-none focus:ring-2 focus:ring-yellow-400" data-close aria-label="Close sponsor wall"><span aria-hidden="true" class="text-2xl font-bold">&times;</span></button>

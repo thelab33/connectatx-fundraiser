@@ -19,7 +19,7 @@
 {% set goal   = (_g if _g>0 else 1.0) %}
 {% set pct    = ( (100.0 * (raised/goal)) if goal else 0 )|round(1) %}
 
-<section id="{{ meter_id }}"
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6" id="{{ meter_id }}"
   class="relative"
   style="--brand: {{ theme_hex }};"
   data-initial='{{ {"raised": raised, "goal": goal}|tojson }}'

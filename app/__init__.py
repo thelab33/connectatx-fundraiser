@@ -1,3 +1,5 @@
+from app.routes.compat import bp as compat_bp
+from app.admin.routes import bp as admin_bp
 from __future__ import annotations
 from app.extensions import socketio as _socketio
 # app/__init__.py
@@ -163,7 +165,7 @@ STYLE_TAG  = re.compile(r"(<style\b(?![^>]*\bnonce=)[^>]*>)",  re.IGNORECASE)
 # App Factory
 # ─────────────────────────────────────────────────────────────────────────────
 def create_app(config_class: ConfigLike | None = None) -> Flask:
-    app = Flask(
+    \1    app.register_blueprint(admin_bp)
         __name__,
         static_folder=str(BASE_DIR / "app/static"),
         template_folder=str(BASE_DIR / "app/templates"),
@@ -400,16 +402,18 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         app.logger.exception("Unhandled error: %s", err)
         return _json_error("Internal Server Error", 500, request_id=g.request_id) if _wants_json() else InternalServerError()
 
-    # Blueprints (attr supports fallbacks: bp|api_bp|main_bp)
+        # Blueprints (attr supports fallbacks: bp|api_bp|main_bp)
     blueprints = [
         ("app.routes.main",            "main_bp|bp", "/"),
         ("app.routes.api",             "bp|api_bp",  "/api"),
         ("app.admin.routes",           "bp|admin_bp","/admin"),
         ("app.blueprints.fc_payments", "bp",         "/payments"),
         ("app.blueprints.fc_metrics",  "bp",         "/metrics"),
+        ("app.routes.newsletter",      "bp",         "/newsletter"),  # ✅ Newsletter wired up
     ]
     for dotted, attr, prefix in blueprints:
         _safe_register(app, dotted, attr, prefix)
+
 
     # Health & Version
     @app.get("/healthz")

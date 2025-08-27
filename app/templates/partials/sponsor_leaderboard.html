@@ -1,46 +1,112 @@
-<div id="sponsor-leaderboard" class="sticky top-0 z-40 w-full border-b border-yellow-400/20 bg-black/80 backdrop-blur">
-  <div class="flex overflow-x-auto whitespace-nowrap px-4 py-2 text-sm font-bold text-yellow-300 gap-6">
-    <span class="text-yellow-400">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+{# Sponsor Leaderboard — SV Premium (CSP-safe, A11y, Motion-safe) #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _seed = (shoutouts if shoutouts is defined and shoutouts else []) %}
+
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6" id="sponsor-leaderboard"
+  class="sticky w-full z-40 border-b border-yellow-400/20"
+  aria-live="polite" aria-label="Live sponsor shoutouts"
+  style="top: var(--fc-header-h, 0px); background: rgba(0,0,0,.80); backdrop-filter: blur(10px) saturate(140%); -webkit-backdrop-filter: blur(10px) saturate(140%);">
+  <div class="fc-ticker__viewport overflow-hidden">
+    <div class="fc-ticker__rail fc-marquee px-4 py-2 text-sm font-bold gap-6 whitespace-nowrap flex" role="list">
+      <span class="pill headline text-yellow-300/95">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+
+      {# Server seeds (optional) #}
+      {% for s in _seed %}
+        {% set t = (s.tier or 'General')|string %}
+        <span role="listitem" class="pill inline-flex items-center gap-2" data-tier="{{ t }}">
+          {% set badge = '✨' if t|lower=='platinum' else '🏅' if t|lower=='gold' else '🎉' if t|lower=='silver' else '🥉' if t|lower=='bronze' else '🔥' %}
+          {{ badge }} <span class="text-white">{{ s.sponsor }}</span> {{ s.msg }}
+        </span>
+      {% endfor %}
+
+      {# Duplicate headline for seamless loop #}
+      <span aria-hidden="true" class="pill headline text-yellow-300/95">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+    </div>
   </div>
-</div>
-<link rel="preconnect" href="/socket.io/" crossorigin>
-<script src="/socket.io/socket.io.js"></script>
-<script type="module">
-  const rail = document.querySelector('#sponsor-leaderboard .flex');
-  // marquee feel + hover pause
-  rail.style.animation = 'ticker 20s linear infinite';
-  rail.addEventListener('mouseenter', ()=> rail.style.animationPlayState='paused');
-  rail.addEventListener('mouseleave', ()=> rail.style.animationPlayState='running');
+</section>
 
-  // seed from API (first paint)
-  fetch('/api/shoutouts').then(r=>r.json()).then(list=>{
-    list.reverse().forEach(addItem);
-  }).catch(()=>{});
-
-  // live push
-  const socket = io({ transports: ['websocket','polling'] });
-  socket.on('new_shoutout', addItem);
-
-  async function addItem(data){
-    const span = document.createElement('span');
-    span.className = 'inline-flex items-center gap-2';
-    span.dataset.tier = (data.tier || 'General');
-    const badge = ({Platinum:"✨", Gold:"🏅", Silver:"🎉", Bronze:"🔥"})[data.tier] || "🔥";
-    span.innerHTML = `${badge} <span class="text-white">${escapeHtml(data.sponsor||'Anonymous')}</span> ${escapeHtml(data.msg||'supported the team!')}`;
-    rail.prepend(span);
-    // confetti burst (lightweight ESM)
-    try {
-      const {default: confetti} = await import('https://cdn.skypack.dev/canvas-confetti');
-      confetti({ particleCount: 60, spread: 90, origin: { y: 0.2 } });
-    } catch(e) {}
+<style nonce="{{ NONCE }}">
+  #sponsor-leaderboard .pill{
+    display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .6rem;border-radius:999px;
+    background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
   }
-  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-</script>
-<style>
-  #sponsor-leaderboard .flex{ will-change: transform; }
-  @keyframes ticker{ from{transform:translateX(0)} to{transform:translateX(-50%)} }
-  [data-tier="Platinum"]{ color:#e0e7ff; font-weight:900; text-shadow:0 0 12px #a78bfa; }
-  [data-tier="Gold"]{ color:#fde68a; text-shadow:0 0 8px #facc15; }
-  [data-tier="Silver"]{ color:#d1d5db; }
-  [data-tier="Bronze"]{ color:#fbbf24; }
+  #sponsor-leaderboard .headline{ color:#fde68a; text-shadow:0 0 10px rgba(250,204,21,.35) }
+  #sponsor-leaderboard .fc-ticker__rail{ will-change: transform }
+
+  /* Marquee (hover pause; motion-safe) */
+  @keyframes fc-marquee { from{ transform: translateX(0) } to{ transform: translateX(-50%) } }
+  .fc-marquee{ animation: fc-marquee 26s linear infinite }
+  #sponsor-leaderboard:hover .fc-marquee{ animation-play-state: paused }
+  @media (prefers-reduced-motion: reduce){ .fc-marquee{ animation: none !important } }
+
+  /* Tier accents */
+  #sponsor-leaderboard [data-tier="Platinum"]{ color:#e0e7ff; font-weight:900; text-shadow:0 0 12px #a78bfa }
+  #sponsor-leaderboard [data-tier="Gold"]    { color:#fde68a; text-shadow:0 0 8px  #facc15 }
+  #sponsor-leaderboard [data-tier="Silver"]  { color:#d1d5db }
+  #sponsor-leaderboard [data-tier="Bronze"]  { color:#fbbf24 }
 </style>
+
+<script nonce="{{ NONCE }}">
+(() => {
+  if (window.__fcTicker) return; window.__fcTicker = true;
+
+  const rail = document.querySelector('#sponsor-leaderboard .fc-ticker__rail');
+  if (!rail) return;
+
+  // Seed from API on first paint (fallback if server didn't pass shoutouts)
+  (async () => {
+    try {
+      const r = await fetch('/api/shoutouts', { headers: { accept: 'application/json' } });
+      if (!r.ok) return;
+      const list = await r.json();
+      if (!Array.isArray(list)) return;
+      // newest first
+      list.slice().reverse().forEach(addItem);
+      // duplicate content once to enable seamless loop feel
+      cloneForLoop();
+    } catch {}
+  })();
+
+  // If Socket.IO is present (loaded by base when USE_SOCKETIO), rely on it
+  // The base template already listens for 'new_shoutout' and prepends into
+  // '#sponsor-leaderboard .fc-t-rail, .fc-ticker__rail'. If that hook is missing,
+  // we add a light local listener too.
+  if (window.io && !window.__fcTickerLocalSocket) {
+    window.__fcTickerLocalSocket = true;
+    try {
+      const socket = io(); // default namespace
+      socket.on('new_shoutout', addItem);
+    } catch {}
+  }
+
+  function addItem(data){
+    try {
+      const span = document.createElement('span');
+      span.className = 'pill inline-flex items-center gap-2';
+      const tier = String((data?.tier || 'General'));
+      span.dataset.tier = tier;
+      const badge = (tier.toLowerCase()==='platinum') ? '✨'
+                 : (tier.toLowerCase()==='gold')     ? '🏅'
+                 : (tier.toLowerCase()==='silver')   ? '🎉'
+                 : (tier.toLowerCase()==='bronze')   ? '🥉'
+                 : '🔥';
+      span.innerHTML = `${badge} <span class="text-white">${escapeHtml(data?.sponsor ?? 'Anonymous')}</span> ${escapeHtml(data?.msg ?? 'supported the team!')}`;
+      rail.prepend(span);
+      // gentle celebration if confetti is already present
+      try { window.confetti?.({ particleCount: 50, spread: 80, origin: { y: 0.2 } }); } catch {}
+    } catch {}
+  }
+
+  function cloneForLoop(){
+    // Duplicate children once so the marquee can glide without gap.
+    // Do this only if not already duplicated.
+    if (rail.__clonedOnce) return;
+    rail.__clonedOnce = true;
+    const kids = [...rail.children];
+    kids.forEach(k => rail.appendChild(k.cloneNode(true)));
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+})();
+</script>
+

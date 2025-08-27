@@ -1,13 +1,13 @@
 # app/models/__init__.py
 """
-Autoload all models and mixins for Starforge/FundChamps SaaS.
+Central model registry for FundChamps.
 
-Benefits
---------
-- Centralized imports for: `from app.models import Team, Player, Sponsor, ...`
-- Ensures Alembic autogeneration sees all models (explicit + optional + discovery)
-- Handles optional/experimental models gracefully with logging
-- Utilities to introspect loaded models (for admin, seeds, etc.)
+Why this exists
+---------------
+- One import for everything: `from app.models import Team, Player, ...`
+- Ensures Alembic autogenerate sees ALL models (explicit first, then optional/discovered)
+- Stable, explicit core ordering → deterministic migrations
+- Optional models + auto-discovery kept, but sandboxed and low-noise
 """
 from __future__ import annotations
 
@@ -17,9 +17,10 @@ import logging
 import os
 import pkgutil
 from types import ModuleType
-from typing import Any, List, Optional, Tuple, Type
+from typing import Any, Iterable, List, Optional, Tuple, Type
+from .shoutout import Shoutout  # ✅ NEW
 
-from app.extensions import db  # expose db everywhere
+from app.extensions import db  # re-exported
 
 logger = logging.getLogger(__name__)
 
@@ -29,14 +30,28 @@ logger = logging.getLogger(__name__)
 from .mixins import TimestampMixin, SoftDeleteMixin  # noqa: F401
 
 # ───────────────────────────────────────────────────────────────────────────────
-# Core models (explicit = clearer errors + stable ordering)
+# Core models (explicit imports → clear errors + stable ordering)
+#   NOTE: keep these as the source of truth for Alembic ordering.
 # ───────────────────────────────────────────────────────────────────────────────
 from .team import Team  # noqa: F401
 from .player import Player  # noqa: F401
 from .sponsor import Sponsor  # noqa: F401
 from .transaction import Transaction  # noqa: F401
 from .campaign_goal import CampaignGoal  # noqa: F401
-from .sponsor_click import SponsorClick  # noqa: F401  # analytics beacons table
+from .sponsor_click import SponsorClick  # noqa: F401
+from .newsletter import NewsletterSignup  # ✅ NEW core model
+from .shoutout import Shoutout  # ✅ promote to core (and export)
+
+_CORE_NAMES: tuple[str, ...] = (
+    "Team",
+    "Player",
+    "Sponsor",
+    "Transaction",
+    "CampaignGoal",
+    "SponsorClick",
+    "NewsletterSignup",
+    "Shoutout",
+)
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Optional models that may or may not exist in a given deployment
@@ -51,6 +66,12 @@ OPTIONAL_MODELS: List[Tuple[str, str]] = [
 _loaded_optional: List[str] = []
 
 
+def _iter_candidates(x: str | Iterable[str]) -> list[str]:
+    if isinstance(x, str):
+        return [p.strip() for p in x.split("|")] if "|" in x else [x]
+    return [str(p) for p in x]
+
+
 def _try_import_optional() -> None:
     for module_name, class_name in OPTIONAL_MODELS:
         modpath = f"app.models.{module_name}"
@@ -61,7 +82,6 @@ def _try_import_optional() -> None:
             _loaded_optional.append(class_name)
             logger.debug("✅ Loaded optional model: %s from '%s'", class_name, module_name)
         except (ImportError, AttributeError) as e:
-            # keep noise low in production; INFO is fine
             logger.info("ℹ️ Optional model '%s' not loaded: %s", class_name, e)
 
 
@@ -70,15 +90,15 @@ _try_import_optional()
 # ───────────────────────────────────────────────────────────────────────────────
 # Optional: directory auto-discovery
 # - Scans app/models/ for modules that define SQLAlchemy models and imports them.
-# - Skips known non-model files.
+# - Skips known non-model files and all explicit core modules.
 # - Controlled by env flag: MODELS_AUTODISCOVER (default: True)
-#   Set to False if you want to only rely on explicit imports above.
 # ───────────────────────────────────────────────────────────────────────────────
 _AUTODISCOVER = os.getenv("MODELS_AUTODISCOVER", "true").lower() not in {"0", "false", "no"}
 _DISCOVERY_SKIP = {
     "__init__", "mixins", "base", "enums", "types", "typing", "tests", "test", "conftest",
     # explicitly-loaded core files (avoid double-work)
     "team", "player", "sponsor", "transaction", "campaign_goal", "sponsor_click",
+    "newsletter", "shoutout",
     # known optionals already handled
     *{m for m, _ in OPTIONAL_MODELS},
 }
@@ -110,14 +130,16 @@ def _discover_models(package_name: str = "app.models") -> List[str]:
             try:
                 module = importlib.import_module(f"{package_name}.{modname}")
                 exported = 0
-                # pull any db.Model subclasses into globals() so Alembic sees them
                 for name, obj in inspect.getmembers(module, _is_sqla_model):
                     if name not in globals():
                         globals()[name] = obj
                     loaded.append(name)
                     exported += 1
                 if exported:
-                    logger.debug("🔎 Discovered %d model(s) in '%s': %s", exported, modname, ", ".join(n for n in loaded if n in globals()))
+                    logger.debug(
+                        "🔎 Discovered %d model(s) in '%s': %s",
+                        exported, modname, ", ".join(n for n in loaded if n in globals())
+                    )
             except Exception as e:
                 logger.info("ℹ️ Skipped auto-import of '%s' due to: %s", modname, e)
                 continue
@@ -135,9 +157,9 @@ _loaded_discovered = _discover_models()
 __all__ = [
     # db + mixins
     "db", "TimestampMixin", "SoftDeleteMixin",
-    # core
-    "Team", "Player", "Sponsor", "Transaction", "CampaignGoal", "SponsorClick",
-    # optionals
+    # core (explicit, ordered)
+    *_CORE_NAMES,
+    # optionals (if present)
     *_loaded_optional,
     # discovered (if any)
     *_loaded_discovered,
@@ -149,7 +171,7 @@ __all__ = [
 def iter_models() -> List[Any]:
     """
     Returns all exported names in __all__ that look like classes (TitleCase).
-    Useful for admin registries, seed generators, etc. (framework-agnostic).
+    Useful for admin registries, seed generators, etc.
     """
     out: List[Any] = []
     for name in __all__:
@@ -169,17 +191,14 @@ def get_model(name: str) -> Optional[Type[Any]]:
     return globals().get(name)
 
 
-# Eager check (debug only): helps catch typos while developing
+# Debug summary (only in dev)
 if os.getenv("FLASK_DEBUG", "1").lower() not in {"0", "false", "no"}:
     try:
         _cnt = len(iter_sqla_models())
         logger.debug(
             "📦 models loaded: %d (core=%d, optional=%d, discovered=%d)",
-            _cnt, 6, len(_loaded_optional), len(_loaded_discovered),
+            _cnt, len(_CORE_NAMES), len(_loaded_optional), len(_loaded_discovered),
         )
     except Exception:
         pass
 
-
-# expose new model for migrations
-from .shoutout import Shoutout

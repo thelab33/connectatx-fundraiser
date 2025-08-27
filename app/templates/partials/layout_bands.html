@@ -11,9 +11,9 @@
 {% set brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
 
 <h2 id="fc-bands-title" class="sr-only">Layout Bands</h2>
-<section data-ui="{{ (name|default('layout_bands'))|replace('_','-') }}" class="block">
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block" data-ui="{{ (name|default('layout_bands'))|replace('_','-') }}" >
 
-  <section id="__fc-bands" aria-hidden="true" hidden></section>
+  <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6" id="__fc-bands" aria-hidden="true" hidden></section>
 
   <style nonce="{{ NONCE }}">
     :root{

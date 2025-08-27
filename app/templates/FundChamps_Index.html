@@ -87,7 +87,7 @@
   {% include "partials/donation_modal.html" ignore missing with context %}
 
   {# --- Dedicated Donate Page CTA --- #}
-  <section aria-labelledby="donate-cta-heading" class="container-elite my-10 max-w-3xl">
+  <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-10 max-w-3xl" aria-labelledby="donate-cta-heading" >
     <h2 id="donate-cta-heading" class="sr-only">Donate page call to action</h2>
     <a
       href="{{ url_for('main.donate') if (url_for is defined and has_endpoint('main.donate')) else '/donate' }}"

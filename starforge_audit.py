@@ -227,7 +227,7 @@ def audit_static_files() -> List[Finding]:
     for f in js_files + css_files:
         if f.suffix == ".map" or f.name.endswith(".map"):
             add(finds, Finding("static", "warn", "Source map present in production build", str(f)))
-        size_kb = f.stat().st_size / 1024
+        size_kb = (f.stat().st_size / 1024) if f.exists() else 0
         if f.suffix == ".js" and size_kb > 800:
             add(finds, Finding("static", "warn", f"Large JS bundle ~{size_kb:.0f} KB", str(f)))
         if f.suffix == ".css" and size_kb > 600:
@@ -236,7 +236,7 @@ def audit_static_files() -> List[Finding]:
     # Images: format/size
     for f in img_files:
         ext = f.suffix.lower()
-        size_kb = f.stat().st_size / 1024
+        size_kb = (f.stat().st_size / 1024) if f.exists() else 0
         if ext in IMG_EXT_BAD:
             add(finds, Finding("static", "warn", f"Legacy/inefficient image format {ext}", str(f)))
         if size_kb > 800:

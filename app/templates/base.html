@@ -1,24 +1,20 @@
-{# -----------------------------------------------------------------------------
-  Base layout — FundChamps Prestige Elite (SV-Premium, refined)
-  - CSP-safe NONCE; single CSS pipeline
-  - Donate-aware SEO + OG/Twitter
-  - Header shrink sentinel (id="site-header-sentinel")
-  - JSON-LD (Organization + DonateAction)
-  - Theme-color + brand CSS vars sync
-  - Metrics beacons (impression + click)
-  - PWA hooks (manifest + guarded SW)
-  - Live shoutouts: HTMX polling by default; optional Socket.IO push
------------------------------------------------------------------------------ #}
+{# ---------------------------------------------------------------------------
+  Base layout — FundChamps Prestige Elite (SV-Premium, modular v3.3)
+  - Section slots (ticker/hero/tiers/impact/allocation/about/cta/concierge)
+  - Single CSS pipeline, CSP nonce, JSON-LD, metrics, confetti, sockets (opt)
+  - Hero Compat: ensures inline hero <img> shows under glass card content
+  - Back-compat: {% block content %} still works
+--------------------------------------------------------------------------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _ver = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
 {% set SRI = SRI if SRI is defined else {} %}
 {% set _route = (request.endpoint if request is defined else '') %}
-{% set _TEAM = (team if team is defined else (_team if _team is defined else {})) %}
-{% set _brand_hex = _TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15' %}
-{% set _brand_name = _TEAM.team_name if _TEAM and _TEAM.team_name else 'Connect ATX Elite' %}
+{% set _TEAM  = (team if team is defined else (_team if _team is defined else {})) %}
+{% set _brand_hex  = _TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15' %}
+{% set _brand_name = _TEAM.team_name  if _TEAM and _TEAM.team_name  else 'Connect ATX Elite' %}
 {% set _brand_slug = (_TEAM.team_slug if _TEAM and _TEAM.team_slug else _brand_name)|lower|replace(' ', '-')|replace('--','-') %}
 {% set _title_default = _brand_name %}
-{% set _desc_default = 'Fuel the season. Fund the future.' %}
+{% set _desc_default  = 'Fuel the season. Fund the future.' %}
 {% set _is_donate = (_route == 'main.donate') %}
 {% set _page_title = ( (_is_donate and (_TEAM.og_title_donate if _TEAM and _TEAM.og_title_donate)) or
                        (_TEAM.og_title if _TEAM and _TEAM.og_title) or
@@ -27,36 +23,29 @@
 {% set _page_desc = ( (_is_donate and (_TEAM.og_description_donate if _TEAM and _TEAM.og_description_donate)) or
                       (_TEAM.og_description if _TEAM and _TEAM.og_description) or
                       _desc_default ) %}
-{% set _hero_img = _TEAM.hero_image or _TEAM.hero_bg or 'images/hero.avif' %}
-{% set _og_img = _TEAM.og_image or 'images/og_default.jpg' %}
+{% set _hero_img = _TEAM.hero_image or _TEAM.hero_bg or _TEAM.team_photo or 'images/hero.avif' %}
+{% set _og_img   = _TEAM.og_image   or 'images/og_default.jpg' %}
 
 {# Versioned assets #}
 {% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver) if _ver else url_for('static', filename='css/tailwind.min.css') %}
-{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
-{% set js_donate     = url_for('static', filename='js/donate.min.js', v=_ver)      if _ver else url_for('static', filename='js/donate.min.js') %}
+{% set js_href       = url_for('static', filename='js/bundle.min.js',  v=_ver) if _ver else url_for('static', filename='js/bundle.min.js') %}
+{% set js_donate     = url_for('static', filename='js/donate.min.js',  v=_ver) if _ver else url_for('static', filename='js/donate.min.js') %}
 
 {# Optional SRI #}
 {% set sri_css     = SRI.get('css/tailwind.min.css') if SRI else None %}
 {% set sri_js_main = SRI.get('js/bundle.min.js')     if SRI else None %}
 {% set sri_js_don  = SRI.get('js/donate.min.js')     if SRI else None %}
 
-{# Optional PWA manifest (enable by setting WEB_MANIFEST) #}
+{# Optional PWA manifest + sockets #}
 {% set _manifest = WEB_MANIFEST if WEB_MANIFEST is defined else None %}
-
-{# Live shoutouts transport:
-   - Default: HTMX polling
-   - To enable Socket.IO push, set USE_SOCKETIO=true in template context #}
 {% set USE_SOCKETIO = USE_SOCKETIO if USE_SOCKETIO is defined else false %}
 
 <!doctype html>
-<html
-  lang="en"
+<html lang="en"
   class="h-full antialiased scroll-smooth selection:bg-yellow-300/30"
-  data-theme="dark"
-  data-brand="{{ _brand_slug }}"
-  data-route="{{ _route|default('') }}"
->
-  <head>
+  data-theme="dark" data-brand="{{ _brand_slug }}" data-route="{{ _route|default('') }}">
+<head>
+  {% block head_pre_meta %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
@@ -67,11 +56,11 @@
       <link rel="canonical" href="{{ request.base_url }}" />
       <meta property="og:url" content="{{ request.base_url }}" />
     {% endif %}
+  {% endblock %}
 
+  {% block head_meta %}
     <title>{% block title %}{{ _page_title }}{% endblock %}</title>
     <meta name="description" content="{{ _page_desc }}" />
-
-    {# --- OG/Twitter --- #}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="{{ _brand_name }}" />
     <meta property="og:title" content="{{ _page_title }}" />
@@ -82,152 +71,193 @@
     <meta name="twitter:title" content="{{ _page_title }}" />
     <meta name="twitter:description" content="{{ _page_desc }}" />
     <meta name="twitter:image" content="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+    <meta name="twitter:image:alt" content="{{ _brand_name }} fundraiser" />
+    <link rel="icon" href="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+  {% endblock %}
 
-    {# --- PWA hooks --- #}
+  {% block head_pwa %}
     {% if _manifest %}
       <link rel="manifest" href="{{ url_for('static', filename=_manifest, v=_ver) if _ver else url_for('static', filename=_manifest) }}">
       <meta name="apple-mobile-web-app-capable" content="yes">
       <meta name="mobile-web-app-capable" content="yes">
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     {% endif %}
+  {% endblock %}
 
-    {# Preconnects — Stripe, Socket.IO, YouTube #}
+  {% block head_preconnects %}
     <link rel="preconnect" href="https://js.stripe.com" crossorigin>
     {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
     <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
     <link rel="dns-prefetch" href="https://js.stripe.com">
     <link rel="dns-prefetch" href="https://www.youtube-nocookie.com">
+  {% endblock %}
 
-    {# LCP hint for hero #}
+  {% block head_preload %}
     {% if url_for is defined and _hero_img %}
-      <link rel="preload" as="image" href="{{ url_for('static', filename=_hero_img, v=_ver) if _ver else url_for('static', filename=_hero_img) }}" imagesizes="100vw">
+      <link rel="preload" as="image"
+            href="{{ url_for('static', filename=_hero_img, v=_ver) if _ver else url_for('static', filename=_hero_img) }}"
+            imagesizes="100vw" />
     {% endif %}
+  {% endblock %}
 
-    {# --- SINGLE CSS PIPELINE --- #}
+  {% block styles %}
     <link rel="preload" as="style" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
     <link rel="stylesheet" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
-
-    {# Small global helpers (no heavy resets here) #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fc-tokens.css', v=_ver) if _ver else url_for('static', filename='css/fc-tokens.css') }}">
     <style nonce="{{ NONCE }}">
-      html { font-size: 16px; text-rendering: optimizeLegibility; }
-      .text-fluid-h1 { font-size: clamp(1.75rem, 1.1rem + 2.2vw, 2.75rem); }
-      .text-fluid-h2 { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem); }
-
-      /* ==== Premium Sponsor Ticker base styles (works for HTMX or Socket.IO) ==== */
-      .fc-ticker { position:sticky; top:0; z-index:40;
-        background: linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.72));
-        border-bottom:1px solid rgba(255,255,255,.12);
-        -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
-        box-shadow:0 6px 28px rgba(0,0,0,.35);
+      :root{
+        --fc-space-y: clamp(2.15rem, 4.5vh, 4.5rem);
+        --fc-sticky-offset: clamp(64px, 7.5vh, 96px);
+        --fc-brand: {{ _brand_hex }};
+        --fc-ring: color-mix(in srgb, var(--fc-brand) 65%, transparent);
+        --fc-header-h: 0px;
       }
-      .fc-t-rail { display:flex; gap:1.5rem; white-space:nowrap; padding:.55rem 1rem; }
-      .fc-t-pill { display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .6rem;
-        border-radius:999px; font-weight:700; background: rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.10);
+      html, body { scroll-behavior: smooth; }
+      main { overscroll-behavior-y: contain; }
+      @supports (scroll-snap-type: y proximity){
+        main { scroll-snap-type: y proximity; }
+        main > section, main > [data-snap] { scroll-snap-align: start; scroll-margin-top: var(--fc-sticky-offset); }
+        @media (prefers-reduced-motion: reduce){ main { scroll-snap-type: none; } }
       }
-      .fc-t-head { color:#fde68a; font-weight:800; letter-spacing:.01em; text-shadow:0 0 10px rgba(250,204,21,.35); }
 
-      @keyframes fc-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-      .fc-marquee { animation: fc-marquee 26s linear infinite; }
-      .fc-ticker:hover .fc-marquee { animation-play-state: paused; }
-      @media (prefers-reduced-motion: reduce){ .fc-marquee { animation:none !important; } }
+      /* Rhythm + containers */
+      .fc-section{ padding-block: var(--fc-space-y); }
+      .fc-container{ width:min(88rem, 96vw); margin-inline:auto; padding-inline:clamp(.75rem, 2vw, 1.25rem); }
+      img { border-radius:.5rem; height:auto; max-width:100%; display:block; }
 
-      .tier-plat{color:#e0e7ff} .tier-gold{color:#fde68a} .tier-silver{color:#d1d5db} .tier-bronze{color:#fbbf24}
+      /* Dense mode */
+      body.is-dense * { letter-spacing:.01em; }
+      body.is-dense p, body.is-dense li { line-height:1.6; }
+      body.is-dense section { padding-block: var(--fc-space-y); }
+      body.is-dense .fc-card, body.is-dense .glass, body.is-dense .impact-card, body.is-dense .tier-card{
+        border-radius:14px; padding:1rem 1.15rem; transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+      }
+      body.is-dense .fc-card:hover, body.is-dense .glass:hover, body.is-dense .impact-card:hover, body.is-dense .tier-card:hover{
+        transform:translateY(-3px) scale(1.005); box-shadow:0 10px 24px rgba(0,0,0,.28);
+      }
+      :focus-visible { outline:2px solid var(--fc-ring); outline-offset:2px; }
+
+      /* ---------- HERO COMPAT: ensure inline photo shows under hero content ---------- */
+      #fc-hero .fc-hero-glass{ position:relative; isolation:isolate; }
+      #fc-hero .fc-hero-glass .hero-bg{ position:absolute; inset:0; z-index:0; }
+      #fc-hero .fc-hero-glass .hero-bg img{
+        width:100%; height:100%; object-fit:cover;
+        object-position: var(--hero-focus, 50% 24%);
+        filter:saturate(1.05) contrast(1.08);
+      }
+      #fc-hero .fc-hero-glass .hero-content{ position:relative; z-index:1; }
+      /* ----------------------------------------------------------------------------- */
+
+      /* Perf: below-the-fold */
+      main > section:nth-of-type(n+2){ content-visibility:auto; contain-intrinsic-size: 900px; }
     </style>
+  {% endblock %}
 
-    {# --- JSON-LD --- #}
+  {% block head_early_js %}
+    <script nonce="{{ NONCE }}">
+      (() => {
+        try{
+          const qs = new URLSearchParams(location.search);
+          if (qs.get('dense')==='1') localStorage.setItem('fc:dense','1');
+          if (qs.get('dense')==='0') localStorage.removeItem('fc:dense');
+          if (localStorage.getItem('fc:dense')==='1') document.documentElement.classList.add('is-dense');
+        }catch{}
+      })();
+    </script>
+    <script nonce="{{ NONCE }}">
+      (() => {
+        const BRAND = '{{ _brand_hex }}';
+        const metaTheme = document.querySelector('#meta-theme-color');
+        const applyTheme = () => {
+          const prefersDark = matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+          if (metaTheme) metaTheme.content = prefersDark ? '#0b0b0c' : BRAND;
+          document.documentElement.style.setProperty('--fc-brand', BRAND);
+          document.documentElement.style.setProperty('--fc-ring', 'color-mix(in srgb, ' + BRAND + ' 65%, transparent)');
+        };
+        applyTheme();
+        matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener('change', applyTheme);
+
+        // Header height → CSS var for sticky offsets
+        const hdr = document.getElementById('site-header');
+        const setH = () => document.documentElement.style.setProperty('--fc-header-h', ((hdr?.offsetHeight)||0) + 'px');
+        setH(); addEventListener('resize', setH, { passive:true });
+      })();
+    </script>
+  {% endblock %}
+
+  {% block json_ld %}
     <script type="application/ld+json" nonce="{{ NONCE }}">
-    {
-      "@context":"https://schema.org",
-      "@type":"Organization",
-      "name": {{ _brand_name|tojson }},
-      "url":  {{ (request.base_url if request is defined else '/')|tojson }},
-      "brand": {{ _brand_name|tojson }},
-      "logo": {{ (url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img)) | tojson }}
-    }
+    {"@context":"https://schema.org","@type":"Organization","name":{{ _brand_name|tojson }},"url":{{ (request.base_url if request is defined else '/')|tojson }},"brand":{{ _brand_name|tojson }},"logo":{{ (url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img)) | tojson }}}
     </script>
     {% if _is_donate %}
     <script type="application/ld+json" nonce="{{ NONCE }}">
-    {
-      "@context":"https://schema.org",
-      "@type":"DonateAction",
-      "name": "Donate to {{ _brand_name }}",
-      "target": {{ (request.base_url if request is defined else '/donate')|tojson }},
-      "actionStatus": "https://schema.org/PotentialActionStatus"
-    }
+    {"@context":"https://schema.org","@type":"DonateAction","name":"Donate to {{ _brand_name }}","target":{{ (request.base_url if request is defined else '/donate')|tojson }},"actionStatus":"https://schema.org/PotentialActionStatus"}
     </script>
     {% endif %}
+  {% endblock %}
 
-    {% block extra_css %}{% endblock %}
-    {% block head %}{% endblock %}
-  </head>
+  {% block extra_css %}{% endblock %}
+  {% block head %}{% endblock %}
+</head>
 
-  <body class="min-h-full bg-zinc-950 text-zinc-100">
-    <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Skip to content</a>
+<body class="min-h-full bg-zinc-950 text-zinc-100">
+  <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Skip to content</a>
+  <div id="site-header-sentinel" aria-hidden="true" class="h-0 w-full"></div>
 
-    {# Header shrink sentinel #}
-    <div id="site-header-sentinel" aria-hidden="true" class="h-0 w-full"></div>
-
-    {# Global header #}
+  {% block header %}
     {% include "partials/header_and_announcement.html" ignore missing with context %}
+  {% endblock %}
 
-    {# Premium Sponsor Leaderboard strip sits just under the header.
-       The partial itself decides HTMX or push rendering. #}
-    {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
+  {% block above_main %}{% endblock %}
 
-    <main id="main" role="main" class="relative">
-      <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
-      {% block content %}{% endblock %}
-    </main>
+  <main id="main" role="main" class="relative">
+    <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
 
-    {# Global footer #}
+    {# --- Section slots for Nike/Apple storytelling flow --- #}
+    {% block section_ticker %}{% endblock %}
+    {% block section_hero %}{% endblock %}
+    {% block section_tiers %}{% endblock %}
+    {% block section_impact %}{% endblock %}
+    {% block section_allocation %}{% endblock %}
+    {% block section_about %}{% endblock %}
+    {% block section_mid_cta %}{% endblock %}
+    {% block section_concierge %}{% endblock %}
+    {% block sections_extra %}{% endblock %}
+
+    {# Back-compat: old pages can still render everything via content #}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block below_main %}{% endblock %}
+
+  {% block footer %}
     {% include "partials/footer.html" ignore missing with context %}
+  {% endblock %}
 
-    {# Modals/misc (non-blocking) #}
+  {% block modals %}
     {% include "partials/donation_modal.html" ignore missing %}
     {% include "partials/newsletter.html"      ignore missing %}
+  {% endblock %}
 
-    {# Core bundle #}
+  {% block core_scripts %}
     <script src="{{ js_href }}" defer nonce="{{ NONCE }}"{% if sri_js_main %} integrity="{{ sri_js_main }}" crossorigin="anonymous"{% endif %}></script>
     {% if _is_donate %}
       <script src="{{ js_donate }}" defer nonce="{{ NONCE }}"{% if sri_js_don %} integrity="{{ sri_js_don }}" crossorigin="anonymous"{% endif %}></script>
     {% endif %}
+    {% if USE_SOCKETIO %}<script src="/socket.io/socket.io.js" defer nonce="{{ NONCE }}"></script>{% endif %}
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+  {% endblock %}
 
-    {# Optional Socket.IO client (guarded) — switch on via USE_SOCKETIO=true #}
-    {% if USE_SOCKETIO %}
-      <script src="/socket.io/socket.io.js" defer nonce="{{ NONCE }}"></script>
-    {% endif %}
+  {% block extra_js %}{% endblock %}
 
-    {% block extra_js %}{% endblock %}
-
+  {% block tail_scripts %}
     <script nonce="{{ NONCE }}">
     (() => {
       if (window.__fcPolish) return; window.__fcPolish = true;
 
-      const prefersReduced = matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-      const BRAND = '{{ _brand_hex }}';
-
-      // Theme/meta sync
-      const metaTheme = document.querySelector('#meta-theme-color');
-      const applyTheme = () => {
-        const dark = matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
-        if (metaTheme) metaTheme.content = dark ? '#0b0b0c' : BRAND;
-        document.documentElement.style.setProperty('--fc-brand', BRAND);
-        document.documentElement.style.setProperty('--fc-ring', `color-mix(in srgb, ${BRAND} 65%, transparent)`);
-      };
-      applyTheme();
-      matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener('change', applyTheme);
-
       // Metrics beacons
-      const beacon = (url, data) => {
-        try {
-          const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
-          navigator.sendBeacon?.(url, blob);
-        } catch {}
-      };
-      beacon('/metrics/impression', {
-        route: document.documentElement.dataset.route || '',
-        at: Date.now(),
-        brand: document.documentElement.dataset.brand || ''
-      });
+      const beacon = (url, data) => { try { navigator.sendBeacon?.(url, new Blob([JSON.stringify(data)], {type:'application/json'})); } catch {} };
+      beacon('/metrics/impression', { route: document.documentElement.dataset.route || '', at: Date.now(), brand: document.documentElement.dataset.brand || '' });
       addEventListener('click', e => {
         const el = e.target.closest('[data-track], .fc-btn-primary, [data-cta]');
         if (!el) return;
@@ -238,58 +268,47 @@
         });
       }, {passive:true});
 
-      // Confetti on shoutout refresh (HTMX) or push (Socket.IO)
-      function popConfetti(){
-        import('https://cdn.skypack.dev/canvas-confetti')
-          .then(({default:confetti}) => confetti({ particleCount: 40, spread: 70, origin:{ y: .18 } }))
-          .catch(()=>{});
-      }
+      // Confetti on shoutout swaps
+      function popConfetti(){ try{ window.confetti?.({ particleCount: 40, spread: 70, origin:{ y: .18 } }) }catch{} }
       document.addEventListener('htmx:afterSwap', (e) => {
         if (e.target?.classList?.contains('fc-marquee')) popConfetti();
       }, {passive:true});
 
+      // Optional Socket.IO: prepend shoutout pill
       {% if USE_SOCKETIO %}
-      // Socket.IO push — requires server to emit "new_shoutout" {sponsor,msg,tier}
       addEventListener('DOMContentLoaded', () => {
         const boot = () => {
-          if (!window.io) return;      // will exist after /socket.io/socket.io.js loads
-          const socket = io();         // default namespace
+          if (!window.io) return;
+          const socket = io();
           socket.on('new_shoutout', data => {
-            const rail = document.querySelector('#sponsor-leaderboard .fc-t-rail');
+            const rail = document.querySelector('#sponsor-leaderboard .fc-ticker__rail, #sponsor-leaderboard .fc-t-rail');
             if (!rail) return;
             const span = document.createElement('span');
-            span.className = 'fc-t-pill';
-            const tier = String((data.tier||'').toLowerCase());
-            const badge = tier==='platinum' ? '✨' : tier==='gold' ? '🏅' : tier==='silver' ? '🎉' : tier==='bronze' ? '🥉' : '🔥';
-            span.innerHTML = `${badge} <span class="text-white">${data.sponsor}</span> ${data.msg}`;
-            rail.prepend(span);
-            popConfetti();
+            span.className = 'pill';
+            const t = String((data.tier||'').toLowerCase());
+            const badge = t==='platinum' ? '✨' : t==='gold' ? '🏅' : t==='silver' ? '🎉' : t==='bronze' ? '🥉' : '🔥';
+            span.innerHTML = `${badge} <span class="text-white">${data.sponsor||''}</span> ${data.msg||''}`;
+            rail.prepend(span); popConfetti();
           });
         };
-        // If the client bundle deferred, give it a tick
         setTimeout(boot, 0);
       }, {once:true});
       {% endif %}
+
+      // Prefetch donate target for snappy CTA
+      const prefetch = (url) => { const l=document.createElement('link'); l.rel='prefetch'; l.href=url; document.head.appendChild(l); };
+      addEventListener('pointerover', e => {
+        const el = e.target.closest('a[href*="donate"], [data-open-donate-modal]');
+        if (el) try{ prefetch((el.href||'/donate')); }catch{}
+      }, {passive:true});
+      addEventListener('focusin', e => {
+        const el = e.target.closest('a[href*="donate"], [data-open-donate-modal]');
+        if (el) try{ prefetch((el.href||'/donate')); }catch{}
+      }, {passive:true});
     })();
     </script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<script nonce="{{ NONCE }}">
- if(window.io){const socket=io();socket.on("new_shoutout",d=>{if(d.tier==="Platinum"){for(let i=0;i<3;i++){setTimeout(()=>{confetti({particleCount:120,spread:90,startVelocity:55,origin:{y:0.6}})},i*400)}}});}
-</script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<style nonce="{{ NONCE }}">.platinum-glow{animation:platinumPulse 2s ease-out 1}@keyframes platinumPulse{0%{color:#fde047;text-shadow:0 0 10px #facc15,0 0 20px #fbbf24}100%{color:inherit;text-shadow:none}}</style>
-<script nonce="{{ NONCE }}">if(window.io){const socket=io();socket.on("new_shoutout",d=>{if(d.tier==="Platinum"){for(let i=0;i<3;i++){setTimeout(()=>{confetti({particleCount:120,spread:90,startVelocity:55,origin:{y:0.6}})},i*400)}}const el=[...document.querySelectorAll("#sponsor-leaderboard span")].find(e=>e.textContent.includes(d.sponsor));if(el){el.classList.add("platinum-glow");setTimeout(()=>el.classList.remove("platinum-glow"),2000)}});}</script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<style nonce="{{ NONCE }}">.platinum-glow{animation:platinumPulse 2s ease-out 1}@keyframes platinumPulse{0%{color:#fde047;text-shadow:0 0 10px #facc15,0 0 20px #fbbf24}100%{color:inherit;text-shadow:none}}</style>
-<script nonce="{{ NONCE }}">if(window.io){const socket=io();socket.on("new_shoutout",d=>{if(d.tier==="Platinum"){for(let i=0;i<3;i++){setTimeout(()=>{confetti({particleCount:120,spread:90,startVelocity:55,origin:{y:0.6}})},i*400)}}const el=[...document.querySelectorAll("#sponsor-leaderboard span")].find(e=>e.textContent.includes(d.sponsor));if(el){el.classList.add("platinum-glow");el.textContent="👑 "+el.textContent;setTimeout(()=>{el.classList.remove("platinum-glow");el.textContent=el.textContent.replace(/^👑 /,"")},2000)}});}</script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<style nonce="{{ NONCE }}">.platinum-glow{animation:platinumPulse 2s ease-out 1}@keyframes platinumPulse{0%{color:#fde047;text-shadow:0 0 10px #facc15,0 0 20px #fbbf24}100%{color:inherit;text-shadow:none}}.platinum-hover{color:#fde047 !important;text-shadow:0 0 10px #facc15,0 0 20px #fbbf24}</style>
-<script nonce="{{ NONCE }}">if(window.io){const socket=io();socket.on("new_shoutout",d=>{if(d.tier==="Platinum"){for(let i=0;i<3;i++){setTimeout(()=>{confetti({particleCount:120,spread:90,startVelocity:55,origin:{y:0.6}})},i*400)}}const el=[...document.querySelectorAll("#sponsor-leaderboard span")].find(e=>e.textContent.includes(d.sponsor));if(el){el.classList.add("platinum-glow");el.textContent="👑 "+el.textContent;setTimeout(()=>{el.classList.remove("platinum-glow");el.textContent=el.textContent.replace(/^👑 /,"")},2000);el.addEventListener("mouseenter",()=>{el.classList.add("platinum-hover");if(!el.textContent.startsWith("👑"))el.textContent="👑 "+el.textContent});el.addEventListener("mouseleave",()=>{el.classList.remove("platinum-hover");el.textContent=el.textContent.replace(/^👑 /,"")});}});}</script>
-<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-<style nonce="{{ NONCE }}">.platinum-glow{animation:platinumPulse 2s ease-out 1}@keyframes platinumPulse{0%{color:#fde047;text-shadow:0 0 10px #facc15,0 0 20px #fbbf24}100%{color:inherit;text-shadow:none}}.platinum-hover{color:#fde047 !important;text-shadow:0 0 10px #facc15,0 0 20px #fbbf24}</style>
-<script nonce="{{ NONCE }}">if(window.io){const socket=io();socket.on("new_shoutout",d=>{if(d.tier==="Platinum"){for(let i=0;i<3;i++){setTimeout(()=>{confetti({particleCount:120,spread:90,startVelocity:55,origin:{y:0.6}})},i*400)}}const el=[...document.querySelectorAll("#sponsor-leaderboard span")].find(e=>e.textContent.includes(d.sponsor));if(el){el.classList.add("platinum-glow");el.textContent="👑 "+el.textContent;setTimeout(()=>{el.classList.remove("platinum-glow");el.textContent=el.textContent.replace(/^👑 /,"")},2000);el.addEventListener("mouseenter",()=>{el.classList.add("platinum-hover");if(!el.textContent.startsWith("👑"))el.textContent="👑 "+el.textContent});el.addEventListener("mouseleave",()=>{el.classList.remove("platinum-hover");el.textContent=el.textContent.replace(/^👑 /,"")});
-// Auto-scroll ticker to Platinum sponsor
-const ticker=document.querySelector("#sponsor-leaderboard");if(ticker&&el){const parentWidth=ticker.clientWidth;const elRect=el.getBoundingClientRect();const tickerRect=ticker.getBoundingClientRect();const scroll=elRect.left-tickerRect.left-(parentWidth/2)+(elRect.width/2);ticker.scrollBy({left:scroll,behavior:"smooth"});}}});}</script>
-  </body>
+    <script src="{{ url_for('static', filename='js/fc-ui.js', v=_ver) if _ver else url_for('static', filename='js/fc-ui.js') }}" defer></script>
+  {% endblock %}
+</body>
 </html>
 

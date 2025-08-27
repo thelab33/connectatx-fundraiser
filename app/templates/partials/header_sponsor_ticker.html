@@ -7,7 +7,7 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _items = items if items is defined else [] %}
 
-<section id="hdr-ticker"
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6" id="hdr-ticker"
          class="relative w-full overflow-hidden bg-gray-900 text-gray-100 text-sm border-t border-gray-700"
          aria-label="Live sponsor and donor ticker">
 

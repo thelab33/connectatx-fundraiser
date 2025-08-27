@@ -3,7 +3,7 @@
 
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 
-<section data-ui="{{ (name|default('sticky_cta_manager'))|replace('_','-') }}" class="block">
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block" data-ui="{{ (name|default('sticky_cta_manager'))|replace('_','-') }}" >
   <h2 class="sr-only">Sticky CTA Manager</h2>
 
   <div id="fc-sticky-reserve" aria-hidden="true" style="height:0"></div>

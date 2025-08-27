@@ -1,26 +1,19 @@
-{# -----------------------------------------------------------------------------
-  Base layout — FundChamps Prestige Elite (SV-Premium, refined)
-  - CSP-safe NONCE, optional SRI + preconnects
-  - Single CSS payload (tailwind.min.css)
-  - Donate-aware SEO, OG/Twitter, canonical, theme-color sync
-  - Header shrink sentinel included (id="site-header-sentinel")
-  - Enhancements:
-      1) Header sentinel element
-      2) JSON-LD (Organization + DonateAction)
-      3) Theme-color auto-sync (brand + color-scheme)
-      4) Metrics beacons (impression + click)
-      5) PWA hooks (manifest + SW registration, guarded)
------------------------------------------------------------------------------ #}
+{# ---------------------------------------------------------------------------
+  Base layout — FundChamps Prestige Elite (SV-Premium, modular v3.1)
+  - Fine-grained section slots (ticker/hero/tiers/impact/allocation/about/cta/concierge)
+  - Keeps single CSS pipeline, CSP nonce, JSON-LD, metrics, confetti, sockets (guarded)
+  - Back-compat: old pages can still use {% block content %}
+--------------------------------------------------------------------------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _ver = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
 {% set SRI = SRI if SRI is defined else {} %}
 {% set _route = (request.endpoint if request is defined else '') %}
-{% set _TEAM = (team if team is defined else (_team if _team is defined else {})) %}
-{% set _brand_hex = _TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15' %}
-{% set _brand_name = _TEAM.team_name if _TEAM and _TEAM.team_name else 'Connect ATX Elite' %}
+{% set _TEAM  = (team if team is defined else (_team if _team is defined else {})) %}
+{% set _brand_hex  = _TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15' %}
+{% set _brand_name = _TEAM.team_name  if _TEAM and _TEAM.team_name  else 'Connect ATX Elite' %}
 {% set _brand_slug = (_TEAM.team_slug if _TEAM and _TEAM.team_slug else _brand_name)|lower|replace(' ', '-')|replace('--','-') %}
 {% set _title_default = _brand_name %}
-{% set _desc_default = 'Fuel the season. Fund the future.' %}
+{% set _desc_default  = 'Fuel the season. Fund the future.' %}
 {% set _is_donate = (_route == 'main.donate') %}
 {% set _page_title = ( (_is_donate and (_TEAM.og_title_donate if _TEAM and _TEAM.og_title_donate)) or
                        (_TEAM.og_title if _TEAM and _TEAM.og_title) or
@@ -30,30 +23,28 @@
                       (_TEAM.og_description if _TEAM and _TEAM.og_description) or
                       _desc_default ) %}
 {% set _hero_img = _TEAM.hero_image or _TEAM.hero_bg or 'images/hero.avif' %}
-{% set _og_img = _TEAM.og_image or 'images/og_default.jpg' %}
+{% set _og_img   = _TEAM.og_image   or 'images/og_default.jpg' %}
 
-{# Versioned asset URLs #}
+{# Versioned assets #}
 {% set href_tailwind = url_for('static', filename='css/tailwind.min.css', v=_ver) if _ver else url_for('static', filename='css/tailwind.min.css') %}
-{% set js_href       = url_for('static', filename='js/bundle.min.js', v=_ver)      if _ver else url_for('static', filename='js/bundle.min.js') %}
-{% set js_donate     = url_for('static', filename='js/donate.min.js', v=_ver)      if _ver else url_for('static', filename='js/donate.min.js') %}
+{% set js_href       = url_for('static', filename='js/bundle.min.js',  v=_ver) if _ver else url_for('static', filename='js/bundle.min.js') %}
+{% set js_donate     = url_for('static', filename='js/donate.min.js',  v=_ver) if _ver else url_for('static', filename='js/donate.min.js') %}
 
 {# Optional SRI #}
 {% set sri_css     = SRI.get('css/tailwind.min.css') if SRI else None %}
-{% set sri_js_main = SRI.get('js/bundle.min.js') if SRI else None %}
-{% set sri_js_don  = SRI.get('js/donate.min.js') if SRI else None %}
+{% set sri_js_main = SRI.get('js/bundle.min.js')     if SRI else None %}
+{% set sri_js_don  = SRI.get('js/donate.min.js')     if SRI else None %}
 
-{# Optional PWA manifest path (set WEB_MANIFEST in context/config to enable) #}
+{# Optional PWA manifest + sockets #}
 {% set _manifest = WEB_MANIFEST if WEB_MANIFEST is defined else None %}
+{% set USE_SOCKETIO = USE_SOCKETIO if USE_SOCKETIO is defined else false %}
 
 <!doctype html>
-<html
-  lang="en"
+<html lang="en"
   class="h-full antialiased scroll-smooth selection:bg-yellow-300/30"
-  data-theme="dark"
-  data-brand="{{ _brand_slug }}"
-  data-route="{{ _route|default('') }}"
->
-  <head>
+  data-theme="dark" data-brand="{{ _brand_slug }}" data-route="{{ _route|default('') }}">
+<head>
+  {% block head_pre_meta %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <meta name="color-scheme" content="dark light" />
@@ -64,11 +55,11 @@
       <link rel="canonical" href="{{ request.base_url }}" />
       <meta property="og:url" content="{{ request.base_url }}" />
     {% endif %}
+  {% endblock %}
 
+  {% block head_meta %}
     <title>{% block title %}{{ _page_title }}{% endblock %}</title>
     <meta name="description" content="{{ _page_desc }}" />
-
-    {# --- OG/Twitter --- #}
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="{{ _brand_name }}" />
     <meta property="og:title" content="{{ _page_title }}" />
@@ -79,207 +70,228 @@
     <meta name="twitter:title" content="{{ _page_title }}" />
     <meta name="twitter:description" content="{{ _page_desc }}" />
     <meta name="twitter:image" content="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+    <meta name="twitter:image:alt" content="{{ _brand_name }} fundraiser" />
+    <link rel="icon" href="{{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) }}" />
+  {% endblock %}
 
-    {# --- PWA hooks (enhancement #5) --- #}
+  {% block head_pwa %}
     {% if _manifest %}
       <link rel="manifest" href="{{ url_for('static', filename=_manifest, v=_ver) if _ver else url_for('static', filename=_manifest) }}">
       <meta name="apple-mobile-web-app-capable" content="yes">
       <meta name="mobile-web-app-capable" content="yes">
+      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     {% endif %}
+  {% endblock %}
 
-    {# Preconnects (idle) — Stripe, Socket, YouTube #}
+  {% block head_preconnects %}
     <link rel="preconnect" href="https://js.stripe.com" crossorigin>
-    <link rel="preconnect" href="/socket.io/" crossorigin>
+    {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
     <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
     <link rel="dns-prefetch" href="https://js.stripe.com">
     <link rel="dns-prefetch" href="https://www.youtube-nocookie.com">
+  {% endblock %}
 
-    {# Useful LCP hint if hero image exists #}
+  {% block head_preload %}
     {% if url_for is defined and _hero_img %}
-      <link rel="preload" as="image" href="{{ url_for('static', filename=_hero_img, v=_ver) if _ver else url_for('static', filename=_hero_img) }}" imagesizes="100vw">
+      <link rel="preload" as="image"
+            href="{{ url_for('static', filename=_hero_img, v=_ver) if _ver else url_for('static', filename=_hero_img) }}"
+            imagesizes="100vw" />
     {% endif %}
+  {% endblock %}
 
-    {# --- SINGLE CSS PIPELINE --- #}
+  {% block styles %}
     <link rel="preload" as="style" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
     <link rel="stylesheet" href="{{ href_tailwind }}"{% if sri_css %} integrity="{{ sri_css }}" crossorigin="anonymous"{% endif %} />
-
-    {# Lock 1rem and add optional fluid heading helpers — no global clamps elsewhere #}
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fc-tokens.css', v=_ver) if _ver else url_for('static', filename='css/fc-tokens.css') }}">
     <style nonce="{{ NONCE }}">
-      html { font-size: 16px; text-rendering: optimizeLegibility; }
-      .text-fluid-h1 { font-size: clamp(1.75rem, 1.1rem + 2.2vw, 2.75rem); }
-      .text-fluid-h2 { font-size: clamp(1.25rem, 1rem + 1.2vw, 1.75rem); }
-      @media (prefers-reduced-motion: reduce) {
-        .fc-reveal { transition: none !important; }
+      :root{
+        --fc-space-y: clamp(2.15rem, 4.5vh, 4.5rem);
+        --fc-sticky-offset: clamp(64px, 7.5vh, 96px);
+        --fc-brand: {{ _brand_hex }};
+        --fc-ring: color-mix(in srgb, var(--fc-brand) 65%, transparent);
+        --fc-header-h: 0px;
       }
+      html, body { scroll-behavior: smooth; }
+      main { overscroll-behavior-y: contain; }
+      @supports (scroll-snap-type: y proximity){
+        main { scroll-snap-type: y proximity; }
+        main > section, main > [data-snap] { scroll-snap-align: start; scroll-margin-top: var(--fc-sticky-offset); }
+        @media (prefers-reduced-motion: reduce){ main { scroll-snap-type: none; } }
+      }
+      body.is-dense * { letter-spacing:.01em; }
+      body.is-dense p, body.is-dense li { line-height:1.6; }
+      body.is-dense section { padding-block: var(--fc-space-y); }
+      body.is-dense .btn, body.is-dense .fc-btn-primary, body.is-dense button { padding:.55rem 1rem; font-weight:700; }
+      body.is-dense .btn-lg { padding:.65rem 1.15rem; font-size:1rem; }
+      body.is-dense .fc-card, body.is-dense .glass, body.is-dense .impact-card, body.is-dense .tier-card{
+        border-radius:14px; padding:1rem 1.15rem; transition:transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+      }
+      body.is-dense .fc-card:hover, body.is-dense .glass:hover, body.is-dense .impact-card:hover, body.is-dense .tier-card:hover{
+        transform:translateY(-3px) scale(1.005); box-shadow:0 10px 24px rgba(0,0,0,.28);
+      }
+      :focus-visible { outline:2px solid var(--fc-ring); outline-offset:2px; }
+      .fc-section{ padding-block: var(--fc-space-y); }
+      .fc-container{ width:min(88rem, 96vw); margin-inline:auto; padding-inline:clamp(.75rem, 2vw, 1.25rem); }
+      main > section:nth-of-type(n+2){ content-visibility:auto; contain-intrinsic-size: 900px; }
+      img { border-radius:.5rem; }
     </style>
+  {% endblock %}
 
-    {# --- Structured Data (enhancement #2) --- #}
+  {% block head_early_js %}
+    <script nonce="{{ NONCE }}">
+      (() => {
+        try{
+          const qs = new URLSearchParams(location.search);
+          if (qs.get('dense')==='1') localStorage.setItem('fc:dense','1');
+          if (qs.get('dense')==='0') localStorage.removeItem('fc:dense');
+          if (localStorage.getItem('fc:dense')==='1') document.documentElement.classList.add('is-dense');
+        }catch{}
+      })();
+    </script>
+    <script nonce="{{ NONCE }}">
+      (() => {
+        const BRAND = '{{ _brand_hex }}';
+        const metaTheme = document.querySelector('#meta-theme-color');
+        const applyTheme = () => {
+          const prefersDark = matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+          if (metaTheme) metaTheme.content = prefersDark ? '#0b0b0c' : BRAND;
+          document.documentElement.style.setProperty('--fc-brand', BRAND);
+          document.documentElement.style.setProperty('--fc-ring', 'color-mix(in srgb, ' + BRAND + ' 65%, transparent)');
+        };
+        applyTheme();
+        matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener('change', applyTheme);
+
+        const hdr = document.getElementById('site-header');
+        const setH = () => document.documentElement.style.setProperty('--fc-header-h', ((hdr?.offsetHeight)||0) + 'px');
+        setH(); addEventListener('resize', setH, { passive:true });
+      })();
+    </script>
+  {% endblock %}
+
+  {% block json_ld %}
     <script type="application/ld+json" nonce="{{ NONCE }}">
-    {
-      "@context": "https://schema.org",
-      "@type": "Organization",
-      "name": {{ _brand_name|tojson }},
-      "url": {{ (request.base_url if request is defined else '/')|tojson }},
-      "brand": {{ _brand_name|tojson }},
-      "sameAs": [],
-      "logo": {{ url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img) | tojson }}
-    }
+    {"@context":"https://schema.org","@type":"Organization","name":{{ _brand_name|tojson }},"url":{{ (request.base_url if request is defined else '/')|tojson }},"brand":{{ _brand_name|tojson }},"logo":{{ (url_for('static', filename=_og_img, v=_ver) if _ver else url_for('static', filename=_og_img)) | tojson }}}
     </script>
     {% if _is_donate %}
     <script type="application/ld+json" nonce="{{ NONCE }}">
-    {
-      "@context": "https://schema.org",
-      "@type": "DonateAction",
-      "name": "Donate to {{ _brand_name }}",
-      "target": {{ (request.base_url if request is defined else '/donate')|tojson }},
-      "actionStatus": "https://schema.org/PotentialActionStatus"
-    }
+    {"@context":"https://schema.org","@type":"DonateAction","name":"Donate to {{ _brand_name }}","target":{{ (request.base_url if request is defined else '/donate')|tojson }},"actionStatus":"https://schema.org/PotentialActionStatus"}
     </script>
     {% endif %}
+  {% endblock %}
 
-    {% block extra_css %}{% endblock %}
-    {% block head %}{% endblock %}
-  </head>
+  {% block extra_css %}{% endblock %}
+  {% block head %}{% endblock %}
+</head>
 
-  <body class="min-h-full bg-zinc-950 text-zinc-100">
-    <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Skip to content</a>
+<body class="min-h-full bg-zinc-950 text-zinc-100">
+  <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2">Skip to content</a>
+  <div id="site-header-sentinel" aria-hidden="true" class="h-0 w-full"></div>
 
-    {# Header shrink sentinel (enhancement #1) #}
-    <div id="site-header-sentinel" aria-hidden="true" class="h-0 w-full"></div>
-
-    {# Header section (global) #}
+  {% block header %}
     {% include "partials/header_and_announcement.html" ignore missing with context %}
+  {% endblock %}
 
-    <main id="main" role="main" class="relative">
-      <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
-      {% block content %}{% endblock %}
-    </main>
+  {% block above_main %}{% endblock %}
 
-    {# Footer section (global) #}
+  <main id="main" role="main" class="relative">
+    <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
+
+    {# --- Section slots for Nike/Apple storytelling flow --- #}
+    {% block section_ticker %}{% endblock %}
+    {% block section_hero %}{% endblock %}
+    {% block section_tiers %}{% endblock %}
+    {% block section_impact %}{% endblock %}
+    {% block section_allocation %}{% endblock %}
+    {% block section_about %}{% endblock %}
+    {% block section_mid_cta %}{% endblock %}
+    {% block section_concierge %}{% endblock %}
+    {% block sections_extra %}{% endblock %}
+
+    {# Back-compat: old pages can still render everything via content #}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block below_main %}{% endblock %}
+
+  {% block footer %}
     {% include "partials/footer.html" ignore missing with context %}
+  {% endblock %}
 
-    {# -- Modals & Misc (do not block page load, ignore missing) -- #}
+  {% block modals %}
     {% include "partials/donation_modal.html" ignore missing %}
-    {% include "partials/newsletter.html" ignore missing %}
+    {% include "partials/newsletter.html"      ignore missing %}
+  {% endblock %}
 
-    {# Core JS script for Tailwind and other features #}
+  {% block core_scripts %}
     <script src="{{ js_href }}" defer nonce="{{ NONCE }}"{% if sri_js_main %} integrity="{{ sri_js_main }}" crossorigin="anonymous"{% endif %}></script>
     {% if _is_donate %}
       <script src="{{ js_donate }}" defer nonce="{{ NONCE }}"{% if sri_js_don %} integrity="{{ sri_js_don }}" crossorigin="anonymous"{% endif %}></script>
     {% endif %}
+    {% if USE_SOCKETIO %}<script src="/socket.io/socket.io.js" defer nonce="{{ NONCE }}"></script>{% endif %}
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer></script>
+  {% endblock %}
 
-    {% block extra_js %}{% endblock %}
+  {% block extra_js %}{% endblock %}
 
-    {# Elite polish: Ripple, reveal on scroll, back-to-top ring, theme/meta sync, metrics, PWA (enhancements #3–#5) #}
+  {% block tail_scripts %}
     <script nonce="{{ NONCE }}">
     (() => {
       if (window.__fcPolish) return; window.__fcPolish = true;
 
-      const prefersReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-      // --- Theme/meta sync (enhancement #3)
-      const BRAND = '{{ _brand_hex }}';
-      const metaTheme = document.querySelector('#meta-theme-color');
-      const setThemeColor = () => {
-        const dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        // darker UI chrome in dark mode, brand tint in light
-        metaTheme && (metaTheme.content = dark ? '#0b0b0c' : BRAND);
-        document.documentElement.style.setProperty('--fc-brand', BRAND);
-        document.documentElement.style.setProperty('--fc-ring', `color-mix(in srgb, ${BRAND} 65%, transparent)`);
-      };
-      setThemeColor();
-      (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)')).addEventListener?.('change', setThemeColor);
-
-      // --- Cosmetics
-      const css = `
-        body{ letter-spacing:.002em; -webkit-font-smoothing:antialiased; }
-        .tabular-nums{ font-variant-numeric: tabular-nums; }
-        .fc-reveal{ opacity:0; transform:translateY(12px); transition:opacity .6s ease, transform .6s ease; }
-        .fc-reveal.is-in{ opacity:1; transform:none; }
-        .fc-focus{ outline:none; box-shadow: 0 0 0 0px transparent; }
-        .fc-focus:focus-visible{ box-shadow:0 0 0 3px var(--fc-ring); border-radius:12px; }
-        .fc-btn{ border-radius:999px; font-weight:800; position:relative; overflow:hidden; padding:.7rem 1.1rem; display:inline-flex; align-items:center; gap:.55rem; }
-        .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow:0 10px 30px rgb(250 204 21 / 15%); }
-        .fc-btn-ghost{ color:#fff; background: rgb(255 255 255 / 7%); border:1px solid rgb(255 255 255 / 15%); }
-        .fc-input{ background:rgb(255 255 255 / 6%); border:1px solid rgb(255 255 255 / 12%); border-radius:12px; padding:.65rem .85rem; color:#fff; }
-        .fc-input::placeholder{ color:rgb(255 255 255 /.55); }
-      `;
-      const style = document.createElement('style'); style.textContent = css; try { style.nonce='{{ NONCE }}'; } catch(e){}
-      document.head.appendChild(style);
-
-      const $ = (s, r=document) => r.querySelector(s);
-      const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
-
-      // Ripple (skip if reduced motion)
-      function attachRipple(){
-        if (prefersReduced) return;
-        $$('.fc-btn,[data-ripple]').forEach(btn=>{
-          if (btn.__rip) return; btn.__rip = true;
-          btn.addEventListener('click', e=>{
-            const r = document.createElement('span'); r.className='fc-ripple';
-            const rect=btn.getBoundingClientRect();
-            const x=(e.clientX??(rect.left+rect.width/2))-rect.left;
-            const y=(e.clientY??(rect.top+rect.height/2))-rect.top;
-            const d=Math.max(rect.width,rect.height)*1.1;
-            Object.assign(r.style,{width:d+'px',height:d+'px',left:x+'px',top:y+'px'});
-            btn.appendChild(r);
-            r.animate([{transform:'translate(-50%,-50%) scale(0)',opacity:.35},{transform:'translate(-50%,-50%) scale(18)',opacity:0}],{duration:650,easing:'cubic-bezier(.22,1,.36,1)'}).onfinish=()=>r.remove();
-          }, {passive:true});
-        });
-      }
-
-      // Reveal on Scroll (skip if reduced motion)
-      function attachReveals(){
-        if (prefersReduced) return;
-        const els=$$('[data-reveal], .fc-reveal').filter(el=>!el.__reveal);
-        if(!els.length) return;
-        if(!('IntersectionObserver' in window)){ els.forEach(el=>el.classList.add('is-in')); return; }
-        const io=new IntersectionObserver(ents=>{
-          ents.forEach(ent=>{ if(ent.isIntersecting){ ent.target.classList.add('is-in'); io.unobserve(ent.target);} });
-        },{threshold:.14});
-        els.forEach(el=>{ el.classList.add('fc-reveal'); io.observe(el); el.__reveal=true; });
-      }
-
-      // Metrics beacons (enhancement #4)
-      const beacon = (url, data) => {
-        try {
-          const blob = new Blob([JSON.stringify(data)], {type:'application/json'});
-          navigator.sendBeacon && navigator.sendBeacon(url, blob);
-        } catch(e) {}
-      };
-      // Impression on load
-      beacon('/metrics/impression', {
-        route: document.documentElement.dataset.route || '',
-        at: Date.now(),
-        brand: document.documentElement.dataset.brand || ''
-      });
-      // Click tracking for elements with data-track or primary buttons
-      document.addEventListener('click', (e) => {
+      // Metrics beacons
+      const beacon = (url, data) => { try { navigator.sendBeacon?.(url, new Blob([JSON.stringify(data)], {type:'application/json'})); } catch {} };
+      beacon('/metrics/impression', { route: document.documentElement.dataset.route || '', at: Date.now(), brand: document.documentElement.dataset.brand || '' });
+      addEventListener('click', e => {
         const el = e.target.closest('[data-track], .fc-btn-primary, [data-cta]');
         if (!el) return;
         beacon('/metrics/click', {
-          id: el.getAttribute('data-track') || el.getAttribute('id') || '',
+          id: el.getAttribute('data-track') || el.id || '',
           text: (el.getAttribute('data-cta') || el.textContent || '').trim().slice(0,80),
           at: Date.now()
         });
       }, {passive:true});
 
-      // Bootstrap
-      attachRipple(); attachReveals();
-      document.addEventListener('DOMContentLoaded',()=>{ attachRipple(); attachReveals(); },{once:true});
-      document.addEventListener('htmx:afterSwap',()=>{ attachRipple(); attachReveals(); },{passive:true});
+      // Confetti on shoutout swaps
+      function popConfetti(){ try{ window.confetti?.({ particleCount: 40, spread: 70, origin:{ y: .18 } }) }catch{} }
+      document.addEventListener('htmx:afterSwap', (e) => {
+        if (e.target?.classList?.contains('fc-marquee')) popConfetti();
+      }, {passive:true});
 
-      // PWA service worker (enhancement #5 — guarded, optional)
-      {% if _manifest %}
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          // only attempt if /sw.js exists; errors are swallowed
-          navigator.serviceWorker.register('/sw.js').catch(()=>{});
-        }, {once:true});
-      }
+      // Optional Socket.IO: prepend shoutout pill
+      {% if USE_SOCKETIO %}
+      addEventListener('DOMContentLoaded', () => {
+        const boot = () => {
+          if (!window.io) return;
+          const socket = io();
+          socket.on('new_shoutout', data => {
+            const rail = document.querySelector('#sponsor-leaderboard .fc-ticker__rail, #sponsor-leaderboard .fc-t-rail');
+            if (!rail) return;
+            const span = document.createElement('span');
+            span.className = 'pill';
+            const t = String((data.tier||'').toLowerCase());
+            const badge = t==='platinum' ? '✨' : t==='gold' ? '🏅' : t==='silver' ? '🎉' : t==='bronze' ? '🥉' : '🔥';
+            span.innerHTML = `${badge} <span class="text-white">${data.sponsor||''}</span> ${data.msg||''}`;
+            rail.prepend(span); popConfetti();
+          });
+        };
+        setTimeout(boot, 0);
+      }, {once:true});
       {% endif %}
+
+      // Prefetch donate target for snappy CTA
+      const prefetch = (url) => { const l=document.createElement('link'); l.rel='prefetch'; l.href=url; document.head.appendChild(l); };
+      addEventListener('pointerover', e => {
+        const el = e.target.closest('a[href*="donate"], [data-open-donate-modal]');
+        if (el) try{ prefetch((el.href||'/donate')); }catch{}
+      }, {passive:true});
+      addEventListener('focusin', e => {
+        const el = e.target.closest('a[href*="donate"], [data-open-donate-modal]');
+        if (el) try{ prefetch((el.href||'/donate')); }catch{}
+      }, {passive:true});
     })();
     </script>
-    <style nonce="{{ NONCE }}">.fc-ripple{position:absolute;border-radius:9999px;transform:translate(-50%,-50%) scale(0);opacity:.35;background:#fff;pointer-events:none}</style>
-  </body>
+    <script src="{{ url_for('static', filename='js/fc-ui.js', v=_ver) if _ver else url_for('static', filename='js/fc-ui.js') }}" defer></script>
+  {% endblock %}
+</body>
 </html>
+

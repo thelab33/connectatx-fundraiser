@@ -1,5 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-<section data-ui="sponsor-ticker" class="block">
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block" data-ui="sponsor-ticker" >
 {# =========================== ELITE SPONSOR TICKER BAR (Self-contained) =========================== #}
 
 {# Fallback data (array of {name, url?, logo?}) #}

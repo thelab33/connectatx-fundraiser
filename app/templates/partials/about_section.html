@@ -1,8 +1,9 @@
 {# ================================
-   about_section.html — SV-ELITE (Production v2)
-   - Grid-fixed, image mosaic, motion-safe counters
-   - CSP-safe modal with focus trap + hooks
-   - Uses global tokens (fc-*)
+   about_section.html — SV-ELITE (v4)
+   - Single centered card (readable measure)
+   - Motion-safe counters (IO-gated)
+   - CSP-safe video modal (optional)
+   - Assumes parent section/container from index.html
    ================================ #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _team = team if team is defined and team else none %}
@@ -10,270 +11,195 @@
 {% set REGION      = _team.region     if _team and _team.region     else "Austin, TX" %}
 {% set MISSION_TXT = _team.mission    if _team and _team.mission    else
 "Beyond basketball—we’re shaping leaders, scholars, and role models for our community." %}
-
-{# Safe asset helper: works with or without Flask url_for #}
-{% macro asset(path) -%}
-  {%- set p = path|string -%}
-  {%- if '://' in p or p.startswith('data:') -%}{{ p }}
-  {%- else -%}
-    {%- if url_for is defined -%}{{ url_for('static', filename=p.lstrip('/')) }}
-    {%- else -%}/static/{{ p.lstrip('/') }}{%- endif -%}
-  {%- endif -%}
-{%- endmacro %}
-
-{# Allow overrides from context #}
-{% set STATS = STATS if STATS is defined and STATS else [
-  {"icon":"🏀","label":"Regionals record","value": _team.regionals_record if _team and _team.regionals_record else "15"},
-  {"icon":"🏆","label":"Championships","value": _team.championships if _team and _team.championships else "3"},
-  {"icon":"🎓","label":"Top academic athletes","value": _team.top_academic if _team and _team.top_academic else "12"}
-] %}
-{% set IMG1 = IMG1 if IMG1 is defined and IMG1 else (_team.img1 if _team and _team.img1 else 'images/player1.webp') %}
-{% set IMG2 = IMG2 if IMG2 is defined and IMG2 else (_team.img2 if _team and _team.img2 else 'images/player2.webp') %}
-{% set IMG3 = IMG3 if IMG3 is defined and IMG3 else (_team.img3 if _team and _team.img3 else 'images/player3.webp') %}
-{% set VIDEO_URL = VIDEO_URL if VIDEO_URL is defined and VIDEO_URL
+{% set SHOW_VIDEO  = SHOW_VIDEO if SHOW_VIDEO is defined else True %}
+{% set VIDEO_URL   = VIDEO_URL if VIDEO_URL is defined and VIDEO_URL
   else (_team.video_url if _team and _team.video_url else 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1') %}
-{% set SHOW_VIDEO = SHOW_VIDEO if SHOW_VIDEO is defined else True %}
 
-<section id="fc-about" class="relative bg-fc-surface text-fc-text py-14 sm:py-20" aria-labelledby="fc-about-title">
+{# Stats (numbers only; animated) #}
+{% set STATS = STATS if STATS is defined and STATS else [
+  {"icon":"🏀","label":"Regionals record","value": (_team.regionals_record if _team and _team.regionals_record else "15")},
+  {"icon":"🏆","label":"Championships","value": (_team.championships    if _team and _team.championships    else "3")},
+  {"icon":"🎓","label":"Top academic athletes","value": (_team.top_academic if _team and _team.top_academic else "12")}
+] %}
+
+<div id="fc-about" role="region" aria-labelledby="fc-about-title">
   <style nonce="{{ NONCE }}">
-    /* Scoped to #fc-about only */
-    #fc-about .mosaic { position: relative; }
-    #fc-about .mosaic-grid {
-      display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 1fr; gap: .75rem;
-      content-visibility: auto; contain-intrinsic-size: 520px;
+    /* ── Scoped to #fc-about ───────────────────────────────────────────── */
+    #fc-about{ scroll-margin-top: var(--fc-sticky-offset, 80px); }
+
+    /* Centered readable card (matches hero polish) */
+    #fc-about .about-card{
+      --about-max: 60rem;
+      background: rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: clamp(18px, 16px + 1vw, 28px);
+      max-width: var(--about-max);
+      margin-inline: auto;
+      padding: clamp(1rem, 1rem + 1.4vw, 2rem);
+      box-shadow: 0 22px 70px rgba(0,0,0,.35);
     }
-    #fc-about .tile { position: relative; overflow: hidden; border-radius: .9rem; }
-    #fc-about .tile img {
-      width: 100%; height: 100%; object-fit: cover; display: block; transform-origin: 50% 50%;
+    @media (min-width:1024px){ #fc-about .about-card{ padding: 2.25rem 2.5rem; } }
+
+    /* Headline sheen */
+    #fc-about .shine-text{
+      background-image: linear-gradient(90deg, #f5d04c, #facc15, #f5d04c);
+      background-size: 200% 100%;
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      animation: about-shine 6s linear infinite; letter-spacing:-.01em;
     }
-    /* Ken Burns (motion-safe) */
-    @media (prefers-reduced-motion: no-preference) {
-      #fc-about .tile img { animation: about-ken 14s ease-in-out infinite alternate; }
-      @keyframes about-ken { from { transform: scale(1.03) } to { transform: scale(1.12) } }
+    @keyframes about-shine { to { background-position: 200% 0 } }
+
+    /* Stats row */
+    #fc-about .stats-grid{ display:grid; gap:.6rem; grid-template-columns: repeat(3, minmax(0,1fr)); }
+    @media (max-width:520px){ #fc-about .stats-grid{ grid-template-columns: 1fr 1fr 1fr; } }
+    #fc-about .stat{
+      display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center;
+      gap:.25rem; padding:.85rem .9rem; border-radius:.9rem;
+      background: color-mix(in srgb, #fff 6%, transparent);
+      border:1px solid rgba(255,255,255,.10);
     }
-    /* Ambient sheen + ring */
-    #fc-about .tile::after {
-      content:""; position:absolute; inset:0; pointer-events:none;
-      background: linear-gradient(180deg, rgba(255,255,255,.06), transparent 40%);
-      opacity:.6;
-    }
-    #fc-about .tile .ring {
-      position:absolute; inset:0; border-radius:inherit;
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
-    }
-    /* Play overlay button */
-    #fc-about .play-btn {
-      position:absolute; inset:auto auto 10px 10px;
-      display:inline-flex; align-items:center; gap:.5rem;
-      padding:.55rem .8rem; border-radius:.75rem;
-      background: rgba(17,17,17,.6); color:#fff;
-      border:1px solid rgba(255,255,255,.12);
-      backdrop-filter: blur(6px) saturate(120%);
-      -webkit-backdrop-filter: blur(6px) saturate(120%);
-      font-weight: 700; font-size: .9rem;
-    }
-    /* Focus ring */
-    #fc-about .focusable:focus-visible{ outline: none; box-shadow: 0 0 0 .18rem rgba(250,204,21,.8) }
+    #fc-about .stat .v{ font-variant-numeric: tabular-nums; font-weight:900; font-size:clamp(1.1rem, .9rem + .8vw, 1.6rem); }
+    #fc-about .stat .k{ font-size:.8rem; color:#d4d4d8; }
+
+    /* CTA row */
+    #fc-about .cta-row{ display:flex; flex-wrap:wrap; gap:.65rem; align-items:center; }
+
+    /* Motion/contrast preferences */
+    @media (prefers-reduced-motion: reduce){ #fc-about .shine-text{ animation:none } }
   </style>
 
-  <div class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6">
-    <div class="grid gap-10 md:grid-cols-2 items-start">
-      <!-- Copy / Mission -->
-      <div>
-        <h2 id="fc-about-title" class="text-2xl md:text-3xl font-extrabold tracking-tight mb-2 optical-tight">
-          Our Mission <span class="sr-only">— {{ TEAM_NAME }} ({{ REGION }})</span>
-        </h2>
-        <p class="text-fc-text/90 leading-relaxed mb-5 text-pretty">{{ MISSION_TXT }}</p>
+  <div class="about-card">
+    <h2 id="fc-about-title" class="text-fluid-h1 font-extrabold shine-text mb-2">
+      More Than Basketball — We’re Family
+    </h2>
 
-        <!-- Counters (reduced-motion aware; IO-triggered) -->
-        <dl class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {% for s in STATS %}
-          <div class="rounded-xl border border-fc-border/80 bg-fc-elev/70 p-3">
-            <dt class="text-[12px] text-fc-text/70">{{ s.icon }} {{ s.label }}</dt>
-            <dd class="mt-1 text-xl font-semibold tracking-tight tabular-nums">
-              <span class="fc-counter" data-target="{{ (s.value|string)|replace('–','-') }}">{{ s.value }}</span>
-            </dd>
-          </div>
-          {% endfor %}
-        </dl>
+    <p class="text-base sm:text-lg text-white/90">
+      <span class="text-yellow-400">{{ TEAM_NAME }}</span> is more than a team—it’s a movement built by families, for families.
+      We give kids a second home where teamwork, respect, and championship character are built for life.
+    </p>
 
-        <!-- Secondary CTAs -->
-        <div class="mt-6 flex flex-wrap gap-3">
-          <a href="#tiers"
-             class="inline-flex items-center rounded-xl px-4 py-2 bg-fc-brand text-black font-semibold shadow transition
-                    focus:outline-none focus:ring-2 focus:ring-fc-brand focus:ring-offset-2 focus:ring-offset-fc-surface hover:opacity-90"
-             data-analytics="about:tiers">
-            View Sponsorship Tiers
-          </a>
-          <a href="#sponsor-form"
-             class="inline-flex items-center rounded-xl px-4 py-2 bg-fc-elev border border-fc-border text-fc-text transition
-                    focus:outline-none focus:ring-2 focus:ring-fc-brand focus:ring-offset-2 focus:ring-offset-fc-surface hover:bg-fc-elev/80"
-             data-analytics="about:sponsor">
-            Sponsor a Champion
-          </a>
-        </div>
+    <p class="mt-3 text-base sm:text-lg text-white/85">{{ MISSION_TXT }}</p>
+
+    <p class="mt-2 text-sm text-yellow-200/90 italic">
+      “Family means showing up, believing in each other, and making sure no one is left behind.
+      That’s what we do—on the court, and off.” <span class="text-amber-300">&mdash; Coach Angel Rodriguez</span>
+    </p>
+
+    <!-- Stats -->
+    <div class="mt-5 stats-grid">
+      {% for s in STATS %}
+      <div class="stat">
+        <div class="text-lg" aria-hidden="true">{{ s.icon }}</div>
+        <div class="v fc-counter" data-target="{{ (s.value|string)|replace('–','-') }}">{{ s.value }}</div>
+        <div class="k">{{ s.label }}</div>
       </div>
+      {% endfor %}
+    </div>
 
-      <!-- Image Mosaic + Play -->
-      <div class="mosaic">
-        <div class="mosaic-grid">
-          <figure class="tile col-span-1 row-span-3">
-            <img src="{{ asset(IMG1) }}" alt="Practice and teamwork — {{ TEAM_NAME }}" loading="lazy" decoding="async" fetchpriority="low">
-            <span class="ring" aria-hidden="true"></span>
-          </figure>
-          <figure class="tile">
-            <img src="{{ asset(IMG2) }}" alt="Game day moments — {{ TEAM_NAME }}" loading="lazy" decoding="async" fetchpriority="low">
-            <span class="ring" aria-hidden="true"></span>
-          </figure>
-          <figure class="tile">
-            <img src="{{ asset(IMG3) }}" alt="Classroom excellence — {{ TEAM_NAME }}" loading="lazy" decoding="async" fetchpriority="low">
-            <span class="ring" aria-hidden="true"></span>
-          </figure>
-        </div>
+    <!-- CTAs -->
+    <div class="mt-5 cta-row">
+      <a href="#fundraiser" class="fc-btn fc-btn-primary" data-cta="about:become-champion">💛 Become a Champion</a>
+      {% if SHOW_VIDEO %}
+      <button id="fc-video-open" class="fc-btn fc-btn-ghost" type="button" data-video-src="{{ VIDEO_URL }}"
+              aria-haspopup="dialog" aria-expanded="false">▶ Watch Our Story</button>
+      {% endif %}
+    </div>
 
-        {% if SHOW_VIDEO %}
-        <button
-          type="button"
-          id="fc-video-open"
-          class="play-btn focusable"
-          aria-haspopup="dialog"
-          aria-controls="fc-video-modal"
-          aria-expanded="false"
-          data-modal-target="fc-video-modal"
-          data-video-src="{{ VIDEO_URL }}"
-          data-analytics="about:watch">
-          ▶ <span>Watch Our Story</span>
-        </button>
-        <noscript>
-          <p class="mt-2">
-            <a class="underline text-fc-brand" href="{{ VIDEO_URL }}">Watch Our Story (opens video)</a>
-          </p>
-        </noscript>
-        {% endif %}
+    <p class="mt-2 text-xs text-white/60">
+      Every sponsorship fuels gym time, tutoring, travel, and more. Keep our kids dreaming big.
+    </p>
+  </div>
+
+  {% if SHOW_VIDEO %}
+  <!-- Accessible modal (CSP-safe) -->
+  <div id="fc-video-modal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true" aria-labelledby="fc-video-title">
+    <div data-modal-overlay class="absolute inset-0 bg-black/70"></div>
+    <div class="relative mx-auto my-10 w-[min(100vw-2rem,960px)] rounded-2xl overflow-hidden ring-1 ring-white/10 bg-black shadow-2xl">
+      <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <h4 id="fc-video-title" class="font-bold">Program Highlights</h4>
+        <button type="button" class="fc-btn fc-btn-ghost px-3 py-1.5" data-modal-close aria-label="Close video">✕</button>
+      </div>
+      <div class="relative aspect-video">
+        <iframe class="absolute inset-0 w-full h-full" src="" title="Team highlight video"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                referrerpolicy="strict-origin-when-cross-origin"></iframe>
       </div>
     </div>
   </div>
+  {% endif %}
+</div>
 
-  {# --- Video Modal (CSP-safe, focus trapped) --- #}
-  <div id="fc-video-modal"
-       class="fixed inset-0 z-[1000] hidden"
-       role="dialog"
-       aria-modal="true"
-       aria-labelledby="fc-video-title"
-       aria-describedby="fc-video-desc">
-    <div class="absolute inset-0 bg-black/70 supports-[backdrop-filter:blur(2px)]:backdrop-blur-sm" data-modal-overlay></div>
-
-    <div class="relative mx-auto max-w-4xl mt-16 rounded-2xl bg-fc-surface border border-fc-border shadow-2xl focus:outline-none"
-         role="document" tabindex="-1">
-      <div class="flex items-center justify-between px-4 py-3 border-b border-fc-border">
-        <h3 id="fc-video-title" class="text-lg font-semibold">Our Story — {{ TEAM_NAME }}</h3>
-        <button type="button"
-                class="rounded-lg px-3 py-1 bg-fc-elev border border-fc-border hover:bg-fc-elev/80"
-                data-modal-close="fc-video-modal" aria-label="Close video">✕</button>
-      </div>
-
-      <p id="fc-video-desc" class="sr-only">Video modal showing {{ TEAM_NAME }} mission film</p>
-
-      <div class="aspect-video">
-        <iframe
-          title="Our Story — {{ TEAM_NAME }}"
-          class="w-full h-full rounded-b-2xl"
-          src=""
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          allowfullscreen
-          loading="lazy"
-          referrerpolicy="strict-origin-when-cross-origin"></iframe>
-      </div>
-    </div>
-  </div>
-</section>
-
-{# --- JS: modal + counters (CSP nonce) --- #}
+{# --- JS: counters + modal (IO-gated; CSP nonce) --- #}
 <script nonce="{{ NONCE }}">
 (() => {
+  // Counter animation
   const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-
-  // Counter animation: numeric only
-  function animateCounter(el){
+  function anim(el){
     const raw = (el.getAttribute('data-target') || el.textContent || '').trim();
     if(!/^\d+(\.\d+)?$/.test(raw)){ el.textContent = raw; return; }
-    if(prefersReduce){ el.textContent = Number(raw).toLocaleString(); return; }
     const target = parseFloat(raw);
-    let start=null, dur=900;
-    const step=(ts)=>{ if(!start) start=ts; const p=Math.min(1,(ts-start)/dur);
+    if (prefersReduce){ el.textContent = target.toLocaleString(); return; }
+    let t0=null, dur=900;
+    const step=(ts)=>{ if(!t0) t0=ts; const p=Math.min(1,(ts-t0)/dur);
       el.textContent = Math.floor(target*p).toLocaleString();
       if(p<1) requestAnimationFrame(step);
     };
     requestAnimationFrame(step);
   }
-  function initCounters(){ document.querySelectorAll('.fc-counter').forEach(animateCounter); }
+  function init(){ document.querySelectorAll('#fc-about .fc-counter').forEach(anim); }
 
-  // IO gate
+  // IO gate for counters
   (function(){
     const sect = document.getElementById('fc-about');
     if('IntersectionObserver' in window && sect){
       let ran=false;
       const io=new IntersectionObserver((entries)=>{
-        if(!ran && entries.some(e=>e.isIntersecting)){ ran=true; initCounters(); io.disconnect(); }
+        if(!ran && entries.some(e=>e.isIntersecting)){ ran=true; init(); io.disconnect(); }
       },{threshold:0.2});
       io.observe(sect);
-    } else { initCounters(); }
+    } else { init(); }
   })();
 
-  // Modal + focus trap
-  const openBtn = document.getElementById('fc-video-open');
-  const modal   = document.getElementById('fc-video-modal');
-  if (!openBtn || !modal) return;
-
+  // Modal (optional)
+  const modal = document.getElementById('fc-video-modal');
+  const trigger = document.getElementById('fc-video-open');
+  if (!modal || !trigger) return;
   const iframe  = modal.querySelector('iframe');
   const overlay = modal.querySelector('[data-modal-overlay]');
   const closeBtn= modal.querySelector('[data-modal-close]');
-  let lastFocus = null;
+  let last=null;
 
-  const focusables = (root) => Array.from(root.querySelectorAll(
-    'a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])'
-  )).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+  const focusables = (root) => Array.from(root.querySelectorAll('a[href],button,textarea,input,select,[tabindex]:not([tabindex="-1"])'))
+    .filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
 
-  function lockBody(){ document.documentElement.style.overflow = 'hidden'; }
-  function unlockBody(){ document.documentElement.style.overflow = ''; }
-
-  function trapTab(e){
-    if(e.key !== 'Tab') return;
+  function lock(){ document.documentElement.style.overflow='hidden'; }
+  function unlock(){ document.documentElement.style.overflow=''; }
+  function trap(e){
+    if(e.key!=='Tab') return;
     const f = focusables(modal); if(!f.length) return;
-    const first=f[0], last=f[f.length-1];
-    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
-    else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+    const [first,lastEl] = [f[0], f[f.length-1]];
+    if(e.shiftKey && document.activeElement===first){ e.preventDefault(); lastEl.focus(); }
+    else if(!e.shiftKey && document.activeElement===lastEl){ e.preventDefault(); first.focus(); }
   }
-  function escClose(e){ if(e.key==='Escape') close(); }
-
+  function esc(e){ if(e.key==='Escape') close(); }
   function open(){
-    lastFocus = document.activeElement;
+    last = document.activeElement;
     modal.classList.remove('hidden');
-    openBtn.setAttribute('aria-expanded','true');
-    const src = openBtn.getAttribute('data-video-src') || '';
-    if(iframe) iframe.src = src;
-    lockBody();
-    (focusables(modal)[0] || modal).focus();
-    document.addEventListener('keydown', trapTab, { passive:false });
-    document.addEventListener('keydown', escClose, { passive:false });
-    try{ document.dispatchEvent(new CustomEvent('fc:video:open', { detail:{ src } })); }catch(_){}
+    iframe && (iframe.src = trigger.getAttribute('data-video-src') || '');
+    lock(); (focusables(modal)[0] || modal).focus();
+    document.addEventListener('keydown', trap);
+    document.addEventListener('keydown', esc);
   }
-
   function close(){
     modal.classList.add('hidden');
-    openBtn.setAttribute('aria-expanded','false');
-    if(iframe) iframe.src = '';
-    unlockBody();
-    document.removeEventListener('keydown', trapTab);
-    document.removeEventListener('keydown', escClose);
-    if(lastFocus && lastFocus.focus) lastFocus.focus();
-    try{ document.dispatchEvent(new CustomEvent('fc:video:close')); }catch(_){}
+    if (iframe) iframe.src = '';
+    unlock();
+    document.removeEventListener('keydown', trap);
+    document.removeEventListener('keydown', esc);
+    last && last.focus?.();
   }
-
-  openBtn.addEventListener('click', open, { passive:true });
-  (closeBtn || modal).addEventListener('click', (e) => {
-    if(e.target === overlay || e.currentTarget === closeBtn) close();
-  });
+  trigger.addEventListener('click', open, {passive:true});
+  (closeBtn || modal).addEventListener('click', (e)=>{ if(e.target===overlay || e.currentTarget===closeBtn) close(); });
 })();
 </script>
 

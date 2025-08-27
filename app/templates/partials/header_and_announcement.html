@@ -1,151 +1,144 @@
 {# =========================
-   Header — MVP v1.4 (FundChamps LEFT • Meter+CTA CENTER • Team RIGHT)
-   - Premium: rainbow wordmark, glow pulse, micro-interactions
-   - Safe fallbacks: SVG preferred, graceful text fallback
+   Header — MVP v1.6 (Compact • A11y/Perf/Safety)
    ========================= #}
 {% set NONCE    = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
 {% set _team    = team if team is defined and team else none %}
 
-{# Platform brand #}
 {% set platform_name  = platform_name if platform_name is defined and platform_name else 'FundChamps' %}
 {% set platform_url   = platform_url if platform_url is defined and platform_url else '/' %}
 {% set _p_logo_svg    = 'images/fundchamps-logo.svg' %}
 {% set platform_logo_svg = (url_for('static', filename=_p_logo_svg) if url_for is defined else '/static/' ~ _p_logo_svg) %}
 
-{# Team bits #}
 {% set team_name   = _team.team_name if _team and _team.team_name is defined else 'Connect ATX Elite' %}
 {% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
 {% set stripe_payment_link = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
 
-{# Meter math #}
 {% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
 {% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
 {% set _raw_pct = (funds_raised / (fundraising_goal if fundraising_goal else 1) * 100) %}
 {% set pct = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
 
-{# Team logo #}
 {% set _logo = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
 {% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
 
-<header id="{{ _hdr_id }}" role="banner"
-  class="sticky top-0 z-50 border-b border-white/10"
-  style="--fc-brand: {{ brand_color }};">
-  <style nonce="{{ NONCE }}">
-    #{{ _hdr_id }} {
-      isolation: isolate;
-      background: linear-gradient(180deg, rgb(0 0 0 /.8), rgb(0 0 0 /.65));
-      backdrop-filter: blur(14px) saturate(140%);
-      -webkit-backdrop-filter: blur(14px) saturate(140%);
-      padding-left: max(0px, env(safe-area-inset-left));
-      padding-right: max(0px, env(safe-area-inset-right));
-    }
-    #{{ _hdr_id }} .container { width:min(86rem,94vw); margin-inline:auto; }
+{% if stripe_payment_link %}
+<link rel="preconnect" href="https://js.stripe.com" crossorigin>
+{% endif %}
 
-    /* LEFT brand */
-    .fc-brand { display:inline-flex; align-items:center; gap:.55rem; }
-    .fc-brand .logo { height:clamp(40px,4.5vw,58px); width:auto; }
-    .fc-brand .word {
-      font-weight:900; letter-spacing:-.02em;
-      font-size:clamp(20px,2vw,30px);
-      background: linear-gradient(90deg,#f87171,#facc15,#4ade80,#38bdf8,#a78bfa);
-      background-size:200% auto;
-      animation: rainbow-shift 8s linear infinite, rainbow-glow 2.5s ease-in-out infinite;
-      -webkit-background-clip:text; background-clip:text;
-      color:transparent; white-space:nowrap;
+<header id="{{ _hdr_id }}" role="banner"
+        class="sticky top-0 z-50 border-b border-white/10 print:hidden"
+        style="--fc-brand: {{ brand_color }};">
+  <style nonce="{{ NONCE }}">
+    #{{ _hdr_id }}{
+      isolation:isolate;
+      background:linear-gradient(180deg,rgb(0 0 0/.80),rgb(0 0 0/.66));
+      -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
+      padding-top:max(0px, env(safe-area-inset-top));
+      padding-inline:max(0px, env(safe-area-inset-left)) max(0px, env(safe-area-inset-right));
+      contain:content;
     }
-    @keyframes rainbow-shift { to { background-position:200% center; } }
-    @keyframes rainbow-glow {
-      0%,100% { text-shadow:0 0 6px rgba(255,255,255,.15); }
-      50%     { text-shadow:0 0 16px rgba(255,255,255,.35); }
+    /* align with base v3.3 container */
+    #{{ _hdr_id }} .fc-container{ width:min(88rem,96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
+
+    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+
+    /* Brand */
+    .fc-brand{ display:inline-flex; align-items:center; gap:.55rem; }
+    .fc-brand .logo{ height:clamp(40px,4.5vw,58px); width:auto; }
+    .fc-brand .word{
+      font-weight:900; letter-spacing:-.02em; font-size:clamp(20px,2vw,30px);
+      background:linear-gradient(90deg,#f87171,#facc15,#4ade80,#38bdf8,#a78bfa);
+      background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent; white-space:nowrap;
+      animation:rainbow-shift 8s linear infinite, rainbow-glow 2.5s ease-in-out infinite;
     }
+    @media (prefers-reduced-motion: reduce){ .fc-brand .word{ animation:none } }
+    @keyframes rainbow-shift{ to{ background-position:200% center } }
+    @keyframes rainbow-glow{ 0%,100%{ text-shadow:0 0 6px rgba(255,255,255,.15) } 50%{ text-shadow:0 0 16px rgba(255,255,255,.35) } }
 
     /* Team chip */
-    .legacy-chip {
-      position:relative; padding:.42rem .72rem; border-radius:1rem;
-      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),
-                 linear-gradient(90deg,var(--fc-brand),#fff7cc);
+    .legacy-chip{ position:relative; padding:.42rem .72rem; border-radius:1rem;
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),
+        linear-gradient(90deg,var(--fc-brand),#fff7cc);
       box-shadow:0 8px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2);
-      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
     }
-    .legacy-chip .txt { font-weight:900; letter-spacing:-.02em; font-size:clamp(16px,1.6vw,22px); color:#0b0c0f; }
+    .legacy-chip .txt{ font-weight:900; letter-spacing:-.02em; font-size:clamp(16px,1.6vw,22px); color:#0b0c0f; }
+
+    /* Grid */
+    .hdr-grid{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; }
+    .hdr-center{ display:flex; align-items:center; justify-content:center; gap:.9rem; }
 
     /* Meter */
-    .hdr-center { display:flex; align-items:center; justify-content:center; gap:.9rem; }
-    .hdr-meter { display:flex; align-items:center; gap:.5rem; }
-    .hdr-meter .track {
-      width:180px; height:10px; border-radius:9999px; overflow:hidden;
-      background: rgb(255 255 255 / 12%);
-      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 9%);
-    }
-    .hdr-meter .fill {
-      height:100%; width:{{ pct|round(1) }}%;
-      background: linear-gradient(90deg,#fffbe6,var(--fc-brand),#f59e0b);
-      transition:width .6s cubic-bezier(.22,1,.36,1);
-      box-shadow:0 0 6px rgba(255,255,255,.4);
-    }
-    .hdr-meter .pct {
-      font-variant-numeric: tabular-nums;
-      font-size:12px; color:#fde68a;
-      min-width:3.2ch; text-align:right;
-    }
+    .hdr-meter{ display:flex; align-items:center; gap:.5rem; }
+    .hdr-meter .track{ width:180px; height:10px; border-radius:9999px; overflow:hidden; background:rgb(255 255 255/12%); box-shadow:inset 0 0 0 1px rgb(255 255 255/9%); }
+    .hdr-meter .fill{ height:100%; width:{{ pct|round(1) }}%; background:linear-gradient(90deg,#fffbe6,var(--fc-brand),#f59e0b);
+      transition:width .6s cubic-bezier(.22,1,.36,1); box-shadow:0 0 6px rgba(255,255,255,.4); }
+    .hdr-meter .pct{ font-variant-numeric:tabular-nums; font-size:12px; color:#fde68a; min-width:3.2ch; text-align:right; }
 
     /* CTA */
-    .fc-btn { display:inline-flex; align-items:center; gap:.5rem; border-radius:999px; padding:.7rem 1rem; font-weight:800; }
-    .fc-btn-primary {
-      background:linear-gradient(180deg,#fde047,#facc15);
-      color:#0b0b0c; box-shadow:0 10px 30px rgba(250,204,21,.3);
-      transition: transform .25s ease;
-    }
-    .fc-btn-primary:hover { transform: translateY(-1px) scale(1.02); }
+    .fc-btn{ display:inline-flex; align-items:center; gap:.5rem; border-radius:999px; padding:.7rem 1rem; font-weight:800; }
+    .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow:0 10px 30px rgba(250,204,21,.3); transition:transform .25s ease; }
+    .fc-btn-primary:focus-visible{ outline:2px solid #fff7cc; outline-offset:2px; }
+    .fc-btn-primary:hover{ transform:translateY(-1px) scale(1.02); }
 
-    /* Layout */
-    .hdr-grid { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; }
-    @media (max-width:720px){ .hdr-meter .track{width:140px;} }
-    @media (max-width:520px){
-      .hdr-center{gap:.6rem;} .hdr-meter .track{width:110px;}
-      .legacy-chip{display:none;}
-    }
+    @media (max-width:720px){ .hdr-meter .track{ width:140px } }
+    @media (max-width:520px){ .hdr-center{ gap:.6rem } .hdr-meter .track{ width:110px } .legacy-chip{ display:none } }
 
-    /* Shrink */
-    #{{ _hdr_id }}.is-shrunk {
-      backdrop-filter:blur(16px) saturate(160%);
-      -webkit-backdrop-filter:blur(16px) saturate(160%);
-      box-shadow:0 8px 30px rgb(0 0 0 /.35);
+    /* Compact mode (<=420px) */
+    #{{ _hdr_id }}.is-compact .hdr-meter{ display:none; }         /* hide meter entirely */
+    #{{ _hdr_id }}.is-compact .fc-btn-primary{ padding:.55rem .9rem; font-size:.95rem; }
+    #{{ _hdr_id }}.is-compact .fc-brand .logo{ height:38px; }
+
+    /* Shrink state */
+    #{{ _hdr_id }}.is-shrunk{ -webkit-backdrop-filter:blur(16px) saturate(160%); backdrop-filter:blur(16px) saturate(160%); box-shadow:0 8px 30px rgb(0 0 0/.35); }
+
+    /* High-contrast users */
+    @media (forced-colors: active){
+      #{{ _hdr_id }}{ -webkit-backdrop-filter:none; backdrop-filter:none; background:Canvas; border-bottom:1px solid CanvasText; }
+      .hdr-meter .track{ background:Canvas; box-shadow:none; border:1px solid CanvasText; }
+      .hdr-meter .fill{ background:CanvasText; box-shadow:none; }
+      .fc-btn-primary{ background:CanvasText; color:Canvas; box-shadow:none; }
     }
   </style>
 
-  <div class="container">
+  <div class="fc-container">
     <div class="hdr-grid px-4 lg:px-6 py-3">
 
-      {# LEFT: brand #}
-      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home">
+      <!-- LEFT: platform brand -->
+      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home" data-cta="nav:brand">
         <img src="{{ platform_logo_svg }}" alt="{{ platform_name }} logo"
              class="logo" loading="eager" decoding="async" fetchpriority="high"
              onerror="this.style.display='none';var s=this.nextElementSibling;s&&s.classList.remove('hidden')" />
         <span class="word hidden">{{ platform_name }}</span>
       </a>
 
-      {# CENTER: meter + CTA #}
+      <!-- CENTER: meter + CTA -->
       <div class="hdr-center">
-        <div id="hdr-meter" class="hdr-meter" role="meter"
-             aria-valuemin="0" aria-valuemax="100"
-             aria-valuenow="{{ pct|round(1) }}"
-             aria-live="polite">
-          <div class="track"><div class="fill"></div></div>
-          <span class="pct">{{ pct|round(0) }}%</span>
+        <div id="hdr-meter" class="hdr-meter" role="meter" aria-valuemin="0" aria-valuemax="100"
+             aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress" aria-live="polite">
+          <div class="track"><div class="fill" style="width:{{ pct|round(1) }}%"></div></div>
+          <span class="pct" aria-hidden="true">{{ pct|round(0) }}%</span>
+          <span class="sr-only">Raised {{ funds_raised|round(0) }} of {{ fundraising_goal|round(0) }} ({{ pct|round(0) }} percent)</span>
         </div>
-        <a {% if stripe_payment_link %} href="{{ stripe_payment_link }}" {% else %} href="#donate" data-open-donate-modal {% endif %}
-           class="fc-btn fc-btn-primary" aria-label="Sponsor gym time securely">
-          💛 Sponsor A Champion
+
+        <a {% if stripe_payment_link %} href="{{ stripe_payment_link }}" target="_blank" rel="noopener"
+           {% else %} href="#donate" data-open-donate-modal {% endif %}
+           class="fc-btn fc-btn-primary"
+           aria-label="Sponsor gym time securely"
+           data-cta="cta:header-sponsor"
+           data-label-full="💛 Sponsor A Champion"
+           data-label-compact="💛 Donate">
+          <span class="lbl">💛 Sponsor A Champion</span>
         </a>
       </div>
 
-      {# RIGHT: team logo #}
-      <a href="{{ home_url|default('/') }}" class="flex items-center gap-3 justify-self-end" aria-label="{{ team_name }} home">
+      <!-- RIGHT: team logo + chip -->
+      <a href="{{ home_url|default('/') }}" class="flex items-center gap-3 justify-self-end"
+         aria-label="{{ team_name }} home" data-cta="nav:team">
         <img src="{{ logoSrc }}" alt="{{ team_name }} logo"
-             class="h-10 w-10 rounded-xl ring-1 ring-white/10"
-             loading="eager" decoding="async"/>
+             class="h-10 w-10 rounded-xl ring-1 ring-white/10" loading="eager" decoding="async" />
         <span class="legacy-chip"><span class="txt">{{ team_name }}</span></span>
       </a>
 
@@ -153,34 +146,66 @@
   </div>
 
   <script nonce="{{ NONCE }}">
+    // Motion/data saver hint
+    (function(){
+      const rM = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      const sD = !!(navigator.connection && navigator.connection.saveData);
+      if (rM || sD) document.documentElement.classList.add('fc-reduced');
+    })();
+
     (() => {
-      if (window.__fcHeaderMVP_14) return; window.__fcHeaderMVP_14 = true;
+      if (window.__fcHeaderMVP_16) return; window.__fcHeaderMVP_16 = true;
       const hdr=document.getElementById('{{ _hdr_id }}');
       const fill=hdr.querySelector('#hdr-meter .fill');
       const pctTxt=hdr.querySelector('#hdr-meter .pct');
-      const track=hdr.querySelector('#hdr-meter');
+      const meter=hdr.querySelector('#hdr-meter');
+      const cta=hdr.querySelector('[data-cta="cta:header-sponsor"]');
+      const lbl=cta?.querySelector('.lbl');
 
-      /* shrink */
+      // Shrink on scroll with hysteresis
       let s=false; const ON=64, OFF=20;
       const on=()=>{ const y=scrollY||document.documentElement.scrollTop||0;
-        if(y>ON && !s){s=true;hdr.classList.add('is-shrunk');}
-        else if(y<OFF && s){s=false;hdr.classList.remove('is-shrunk');}};
-      on(); addEventListener('scroll', on, {passive:true});
+        if(y>ON && !s){ s=true; hdr.classList.add('is-shrunk'); }
+        else if(y<OFF && s){ s=false; hdr.classList.remove('is-shrunk'); } };
+      on(); addEventListener('scroll', on, { passive:true });
 
-      /* live meter */
+      // Compact mode (<=420px)
+      const mql = matchMedia('(max-width:420px)');
+      const updateCompact = () => {
+        const is = !!mql.matches; hdr.classList.toggle('is-compact', is);
+        if (lbl){
+          const full = cta.getAttribute('data-label-full') || 'Donate';
+          const short = cta.getAttribute('data-label-compact') || 'Donate';
+          lbl.textContent = is ? short : full;
+          cta.setAttribute('aria-label', is ? 'Donate securely' : 'Sponsor gym time securely');
+        }
+      };
+      updateCompact(); mql.addEventListener('change', updateCompact);
+
+      // Meter updates (global event)
       function setMeter(r,g){
         const goal=Math.max(0,+g||0), raised=Math.max(0,+r||0);
-        const p=Math.max(0,Math.min(100,goal?(raised/goal*100):0));
-        if(fill) fill.style.width=p.toFixed(1)+'%';
-        if(pctTxt) pctTxt.textContent=p.toFixed(0)+'%';
-        if(track) track.setAttribute('aria-valuenow',p.toFixed(1));
+        const p=Math.max(0,Math.min(100, goal ? (raised/goal*100) : 0));
+        if (fill) fill.style.width=p.toFixed(1)+'%';
+        if (pctTxt) pctTxt.textContent=p.toFixed(0)+'%';
+        if (meter) meter.setAttribute('aria-valuenow', p.toFixed(1));
       }
-      addEventListener('fc:meter:update',(e)=>{const d=e.detail||{};setMeter(d.raised,d.goal);},{passive:true});
+      addEventListener('fc:meter:update', (e)=>{ const d=e.detail||{}; setMeter(d.raised,d.goal); }, { passive:true });
+
+      // If Stripe link exists, append UTM on first interaction
+      const plink = {{ (stripe_payment_link or '')|tojson }};
+      if (cta && plink){
+        const decorate=(href)=> href + (href.includes('?')?'&':'?') +
+          'utm_source=site&utm_medium=header&utm_campaign=fundraiser';
+        const setOnce=()=>{ if(!cta.__utmed){ cta.href = decorate(cta.href); cta.__utmed = true; } };
+        cta.addEventListener('pointerdown', setOnce, { once:true, passive:true });
+        cta.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' ') setOnce(); }, { once:true });
+      }
     })();
   </script>
 </header>
 
-{# Quick donate pill #}
+<!-- Quick donate pill (opt-in) -->
 <a href="#donate" class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
-   data-open-donate-modal data-analytics="cta:quick-donate" aria-label="Quick donate button" hidden></a>
+   data-open-donate-modal data-cta="cta:quick-donate" aria-label="Quick donate button" hidden></a>
 

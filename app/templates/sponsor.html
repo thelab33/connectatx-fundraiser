@@ -11,9 +11,8 @@
 
 {% block content %}
   {# Header for branding consistency #}
-  {% include "partials/header_and_announcement.html" ignore missing with context %}
 
-  <section class="container-elite text-center my-12">
+  <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12" >
     <h2 class="text-3xl sm:text-4xl font-extrabold text-yellow-400 mb-4">Become a Sponsor</h2>
     <p class="max-w-2xl mx-auto text-zinc-300 text-lg">
       Your sponsorship directly fuels travel, gym time, uniforms, and tutoring for our players.
@@ -22,12 +21,12 @@
   </section>
 
   {# Sponsorship tiers (reuses your partial) #}
-  <section id="tiers" class="container-elite my-12">
+  <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-12" id="tiers" >
     {% include "partials/tiers.html" ignore missing with context %}
   </section>
 
   {# --- QR Donate / Payment Link --- #}
-<section class="container-elite text-center my-12">
+<section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12" >
   <h2 class="text-2xl font-bold mb-4 text-yellow-400">Scan to Donate Instantly</h2>
   <p class="text-sm text-zinc-400 mb-6">Works with Apple Pay, Google Pay, or any card</p>
   <div class="flex justify-center">
@@ -59,7 +58,7 @@
 </section>
 
   {# Newsletter (optional trust-builder) #}
-  <section class="container-elite my-12">
+  <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-12" >
     {% include "partials/newsletter.html" ignore missing with context %}
   </section>
 

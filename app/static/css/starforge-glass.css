@@ -1,1 +1,1 @@
-#fc-hero::before{content:"";position:absolute;inset:0;z-index:2;background:var(--fc-glass-bg,rgba(12,12,14,.55));-webkit-backdrop-filter:blur(14px) saturate(1.05);backdrop-filter:blur(14px) saturate(1.05);border-radius:inherit;pointer-events:none;}
+#fc-hero::before{content:"";position:absolute;inset:0;z-index:-1; pointer-events:none;background:var(--fc-glass-bg,rgba(12,12,14,.55));-webkit-backdrop-filter:blur(14px) saturate(1.05);backdrop-filter:blur(14px) saturate(1.05);border-radius:inherit;pointer-events:none;}

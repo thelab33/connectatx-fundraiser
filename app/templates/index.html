@@ -2,138 +2,129 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _q = request.args if request is defined else {} %}
 
-{# ---------- Brand/name fallbacks ---------- #}
-{% set _brand_name = _brand_name if _brand_name is defined
-  else (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-
-{# ---------- Show/Hide Flags Based on Query Params ---------- #}
-{% set SHOW_IMPACT     = (show_impact     if show_impact     is defined else (_q.get('impact') not in _OFF)) %}
-{% set SHOW_ALLOCATION = (show_allocation if show_allocation is defined else (_q.get('alloc')  not in _OFF)) %}
-{% set SHOW_TIERS      = (show_tiers      if show_tiers      is defined else (_q.get('tiers')  not in _OFF)) %}
-{% set SHOW_ABOUT      = (show_about      if show_about      is defined else (_q.get('about')  not in _OFF)) %}
+{# ---- Toggles with safe OFF list ---- #}
+{% set _OFF = ['0','false','off','no','disable'] %}
+{% set SHOW_TICKER     = (show_ticker     if show_ticker     is defined else (_q.get('ticker')     not in _OFF)) %}
+{% set SHOW_TIERS      = (show_tiers      if show_tiers      is defined else (_q.get('tiers')      not in _OFF)) %}
+{% set SHOW_IMPACT     = (show_impact     if show_impact     is defined else (_q.get('impact')     not in _OFF)) %}
+{% set SHOW_ALLOCATION = (show_allocation if show_allocation is defined else (_q.get('alloc')      not in _OFF)) %}
+{% set SHOW_ABOUT      = (show_about      if show_about      is defined else (_q.get('about')      not in _OFF)) %}
+{% set SHOW_CONCIERGE  = (show_concierge  if show_concierge  is defined else (_q.get('concierge')  not in _OFF)) %}
 
 {% block head %}
   {{ super() }}
   <style nonce="{{ NONCE }}">
-    /* ===== SV-Elite polish tokens (keeps Tailwind happy) ===== */
+    /* SV-ELITE scene helpers (aligned to base) */
     :root{
-      --fc-gold: #facc15;
-      --fc-amber: #f59e0b;
-      --fc-surface: rgba(255,255,255,.06);
+      --scene-dark:#0b0b0c; --scene-dim:#0f0f10; --scene-line:#ffffff22;
     }
+    .scene        { padding-block: var(--fc-space-y); }
+    .scene--flush { padding-block: 0; }
+    .scene--dark  { background: var(--scene-dark); }
+    .scene--dim   { background: var(--scene-dim); }
+    .scene-break  { height:1px; background:linear-gradient(90deg,transparent,var(--scene-line),transparent); }
 
-    /* ===== Sponsor Leaderboard (premium) ===== */
-    .fc-ticker {
-      position: sticky; top: 0; z-index: 40;
-      background: linear-gradient(180deg, rgba(0,0,0,.82), rgba(0,0,0,.72));
-      border-bottom: 1px solid rgba(255,255,255,.12);
-      -webkit-backdrop-filter: blur(10px) saturate(140%);
-      backdrop-filter: blur(10px) saturate(140%);
-      box-shadow: 0 6px 28px rgba(0,0,0,.35);
-    }
-    .fc-ticker__rail { display:flex; gap:1.5rem; white-space:nowrap; padding:.55rem 1rem; }
-    .fc-ticker__rail .pill {
-      display:inline-flex; align-items:center; gap:.45rem;
-      padding:.35rem .6rem; border-radius:999px; font-weight:700;
-      background: var(--fc-surface);
-      border: 1px solid rgba(255,255,255,.10);
-    }
-    .fc-ticker__rail .headline {
-      color: #fde68a; font-weight:800; letter-spacing:.01em;
-      text-shadow: 0 0 10px rgba(250,204,21,.35);
-    }
+    /* Keep anchor jumps clean under sticky header */
+    section[aria-labelledby], section[id] { scroll-margin-top: var(--fc-sticky-offset); }
 
-    /* marquee (paused on hover; motion-safe) */
-    @keyframes fc-marquee { from{transform:translateX(0)} to{transform:translateX(-50%)} }
-    .fc-marquee { animation: fc-marquee 26s linear infinite; }
-    .fc-ticker:hover .fc-marquee { animation-play-state: paused; }
-    @media (prefers-reduced-motion: reduce){
-      .fc-marquee { animation: none !important; }
-    }
-
-    /* tier accents */
-    .tier-plat { color:#e0e7ff; }
-    .tier-gold { color:#fde68a; }
-    .tier-silver{ color:#d1d5db; }
-    .tier-bronze{ color:#fbbf24; }
-
-    /* micro pop-in used across page */
-    @keyframes pop { 0%{transform:scale(.98);opacity:0} 100%{transform:scale(1);opacity:1} }
-    .animate-pop { animation: pop .35s ease-out both; }
+    /* Ensure inner containers align exactly with base */
+    .fc-container{ width:min(88rem, 96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
   </style>
 {% endblock %}
 
-{% block content %}
+{# ==================== 1) TICKER ==================== #}
+{% block section_ticker %}
+{% if SHOW_TICKER %}
+<section id="sponsor-leaderboard"
+         class="fc-section scene scene--flush"
+         role="region" aria-live="polite" aria-label="Live sponsor shoutouts"
+         data-snap>
+  <h2 class="sr-only" id="ticker-title">Live sponsor shoutouts</h2>
+  <div class="fc-container">
+    {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
+  </div>
+</section>
+<div class="scene-break" aria-hidden="true"></div>
+{% endif %}
+{% endblock %}
 
-  {# ===== Sponsor Leaderboard (HTMX live feed) ===== #}
-  {# expects /api/shoutouts -> [{sponsor,msg,tier}, ...] #}
-  <section id="sponsor-leaderboard" class="fc-ticker" aria-live="polite" aria-label="Live sponsor shoutouts">
-    <div class="overflow-hidden">
-      <div class="fc-ticker__rail fc-marquee"
-           hx-get="/api/shoutouts"
-           hx-trigger="load, every 8s"
-           hx-swap="outerHTML"
-           role="list">
-        <span class="pill headline">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+{# ==================== 2) HERO ==================== #}
+{% block section_hero %}
+<section id="fundraiser-hero"
+         class="fc-section scene scene--flush"
+         data-snap aria-labelledby="hero-title" role="region">
+  <h2 class="sr-only" id="hero-title">Fundraiser hero</h2>
+  <div class="fc-container">
+    {# Your hero partial should reference HERO_IMG from base v3.3 #}
+    {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+  </div>
+</section>
 
-        {# optional server-rendered seeds if provided in context #}
-        {% for s in (shoutouts or []) %}
-          <span role="listitem" class="pill">
-            {% set t = (s.tier or 'General') | lower %}
-            {% if t == 'platinum' %}<span class="tier-plat">✨</span>
-            {% elif t == 'gold' %}<span class="tier-gold">🏅</span>
-            {% elif t == 'silver' %}<span class="tier-silver">🎉</span>
-            {% elif t == 'bronze' %}<span class="tier-bronze">🥉</span>
-            {% else %}🔥{% endif %}
-            <span class="text-white">{{ s.sponsor }}</span> {{ s.msg }}
-          </span>
-        {% endfor %}
-      </div>
-    </div>
-  </section>
+{# Share bar immediately after hero for social lift #}
+<section class="fc-section scene scene--flush" aria-label="Share the fundraiser">
+  <div class="fc-container">
+    {% include "partials/share_bar.html" ignore missing with context %}
+  </div>
+</section>
+{% endblock %}
 
-  <!-- Hero Section with Fundraising Progress and CTA -->
-  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-
-  <!-- Impact Buckets Section -->
-    <style>.impact-card:hover{transform:translateY(-4px);box-shadow:0 6px 14px rgba(0,0,0,.35)}.impact-card .title:before{margin-right:.4em}</style>
-  {% if SHOW_IMPACT %}
+{# ==================== 3) IMPACT ==================== #}
+{% block section_impact %}
+{% if SHOW_IMPACT %}
+<div class="scene-break" aria-hidden="true"></div>
+<section id="impact"
+         class="fc-section scene scene--dim"
+         data-snap aria-labelledby="impact-title" role="region">
+  <h2 class="sr-only" id="impact-title">Impact buckets</h2>
+  <div class="fc-container">
     {% include "partials/impact_lockers_premium.html" ignore missing with context %}
-  {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
 
-  <!-- Dedicated Donate Page CTA -->
-  <section aria-labelledby="donate-cta-heading" class="my-10 max-w-3xl mx-auto text-center animate-pop">
-    <h2 id="donate-cta-heading" class="sr-only">Donate page call to action</h2>
-    <a href="{{ url_for('main.donate') }}"
-       class="btn btn-primary btn-lg rounded-full inline-flex items-center gap-2">
-      💛 Donate Now
-    </a>
-    <p id="donate-cta-note" class="mt-2 text-sm text-gray-400">
-      Secure checkout • Receipts by email • One-time and recurring gifts supported
-    </p>
-  </section>
-
-  <!-- Sponsor Tiers Section (VIP, Gold, Silver) -->
-  {% if SHOW_TIERS %}
+{# ==================== 4) TIERS ==================== #}
+{% block section_tiers %}
+{% if SHOW_TIERS %}
+<div class="scene-break" aria-hidden="true"></div>
+<section id="tiers"
+         class="fc-section scene scene--dim"
+         data-snap aria-labelledby="tiers-title" role="region">
+  <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
+  <div class="fc-container">
     {% include "partials/tiers.html" ignore missing with context %}
-  {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
 
-  <!-- About Section (Mission Statement) -->
-  {% if SHOW_ABOUT %}
+{# ==================== 6) ABOUT ==================== #}
+{% block section_about %}
+{% if SHOW_ABOUT %}
+<div class="scene-break" aria-hidden="true"></div>
+<section id="mission"
+         class="fc-section scene scene--dim"
+         data-snap aria-labelledby="about-title" role="region">
+  <h2 class="sr-only" id="about-title">About our program</h2>
+  <div class="fc-container">
+    {# Social nudge before the story #}
     {% include "partials/about_section.html" ignore missing with context %}
-    {% include "partials/ai_concierge.html" ignore missing with context %}
-  {% endif %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
 
-  {# Confetti on ticker update (SV-Elite flourish). Safe when NONCE present. #}
-  <script nonce="{{ NONCE }}">
-    document.addEventListener("htmx:afterSwap", (e) => {
-      if (e.target && e.target.classList && e.target.classList.contains("fc-marquee")) {
-        // soft celebratory burst when new shoutouts load
-        import("https://cdn.skypack.dev/canvas-confetti").then(({default:confetti})=>{
-          confetti({ particleCount: 36, spread: 60, startVelocity: 32, origin: { y: 0.18 } });
-        }).catch(()=>{});
-      }
-    });
-  </script>
+{# ==================== 8) CONCIERGE ==================== #}
+{% block section_concierge %}
+{% if SHOW_CONCIERGE %}
+<section id="concierge"
+         class="fc-section scene scene--dark"
+         data-snap aria-labelledby="concierge-title" role="region">
+  <h2 class="sr-only" id="concierge-title">AI concierge</h2>
+  <div class="fc-container">
+    {% include "partials/ai_concierge.html" ignore missing with context %}
+  </div>
+</section>
+{% endif %}
 {% endblock %}
 
