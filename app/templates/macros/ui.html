@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# =============================================================================
    macros/ui.html — FundChamps Premium UI Macros (2025+)
    - Pure Jinja2 + Tailwind v3+, Unicode (UTF-8, no BOM)

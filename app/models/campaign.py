@@ -1,5 +1,6 @@
 # app/models/campaign.py
 from datetime import datetime
+
 from app.extensions import db
 
 # LEGACY REMOVED: class CampaignGoal(db.Model):

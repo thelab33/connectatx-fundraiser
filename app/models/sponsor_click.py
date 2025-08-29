@@ -10,8 +10,10 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from sqlalchemy import Index
+
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class SponsorClick(db.Model, TimestampMixin, SoftDeleteMixin):
@@ -25,14 +27,23 @@ class SponsorClick(db.Model, TimestampMixin, SoftDeleteMixin):
     id = db.Column(db.Integer, primary_key=True)
 
     # tenancy + display context
-    tenant  = db.Column(db.String(120), nullable=True, index=True,  doc="Team/tenant slug")
-    name    = db.Column(db.String(255), nullable=True, index=True,  doc="Sponsor display name")
-    surface = db.Column(db.String(64),  nullable=True, index=True,  doc="spotlight | wall | drawer | hero | meter")
+    tenant = db.Column(
+        db.String(120), nullable=True, index=True, doc="Team/tenant slug"
+    )
+    name = db.Column(
+        db.String(255), nullable=True, index=True, doc="Sponsor display name"
+    )
+    surface = db.Column(
+        db.String(64),
+        nullable=True,
+        index=True,
+        doc="spotlight | wall | drawer | hero | meter",
+    )
 
     # destination + client data
-    url      = db.Column(db.Text, nullable=True, doc="Target URL (may include UTM params)")
-    ua       = db.Column(db.Text, nullable=True, doc="User-Agent string")
-    ip       = db.Column(db.String(45), nullable=True, doc="Client IP (IPv4/IPv6)")
+    url = db.Column(db.Text, nullable=True, doc="Target URL (may include UTM params)")
+    ua = db.Column(db.Text, nullable=True, doc="User-Agent string")
+    ip = db.Column(db.String(45), nullable=True, doc="Client IP (IPv4/IPv6)")
     referrer = db.Column(db.Text, nullable=True, doc="HTTP Referer seen by server")
 
     # Optional loose bag for future fields (campaign, experiment, etc.)
@@ -58,4 +69,3 @@ class SponsorClick(db.Model, TimestampMixin, SoftDeleteMixin):
     def __repr__(self) -> str:  # pragma: no cover
         surface = self.surface or "?"
         return f"<SponsorClick {self.tenant or '-'}:{surface}:{self.name or '-'}>"
-

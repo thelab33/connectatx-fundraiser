@@ -1,80 +1,70 @@
 {% extends "base.html" %}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _q = request.args if request is defined else {} %}
 
-{# ---- Toggles with safe OFF list ---- #}
+{# ============================================================
+   FundChamps • Fundraiser Home (SV-Elite Clean)
+   - Removed: sponsor ticker + share bar section
+   - Sections use fc-section + scene wrappers
+   ============================================================ #}
+
+{# ---------- Query Flags (ticker removed) ---------- #}
+{% set _q   = request.args if request is defined else {} %}
 {% set _OFF = ['0','false','off','no','disable'] %}
-{% set SHOW_TICKER     = (show_ticker     if show_ticker     is defined else (_q.get('ticker')     not in _OFF)) %}
-{% set SHOW_TIERS      = (show_tiers      if show_tiers      is defined else (_q.get('tiers')      not in _OFF)) %}
-{% set SHOW_IMPACT     = (show_impact     if show_impact     is defined else (_q.get('impact')     not in _OFF)) %}
-{% set SHOW_ALLOCATION = (show_allocation if show_allocation is defined else (_q.get('alloc')      not in _OFF)) %}
-{% set SHOW_ABOUT      = (show_about      if show_about      is defined else (_q.get('about')      not in _OFF)) %}
-{% set SHOW_CONCIERGE  = (show_concierge  if show_concierge  is defined else (_q.get('concierge')  not in _OFF)) %}
 
+{% set SHOW_TIERS      = (show_tiers      if show_tiers      is defined else (_q.get('tiers','1')     |lower not in _OFF)) %}
+{% set SHOW_IMPACT     = (show_impact     if show_impact     is defined else (_q.get('impact','1')    |lower not in _OFF)) %}
+{% set SHOW_ABOUT      = (show_about      if show_about      is defined else (_q.get('about','1')     |lower not in _OFF)) %}
+{% set SHOW_CONCIERGE  = (show_concierge  if show_concierge  is defined else (_q.get('concierge','1') |lower not in _OFF)) %}
+
+{# ---------- Scoped Helpers ---------- #}
 {% block head %}
   {{ super() }}
-  <style nonce="{{ NONCE }}">
-    /* SV-ELITE scene helpers (aligned to base) */
-    :root{
-      --scene-dark:#0b0b0c; --scene-dim:#0f0f10; --scene-line:#ffffff22;
-    }
+  <style {{ nonce_attr() }}>
+    :root { --scene-dark:#0b0b0c; --scene-dim:#0f0f10; --scene-line:#ffffff22; }
     .scene        { padding-block: var(--fc-space-y); }
     .scene--flush { padding-block: 0; }
     .scene--dark  { background: var(--scene-dark); }
     .scene--dim   { background: var(--scene-dim); }
     .scene-break  { height:1px; background:linear-gradient(90deg,transparent,var(--scene-line),transparent); }
-
-    /* Keep anchor jumps clean under sticky header */
-    section[aria-labelledby], section[id] { scroll-margin-top: var(--fc-sticky-offset); }
-
-    /* Ensure inner containers align exactly with base */
-    .fc-container{ width:min(88rem, 96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
+    .fc-container { width:min(88rem,96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
   </style>
 {% endblock %}
 
-{# ==================== 1) TICKER ==================== #}
-{% block section_ticker %}
-{% if SHOW_TICKER %}
-<section id="sponsor-leaderboard"
-         class="fc-section scene scene--flush"
-         role="region" aria-live="polite" aria-label="Live sponsor shoutouts"
-         data-snap>
-  <h2 class="sr-only" id="ticker-title">Live sponsor shoutouts</h2>
-  <div class="fc-container">
-    {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
-  </div>
-</section>
-<div class="scene-break" aria-hidden="true"></div>
-{% endif %}
-{% endblock %}
+{# ---------- (Ticker intentionally removed) ---------- #}
+{% block section_ticker %}{% endblock %}
 
-{# ==================== 2) HERO ==================== #}
+{# ---------- 1) Hero (no share bar) ---------- #}
 {% block section_hero %}
 <section id="fundraiser-hero"
          class="fc-section scene scene--flush"
-         data-snap aria-labelledby="hero-title" role="region">
+         aria-labelledby="hero-title" role="region">
   <h2 class="sr-only" id="hero-title">Fundraiser hero</h2>
   <div class="fc-container">
-    {# Your hero partial should reference HERO_IMG from base v3.3 #}
     {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-  </div>
-</section>
-
-{# Share bar immediately after hero for social lift #}
-<section class="fc-section scene scene--flush" aria-label="Share the fundraiser">
-  <div class="fc-container">
-    {% include "partials/share_bar.html" ignore missing with context %}
   </div>
 </section>
 {% endblock %}
 
-{# ==================== 3) IMPACT ==================== #}
+{# ---------- 2) Tiers + Program Stats ---------- #}
+{% block section_tiers %}
+{% if SHOW_TIERS %}
+<div class="scene-break" aria-hidden="true"></div>
+<section id="tiers" class="fc-section scene scene--dim"
+         aria-labelledby="tiers-title" role="region">
+  <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
+  <div class="fc-container">
+    {% include "partials/tiers.html" ignore missing with context %}
+    {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{# ---------- 3) Impact Buckets ---------- #}
 {% block section_impact %}
 {% if SHOW_IMPACT %}
 <div class="scene-break" aria-hidden="true"></div>
-<section id="impact"
-         class="fc-section scene scene--dim"
-         data-snap aria-labelledby="impact-title" role="region">
+<section id="impact" class="fc-section scene scene--dim"
+         aria-labelledby="impact-title" role="region">
   <h2 class="sr-only" id="impact-title">Impact buckets</h2>
   <div class="fc-container">
     {% include "partials/impact_lockers_premium.html" ignore missing with context %}
@@ -83,43 +73,25 @@
 {% endif %}
 {% endblock %}
 
-{# ==================== 4) TIERS ==================== #}
-{% block section_tiers %}
-{% if SHOW_TIERS %}
-<div class="scene-break" aria-hidden="true"></div>
-<section id="tiers"
-         class="fc-section scene scene--dim"
-         data-snap aria-labelledby="tiers-title" role="region">
-  <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
-  <div class="fc-container">
-    {% include "partials/tiers.html" ignore missing with context %}
-  </div>
-</section>
-{% endif %}
-{% endblock %}
-
-{# ==================== 6) ABOUT ==================== #}
+{# ---------- 4) About ---------- #}
 {% block section_about %}
 {% if SHOW_ABOUT %}
 <div class="scene-break" aria-hidden="true"></div>
-<section id="mission"
-         class="fc-section scene scene--dim"
-         data-snap aria-labelledby="about-title" role="region">
+<section id="mission" class="fc-section scene scene--dim"
+         aria-labelledby="about-title" role="region">
   <h2 class="sr-only" id="about-title">About our program</h2>
   <div class="fc-container">
-    {# Social nudge before the story #}
     {% include "partials/about_section.html" ignore missing with context %}
   </div>
 </section>
 {% endif %}
 {% endblock %}
 
-{# ==================== 8) CONCIERGE ==================== #}
+{# ---------- 5) Concierge ---------- #}
 {% block section_concierge %}
 {% if SHOW_CONCIERGE %}
-<section id="concierge"
-         class="fc-section scene scene--dark"
-         data-snap aria-labelledby="concierge-title" role="region">
+<section id="concierge" class="fc-section scene scene--dark"
+         aria-labelledby="concierge-title" role="region">
   <h2 class="sr-only" id="concierge-title">AI concierge</h2>
   <div class="fc-container">
     {% include "partials/ai_concierge.html" ignore missing with context %}

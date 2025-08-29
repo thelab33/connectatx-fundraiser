@@ -1,19 +1,25 @@
-# app/models/newsletter.py
+# app/routes/newsletter.py
 from __future__ import annotations
-from datetime import datetime
-from app.extensions import db
-from .mixins import TimestampMixin  # gives created_at / updated_at
 
-class NewsletterSignup(TimestampMixin, db.Model):
-    __tablename__ = "newsletter_signups"
+from flask import Blueprint, jsonify, request
 
-    id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(255), unique=True, nullable=False, index=True)
-    invite = db.Column(db.String(255))
-    ip = db.Column(db.String(64))
-    ua = db.Column(db.String(256))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+from app.models.newsletter import NewsletterSignup
 
-    def __repr__(self) -> str:
-        return f"<NewsletterSignup {self.email}>"
+bp = Blueprint("newsletter", __name__, url_prefix="/newsletter")
 
+
+@bp.post("/signup")
+def signup():
+    data = request.get_json(silent=True) or {}
+    email = (data.get("email") or request.form.get("email") or "").strip()
+    if not email:
+        return jsonify({"ok": False, "error": "Email required"}), 400
+
+    row = NewsletterSignup.get_or_create(
+        email=email,
+        invite=data.get("invite") or request.args.get("invite"),
+        ip=(request.access_route[0] if request.access_route else request.remote_addr),
+        ua=request.user_agent.string if request.user_agent else None,
+        commit=True,
+    )
+    return jsonify({"ok": True, "id": row.id})

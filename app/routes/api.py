@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 """
 FundChamps API Blueprint (SV-Elite)
 ────────────────────────────────────────────
@@ -9,17 +10,17 @@ FundChamps API Blueprint (SV-Elite)
 • CSP-safe JSON helpers & small hardening
 """
 
+import os
+import threading
+import time
 from dataclasses import dataclass
 from functools import wraps
 from typing import Any, Dict, List, Optional, Set, Tuple
-import os
-import time
-import threading
 
 import requests
-from flask import Blueprint, current_app, jsonify, request, make_response
+from flask import Blueprint, current_app, jsonify, make_response, request
 from flask_restx import Api, Resource, fields
-from sqlalchemy import func, desc, text, inspect
+from sqlalchemy import desc, func, inspect, text
 from werkzeug.exceptions import BadRequest, Unauthorized
 
 from app.extensions import db
@@ -80,10 +81,12 @@ api = Api(
 # Exempt CSRF for JSON API (forms stay protected elsewhere)
 try:
     from app.extensions import csrf  # type: ignore
+
     if csrf:
         csrf.exempt(api_bp)  # type: ignore
 except Exception:
     pass
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ⚙️ Config helpers
@@ -96,23 +99,40 @@ def _cfg(name: str, default: Any = None) -> Any:
         return env if env is not None else default
     return val
 
-def _stripe_secret() -> str:  return str(_cfg("STRIPE_SECRET_KEY", "") or "")
-def _stripe_public() -> str:  return str(_cfg("STRIPE_PUBLIC_KEY", "") or "")
+
+def _stripe_secret() -> str:
+    return str(_cfg("STRIPE_SECRET_KEY", "") or "")
+
+
+def _stripe_public() -> str:
+    return str(_cfg("STRIPE_PUBLIC_KEY", "") or "")
+
 
 def _paypal_env() -> str:
     return str(_cfg("PAYPAL_ENV", "sandbox") or "sandbox").lower()
 
+
 def _paypal_creds() -> tuple[str, str]:
-    return (str(_cfg("PAYPAL_CLIENT_ID", "") or ""), str(_cfg("PAYPAL_SECRET", "") or ""))
+    return (
+        str(_cfg("PAYPAL_CLIENT_ID", "") or ""),
+        str(_cfg("PAYPAL_SECRET", "") or ""),
+    )
+
 
 def _paypal_base() -> str:
-    return "https://api-m.paypal.com" if _paypal_env() == "live" else "https://api-m.sandbox.paypal.com"
+    return (
+        "https://api-m.paypal.com"
+        if _paypal_env() == "live"
+        else "https://api-m.sandbox.paypal.com"
+    )
+
 
 def _paypal_timeout() -> int:
     try:
         return int(_cfg("PAYPAL_TIMEOUT", 15) or 15)
     except Exception:
         return 15
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🔐 Auth: Static tokens or JWT
@@ -122,17 +142,23 @@ try:
 except Exception:  # pragma: no cover
     jwt = None  # type: ignore
 
+
 def _api_tokens() -> Set[str]:
-    return {t.strip() for t in str(_cfg("API_TOKENS", "") or "").split(",") if t.strip()}
+    return {
+        t.strip() for t in str(_cfg("API_TOKENS", "") or "").split(",") if t.strip()
+    }
+
 
 def _normalize_pem(s: str) -> str:
     return s.replace("\\n", "\n") if "BEGIN" in s and "\\n" in s else s
+
 
 def _bearer_token() -> Optional[str]:
     h = request.headers.get("Authorization", "")
     if h.lower().startswith("bearer "):
         return h.split(" ", 1)[1].strip() or None
     return None
+
 
 def _token_scopes_from_claims(claims: Dict[str, Any]) -> Set[str]:
     if isinstance(claims.get("scope"), str):
@@ -143,10 +169,13 @@ def _token_scopes_from_claims(claims: Dict[str, Any]) -> Set[str]:
         return set(map(str, claims["permissions"]))
     return set()
 
+
 def _verify_bearer_token(tok: str) -> Tuple[str, Set[str]]:
     # 1) Static API token
     if tok in _api_tokens():
-        return f"apikey:{tok[-4:]}", {"*"}  # full scope for simple tokens (adjust to taste)
+        return f"apikey:{tok[-4:]}", {
+            "*"
+        }  # full scope for simple tokens (adjust to taste)
 
     # 2) JWT (if configured)
     jwt_secret = str(_cfg("JWT_SECRET", "") or "")
@@ -170,6 +199,7 @@ def _verify_bearer_token(tok: str) -> Tuple[str, Set[str]]:
 
     raise Unauthorized("Invalid or unsupported bearer token.")
 
+
 def require_bearer(optional: bool = True, scopes: Optional[List[str]] = None):
     needed = set(scopes or [])
 
@@ -185,18 +215,26 @@ def require_bearer(optional: bool = True, scopes: Optional[List[str]] = None):
             subject, granted = _verify_bearer_token(tok)
             # stash on request for downstream usage
             request.api_subject = subject  # type: ignore[attr-defined]
-            request.api_scopes = granted   # type: ignore[attr-defined]
+            request.api_scopes = granted  # type: ignore[attr-defined]
 
             if needed and not (needed.issubset(granted) or "*" in granted):
                 raise Unauthorized("Insufficient scope.")
             return fn(*args, **kwargs)
+
         return wrapped
+
     return decorator
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧩 JSON helpers
 # ─────────────────────────────────────────────────────────────────────────────
-def _json(data: Dict[str, Any], status: int = 200, etag: Optional[str] = None, max_age: int = 15):
+def _json(
+    data: Dict[str, Any],
+    status: int = 200,
+    etag: Optional[str] = None,
+    max_age: int = 15,
+):
     """Return JSON with optional cache headers and small safety headers."""
     resp = make_response(jsonify(data), status)
     if request.method == "GET":
@@ -206,6 +244,7 @@ def _json(data: Dict[str, Any], status: int = 200, etag: Optional[str] = None, m
             resp.set_etag(etag)
     return resp
 
+
 def _safe_int(name: str, default: int, minimum: int = 1, maximum: int = 100) -> int:
     try:
         val = int(request.args.get(name, default))
@@ -213,11 +252,13 @@ def _safe_int(name: str, default: int, minimum: int = 1, maximum: int = 100) -> 
         raise BadRequest(f"Invalid integer for '{name}'")
     return max(minimum, min(maximum, val))
 
+
 @dataclass(frozen=True)
 class Stats:
     raised: float
     goal: float
     leaderboard: List[Dict[str, Any]]
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📐 Swagger Models
@@ -225,8 +266,12 @@ class Stats:
 leaderboard_model = api.model(
     "Leaderboard",
     {
-        "name": fields.String(required=True, description="Donor/Sponsor name", example="Gold's Gym"),
-        "amount": fields.Float(required=True, description="Amount donated", example=2500.0),
+        "name": fields.String(
+            required=True, description="Donor/Sponsor name", example="Gold's Gym"
+        ),
+        "amount": fields.Float(
+            required=True, description="Amount donated", example=2500.0
+        ),
     },
 )
 
@@ -246,7 +291,9 @@ bucket_model = api.model(
         "slug": fields.String(required=True, example="gear"),
         "label": fields.String(required=True, example="Team Gear"),
         "amount": fields.Float(required=True, example=50.0),
-        "description": fields.String(required=False, example="Covers a player’s practice kit"),
+        "description": fields.String(
+            required=False, example="Covers a player’s practice kit"
+        ),
         "icon": fields.String(required=False, example="shirt"),
     },
 )
@@ -254,10 +301,18 @@ bucket_model = api.model(
 stats_model = api.model(
     "Stats",
     {
-        "raised": fields.Float(required=True, description="Total raised", example=5000.0),
-        "goal": fields.Float(required=True, description="Fundraising goal", example=10000.0),
-        "percent": fields.Float(required=True, description="Percent to goal", example=50.0),
-        "leaderboard": fields.List(fields.Nested(leaderboard_model), description="Top contributors"),
+        "raised": fields.Float(
+            required=True, description="Total raised", example=5000.0
+        ),
+        "goal": fields.Float(
+            required=True, description="Fundraising goal", example=10000.0
+        ),
+        "percent": fields.Float(
+            required=True, description="Percent to goal", example=50.0
+        ),
+        "leaderboard": fields.List(
+            fields.Nested(leaderboard_model), description="Top contributors"
+        ),
     },
 )
 
@@ -290,6 +345,7 @@ payments_cfg_model = api.model(
         "paypal_client_id": fields.String(required=True),
     },
 )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🔎 Data helpers (schema tolerant)
@@ -330,6 +386,7 @@ def _active_goal_amount() -> float:
 
     return 10000.0
 
+
 def _sum_sponsor_approved() -> float:
     """Sum approved sponsors if model exists. Safe fallback to 0."""
     if not Sponsor:
@@ -345,15 +402,20 @@ def _sum_sponsor_approved() -> float:
     except Exception:
         return 0.0
 
+
 def _sum_donations() -> float:
     """Sum donations (if Donation model exists)."""
     if not Donation:
         return 0.0
     try:
-        total = db.session.query(func.coalesce(func.sum(Donation.amount), 0.0)).scalar() or 0.0
+        total = (
+            db.session.query(func.coalesce(func.sum(Donation.amount), 0.0)).scalar()
+            or 0.0
+        )
         return float(total)
     except Exception:
         return 0.0
+
 
 def _recent_donations(limit: int) -> List[Dict[str, Any]]:
     """Return recent donations (name, amount, created_at) with schema tolerance."""
@@ -363,7 +425,9 @@ def _recent_donations(limit: int) -> List[Dict[str, Any]]:
         if Sponsor:
             try:
                 q = db.session.query(Sponsor)
-                col = getattr(Sponsor, "created_at", None) or getattr(Sponsor, "id", None)
+                col = getattr(Sponsor, "created_at", None) or getattr(
+                    Sponsor, "id", None
+                )
                 if hasattr(Sponsor, "deleted"):
                     q = q.filter(Sponsor.deleted.is_(False))
                 if hasattr(Sponsor, "status"):
@@ -371,11 +435,13 @@ def _recent_donations(limit: int) -> List[Dict[str, Any]]:
                 if col is not None:
                     q = q.order_by(desc(col))
                 for s in q.limit(limit).all():
-                    out.append({
-                        "name": getattr(s, "name", "Sponsor"),
-                        "amount": float(getattr(s, "amount", 0.0) or 0.0),
-                        "created_at": str(getattr(s, "created_at", "") or ""),
-                    })
+                    out.append(
+                        {
+                            "name": getattr(s, "name", "Sponsor"),
+                            "amount": float(getattr(s, "amount", 0.0) or 0.0),
+                            "created_at": str(getattr(s, "created_at", "") or ""),
+                        }
+                    )
             except Exception:
                 pass
         return out
@@ -410,10 +476,17 @@ def _recent_donations(limit: int) -> List[Dict[str, Any]]:
                 if hasattr(d, k):
                     created_at = str(getattr(d, k) or "")
                     break
-            out.append({"name": name or "Anonymous", "amount": amount, "created_at": created_at})
+            out.append(
+                {
+                    "name": name or "Anonymous",
+                    "amount": amount,
+                    "created_at": created_at,
+                }
+            )
     except Exception:
         current_app.logger.exception("Recent donations query failed")
     return out
+
 
 def _leaderboard(top_n: int) -> List[Dict[str, Any]]:
     """Leaderboard from Sponsors (preferred) or from Donations (grouped by name)."""
@@ -426,8 +499,13 @@ def _leaderboard(top_n: int) -> List[Dict[str, Any]]:
                 q = q.filter(Sponsor.status == "approved")
             q = q.order_by(desc(getattr(Sponsor, "amount", 0)))
             items = q.limit(top_n).all()
-            return [{"name": getattr(s, "name", "Sponsor"),
-                     "amount": float(getattr(s, "amount", 0.0) or 0.0)} for s in items]
+            return [
+                {
+                    "name": getattr(s, "name", "Sponsor"),
+                    "amount": float(getattr(s, "amount", 0.0) or 0.0),
+                }
+                for s in items
+            ]
         except Exception:
             pass
 
@@ -441,17 +519,24 @@ def _leaderboard(top_n: int) -> List[Dict[str, Any]]:
             amt_col = getattr(Donation, "amount", None)
             if name_col is not None and amt_col is not None:
                 rows = (
-                    db.session.query(name_col.label("name"), func.coalesce(func.sum(amt_col), 0.0).label("amount"))
+                    db.session.query(
+                        name_col.label("name"),
+                        func.coalesce(func.sum(amt_col), 0.0).label("amount"),
+                    )
                     .group_by(name_col)
                     .order_by(desc("amount"))
                     .limit(top_n)
                     .all()
                 )
-                return [{"name": r.name or "Anonymous", "amount": float(r.amount or 0.0)} for r in rows]
+                return [
+                    {"name": r.name or "Anonymous", "amount": float(r.amount or 0.0)}
+                    for r in rows
+                ]
         except Exception:
             pass
 
     return []
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # ✅ Health
@@ -462,14 +547,22 @@ class Status(Resource):
     @api.marshal_with(status_model)
     @require_bearer(optional=True)
     def get(self):
-        return {"status": "ok", "message": "API live", "version": "1.0.0", "docs": "/api/docs"}
+        return {
+            "status": "ok",
+            "message": "API live",
+            "version": "1.0.0",
+            "docs": "/api/docs",
+        }
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 📊 Fundraiser Stats
 # ─────────────────────────────────────────────────────────────────────────────
 @api.route("/stats")
 class StatsResource(Resource):
-    @api.doc(description="Get current fundraiser totals and leaderboard", tags=["Stats"])
+    @api.doc(
+        description="Get current fundraiser totals and leaderboard", tags=["Stats"]
+    )
     @api.marshal_with(stats_model)
     @require_bearer(optional=True)
     def get(self):
@@ -486,7 +579,11 @@ class StatsResource(Resource):
                 "percent": round(percent, 2),
                 "leaderboard": lb,
             }
-            headers = {"Cache-Control": "public, max-age=10", "ETag": etag, "X-Content-Type-Options": "nosniff"}
+            headers = {
+                "Cache-Control": "public, max-age=10",
+                "ETag": etag,
+                "X-Content-Type-Options": "nosniff",
+            }
             return data, 200, headers
         except BadRequest as e:
             api.abort(400, str(e))
@@ -494,10 +591,15 @@ class StatsResource(Resource):
             current_app.logger.error("📊 Error fetching stats", exc_info=True)
             api.abort(500, "Database error")
 
+
 # Recent donors feed (for header ticker / wall)
 @api.route("/donors")
 class DonorsResource(Resource):
-    @api.doc(description="Recent donors (for ticker / wall)", params={"limit": "max items (default 12)"}, tags=["Stats"])
+    @api.doc(
+        description="Recent donors (for ticker / wall)",
+        params={"limit": "max items (default 12)"},
+        tags=["Stats"],
+    )
     @api.marshal_list_with(donor_model)
     @require_bearer(optional=True)
     def get(self):
@@ -506,12 +608,21 @@ class DonorsResource(Resource):
             donors = _recent_donations(limit)
             # manual response for cache headers
             etag = f"d-{len(donors)}-{donors[0]['created_at'] if donors else '0'}"
-            return donors, 200, {"Cache-Control": "public, max-age=15", "ETag": etag, "X-Content-Type-Options": "nosniff"}
+            return (
+                donors,
+                200,
+                {
+                    "Cache-Control": "public, max-age=15",
+                    "ETag": etag,
+                    "X-Content-Type-Options": "nosniff",
+                },
+            )
         except BadRequest as e:
             api.abort(400, str(e))
         except Exception:
             current_app.logger.error("🧾 donors feed error", exc_info=True)
             api.abort(500, "Database error")
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🎯 Impact Buckets (DB-first, static fallback)
@@ -529,7 +640,9 @@ class ImpactBuckets(Resource):
                     table = cand
                     break
             if table:
-                rows = db.session.execute(text(f"""
+                rows = db.session.execute(
+                    text(
+                        f"""
                     SELECT
                       id,
                       COALESCE(slug, 'bucket_' || id) AS slug,
@@ -539,18 +652,56 @@ class ImpactBuckets(Resource):
                       COALESCE(icon, '')              AS icon
                     FROM {table}
                     ORDER BY sort_order NULLS LAST, id
-                """)).fetchall()
+                """
+                    )
+                ).fetchall()
                 items = [dict(r._mapping) for r in rows]
-                return items, 200, {"Cache-Control": "public, max-age=60", "X-Content-Type-Options": "nosniff"}
+                return (
+                    items,
+                    200,
+                    {
+                        "Cache-Control": "public, max-age=60",
+                        "X-Content-Type-Options": "nosniff",
+                    },
+                )
         except Exception as e:
             current_app.logger.warning("impact-buckets: DB fallback: %s", e)
 
         fallback = [
-            {"id": 1, "slug": "gear",    "label": "Team Gear",     "amount": 50,  "description": "Covers a player’s practice kit", "icon": "shirt"},
-            {"id": 2, "slug": "travel",  "label": "Away Travel",   "amount": 150, "description": "Bus + meal stipend for one away game", "icon": "bus"},
-            {"id": 3, "slug": "scholar", "label": "Scholarships",  "amount": 300, "description": "One season fee for a player in need",  "icon": "award"},
+            {
+                "id": 1,
+                "slug": "gear",
+                "label": "Team Gear",
+                "amount": 50,
+                "description": "Covers a player’s practice kit",
+                "icon": "shirt",
+            },
+            {
+                "id": 2,
+                "slug": "travel",
+                "label": "Away Travel",
+                "amount": 150,
+                "description": "Bus + meal stipend for one away game",
+                "icon": "bus",
+            },
+            {
+                "id": 3,
+                "slug": "scholar",
+                "label": "Scholarships",
+                "amount": 300,
+                "description": "One season fee for a player in need",
+                "icon": "award",
+            },
         ]
-        return fallback, 200, {"Cache-Control": "public, max-age=300", "X-Content-Type-Options": "nosniff"}
+        return (
+            fallback,
+            200,
+            {
+                "Cache-Control": "public, max-age=300",
+                "X-Content-Type-Options": "nosniff",
+            },
+        )
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 🧪 Example (demo)
@@ -567,6 +718,7 @@ class ExampleResource(Resource):
             api.abort(404, "Example not found or deleted")
         return _json(ex.as_dict())
 
+
 @api.route("/example/<uuid:uuid>/delete")
 class ExampleDelete(Resource):
     @api.doc(description="Soft delete example by UUID", tags=["Example"])
@@ -580,6 +732,7 @@ class ExampleDelete(Resource):
         ex.soft_delete()
         return _json({"message": f"{getattr(ex, 'name', 'Example')} soft-deleted"})
 
+
 @api.route("/example/<uuid:uuid>/restore")
 class ExampleRestore(Resource):
     @api.doc(description="Restore soft-deleted example by UUID", tags=["Example"])
@@ -592,6 +745,7 @@ class ExampleRestore(Resource):
             api.abort(404, "Example not found or not deleted")
         ex.restore()
         return _json({"message": f"{getattr(ex, 'name', 'Example')} restored"})
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # 💳 Payments (Stripe + PayPal)
@@ -609,9 +763,13 @@ class PaymentsConfig(Resource):
             "paypal_client_id": cid or "",
         }
 
+
 @api.route("/payments/readiness")
 class PaymentsReadiness(Resource):
-    @api.doc(description="Server-side readiness flags for settings/diagnostics", tags=["Payments"])
+    @api.doc(
+        description="Server-side readiness flags for settings/diagnostics",
+        tags=["Payments"],
+    )
     @api.marshal_with(readiness_model)
     def get(self):
         cid, sec = _paypal_creds()
@@ -623,14 +781,20 @@ class PaymentsReadiness(Resource):
             "paypal_client_id": cid or "",
         }
 
+
 # In-process PayPal token cache (thread-safe; fine for single dyno/container)
 _PAYPAL_TOKEN: dict[str, float | str] = {"access_token": "", "exp": 0.0}
 _PAYPAL_LOCK = threading.Lock()
 
+
 def _paypal_token(force: bool = False) -> str:
     now = time.time()
     with _PAYPAL_LOCK:
-        if not force and _PAYPAL_TOKEN.get("access_token") and float(_PAYPAL_TOKEN.get("exp", 0)) > (now + 60):
+        if (
+            not force
+            and _PAYPAL_TOKEN.get("access_token")
+            and float(_PAYPAL_TOKEN.get("exp", 0)) > (now + 60)
+        ):
             return str(_PAYPAL_TOKEN["access_token"])
 
         cid, sec = _paypal_creds()
@@ -650,8 +814,10 @@ def _paypal_token(force: bool = False) -> str:
         _PAYPAL_TOKEN["exp"] = now + float(payload.get("expires_in", 300)) * 0.9
         return str(_PAYPAL_TOKEN["access_token"])
 
+
 def _idempotency_key(data: dict) -> str | None:
     return request.headers.get("Idempotency-Key") or data.get("idempotency_key")
+
 
 def _parse_money(data: dict) -> tuple[int, str]:
     """
@@ -679,6 +845,7 @@ def _parse_money(data: dict) -> tuple[int, str]:
 
     return cents, currency
 
+
 # Stripe: create PaymentIntent (idempotent-friendly)
 @bp.post("/payments/stripe/intent")
 @require_bearer(optional=False, scopes=["payments:create"])
@@ -705,16 +872,20 @@ def create_payment_intent():
             metadata={
                 "app": "fundchamps",
                 "bucket": str(data.get("allocation") or ""),  # uniforms / gym / travel
-                "source": str(data.get("source") or "api"),   # e.g., "impact-lockers"
+                "source": str(data.get("source") or "api"),  # e.g., "impact-lockers"
             },
             description=data.get("description") or "FundChamps Donation",
         )
-        intent = stripe.PaymentIntent.create(**kwargs, idempotency_key=idem) if idem \
-                 else stripe.PaymentIntent.create(**kwargs)
+        intent = (
+            stripe.PaymentIntent.create(**kwargs, idempotency_key=idem)
+            if idem
+            else stripe.PaymentIntent.create(**kwargs)
+        )
         return jsonify({"client_secret": intent.client_secret})
     except Exception:
         current_app.logger.exception("💳 Stripe PI error")
         return jsonify({"error": "stripe_error"}), 400
+
 
 # PayPal: Create order (server-side capture flow)
 @bp.post("/payments/paypal/order")
@@ -738,13 +909,18 @@ def create_paypal_order():
     def _call(token: str):
         return requests.post(
             f"{_paypal_base()}/v2/checkout/orders",
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             json={
                 "intent": "CAPTURE",
-                "purchase_units": [{
-                    "amount": {"currency_code": currency.upper(), "value": value},
-                    "custom_id": (data.get("allocation") or "general"),
-                }],
+                "purchase_units": [
+                    {
+                        "amount": {"currency_code": currency.upper(), "value": value},
+                        "custom_id": (data.get("allocation") or "general"),
+                    }
+                ],
                 "application_context": {
                     "shipping_preference": "NO_SHIPPING",
                     "brand_name": _cfg("TEAM_BRAND", "FundChamps"),
@@ -766,6 +942,7 @@ def create_paypal_order():
         current_app.logger.exception("💳 PayPal order error")
         return jsonify({"error": "paypal_order_error"}), 400
 
+
 # PayPal: Capture order
 @bp.post("/payments/paypal/capture")
 @require_bearer(optional=False, scopes=["payments:capture"])
@@ -781,7 +958,10 @@ def capture_paypal_order():
     def _call(token: str):
         return requests.post(
             f"{_paypal_base()}/v2/checkout/orders/{order_id}/capture",
-            headers={"Content-Type": "application/json", "Authorization": f"Bearer {token}"},
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {token}",
+            },
             timeout=_paypal_timeout() + 5,
         )
 
@@ -807,13 +987,17 @@ def capture_paypal_order():
         current_app.logger.exception("💳 PayPal capture error")
         return jsonify({"error": "paypal_capture_error"}), 400
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # ❌ JSON Error Handlers (register in create_app)
 # ─────────────────────────────────────────────────────────────────────────────
 def register_error_handlers(app):
     @app.errorhandler(404)
     def handle_404(e):
-        return _json({"error": "Not Found", "message": "The requested endpoint does not exist."}, 404)
+        return _json(
+            {"error": "Not Found", "message": "The requested endpoint does not exist."},
+            404,
+        )
 
     @app.errorhandler(400)
     def handle_400(e):
@@ -825,5 +1009,6 @@ def register_error_handlers(app):
 
     @app.errorhandler(500)
     def handle_500(e):
-        return _json({"error": "Internal Server Error", "message": "Something went wrong."}, 500)
-
+        return _json(
+            {"error": "Internal Server Error", "message": "Something went wrong."}, 500
+        )

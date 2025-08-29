@@ -1,9 +1,14 @@
-{# === Minimal Footer — FundChamps Elite (SV-ELITE MVP v2, base v3.3 aligned) === #}
+{# === Minimal Footer — FundChamps Elite (SV-ELITE MVP v3.4) === #}
 {% set NONCE          = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set now_year       = (now().year if now is defined else 2025) %}
 {% set team_name      = (team.team_name if team and team.team_name else 'FundChamps') %}
 {% set team_location  = (team.location if team and team.location else ((team.city ~ ', ' ~ team.state) if team and team.city and team.state else 'Austin, TX')) %}
 {% set brand_color    = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set currency       = (team.currency if team and team.currency else 'USD') %}
+
+{# Nonprofit trust signals (optional) #}
+{% set is_501c3       = (team.is_501c3 if team and team.is_501c3 is not none else false) %}
+{% set ein            = (team.ein if team and team.ein else '') %}
 
 {# Logo URL (works with or without Flask) #}
 {% set _footer_logo   = (team.footer_logo_url if team and team.footer_logo_url else 'images/logo.webp') %}
@@ -58,6 +63,13 @@
           </div>
         </div>
 
+        {% if is_501c3 or ein %}
+        <div class="flex flex-wrap items-center gap-2 text-[11px]">
+          {% if is_501c3 %}<span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-yellow-200">✅ 501(c)(3)</span>{% endif %}
+          {% if ein %}<span class="inline-flex items-center gap-1 rounded-full border border-white/10 bg-black/40 px-2 py-0.5 text-yellow-200">EIN: {{ ein }}</span>{% endif %}
+        </div>
+        {% endif %}
+
         {% if ig or fb or tw %}
         <nav aria-label="Social links" class="flex items-center gap-2">
           {% if ig %}
@@ -88,29 +100,55 @@
         {% endif %}
       </section>
 
-      <!-- Progress + CTA -->
+      <!-- Progress + CTA (basketball meter) -->
       <section class="space-y-3">
         <div class="relative">
           <div class="h-3 w-full overflow-hidden rounded-full ring-1 ring-white/10 bg-white/5" role="progressbar"
                aria-label="Season fundraising progress"
                aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ '%.1f' % pct }}">
-            <div id="footer-meter"
-                 class="h-full rounded-full"
-                 style="width: {{ '%.1f' % pct }}%;
-                        background: linear-gradient(90deg,#fde047,#facc15,#84cc16,#22c55e);
-                        box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 3px 10px rgba(34,197,94,.18);">
+            <div class="relative h-full rounded-full"
+                 style="background:
+                        repeating-linear-gradient(90deg, rgba(255,255,255,.12) 0 8px, transparent 8px 16px),
+                        linear-gradient(90deg,#f59e0b,#facc15,#84cc16,#22c55e);">
+              <div id="footer-meter"
+                   class="absolute inset-y-0 left-0 rounded-full"
+                   style="width: {{ '%.1f' % pct }}%;
+                          box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 3px 10px rgba(34,197,94,.18);">
+              </div>
+              <!-- basketball marker -->
+              <div id="footer-ball" aria-hidden="true"
+                   class="absolute -top-1.5 size-6 rounded-full ring-1 ring-black/30"
+                   style="left: calc({{ '%.1f' % pct }}% - 12px);
+                          background:
+                            radial-gradient(circle at 30% 30%, #fff3 0 30%, #0000 31%),
+                            linear-gradient(90deg, #000 2px, #0000 2px 4px, #000 4px, #0000 6px) 50% / 6px 100% repeat-y,
+                            #f97316;">
+              </div>
             </div>
           </div>
           <p class="mt-2 text-sm text-zinc-300">
-            $<span id="f-raised">{{ '{:,.0f}'.format(raised) }}</span> of
-            $<span id="f-goal">{{ '{:,.0f}'.format(goal) }}</span>
+            <span class="sr-only">Raised</span><span id="f-raised" data-cur="{{ currency }}">{{ '{:,.0f}'.format(raised) }}</span>
+            <span class="opacity-60">/</span>
+            <span class="sr-only">Goal</span><span id="f-goal" data-cur="{{ currency }}">{{ '{:,.0f}'.format(goal) }}</span>
             <span class="ml-1 text-xs text-yellow-200">(<span id="f-pct">{{ '%.1f' % pct }}</span>%)</span>
           </p>
+          <span class="sr-only" aria-live="polite" id="f-live">Progress loaded.</span>
         </div>
 
-        <a id="f-donate" href="{{ donate_href }}"
-           class="fc-btn fc-btn-primary inline-flex items-center"
-           data-cta="footer:donate">💛 Donate</a>
+        <div class="flex flex-wrap items-center gap-2">
+          <a id="f-donate" href="{{ donate_href }}"
+             class="fc-btn fc-btn-primary inline-flex items-center"
+             data-cta="footer:donate">💛 Donate</a>
+
+          <button id="f-share" type="button"
+                  class="fc-btn inline-flex items-center rounded-full border border-white/10 bg-black/40 px-3 py-2">
+            🔗 Share
+          </button>
+          <button id="f-install" type="button"
+                  class="hidden fc-btn inline-flex items-center rounded-full border border-white/10 bg-black/40 px-3 py-2">
+            ⤓ Install App
+          </button>
+        </div>
       </section>
 
       <!-- Links + Contact -->
@@ -148,13 +186,17 @@
     "name": {{ team_name|tojson if tojson is defined else '"' ~ team_name ~ '"' }},
     "url": {{ website_href|tojson if tojson is defined else '"' ~ website_href ~ '"' }},
     "logo": {{ footer_logo|tojson if tojson is defined else '"' ~ footer_logo ~ '"' }},
+    "location": { "@type": "Place", "name": {{ team_location|tojson if tojson is defined else '"' ~ team_location ~ '"' }} },
+    {% if is_501c3 or ein %}
+    "nonprofitStatus": "https://schema.org/NonprofitType",
+    {% if ein %}"taxID": {{ ein|tojson if tojson is defined else '"' ~ ein ~ '"' }},{% endif %}
+    {% endif %}
     "potentialAction": { "@type": "DonateAction", "target": {{ donate_href|tojson if tojson is defined else '"' ~ donate_href ~ '"' }} }
   }
   </script>
 </footer>
 
 <style nonce="{{ NONCE }}">
-  /* keep it featherweight; rely on site tokens */
   #site-footer .fc-btn { padding:.7rem 1rem; font-weight:800; border-radius:999px; }
   #site-footer .fc-btn-primary { background: linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow: 0 8px 26px rgb(250 204 21 / 15%); }
   #site-footer .fc-btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255,255,255,.35), 0 0 0 5px rgba(250,204,21,.45); }
@@ -162,29 +204,49 @@
 
 <script nonce="{{ NONCE }}">
 (() => {
-  if (window.__fcFooterLite) return; window.__fcFooterLite = true;
+  if (window.__fcFooterLite34) return; window.__fcFooterLite34 = true;
   const $ = (s, r=document) => r.querySelector(s);
-  const bar = $('#footer-meter'), pct = $('#f-pct'), raised = $('#f-raised'), goal = $('#f-goal');
+  const bar = $('#footer-meter'), ball = $('#footer-ball'), pctEl = $('#f-pct'), raisedEl = $('#f-raised'), goalEl = $('#f-goal'), live = $('#f-live');
+  const donate = $('#f-donate'), share = $('#f-share'), installBtn = $('#f-install');
+  const cur = (raisedEl?.dataset.cur || 'USD');
 
-  function fmt(n){ return Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0}); }
+  const nf = (val) => {
+    try { return new Intl.NumberFormat(undefined, { style:'currency', currency: cur, maximumFractionDigits:0 }).format(Number(val||0)); }
+    catch { return '$' + Number(val||0).toLocaleString(); }
+  };
+  const pctFmt = (p)=> (p%1===0 ? p.toFixed(0) : p.toFixed(1));
+
   function setMeter(r,g){
     const R = Math.max(0,+r||0), G = Math.max(0,+g||0);
     const P = G ? Math.min(100, Math.max(0, R/G*100)) : 0;
-    if (bar) bar.style.width = P.toFixed(1) + '%';
-    if (pct) pct.textContent = P.toFixed(1).replace(/\.0$/,'');
-    if (raised) raised.textContent = fmt(R);
-    if (goal) goal.textContent = fmt(G);
+    if (bar) { bar.style.width = P + '%'; bar.parentElement?.setAttribute('aria-valuenow', P.toFixed(1)); }
+    if (ball) { ball.style.left = `calc(${P}% - 12px)`; }
+    if (pctEl) pctEl.textContent = pctFmt(P);
+    if (raisedEl) raisedEl.textContent = nf(R);
+    if (goalEl) goalEl.textContent = nf(G);
+    if (live) live.textContent = `Raised ${nf(R)} of ${nf(G)} (${pctFmt(P)}%)`;
   }
 
-  // initialize from server-rendered values (already set)
-  // listen for global updates from hero/tiers
+  // initialize from server-rendered values
+  setMeter( {{ '%.0f' % raised }}, {{ '%.0f' % goal }} );
+
+  // cross-section live updates
   addEventListener('fc:meter:update', ev => {
     const d = ev.detail || {};
-    if ('raised' in d || 'goal' in d) setMeter(d.raised, d.goal);
+    const R = ('raised' in d) ? d.raised : (raisedEl?.textContent || 0);
+    const G = ('goal'   in d) ? d.goal   : (goalEl?.textContent   || 0);
+    setMeter(R, G);
   }, { passive:true });
 
-  // Add UTM to donate (works for Payment Link or internal route)
-  const donate = $('#f-donate');
+  // fun confetti hook when big gifts roll in
+  addEventListener('fc:funds:update', ev => {
+    try {
+      const name = ev.detail?.sponsorName || 'Sponsor';
+      live.textContent = `${name} just donated — thank you!`;
+    } catch {}
+  }, { passive:true });
+
+  // Smart Donate Router: adds UTM & opens modal if href is '#'/missing
   if (donate && donate.href) {
     try {
       const u = new URL(donate.href, location.origin);
@@ -194,6 +256,41 @@
       donate.href = u.toString();
     } catch {}
   }
+  donate?.addEventListener('click', (e)=>{
+    const href = donate.getAttribute('href') || '';
+    if (href === '#' || donate.hasAttribute('data-open-donate-modal')) {
+      e.preventDefault();
+      if (typeof window.openDonationModal === 'function') window.openDonationModal({ source:'footer' });
+    }
+  }, { passive:false });
+
+  // Share button
+  share?.addEventListener('click', async ()=>{
+    const url = location.href;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: document.title || 'FundChamps', text: 'Support our program!', url });
+      } else if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        share.textContent = '✅ Copied';
+        setTimeout(()=> share.textContent = '🔗 Share', 1200);
+      }
+    } catch {}
+  }, { passive:true });
+
+  // PWA install prompt
+  let deferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault(); deferredPrompt = e;
+    installBtn?.classList.remove('hidden');
+  });
+  installBtn?.addEventListener('click', async ()=>{
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    await deferredPrompt.userChoice.catch(()=>{});
+    installBtn.classList.add('hidden'); deferredPrompt = null;
+  });
+
 })();
 </script>
 

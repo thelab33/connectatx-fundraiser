@@ -18,29 +18,28 @@ import os
 import pkgutil
 from types import ModuleType
 from typing import Any, Iterable, List, Optional, Tuple, Type
-from .shoutout import Shoutout  # ✅ NEW
 
 from app.extensions import db  # re-exported
 
+from .shoutout import Shoutout  # ✅ NEW
+
 logger = logging.getLogger(__name__)
 
+from .campaign_goal import CampaignGoal  # noqa: F401
 # ───────────────────────────────────────────────────────────────────────────────
 # Mixins (safe, lightweight)
 # ───────────────────────────────────────────────────────────────────────────────
-from .mixins import TimestampMixin, SoftDeleteMixin  # noqa: F401
-
+from .mixins import SoftDeleteMixin, TimestampMixin  # noqa: F401
+from .newsletter import NewsletterSignup  # ✅ NEW core model
+from .player import Player  # noqa: F401
+from .sponsor import Sponsor  # noqa: F401
+from .sponsor_click import SponsorClick  # noqa: F401
 # ───────────────────────────────────────────────────────────────────────────────
 # Core models (explicit imports → clear errors + stable ordering)
 #   NOTE: keep these as the source of truth for Alembic ordering.
 # ───────────────────────────────────────────────────────────────────────────────
 from .team import Team  # noqa: F401
-from .player import Player  # noqa: F401
-from .sponsor import Sponsor  # noqa: F401
 from .transaction import Transaction  # noqa: F401
-from .campaign_goal import CampaignGoal  # noqa: F401
-from .sponsor_click import SponsorClick  # noqa: F401
-from .newsletter import NewsletterSignup  # ✅ NEW core model
-from .shoutout import Shoutout  # ✅ promote to core (and export)
 
 _CORE_NAMES: tuple[str, ...] = (
     "Team",
@@ -80,7 +79,9 @@ def _try_import_optional() -> None:
             model_cls = getattr(module, class_name)
             globals()[class_name] = model_cls  # export into this package
             _loaded_optional.append(class_name)
-            logger.debug("✅ Loaded optional model: %s from '%s'", class_name, module_name)
+            logger.debug(
+                "✅ Loaded optional model: %s from '%s'", class_name, module_name
+            )
         except (ImportError, AttributeError) as e:
             logger.info("ℹ️ Optional model '%s' not loaded: %s", class_name, e)
 
@@ -93,12 +94,30 @@ _try_import_optional()
 # - Skips known non-model files and all explicit core modules.
 # - Controlled by env flag: MODELS_AUTODISCOVER (default: True)
 # ───────────────────────────────────────────────────────────────────────────────
-_AUTODISCOVER = os.getenv("MODELS_AUTODISCOVER", "true").lower() not in {"0", "false", "no"}
+_AUTODISCOVER = os.getenv("MODELS_AUTODISCOVER", "true").lower() not in {
+    "0",
+    "false",
+    "no",
+}
 _DISCOVERY_SKIP = {
-    "__init__", "mixins", "base", "enums", "types", "typing", "tests", "test", "conftest",
+    "__init__",
+    "mixins",
+    "base",
+    "enums",
+    "types",
+    "typing",
+    "tests",
+    "test",
+    "conftest",
     # explicitly-loaded core files (avoid double-work)
-    "team", "player", "sponsor", "transaction", "campaign_goal", "sponsor_click",
-    "newsletter", "shoutout",
+    "team",
+    "player",
+    "sponsor",
+    "transaction",
+    "campaign_goal",
+    "sponsor_click",
+    "newsletter",
+    "shoutout",
     # known optionals already handled
     *{m for m, _ in OPTIONAL_MODELS},
 }
@@ -107,7 +126,9 @@ _DISCOVERY_SKIP = {
 def _is_sqla_model(obj: Any) -> bool:
     """Best-effort: object is a subclass of db.Model (but not the base class)."""
     try:
-        return inspect.isclass(obj) and issubclass(obj, db.Model) and obj is not db.Model
+        return (
+            inspect.isclass(obj) and issubclass(obj, db.Model) and obj is not db.Model
+        )
     except Exception:
         return False
 
@@ -138,7 +159,9 @@ def _discover_models(package_name: str = "app.models") -> List[str]:
                 if exported:
                     logger.debug(
                         "🔎 Discovered %d model(s) in '%s': %s",
-                        exported, modname, ", ".join(n for n in loaded if n in globals())
+                        exported,
+                        modname,
+                        ", ".join(n for n in loaded if n in globals()),
                     )
             except Exception as e:
                 logger.info("ℹ️ Skipped auto-import of '%s' due to: %s", modname, e)
@@ -156,7 +179,9 @@ _loaded_discovered = _discover_models()
 # ───────────────────────────────────────────────────────────────────────────────
 __all__ = [
     # db + mixins
-    "db", "TimestampMixin", "SoftDeleteMixin",
+    "db",
+    "TimestampMixin",
+    "SoftDeleteMixin",
     # core (explicit, ordered)
     *_CORE_NAMES,
     # optionals (if present)
@@ -164,6 +189,7 @@ __all__ = [
     # discovered (if any)
     *_loaded_discovered,
 ]
+
 
 # ───────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -197,8 +223,10 @@ if os.getenv("FLASK_DEBUG", "1").lower() not in {"0", "false", "no"}:
         _cnt = len(iter_sqla_models())
         logger.debug(
             "📦 models loaded: %d (core=%d, optional=%d, discovered=%d)",
-            _cnt, len(_CORE_NAMES), len(_loaded_optional), len(_loaded_discovered),
+            _cnt,
+            len(_CORE_NAMES),
+            len(_loaded_optional),
+            len(_loaded_discovered),
         )
     except Exception:
         pass
-

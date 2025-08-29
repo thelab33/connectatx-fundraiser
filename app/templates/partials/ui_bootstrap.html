@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# ============================================================================
    templates/shared/ui_bootstrap.html — FundChamps Elite UI Bootstrap
    Provides design tokens & primitives (no visible output).
@@ -122,7 +123,7 @@
 
   /* Header polish */
   .fc-header {
-    position:sticky;top:0;z-index:40;backdrop-filter:saturate(120%) blur(8px);
+    position:sticky;top:0;z-index: 40;backdrop-filter:saturate(120%) blur(8px);
     background:color-mix(in srgb, #0b0c0f 78%, transparent);
     border-bottom:1px solid transparent;transition:border-color var(--fc-dur);
   }

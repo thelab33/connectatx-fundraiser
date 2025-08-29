@@ -1,3 +1,5 @@
+<!-- Starforge: duplicate id(s) detected:  | donor-name ×2 | donor-email ×2 | donation-amount ×2 -->
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# =============================================================================
    app/templates/partials/sponsor_form.html
    FundChamps — Sponsor Form (SV-Premium • CSP-safe • WTForms-friendly)

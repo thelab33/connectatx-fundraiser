@@ -1,20 +1,20 @@
-from __future__ import annotations
-import os
+# app/config/__init__.py
+"""
+FundChamps Config Package (canonical import path)
+Use:
+    FLASK_CONFIG=app.config.DevelopmentConfig
+"""
 
-class BaseConfig:
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///app/app.db")
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-key")
-    ENV = os.getenv("FLASK_ENV", "development")
-    DEBUG = ENV == "development"
+# Prefer the richer definitions in app/config/config.py if present.
+try:
+    from .config import BaseConfig, DevelopmentConfig, TestingConfig, ProductionConfig  # type: ignore
+except Exception:
+    # Fallback to legacy single-file config at app/config.py (if someone kept it)
+    from ..config import BaseConfig, DevelopmentConfig, ProductionConfig  # type: ignore
 
-class DevelopmentConfig(BaseConfig):
-    DEBUG = True
+config_by_name = {
+    "development": DevelopmentConfig,
+    "testing": TestingConfig,
+    "production": ProductionConfig,
+}
 
-class ProductionConfig(BaseConfig):
-    ENV = "production"
-    DEBUG = False
-
-class TestingConfig(BaseConfig):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"

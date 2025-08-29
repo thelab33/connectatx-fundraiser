@@ -1,9 +1,13 @@
 # app/models/shoutout.py
 from __future__ import annotations
+
 from datetime import datetime
 from decimal import Decimal
+
 from app.extensions import db
+
 from .mixins import TimestampMixin
+
 
 class Shoutout(TimestampMixin, db.Model):
     __tablename__ = "shoutouts"
@@ -17,4 +21,3 @@ class Shoutout(TimestampMixin, db.Model):
 
     def __repr__(self) -> str:
         return f"<Shoutout {self.sponsor_name} ${self.amount}>"
-

@@ -6,6 +6,7 @@
    ============================================================================= #}
 
 {% extends "admin/base.html" %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 
 {% block title %}Sponsors Management | {{ super() }}{% endblock %}
 
@@ -133,4 +134,3 @@
     </a>
   </div>
 {% endblock %}
-

@@ -5,13 +5,15 @@
 # -----------------------------------------------------------------------------
 
 from __future__ import annotations
-from app.models.campaign_goal import CampaignGoal  # import, don't re-declare
+
 from typing import Any, Dict, Optional
 from urllib.parse import urlparse
 
 from sqlalchemy import CheckConstraint, Index, event
+
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 DONATION_TIERS = ("Platinum", "Gold", "Silver", "Bronze", "Supporter")
 
@@ -22,7 +24,6 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         CheckConstraint("amount_cents >= 0", name="ck_donations_amount_nonneg"),
         Index("ix_donations_team_status", "team_id", "deleted_at"),
         Index("ix_donations_goal", "campaign_goal_id"),
-        Index("ix_donations_email", "email"),
     )
 
     # ─── Identifiers ───────────────────────────────────────────
@@ -69,7 +70,9 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
 
     # Keep backrefs simple to avoid mapper collisions across apps.
     team = db.relationship("Team", backref=db.backref("donations", lazy="dynamic"))
-    campaign_goal = db.relationship("CampaignGoal", backref=db.backref("donations", lazy="dynamic"))
+    campaign_goal = db.relationship(
+        "CampaignGoal", backref=db.backref("donations", lazy="dynamic")
+    )
 
     # ==========================================================
     # Computed Properties
@@ -186,8 +189,8 @@ class Donation(db.Model, TimestampMixin, SoftDeleteMixin):
         return f"<Donation {self.name} ${self.amount_dollars:,.2f} Tier={self.computed_tier}>"
 
 
-
 # ─── Event Hooks ──────────────────────────────────────────────
+
 
 @event.listens_for(Donation, "before_insert")
 @event.listens_for(Donation, "before_update")
@@ -205,6 +208,7 @@ def _donation_after_change(mapper, connection, target: Donation) -> None:
     if not target.team_id:
         return
     from .campaign_goal import CampaignGoal  # local import to avoid cycles
+
     session = db.session.object_session(target)
     if not session:
         return
@@ -218,4 +222,3 @@ def _donation_after_change(mapper, connection, target: Donation) -> None:
         # Recompute from Sponsors/Donations (your CampaignGoal method sums Sponsors;
         # extend it (optionally) to include Donations as well, or add a parallel method).
         active_goal.update_progress_from_donations(commit=False)
-

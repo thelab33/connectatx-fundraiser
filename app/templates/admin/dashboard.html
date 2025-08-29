@@ -1,5 +1,6 @@
 {# ==================== FundChamps • Admin Dashboard (Elite Edition) ==================== #}
 {% extends "admin/base.html" %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 
 {% block title %}Dashboard – Sponsor Admin | {{ super() }}{% endblock %}
 
@@ -145,4 +146,3 @@
   ask your dev to enable <code>send_slack_new_sponsor()</code> in admin routes!
 </div>
 {% endblock %}
-

@@ -1,14 +1,21 @@
 # app/services/payments.py
-import os, time, random
-import stripe, requests
+import os
+import random
+import time
+
+import requests
+import stripe
 from flask import current_app
+
 
 class PaymentService:
     """Unified Stripe + PayPal service with demo mode toggle."""
 
     @staticmethod
     def _demo_mode() -> bool:
-        return str(os.getenv("DEMO_MODE", current_app.config.get("DEMO_MODE", "0"))).lower() in ("1", "true", "yes")
+        return str(
+            os.getenv("DEMO_MODE", current_app.config.get("DEMO_MODE", "0"))
+        ).lower() in ("1", "true", "yes")
 
     # ---------------- STRIPE ----------------
     @staticmethod
@@ -61,7 +68,9 @@ class PaymentService:
             auth=auth,
             json={
                 "intent": "CAPTURE",
-                "purchase_units": [{"amount": {"currency_code": "USD", "value": str(amount)}}],
+                "purchase_units": [
+                    {"amount": {"currency_code": "USD", "value": str(amount)}}
+                ],
             },
             timeout=PaymentService._paypal_timeout(),
         )
@@ -86,14 +95,20 @@ class PaymentService:
         # real capture
         url = f"{PaymentService._paypal_base()}/v2/checkout/orders/{order_id}/capture"
         client_id, secret = PaymentService._paypal_creds()
-        resp = requests.post(url, auth=(client_id, secret), timeout=PaymentService._paypal_timeout())
+        resp = requests.post(
+            url, auth=(client_id, secret), timeout=PaymentService._paypal_timeout()
+        )
         resp.raise_for_status()
         return resp.json()
 
     # ---------------- Helpers ----------------
     @staticmethod
     def _paypal_base() -> str:
-        return "https://api-m.paypal.com" if PaymentService._paypal_env() == "live" else "https://api-m.sandbox.paypal.com"
+        return (
+            "https://api-m.paypal.com"
+            if PaymentService._paypal_env() == "live"
+            else "https://api-m.sandbox.paypal.com"
+        )
 
     @staticmethod
     def _paypal_env() -> str:
@@ -109,4 +124,3 @@ class PaymentService:
     @staticmethod
     def _paypal_timeout() -> int:
         return int(current_app.config.get("PAYPAL_TIMEOUT", 15))
-

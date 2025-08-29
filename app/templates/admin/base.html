@@ -5,6 +5,7 @@
    ============================ #}
 
 {% extends "base.html" %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 
 {% block title %}Admin | {{ super() }}{% endblock %}
 
@@ -60,4 +61,3 @@
 {% block post_scripts %}
 <!-- Admin-specific JS here -->
 {% endblock %}
-

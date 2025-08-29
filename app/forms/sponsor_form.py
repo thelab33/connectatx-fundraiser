@@ -1,6 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import DecimalField, StringField
-from wtforms.validators import DataRequired, Email, Length, NumberRange, ValidationError
+from wtforms.validators import (DataRequired, Email, Length, NumberRange,
+                                ValidationError)
 
 
 class SponsorForm(FlaskForm):
@@ -43,4 +44,3 @@ class SponsorForm(FlaskForm):
         # Normalize to 2 decimal places
         if field.data:
             field.data = round(field.data, 2)
-

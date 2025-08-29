@@ -26,9 +26,9 @@ log = logging.getLogger(__name__)
 # ─── Blueprint Spec Definition ──────────────────────────────────────────────
 @dataclass(frozen=True)
 class BlueprintSpec:
-    alias: str       # Short name used in env controls/logs
-    module: str      # Dotted import path
-    attr: str        # Attribute name of Blueprint in module
+    alias: str  # Short name used in env controls/logs
+    module: str  # Dotted import path
+    attr: str  # Attribute name of Blueprint in module
     prefix: Optional[str]  # Default URL prefix (None = root)
 
 
@@ -46,7 +46,9 @@ def _import_bp(spec: BlueprintSpec) -> Optional[Blueprint]:
         if not isinstance(bp, Blueprint):
             log.warning(
                 "Module '%s' loaded but '%s' is not a Blueprint (got %r)",
-                spec.module, spec.attr, type(bp).__name__ if bp else None
+                spec.module,
+                spec.attr,
+                type(bp).__name__ if bp else None,
             )
             return None
         return bp
@@ -57,10 +59,16 @@ def _import_bp(spec: BlueprintSpec) -> Optional[Blueprint]:
 
 def _parse_disabled_env(env_value: Optional[str]) -> set[str]:
     """Parse DISABLE_BPS into a set of aliases."""
-    return {p.strip().lower() for p in env_value.split(",") if p.strip()} if env_value else set()
+    return (
+        {p.strip().lower() for p in env_value.split(",") if p.strip()}
+        if env_value
+        else set()
+    )
 
 
-def _safe_register(app: Flask, *, alias: str, bp: Blueprint, prefix: Optional[str]) -> bool:
+def _safe_register(
+    app: Flask, *, alias: str, bp: Blueprint, prefix: Optional[str]
+) -> bool:
     """Register a blueprint unless disabled/already present."""
     if alias in getattr(app, "_fc_disabled_bps", set()):
         app.logger.info("⏭️  Disabled via env: %s", alias)
@@ -69,7 +77,11 @@ def _safe_register(app: Flask, *, alias: str, bp: Blueprint, prefix: Optional[st
         app.logger.info("⏭️  Already registered: %s", bp.name)
         return False
 
-    url_prefix = None if alias == "main" else _env_prefix_override(alias, bp.url_prefix or prefix)
+    url_prefix = (
+        None
+        if alias == "main"
+        else _env_prefix_override(alias, bp.url_prefix or prefix)
+    )
     try:
         app.register_blueprint(bp, url_prefix=url_prefix)
         app.logger.info("🧩 Registered blueprint: %-10s → %s", alias, url_prefix or "/")
@@ -87,8 +99,16 @@ def _route_summary(app: Flask) -> None:
         bps = ", ".join(sorted(app.blueprints.keys())) or "—"
         app.logger.info("📦 Blueprints: %s", bps)
         lines = []
-        for rule in sorted(app.url_map.iter_rules(), key=lambda r: (str(r.rule), r.endpoint)):
-            methods = ",".join(sorted(m for m in rule.methods if m in {"GET", "POST", "PUT", "PATCH", "DELETE"}))
+        for rule in sorted(
+            app.url_map.iter_rules(), key=lambda r: (str(r.rule), r.endpoint)
+        ):
+            methods = ",".join(
+                sorted(
+                    m
+                    for m in rule.methods
+                    if m in {"GET", "POST", "PUT", "PATCH", "DELETE"}
+                )
+            )
             lines.append(f"{rule.rule:<40} {methods:<12} → {rule.endpoint}")
         if lines:
             app.logger.info("🔗 Routes:\n%s", "\n".join(lines))
@@ -98,6 +118,7 @@ def _route_summary(app: Flask) -> None:
 
 # ─── Fallback Blueprint ─────────────────────────────────────────────────────
 fallback_bp = Blueprint("fallback", __name__)
+
 
 @fallback_bp.get("/")
 def _default_root() -> str:
@@ -127,13 +148,13 @@ def register_blueprints(app: Flask) -> None:
             app.logger.warning("⚠️  Could not register CLI group 'starforge': %s", exc)
 
     specs: list[BlueprintSpec] = [
-        BlueprintSpec("main",      "app.routes.main",           "main_bp",    None),
-        BlueprintSpec("api",       "app.routes.api",            "api_bp",     "/api"),
-        BlueprintSpec("sms",       "app.routes.sms",            "sms_bp",     "/sms"),
-        BlueprintSpec("stripe",    "app.routes.stripe_routes",  "stripe_bp",  "/stripe"),
-        BlueprintSpec("webhooks",  "app.routes.webhooks",       "webhook_bp", "/webhooks"),
-        BlueprintSpec("donations", "app.routes.donations",      "bp",         "/donations"),
-        BlueprintSpec("donations", "app.blueprints.donations",  "bp",         "/donations"),
+        BlueprintSpec("main", "app.routes.main", "main_bp", None),
+        BlueprintSpec("api", "app.routes.api", "api_bp", "/api"),
+        BlueprintSpec("sms", "app.routes.sms", "sms_bp", "/sms"),
+        BlueprintSpec("stripe", "app.routes.stripe_routes", "stripe_bp", "/stripe"),
+        BlueprintSpec("webhooks", "app.routes.webhooks", "webhook_bp", "/webhooks"),
+        BlueprintSpec("donations", "app.routes.donations", "bp", "/donations"),
+        BlueprintSpec("donations", "app.blueprints.donations", "bp", "/donations"),
     ]
 
     found_main = False
@@ -141,7 +162,10 @@ def register_blueprints(app: Flask) -> None:
         bp = _import_bp(spec)
         if not bp:
             continue
-        if _safe_register(app, alias=spec.alias, bp=bp, prefix=spec.prefix) and spec.alias == "main":
+        if (
+            _safe_register(app, alias=spec.alias, bp=bp, prefix=spec.prefix)
+            and spec.alias == "main"
+        ):
             found_main = True
 
     if not found_main and "fallback" not in app._fc_disabled_bps:
@@ -149,4 +173,3 @@ def register_blueprints(app: Flask) -> None:
 
     _route_summary(app)
     app.logger.info("✅ Blueprint registration complete.")
-

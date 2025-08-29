@@ -10,22 +10,12 @@ import uuid
 from datetime import datetime
 from typing import Any, Dict, Tuple
 
-from sqlalchemy import (
-    Boolean,
-    CheckConstraint,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    event,
-    select,
-    func,
-    text,
-)
-from sqlalchemy.orm import Mapped, mapped_column, relationship, object_session
+from sqlalchemy import (Boolean, ForeignKey, Integer, String, event, func,
+                        select)
+from sqlalchemy.orm import Mapped, mapped_column, object_session, relationship
 
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
 
 class CampaignGoal(db.Model):
     __tablename__ = "campaign_goals"
@@ -68,7 +58,9 @@ class CampaignGoal(db.Model):
     )
 
     # ── Money (cents) ───────────────────────────────────────────
-    goal_amount: Mapped[int] = mapped_column(Integer, nullable=False, default=0, doc="cents")
+    goal_amount: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, doc="cents"
+    )
     total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, doc="cents")
 
     # ── Status ──────────────────────────────────────────────────
@@ -187,9 +179,13 @@ class CampaignGoal(db.Model):
     # ── Helpers / Queries ───────────────────────────────────────
     @classmethod
     def get_active_for_team(cls, team_id: int) -> "CampaignGoal | None":
-        return db.session.execute(
-            select(cls).where(cls.team_id == team_id, cls.active.is_(True)).limit(1)
-        ).scalars().first()
+        return (
+            db.session.execute(
+                select(cls).where(cls.team_id == team_id, cls.active.is_(True)).limit(1)
+            )
+            .scalars()
+            .first()
+        )
 
     @classmethod
     def set_active_goal(cls, team_id: int, goal_amount_cents: int) -> "CampaignGoal":
@@ -202,7 +198,12 @@ class CampaignGoal(db.Model):
             .where(cls.team_id == team_id, cls.active.is_(True))
             .values(active=False)
         )
-        goal = cls(team_id=team_id, goal_amount=max(0, int(goal_amount_cents)), total=0, active=True)
+        goal = cls(
+            team_id=team_id,
+            goal_amount=max(0, int(goal_amount_cents)),
+            total=0,
+            active=True,
+        )
         sess.add(goal)
         sess.commit()
         return goal
@@ -223,8 +224,16 @@ class CampaignGoal(db.Model):
             "percent_complete": self.percent_complete(),
             "is_complete": self.is_complete,
             "active": bool(self.active),
-            "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else None,
-            "updated_at": self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else None,
+            "created_at": (
+                self.created_at.isoformat()
+                if isinstance(self.created_at, datetime)
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat()
+                if isinstance(self.updated_at, datetime)
+                else None
+            ),
         }
         if include_team and self.team:
             data["team"] = {
@@ -254,4 +263,3 @@ def _cg_before_insert(mapper, connection, target: CampaignGoal):
 def _cg_before_update(mapper, connection, target: CampaignGoal):
     target.goal_amount = max(0, int(target.goal_amount or 0))
     target.total = max(0, int(target.total or 0))
-

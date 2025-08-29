@@ -1,7 +1,11 @@
 from __future__ import annotations
+
 from datetime import datetime
+
 from app.extensions import db
+
 from .mixins import TimestampMixin
+
 
 class NewsletterSignup(TimestampMixin, db.Model):
     __tablename__ = "newsletter_signups"

@@ -4,7 +4,7 @@ Supports optional logo upload for sponsor branding.
 """
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, DecimalField, SelectField, FileField
+from wtforms import DecimalField, FileField, SelectField, StringField
 from wtforms.validators import DataRequired, Email, NumberRange, Optional
 
 
@@ -44,4 +44,3 @@ class DonationForm(FlaskForm):
         validators=[Optional()],
         render_kw={"accept": "image/*"},
     )
-

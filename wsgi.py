@@ -2,9 +2,11 @@
 import os
 from app import create_app
 
-cfg_path = os.getenv("FLASK_CONFIG", "config.ProductionConfig")
-app = create_app(cfg_path)
+# Ensure canonical path (works even if someone left old values)
+cfg = os.getenv("FLASK_CONFIG", "")
+if cfg.startswith("app.config.config."):
+    cfg = cfg.replace("app.config.config.", "app.config.")
+os.environ["FLASK_CONFIG"] = cfg or "app.config.ProductionConfig"
 
-if __name__ == "__main__":
-    app.run()
+application = create_app(os.environ["FLASK_CONFIG"])
 

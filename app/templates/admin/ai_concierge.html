@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# === Floating AI Concierge — FundChamps Elite (CSP/A11y/Streaming/Offline Queue) === #}
 {% set ai_post_url   = (safe_url_for('ai.concierge')        if (safe_url_for is defined and has_endpoint('ai.concierge'))        else '/api/ai/concierge') %}
 {% set ai_stream_url = (safe_url_for('ai.concierge_stream') if (safe_url_for is defined and has_endpoint('ai.concierge_stream')) else '/api/ai/stream') %}

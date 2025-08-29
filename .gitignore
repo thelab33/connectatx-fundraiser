@@ -79,3 +79,6 @@ migrations.backup.*/
 app/static/_unused/
 app/data/*.db
 instance/*.db
+C:/Users/*/AppData/Local/lighthouse.*/
+*.Zone.Identifier
+

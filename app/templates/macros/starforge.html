@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 <h2 class="sr-only">Starforge</h2>
 <!doctype html>
 

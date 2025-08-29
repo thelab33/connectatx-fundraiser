@@ -101,7 +101,7 @@
   {
     "check": "routes",
     "severity": "warn",
-    "message": "Endpoint 'donate.initiate' not found (some widgets will fallback)",
+    "message": "Endpoint 'main.donate' not found (some widgets will fallback)",
     "file": null,
     "ref": null,
     "line": null,
@@ -110,7 +110,7 @@
   {
     "check": "routes",
     "severity": "warn",
-    "message": "Endpoint 'tiers.stats' not found (some widgets will fallback)",
+    "message": "Endpoint 'main.stats_json' not found (some widgets will fallback)",
     "file": null,
     "ref": null,
     "line": null,

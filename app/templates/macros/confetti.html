@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# =============================================================================
    macros/confetti.html — FundChamps Confetti & Celebration Macro
    - Encapsulates canvas-confetti + optional cheer audio

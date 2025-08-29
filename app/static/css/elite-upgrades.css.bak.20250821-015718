@@ -1,3 +1,0 @@
-:root{--fc-accent:#facc15}#fc-hero .bg-wrap{contain:paint}#fc-mini-rail{position:fixed;top:0;left:0;right:0;height:4px;z-index:60;background:rgb(255 255 255 / 8%);backdrop-filter:saturate(1.05);backdrop-filter:saturate(1.05);border-bottom:1px solid rgb(255 255 255 / 6%);pointer-events:none}#fc-mini-rail b{display:block;height:100%;width:var(--w,0%);background:linear-gradient(90deg,#eab308,#84cc16 45%,#22c55e);transition:width .5s ease}
-
-@media (prefers-reduced-motion:reduce){#fc-mini-rail b{transition:none}}#fc-hero .ticker-row{animation-play-state:var(--ticker,running)}:where(a,button,[tabindex],input,select,textarea):focus-visible{outline:3px solid color-mix(in srgb,var(--fc-hero-accent,#facc15) 75%,transparent);outline-offset:3px}

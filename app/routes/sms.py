@@ -1,18 +1,17 @@
 from __future__ import annotations
 
-import os
-import hmac
 import base64
 import hashlib
-import logging
+import hmac
+import os
 import time
 from collections import defaultdict, deque
 from typing import Optional, Tuple
 
-from flask import Blueprint, request, Response, current_app, abort, jsonify
+from flask import Blueprint, Response, abort, current_app, jsonify, request
 
-from app.models import SmsLog
 from app.extensions import db
+from app.models import SmsLog
 
 # ─────────────────────────────────────────────────────────────
 # 📞 Blueprint setup
@@ -31,7 +30,11 @@ OPENAI_MAX_RETRIES = int(os.getenv("OPENAI_MAX_RETRIES", "2"))
 
 # Twilio
 TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN", "")
-REQUIRE_TWILIO_SIGNATURE = os.getenv("REQUIRE_TWILIO_SIGNATURE", "0").lower() in {"1", "true", "yes"}
+REQUIRE_TWILIO_SIGNATURE = os.getenv("REQUIRE_TWILIO_SIGNATURE", "0").lower() in {
+    "1",
+    "true",
+    "yes",
+}
 
 # Message limits
 MAX_INBOUND_LEN = int(os.getenv("SMS_MAX_INBOUND_LEN", "800"))
@@ -65,15 +68,18 @@ _OPENAI_CLIENT = None
 _OPENAI_LEGACY = False
 try:
     from openai import OpenAI  # type: ignore
+
     _OPENAI_CLIENT = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 except Exception:
     try:
         import openai  # type: ignore
+
         openai.api_key = os.getenv("OPENAI_API_KEY")
         _OPENAI_LEGACY = True
         _OPENAI_CLIENT = openai
     except Exception:
         _OPENAI_CLIENT = None
+
 
 # ─────────────────────────────────────────────────────────────
 # 🧩 Utility Functions
@@ -88,9 +94,11 @@ def _xml_escape(s: str) -> str:
         .replace("'", "&apos;")
     )
 
+
 def _trim(s: str, limit: int) -> str:
     s = (s or "").strip()
     return s if len(s) <= limit else s[: max(0, limit - 1)] + "…"
+
 
 def _verify_twilio_signature() -> None:
     if not REQUIRE_TWILIO_SIGNATURE or not TWILIO_AUTH_TOKEN:
@@ -109,6 +117,7 @@ def _verify_twilio_signature() -> None:
         current_app.logger.warning("Twilio signature verification failed")
         abort(403)
 
+
 def _rate_limited(sender: str) -> bool:
     if not sender:
         return False
@@ -121,16 +130,21 @@ def _rate_limited(sender: str) -> bool:
     q.append(now)
     return False
 
+
 def _twiml(msg: str) -> Response:
     xml = f'<?xml version="1.0" encoding="UTF-8"?><Response><Message>{_xml_escape(msg)}</Message></Response>'
     return Response(xml, mimetype="application/xml")
+
 
 # ─────────────────────────────────────────────────────────────
 # 💬 AI Chat with OpenAI
 # ─────────────────────────────────────────────────────────────
 def _openai_chat(user_text: str) -> Tuple[str, Optional[str]]:
     if _OPENAI_CLIENT is None:
-        return (f"Sorry, our AI is busy. You can sponsor or donate at {SITE_URL}.", "OpenAI client not initialized")
+        return (
+            f"Sorry, our AI is busy. You can sponsor or donate at {SITE_URL}.",
+            "OpenAI client not initialized",
+        )
 
     last_err: Optional[str] = None
 
@@ -161,17 +175,37 @@ def _openai_chat(user_text: str) -> Tuple[str, Optional[str]]:
                 )
                 text = (resp.choices[0].message.content or "").strip()
 
-            return (_trim(text, MAX_OUTBOUND_LEN), None if text else "Empty OpenAI response")
+            return (
+                _trim(text, MAX_OUTBOUND_LEN),
+                None if text else "Empty OpenAI response",
+            )
         except Exception as e:
             last_err = str(e)
-            current_app.logger.warning("OpenAI attempt %s failed: %s", attempt, last_err, exc_info=(attempt == OPENAI_MAX_RETRIES + 1))
+            current_app.logger.warning(
+                "OpenAI attempt %s failed: %s",
+                attempt,
+                last_err,
+                exc_info=(attempt == OPENAI_MAX_RETRIES + 1),
+            )
 
-    return (f"Thanks for reaching out! Learn more at {SITE_URL}.", last_err or "unknown error")
+    return (
+        f"Thanks for reaching out! Learn more at {SITE_URL}.",
+        last_err or "unknown error",
+    )
+
 
 # ─────────────────────────────────────────────────────────────
 # 📝 SMS Logging
 # ─────────────────────────────────────────────────────────────
-def _log_sms(message_sid: str | None, from_num: str, to_num: str, inbound: str, reply: str, ai_used: bool, err: Optional[str]) -> None:
+def _log_sms(
+    message_sid: str | None,
+    from_num: str,
+    to_num: str,
+    inbound: str,
+    reply: str,
+    ai_used: bool,
+    err: Optional[str],
+) -> None:
     try:
         entry = {
             "from_number": from_num,
@@ -189,6 +223,7 @@ def _log_sms(message_sid: str | None, from_num: str, to_num: str, inbound: str, 
         current_app.logger.error("Failed to log SMS: %s", e, exc_info=True)
         db.session.rollback()
 
+
 # ─────────────────────────────────────────────────────────────
 # 🔑 Keyword Shortcuts
 # ─────────────────────────────────────────────────────────────
@@ -197,7 +232,9 @@ def _handle_keywords(text: str) -> Optional[str]:
 
     # Twilio compliance
     if t in {"STOP", "STOPALL", "UNSUBSCRIBE", "CANCEL", "END", "QUIT"}:
-        return "You will no longer receive messages from us. Reply START to re-subscribe."
+        return (
+            "You will no longer receive messages from us. Reply START to re-subscribe."
+        )
     if t in {"START", "YES", "UNSTOP"}:
         return "You have been re-subscribed. Text HELP for help."
     if t == "HELP":
@@ -213,6 +250,7 @@ def _handle_keywords(text: str) -> Optional[str]:
 
     return None
 
+
 # ─────────────────────────────────────────────────────────────
 # 🌡️ Health Route
 # ─────────────────────────────────────────────────────────────
@@ -225,6 +263,7 @@ def health() -> Response:
         "twilio_sig_required": REQUIRE_TWILIO_SIGNATURE,
     }
     return Response(response=jsonify(status).get_data(), mimetype="application/json")
+
 
 # ─────────────────────────────────────────────────────────────
 # 📬 SMS Webhook (POST)
@@ -244,7 +283,9 @@ def sms_webhook() -> Response:
     # Prevent duplicate message logs if using SID
     if message_sid and hasattr(SmsLog, "message_sid"):
         try:
-            existing = db.session.query(SmsLog).filter_by(message_sid=message_sid).first()
+            existing = (
+                db.session.query(SmsLog).filter_by(message_sid=message_sid).first()
+            )
             if existing:
                 return _twiml(_xml_escape(existing.response_body or ""))
         except Exception:
@@ -253,7 +294,9 @@ def sms_webhook() -> Response:
     # Rate limiting
     if _rate_limited(from_num):
         reply = "You’re sending messages quickly. Please wait a moment and try again."
-        _log_sms(message_sid, from_num, to_num, msg, reply, ai_used=False, err="rate_limited")
+        _log_sms(
+            message_sid, from_num, to_num, msg, reply, ai_used=False, err="rate_limited"
+        )
         return _twiml(reply)
 
     # No content
@@ -265,12 +308,21 @@ def sms_webhook() -> Response:
     # Check keywords
     keyword_reply = _handle_keywords(msg)
     if keyword_reply:
-        _log_sms(message_sid, from_num, to_num, msg, keyword_reply, ai_used=False, err=None)
+        _log_sms(
+            message_sid, from_num, to_num, msg, keyword_reply, ai_used=False, err=None
+        )
         return _twiml(keyword_reply)
 
     # Fallback to OpenAI
     ai_reply, ai_error = _openai_chat(msg)
     final_reply = ai_reply or f"Thanks for your message! Learn more at {SITE_URL}."
-    _log_sms(message_sid, from_num, to_num, msg, final_reply, ai_used=(ai_error is None), err=ai_error)
+    _log_sms(
+        message_sid,
+        from_num,
+        to_num,
+        msg,
+        final_reply,
+        ai_used=(ai_error is None),
+        err=ai_error,
+    )
     return _twiml(final_reply)
-

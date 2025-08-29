@@ -1,26 +1,31 @@
-from app.routes.compat import bp as compat_bp
-from app.admin.routes import bp as admin_bp
 from __future__ import annotations
-from app.extensions import socketio as _socketio
-# app/__init__.py
-from app.routes import shoutouts
-import logging, os, time, secrets, re
+
+import logging
+import os
+import re
+import secrets
+import time
 from datetime import datetime, timezone
 from importlib import import_module
 from pathlib import Path
-from typing import Any, Type, Iterable
+from typing import Any, Iterable, Type
 from uuid import uuid4
-from app.blueprints import health
+
 from dotenv import load_dotenv
+# app/__init__.py
 from flask import Flask, g, jsonify, request, url_for
 from werkzeug.exceptions import HTTPException, InternalServerError
 from werkzeug.routing import BuildError
+
+from app.blueprints import health
+from app.extensions import socketio as _socketio
+from app.routes import shoutouts
 
 load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Core extensions (note: no 'migrate' here anymore)
-from app.extensions import db, socketio, mail, csrf, cors, login_manager, babel
+from app.extensions import babel, cors, csrf, db, login_manager, mail, socketio
 
 # Optional extras
 try:
@@ -50,6 +55,7 @@ from flask_migrate import Migrate
 
 ConfigLike = str | Type[Any]
 
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -61,8 +67,10 @@ def _resolve_config(target: ConfigLike | None) -> ConfigLike:
         return "app.config.DevelopmentConfig"
     return target
 
+
 def _json_error(message: str, status: int, **extra: Any):
     return jsonify({"status": "error", "message": message, **extra}), status
+
 
 def _mtime_or_now(path: Path) -> int:
     try:
@@ -70,8 +78,10 @@ def _mtime_or_now(path: Path) -> int:
     except Exception:
         return int(datetime.now(timezone.utc).timestamp())
 
+
 class _RequestIDFilter(logging.Filter):
     """Inject g.request_id into all records as 'request_id'."""
+
     def filter(self, record: logging.LogRecord) -> bool:
         try:
             rid = getattr(g, "request_id", "-")
@@ -79,6 +89,7 @@ class _RequestIDFilter(logging.Filter):
             rid = "-"
         setattr(record, "request_id", rid)
         return True
+
 
 def _configure_logging(app: Flask) -> None:
     # Ensure a formatter with request_id is used
@@ -94,12 +105,19 @@ def _configure_logging(app: Flask) -> None:
         # Add filter + formatter to existing handlers
         for h in root.handlers:
             h.addFilter(_RequestIDFilter())
-            if not isinstance(h.formatter, logging.Formatter) or "%(request_id)s" not in (h.formatter._fmt or ""):
+            if not isinstance(
+                h.formatter, logging.Formatter
+            ) or "%(request_id)s" not in (h.formatter._fmt or ""):
                 h.setFormatter(logging.Formatter(fmt))
 
-    logging.getLogger("werkzeug").setLevel(app.config.get("WERKZEUG_LOG_LEVEL", "WARNING"))
-    app.logger.info("Loaded config: %s | DEBUG=%s", app.config.get("ENV", "?"), app.debug)
+    logging.getLogger("werkzeug").setLevel(
+        app.config.get("WERKZEUG_LOG_LEVEL", "WARNING")
+    )
+    app.logger.info(
+        "Loaded config: %s | DEBUG=%s", app.config.get("ENV", "?"), app.debug
+    )
     app.logger.info("DB: %s", app.config.get("SQLALCHEMY_DATABASE_URI", "<unset>"))
+
 
 def _parse_cors_origins(env: str) -> str | list[str]:
     default_prod = os.getenv("PRIMARY_ORIGIN", "https://connect-atx-elite.com")
@@ -108,6 +126,7 @@ def _parse_cors_origins(env: str) -> str | list[str]:
         return [o.strip() for o in raw.split(",") if o.strip()]
     return raw
 
+
 def _iter_candidates(x: str | Iterable[str]) -> list[str]:
     if isinstance(x, str) and "|" in x:
         return [p.strip() for p in x.split("|") if p.strip()]
@@ -115,9 +134,14 @@ def _iter_candidates(x: str | Iterable[str]) -> list[str]:
         return [x]
     return list(x)
 
-def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefix: str | None) -> bool:
+
+def _safe_register(
+    app: Flask, dotted: str, attr: str | Iterable[str], url_prefix: str | None
+) -> bool:
     """Import a module and register a blueprint by attribute name(s)."""
-    disable = {p.strip().lower() for p in os.getenv("DISABLE_BPS", "").split(",") if p.strip()}
+    disable = {
+        p.strip().lower() for p in os.getenv("DISABLE_BPS", "").split(",") if p.strip()
+    }
     mod_key = dotted.split(".")[-1].lower()
     if mod_key in disable:
         app.logger.info("⏭️  Disabled module: %s", dotted)
@@ -140,7 +164,9 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
             break
 
     if not bp:
-        app.logger.warning("⚠️  No blueprint attr found in %s (tried: %s)", dotted, ", ".join(wanted))
+        app.logger.warning(
+            "⚠️  No blueprint attr found in %s (tried: %s)", dotted, ", ".join(wanted)
+        )
         return False
 
     if bp.name in app.blueprints:
@@ -148,29 +174,34 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
         return False
 
     try:
-        app.register_blueprint(bp, url_prefix=url_prefix or getattr(bp, "url_prefix", None))
+        app.register_blueprint(
+            bp, url_prefix=url_prefix or getattr(bp, "url_prefix", None)
+        )
         app.logger.info("🧩 Registered: %-20s → %s", bp.name, url_prefix or "/")
         if "shoutouts" not in app.blueprints:
             app.register_blueprint(shoutouts.bp)
         return True
     except Exception as exc:
-        app.logger.error("❌ Failed to register %s:%s: %s", dotted, bp.name, exc, exc_info=True)
+        app.logger.error(
+            "❌ Failed to register %s:%s: %s", dotted, bp.name, exc, exc_info=True
+        )
         return False
+
 
 # Regex for auto-nonce injection on stray tags (optional, cheap, guarded)
 SCRIPT_TAG = re.compile(r"(<script\b(?![^>]*\bnonce=)[^>]*>)", re.IGNORECASE)
-STYLE_TAG  = re.compile(r"(<style\b(?![^>]*\bnonce=)[^>]*>)",  re.IGNORECASE)
+STYLE_TAG = re.compile(r"(<style\b(?![^>]*\bnonce=)[^>]*>)", re.IGNORECASE)
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # App Factory
 # ─────────────────────────────────────────────────────────────────────────────
 def create_app(config_class: ConfigLike | None = None) -> Flask:
-    \1    app.register_blueprint(admin_bp)
+    app = Flask(
         __name__,
         static_folder=str(BASE_DIR / "app/static"),
         template_folder=str(BASE_DIR / "app/templates"),
     )
-
     # Load config
     cfg = _resolve_config(config_class)
     try:
@@ -189,7 +220,9 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     app.config.setdefault("AUTO_NONCE_HTML", True)
     app.config.setdefault("SESSION_COOKIE_SAMESITE", "Lax")
     app.config.setdefault("SESSION_COOKIE_HTTPONLY", True)
-    app.config.setdefault("SESSION_COOKIE_SECURE", app.config.get("ENV") == "production")
+    app.config.setdefault(
+        "SESSION_COOKIE_SECURE", app.config.get("ENV") == "production"
+    )
 
     _configure_logging(app)
 
@@ -205,7 +238,9 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
                     SqlalchemyIntegration(),
                 ],
                 traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
-                profiles_sample_rate=float(os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")),
+                profiles_sample_rate=float(
+                    os.getenv("SENTRY_PROFILES_SAMPLE_RATE", "0.0")
+                ),
                 send_default_pii=False,
                 environment=app.config.get("ENV", "development"),
                 release=os.getenv("GIT_COMMIT"),
@@ -223,7 +258,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
             resources={r"/api/*": {"origins": cors_origins}},
             expose_headers=["X-Request-ID"],
             allow_headers=["Content-Type", "Authorization"],
-            methods=["GET","POST","PUT","PATCH","DELETE","OPTIONS"],
+            methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         )
 
     # Security headers / CSP (Talisman optional; we still set precise headers below)
@@ -247,6 +282,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     # ✅ CLI commands (import after db/init so they can use models)
     try:
         from app.cli.db_tools import dbcli
+
         app.cli.add_command(dbcli)
     except Exception as e:
         app.logger.warning("⚠️ dbcli not available: %s", e)
@@ -263,7 +299,15 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
                 with sentry_sdk.configure_scope() as scope:
                     scope.set_tag("request_id", g.request_id)
                     scope.set_tag("endpoint", request.endpoint or "")
-                    scope.set_user({"ip_address": request.access_route[0] if request.access_route else request.remote_addr})
+                    scope.set_user(
+                        {
+                            "ip_address": (
+                                request.access_route[0]
+                                if request.access_route
+                                else request.remote_addr
+                            )
+                        }
+                    )
         except Exception:
             pass
 
@@ -284,9 +328,9 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         stripe_js = "https://js.stripe.com"
         stripe_api = "https://api.stripe.com"
         paypal_core = "https://www.paypal.com"
-        paypal_all  = "https://*.paypal.com"
+        paypal_all = "https://*.paypal.com"
         paypal_api_live = "https://api-m.paypal.com"
-        paypal_api_sbx  = "https://api-m.sandbox.paypal.com"
+        paypal_api_sbx = "https://api-m.sandbox.paypal.com"
         socketio_cdn = "https://cdn.socket.io"
 
         csp = (
@@ -304,14 +348,19 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         )
         resp.headers.setdefault("Content-Security-Policy", csp)
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-        resp.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=()")
+        resp.headers.setdefault(
+            "Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=()"
+        )
         resp.headers.setdefault("X-Frame-Options", "DENY")
         resp.headers.setdefault("X-Content-Type-Options", "nosniff")
         resp.headers.setdefault("X-Request-ID", g.request_id)
 
         # HSTS (HTTPS only)
         if request.is_secure or app.config.get("PREFERRED_URL_SCHEME") == "https":
-            resp.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+            resp.headers.setdefault(
+                "Strict-Transport-Security",
+                "max-age=31536000; includeSubDomains; preload",
+            )
 
         # Server-Timing
         try:
@@ -330,9 +379,11 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
             ):
                 text = resp.get_data(as_text=True)
                 if "<script" in text or "<style" in text:
+
                     def _add_nonce(m):
                         tag = m.group(1)
                         return tag[:-1] + f' nonce="{nonce}">'
+
                     text = SCRIPT_TAG.sub(_add_nonce, text)
                     text = STYLE_TAG.sub(_add_nonce, text)
                     resp.set_data(text)
@@ -371,7 +422,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
 
         static_root = Path(app.static_folder)
         css = static_root / "css" / "tailwind.min.css"
-        js  = static_root / "js"  / "bundle.min.js"
+        js = static_root / "js" / "bundle.min.js"
         asset_version = max(_mtime_or_now(css), _mtime_or_now(js))
 
         class _Obj(dict):
@@ -391,34 +442,50 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     # JSON errors (API-friendly)
     def _wants_json() -> bool:
         accept = (request.headers.get("Accept") or "").lower()
-        return "application/json" in accept or request.path.startswith("/api") or request.is_json
+        return (
+            "application/json" in accept
+            or request.path.startswith("/api")
+            or request.is_json
+        )
 
     @app.errorhandler(HTTPException)
     def _http_err(err):
-        return _json_error(err.description or err.name, err.code, request_id=g.request_id) if _wants_json() else err
+        return (
+            _json_error(err.description or err.name, err.code, request_id=g.request_id)
+            if _wants_json()
+            else err
+        )
 
     @app.errorhandler(Exception)
     def _uncaught(err):
         app.logger.exception("Unhandled error: %s", err)
-        return _json_error("Internal Server Error", 500, request_id=g.request_id) if _wants_json() else InternalServerError()
+        return (
+            _json_error("Internal Server Error", 500, request_id=g.request_id)
+            if _wants_json()
+            else InternalServerError()
+        )
 
         # Blueprints (attr supports fallbacks: bp|api_bp|main_bp)
+
     blueprints = [
-        ("app.routes.main",            "main_bp|bp", "/"),
-        ("app.routes.api",             "bp|api_bp",  "/api"),
-        ("app.admin.routes",           "bp|admin_bp","/admin"),
-        ("app.blueprints.fc_payments", "bp",         "/payments"),
-        ("app.blueprints.fc_metrics",  "bp",         "/metrics"),
-        ("app.routes.newsletter",      "bp",         "/newsletter"),  # ✅ Newsletter wired up
+        ("app.routes.main", "main_bp|bp", "/"),
+        ("app.routes.api", "bp|api_bp", "/api"),
+        ("app.admin.routes", "bp|admin_bp", "/admin"),
+        ("app.blueprints.fc_payments", "bp", "/payments"),
+        ("app.blueprints.fc_metrics", "bp", "/metrics"),
+        ("app.routes.newsletter", "bp", "/newsletter"),  # ✅ Newsletter wired up
     ]
     for dotted, attr, prefix in blueprints:
         _safe_register(app, dotted, attr, prefix)
 
-
     # Health & Version
     @app.get("/healthz")
     def _healthz():
-        return {"status": "ok", "message": "FundChamps Flask live!", "request_id": g.request_id}
+        return {
+            "status": "ok",
+            "message": "FundChamps Flask live!",
+            "request_id": g.request_id,
+        }
 
     @app.get("/version")
     def _version():
@@ -426,6 +493,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
 
     # CSRF cookie (if flask-wtf installed)
     if csrf and generate_csrf:
+
         @app.after_request
         def inject_csrf_cookie(resp):
             try:
@@ -450,6 +518,4 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         f"│  Blueprints: {len(app.blueprints):<3}                         │\n"
         "└────────────────────────────────────────────┘"
     )
-
     return app
-

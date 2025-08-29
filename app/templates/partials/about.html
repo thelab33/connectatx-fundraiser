@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# templates/partials/about.html — uses the reusable component with slots #}
 {% set TEAM_NAME = team.team_name if team and team.team_name else 'Connect ATX Elite' %}
 {% set BRAND = team.theme_color if team and team.theme_color else '#facc15' %}

@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 <div class="mt-4 flex flex-wrap items-center gap-2"
      role="group" aria-label="Share this page">
   <button type="button" class="fc-btn fc-btn-ghost" data-share>

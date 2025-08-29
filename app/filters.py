@@ -1,6 +1,8 @@
 from __future__ import annotations
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
+
 
 def commafy(
     value: Any,
@@ -34,11 +36,11 @@ def commafy(
     # Strip common noise: currency, commas, underscores, spaces
     cleaned = (
         s.replace(",", "")
-         .replace("_", "")
-         .replace("$", "")
-         .replace("USD", "")
-         .replace("usd", "")
-         .strip()
+        .replace("_", "")
+        .replace("$", "")
+        .replace("USD", "")
+        .replace("usd", "")
+        .strip()
     )
 
     # Try to parse as Decimal (safer than float for money)
@@ -63,7 +65,7 @@ def commafy(
 
     # Round (HALF_UP) and format with grouping
     if scale > 0:
-        quant = Decimal(1).scaleb(-scale)             # 10^-scale
+        quant = Decimal(1).scaleb(-scale)  # 10^-scale
         d = d.quantize(quant, rounding=ROUND_HALF_UP)
         out = f"{d:,.{scale}f}"
     else:
@@ -74,4 +76,3 @@ def commafy(
     if out in ("-0", "-0.0", "-0.00"):
         out = out.replace("-", "")
     return out
-

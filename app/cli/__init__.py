@@ -2,14 +2,16 @@
 import click
 from faker import Faker
 from werkzeug.security import generate_password_hash
+
 from app.extensions import db
-from app.models.team import Team
-from app.models.user import User
+from app.models.campaign_goal import CampaignGoal
 from app.models.player import Player
 from app.models.sponsor import Sponsor
-from app.models.campaign_goal import CampaignGoal
+from app.models.team import Team
+from app.models.user import User
 
 fake = Faker()
+
 
 @click.group()
 def starforge():
@@ -26,6 +28,7 @@ def starforge():
 def seed_demo(users, sponsors, players, teams, clear):
     """Seed demo data."""
     from app import create_app
+
     app = create_app()
     with app.app_context():
         # db.create_all()  # DISABLED by starforge: use Alembic
@@ -46,6 +49,7 @@ def seed_demo(users, sponsors, players, teams, clear):
 def seed_players_cmd(count, clear):
     """Seed demo players only."""
     from app import create_app
+
     app = create_app()
     with app.app_context():
         if clear:
@@ -73,7 +77,7 @@ def _seed_teams(count):
             slug=fake.unique.slug(),
             team_name=f"{fake.city()} {fake.word().capitalize()}",
             meta_description=fake.sentence(nb_words=10),
-            theme_color=fake.hex_color()
+            theme_color=fake.hex_color(),
         )
         db.session.add(team)
         teams.append(team)
@@ -83,44 +87,51 @@ def _seed_teams(count):
 def _seed_users(count, teams):
     pwd_hash = generate_password_hash("demo123")
     for _ in range(count):
-        db.session.add(User(
-            email=fake.unique.email(),
-            password_hash=pwd_hash,
-            is_admin=fake.boolean(20),
-            team_id=fake.random_element(teams).id if teams else None
-        ))
+        db.session.add(
+            User(
+                email=fake.unique.email(),
+                password_hash=pwd_hash,
+                is_admin=fake.boolean(20),
+                team_id=fake.random_element(teams).id if teams else None,
+            )
+        )
 
 
 def _seed_players(count, teams):
     roles = ["Guard", "Forward", "Center"]
     for _ in range(count):
-        db.session.add(Player(
-            name=fake.name(),
-            role=fake.random_element(roles),
-            photo_url=f"https://i.pravatar.cc/200?img={fake.random_int(1, 70)}",
-            team_id=fake.random_element(teams).id if teams else None
-        ))
+        db.session.add(
+            Player(
+                name=fake.name(),
+                role=fake.random_element(roles),
+                photo_url=f"https://i.pravatar.cc/200?img={fake.random_int(1, 70)}",
+                team_id=fake.random_element(teams).id if teams else None,
+            )
+        )
 
 
 def _seed_sponsors(count, teams):
     tiers = ["Bronze", "Silver", "Gold", "Platinum", "VIP"]
     for _ in range(count):
-        db.session.add(Sponsor(
-            name=fake.company(),
-            amount=fake.random_int(min=100, max=5000),
-            status="approved",
-            deleted=False,
-            # Remove this line if you don’t add tier to Sponsor model
-            tier=fake.random_element(tiers) if hasattr(Sponsor, "tier") else None,
-            team_id=fake.random_element(teams).id if teams else None
-        ))
+        db.session.add(
+            Sponsor(
+                name=fake.company(),
+                amount=fake.random_int(min=100, max=5000),
+                status="approved",
+                deleted=False,
+                # Remove this line if you don’t add tier to Sponsor model
+                tier=fake.random_element(tiers) if hasattr(Sponsor, "tier") else None,
+                team_id=fake.random_element(teams).id if teams else None,
+            )
+        )
 
 
 def _ensure_campaign_goals(teams):
     for team in teams:
         if not CampaignGoal.query.filter_by(team_id=team.id, active=True).first():
-            db.session.add(CampaignGoal(goal_amount=10000, active=True, team_id=team.id))
+            db.session.add(
+                CampaignGoal(goal_amount=10000, active=True, team_id=team.id)
+            )
 
 
 __all__ = ["starforge"]
-

@@ -1,3 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {# ============================== FUNDCHAMPS SPONSOR WALL WIDGET ============================== #}
 {% from "macros/sponsor_card.html"import sponsor_card %}
 

@@ -8,11 +8,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 
 from sqlalchemy import CheckConstraint, Index
+
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class SMSLog(db.Model, TimestampMixin, SoftDeleteMixin):
@@ -30,28 +32,44 @@ class SMSLog(db.Model, TimestampMixin, SoftDeleteMixin):
     id = db.Column(db.Integer, primary_key=True)
 
     # Core parties
-    from_number = db.Column(db.String(32), nullable=True,  index=True,  doc="Sender phone")
-    to_number   = db.Column(db.String(32), nullable=False, index=True,  doc="Recipient phone")
+    from_number = db.Column(
+        db.String(32), nullable=True, index=True, doc="Sender phone"
+    )
+    to_number = db.Column(
+        db.String(32), nullable=False, index=True, doc="Recipient phone"
+    )
 
     # Message content
-    message_body  = db.Column(db.Text, nullable=True,  doc="Inbound or outbound message body")
-    response_body = db.Column(db.Text, nullable=True,  doc="AI/system reply (if any)")
+    message_body = db.Column(
+        db.Text, nullable=True, doc="Inbound or outbound message body"
+    )
+    response_body = db.Column(db.Text, nullable=True, doc="AI/system reply (if any)")
 
     # Flow meta
     direction = db.Column(  # inbound | outbound
-        db.String(16), nullable=False, default="inbound", index=True,
+        db.String(16),
+        nullable=False,
+        default="inbound",
+        index=True,
         doc="Message direction: inbound | outbound",
     )
-    status = db.Column(     # queued|sent|delivered|failed
-        db.String(24), nullable=False, default="queued", index=True,
+    status = db.Column(  # queued|sent|delivered|failed
+        db.String(24),
+        nullable=False,
+        default="queued",
+        index=True,
         doc="Delivery status: queued|sent|delivered|failed",
     )
 
-    ai_used = db.Column(db.Boolean, nullable=False, default=False, doc="Was AI used to generate reply?")
-    error   = db.Column(db.Text, nullable=True, doc="Error details if AI or delivery failed")
+    ai_used = db.Column(
+        db.Boolean, nullable=False, default=False, doc="Was AI used to generate reply?"
+    )
+    error = db.Column(
+        db.Text, nullable=True, doc="Error details if AI or delivery failed"
+    )
 
     # Provider correlation (Twilio/others)
-    provider          = db.Column(db.String(32),  nullable=True, index=True)
+    provider = db.Column(db.String(32), nullable=True, index=True)
     provider_message_id = db.Column(db.String(80), nullable=True, index=True)
     provider_error_code = db.Column(db.String(32), nullable=True)
 
@@ -81,4 +99,3 @@ class SMSLog(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<SMSLog {self.direction} {self.from_number or 'N/A'}→{self.to_number} status={self.status} ai={self.ai_used}>"
-

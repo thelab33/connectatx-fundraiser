@@ -11,15 +11,16 @@ Features
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Any, Dict, Optional, Final
+from typing import Any, Dict, Final, Optional
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, Text, Integer, event, select
+from sqlalchemy import (CheckConstraint, ForeignKey, Index, Integer, String,
+                        Text, event, select)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Constants / Config
@@ -47,12 +48,13 @@ TIER_THRESHOLDS: Final[tuple[tuple[int, str], ...]] = (
     (5000, "Platinum"),
     (2500, "Gold"),
     (1000, "Silver"),
-    (500,  "Bronze"),
+    (500, "Bronze"),
 )
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Model
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 class Sponsor(db.Model, TimestampMixin, SoftDeleteMixin):
     __tablename__ = "sponsors"
@@ -167,8 +169,16 @@ class Sponsor(db.Model, TimestampMixin, SoftDeleteMixin):
             "status": self.status,
             "tier": self.computed_tier,
             "notes": self.notes,
-            "created_at": self.created_at.isoformat() if isinstance(self.created_at, datetime) else None,
-            "updated_at": self.updated_at.isoformat() if isinstance(self.updated_at, datetime) else None,
+            "created_at": (
+                self.created_at.isoformat()
+                if isinstance(self.created_at, datetime)
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat()
+                if isinstance(self.updated_at, datetime)
+                else None
+            ),
         }
         if include_team and self.team:
             data["team"] = {
@@ -182,6 +192,7 @@ class Sponsor(db.Model, TimestampMixin, SoftDeleteMixin):
 # ──────────────────────────────────────────────────────────────────────────────
 # Events: validation/normalization + auto-tier + CampaignGoal sync
 # ──────────────────────────────────────────────────────────────────────────────
+
 
 @event.listens_for(Sponsor, "before_insert")
 @event.listens_for(Sponsor, "before_update")
@@ -226,4 +237,3 @@ def _sponsor_after_save(mapper, connection, target: Sponsor) -> None:
         except Exception:
             # Never let a sync hiccup break the write path.
             pass
-

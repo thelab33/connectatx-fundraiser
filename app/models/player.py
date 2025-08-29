@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import uuid
-from typing import Dict, Any, Optional
+from typing import Any, Dict
 
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class Player(db.Model, TimestampMixin, SoftDeleteMixin):
     """An AAU player on the roster."""
+
     __tablename__ = "players"
 
     # ── Identity ────────────────────────────────────────────────
@@ -52,9 +54,20 @@ class Player(db.Model, TimestampMixin, SoftDeleteMixin):
             "photo_url": self.photo_url,
             "team_id": self.team_id,
             "team_name": getattr(self.team, "team_name", None) if self.team else None,
-            "created_at": self.created_at.isoformat() if getattr(self, "created_at", None) else None,
-            "updated_at": self.updated_at.isoformat() if getattr(self, "updated_at", None) else None,
+            "created_at": (
+                self.created_at.isoformat()
+                if getattr(self, "created_at", None)
+                else None
+            ),
+            "updated_at": (
+                self.updated_at.isoformat()
+                if getattr(self, "updated_at", None)
+                else None
+            ),
             "deleted": bool(getattr(self, "deleted", False)),
-            "deleted_at": self.deleted_at.isoformat() if getattr(self, "deleted_at", None) else None,
+            "deleted_at": (
+                self.deleted_at.isoformat()
+                if getattr(self, "deleted_at", None)
+                else None
+            ),
         }
-

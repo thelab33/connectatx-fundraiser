@@ -1,6 +1,8 @@
-{# =========================
-   Header — MVP v1.6 (Compact • A11y/Perf/Safety)
-   ========================= #}
+{# ======================================================================
+   Header — SV Elite v3.5 (Sticky + Sponsor Leaderboard Rail, SV polish)
+   - A11y-first, CSP-safe, conflict-proof (scoped to header id)
+   - Micro-meter + Donate CTA; pauseable sponsor marquee rail
+   ====================================================================== #}
 {% set NONCE    = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
 {% set _team    = team if team is defined and team else none %}
@@ -22,190 +24,267 @@
 {% set _logo = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
 {% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
 
+{% set TICKER = (
+  ticker_items if ticker_items is defined and ticker_items
+  else [
+    'Shoutout: The Jackson Family — $250 🙌',
+    'Shoutout: Austin Realty — $500 🏠',
+    'Shoutout: Coach Rivera — $100 💪',
+    'Shoutout: Anonymous — $50 💛'
+  ]
+) %}
+
 {% if stripe_payment_link %}
 <link rel="preconnect" href="https://js.stripe.com" crossorigin>
 {% endif %}
 
 <header id="{{ _hdr_id }}" role="banner"
-        class="sticky top-0 z-50 border-b border-white/10 print:hidden"
+        class="sticky top-0 z-50 print:hidden"
         style="--fc-brand: {{ brand_color }};">
   <style nonce="{{ NONCE }}">
     #{{ _hdr_id }}{
       isolation:isolate;
-      background:linear-gradient(180deg,rgb(0 0 0/.80),rgb(0 0 0/.66));
-      -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%);
+      background:linear-gradient(180deg,rgb(5 6 9/.82),rgb(5 6 9/.66));
+      -webkit-backdrop-filter:blur(14px) saturate(150%); backdrop-filter:blur(14px) saturate(150%);
+      border-bottom:1px solid rgba(255,255,255,.08);
       padding-top:max(0px, env(safe-area-inset-top));
       padding-inline:max(0px, env(safe-area-inset-left)) max(0px, env(safe-area-inset-right));
       contain:content;
     }
-    /* align with base v3.3 container */
     #{{ _hdr_id }} .fc-container{ width:min(88rem,96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
 
     .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
 
-    /* Brand */
-    .fc-brand{ display:inline-flex; align-items:center; gap:.55rem; }
-    .fc-brand .logo{ height:clamp(40px,4.5vw,58px); width:auto; }
+    /* Row 1 — brand | nav+meter | ctas */
+    .hdr-row{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; padding:.55rem 0; }
+    .fc-brand{ display:inline-flex; align-items:center; gap:.6rem; text-decoration:none; }
+    .fc-brand .logo{ height:clamp(36px,4.2vw,52px); width:auto; }
     .fc-brand .word{
-      font-weight:900; letter-spacing:-.02em; font-size:clamp(20px,2vw,30px);
+      font-weight:900; letter-spacing:-.02em; font-size:clamp(18px,1.75vw,28px);
       background:linear-gradient(90deg,#f87171,#facc15,#4ade80,#38bdf8,#a78bfa);
-      background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent; white-space:nowrap;
-      animation:rainbow-shift 8s linear infinite, rainbow-glow 2.5s ease-in-out infinite;
+      background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
+      white-space:nowrap; animation:rainbow-shift 8s linear infinite, rainbow-glow 2.5s ease-in-out infinite;
     }
-    @media (prefers-reduced-motion: reduce){ .fc-brand .word{ animation:none } }
     @keyframes rainbow-shift{ to{ background-position:200% center } }
     @keyframes rainbow-glow{ 0%,100%{ text-shadow:0 0 6px rgba(255,255,255,.15) } 50%{ text-shadow:0 0 16px rgba(255,255,255,.35) } }
 
-    /* Team chip */
-    .legacy-chip{ position:relative; padding:.42rem .72rem; border-radius:1rem;
-      background:
-        linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)),
-        linear-gradient(90deg,var(--fc-brand),#fff7cc);
-      box-shadow:0 8px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2);
-      -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    nav.primary a{
+      color:rgba(255,255,255,.86); text-decoration:none; font-weight:600;
+      transition:color .18s ease;
     }
-    .legacy-chip .txt{ font-weight:900; letter-spacing:-.02em; font-size:clamp(16px,1.6vw,22px); color:#0b0c0f; }
+    nav.primary a:hover, nav.primary a:focus-visible{ color: color-mix(in srgb, var(--fc-brand) 80%, white 20%); outline:none; }
 
-    /* Grid */
-    .hdr-grid{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; }
-    .hdr-center{ display:flex; align-items:center; justify-content:center; gap:.9rem; }
+    .hdr-center{ display:flex; align-items:center; justify-content:center; gap:1rem; }
 
-    /* Meter */
+    /* Compact prestige meter */
     .hdr-meter{ display:flex; align-items:center; gap:.5rem; }
-    .hdr-meter .track{ width:180px; height:10px; border-radius:9999px; overflow:hidden; background:rgb(255 255 255/12%); box-shadow:inset 0 0 0 1px rgb(255 255 255/9%); }
-    .hdr-meter .fill{ height:100%; width:{{ pct|round(1) }}%; background:linear-gradient(90deg,#fffbe6,var(--fc-brand),#f59e0b);
-      transition:width .6s cubic-bezier(.22,1,.36,1); box-shadow:0 0 6px rgba(255,255,255,.4); }
-    .hdr-meter .pct{ font-variant-numeric:tabular-nums; font-size:12px; color:#fde68a; min-width:3.2ch; text-align:right; }
+    .hdr-meter .track{
+      position:relative; width: clamp(140px, 22vw, 220px); height: 12px; border-radius:9999px; overflow:hidden;
+      background:rgba(255,255,255,.12); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
+    }
+    .hdr-meter .ticks{
+      position:absolute; inset:0; pointer-events:none;
+      background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0, rgba(255,255,255,.22) 1px, transparent 1px, transparent 5%);
+      opacity:.35;
+    }
+    .hdr-meter .fill{
+      position:absolute; inset-block:0; left:0; width:{{ pct|round(1) }}%;
+      background:linear-gradient(90deg,#fffbe6,var(--fc-brand),#f59e0b);
+      box-shadow:0 0 8px rgba(250,204,21,.45);
+      transition:width .6s cubic-bezier(.2,.8,.2,1);
+    }
+    .hdr-meter .pct{ font-variant-numeric:tabular-nums; min-width:3ch; font-size:.9rem; color:#fde68a; }
 
-    /* CTA */
-    .fc-btn{ display:inline-flex; align-items:center; gap:.5rem; border-radius:999px; padding:.7rem 1rem; font-weight:800; }
-    .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow:0 10px 30px rgba(250,204,21,.3); transition:transform .25s ease; }
-    .fc-btn-primary:focus-visible{ outline:2px solid #fff7cc; outline-offset:2px; }
+    /* Row 2 — Sponsor Leaderboard Rail */
+    .hdr-rail{
+      display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.5rem;
+      padding:.4rem .25rem .55rem; border-top:1px solid rgba(255,255,255,.08);
+    }
+    .rail-btn{
+      --b: rgba(255,255,255,.16);
+      display:inline-flex; align-items:center; gap:.45rem; font-weight:800; font-size:.85rem;
+      padding:.35rem .65rem; border-radius:.65rem; border:1px solid var(--b); background:rgba(255,255,255,.06);
+      color:#e5e7eb;
+    }
+    .rail-track{ position:relative; overflow:hidden; height:30px; }
+    .rail-marquee{ display:flex; align-items:center; gap:1.25rem; white-space:nowrap; will-change:transform; }
+    .rail-item{
+      display:inline-flex; align-items:center; gap:.45rem; padding:.28rem .55rem; border-radius:999px;
+      background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+      border:1px solid rgba(255,255,255,.18); color:#e5e7eb; font-weight:700; font-size:.9rem;
+      text-shadow:0 1px 0 rgba(0,0,0,.35); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+    }
+    .rail-cta{ color:#0b0b0c; background:linear-gradient(90deg,#fde047,#facc15); border:1px solid rgba(0,0,0,.16);
+      border-radius:999px; padding:.35rem .7rem; font-weight:900; font-size:.85rem; text-decoration:none; }
+
+    /* CTAs */
+    .fc-btn{ display:inline-flex; align-items:center; gap:.55rem; border-radius:999px; padding:.6rem 1rem; font-weight:800; }
+    .fc-btn-primary{
+      background:linear-gradient(90deg,#fde047,#facc15,#fbbf24); color:#0b0b0c;
+      box-shadow:0 6px 18px rgba(250,204,21,.35); transition:transform .2s ease;
+    }
     .fc-btn-primary:hover{ transform:translateY(-1px) scale(1.02); }
+    .fc-btn-primary:focus-visible{ outline:2px solid #fff7cc; outline-offset:3px; }
 
-    @media (max-width:720px){ .hdr-meter .track{ width:140px } }
-    @media (max-width:520px){ .hdr-center{ gap:.6rem } .hdr-meter .track{ width:110px } .legacy-chip{ display:none } }
-
-    /* Compact mode (<=420px) */
-    #{{ _hdr_id }}.is-compact .hdr-meter{ display:none; }         /* hide meter entirely */
-    #{{ _hdr_id }}.is-compact .fc-btn-primary{ padding:.55rem .9rem; font-size:.95rem; }
-    #{{ _hdr_id }}.is-compact .fc-brand .logo{ height:38px; }
-
-    /* Shrink state */
+    /* Scroll/shrink behavior */
     #{{ _hdr_id }}.is-shrunk{ -webkit-backdrop-filter:blur(16px) saturate(160%); backdrop-filter:blur(16px) saturate(160%); box-shadow:0 8px 30px rgb(0 0 0/.35); }
+    #{{ _hdr_id }}.is-compact .hdr-meter{ display:none; }
+    #{{ _hdr_id }}.is-compact .fc-btn-primary{ padding:.55rem .85rem; font-size:.95rem; }
 
-    /* High-contrast users */
+    @media (max-width:980px){
+      nav.primary{ display:none; }
+      .hdr-row{ grid-template-columns:auto 1fr auto; }
+    }
+    @media (max-width:720px){
+      .fc-brand .word{ display:none; }
+      .rail-item{ font-size:.85rem; }
+    }
+
+    /* Motion/forced colors */
+    @media (prefers-reduced-motion: reduce){
+      .rail-marquee{ animation:none !important; transform:none !important; }
+      .fc-btn-primary{ transition:none; }
+    }
     @media (forced-colors: active){
-      #{{ _hdr_id }}{ -webkit-backdrop-filter:none; backdrop-filter:none; background:Canvas; border-bottom:1px solid CanvasText; }
-      .hdr-meter .track{ background:Canvas; box-shadow:none; border:1px solid CanvasText; }
-      .hdr-meter .fill{ background:CanvasText; box-shadow:none; }
-      .fc-btn-primary{ background:CanvasText; color:Canvas; box-shadow:none; }
+      #{{ _hdr_id }}{ background:Canvas; border-bottom:1px solid CanvasText; }
+      .rail-item{ background:Canvas; color:CanvasText; border:1px solid CanvasText; }
+      .rail-cta{ background:CanvasText; color:Canvas; border:1px solid CanvasText; }
+      .hdr-meter .track{ background:Canvas; border:1px solid CanvasText; }
     }
   </style>
 
   <div class="fc-container">
-    <div class="hdr-grid px-4 lg:px-6 py-3">
-
-      <!-- LEFT: platform brand -->
-      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home" data-cta="nav:brand">
-        <img src="{{ platform_logo_svg }}" alt="{{ platform_name }} logo"
-             class="logo" loading="eager" decoding="async" fetchpriority="high"
+    <!-- ROW 1 -->
+    <div class="hdr-row">
+      <!-- Brand -->
+      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home">
+        <img src="{{ platform_logo_svg }}" alt="{{ platform_name }} logo" class="logo" loading="eager" decoding="async" fetchpriority="high"
              onerror="this.style.display='none';var s=this.nextElementSibling;s&&s.classList.remove('hidden')" />
         <span class="word hidden">{{ platform_name }}</span>
       </a>
 
-      <!-- CENTER: meter + CTA -->
+      <!-- Center: Nav + Meter (desktop) -->
       <div class="hdr-center">
-        <div id="hdr-meter" class="hdr-meter" role="meter" aria-valuemin="0" aria-valuemax="100"
-             aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress" aria-live="polite">
-          <div class="track"><div class="fill" style="width:{{ pct|round(1) }}%"></div></div>
-          <span class="pct" aria-hidden="true">{{ pct|round(0) }}%</span>
-          <span class="sr-only">Raised {{ funds_raised|round(0) }} of {{ fundraising_goal|round(0) }} ({{ pct|round(0) }} percent)</span>
-        </div>
+        <nav class="primary hidden md:flex items-center gap-8" aria-label="Primary">
+          <a href="#mission">Mission</a>
+          <a href="#tiers">Sponsorship Tiers</a>
+          <a href="#program-stats-calendar">Schedule</a>
+        </nav>
 
-        <a {% if stripe_payment_link %} href="{{ stripe_payment_link }}" target="_blank" rel="noopener"
-           {% else %} href="#donate" data-open-donate-modal {% endif %}
-           class="fc-btn fc-btn-primary"
-           aria-label="Sponsor gym time securely"
-           data-cta="cta:header-sponsor"
-           data-label-full="💛 Sponsor A Champion"
-           data-label-compact="💛 Donate">
-          <span class="lbl">💛 Sponsor A Champion</span>
-        </a>
+        <div class="hidden md:flex flex-col items-end gap-2 min-w-[16rem]" role="region" aria-label="Fundraising progress">
+          <div class="flex items-baseline gap-2 text-sm">
+            <span class="font-bold text-[color:var(--fc-brand)]">{{ '${:,.0f}'.format(funds_raised) }}</span>
+            <span class="opacity-60">/</span>
+            <span class="opacity-80">{{ '${:,.0f}'.format(fundraising_goal) }}</span>
+            <span class="ml-2 text-xs font-semibold text-yellow-200"><span id="hdr-pct">{{ pct|round(1) }}</span>%</span>
+          </div>
+          <div class="hdr-meter w-full" aria-hidden="true">
+            <div class="track">
+              <div class="ticks"></div>
+              <div class="fill"></div>
+            </div>
+          </div>
+          <div id="hdr-sr" class="sr-only" aria-live="polite"></div>
+        </div>
       </div>
 
-      <!-- RIGHT: team logo + chip -->
-      <a href="{{ home_url|default('/') }}" class="flex items-center gap-3 justify-self-end"
-         aria-label="{{ team_name }} home" data-cta="nav:team">
-        <img src="{{ logoSrc }}" alt="{{ team_name }} logo"
-             class="h-10 w-10 rounded-xl ring-1 ring-white/10" loading="eager" decoding="async" />
-        <span class="legacy-chip"><span class="txt">{{ team_name }}</span></span>
-      </a>
+      <!-- CTAs -->
+      <div class="flex items-center gap-3">
+        <button type="button" class="fc-btn fc-btn-primary sheen-btn"
+                data-open-donate-modal data-analytics="cta:donate">
+          💸 Donate
+        </button>
+        <a href="#tiers" class="fc-btn ripple-btn" style="border:1px solid color-mix(in srgb, var(--fc-brand) 35%, white 65%); color:#ffeeb0; background:rgba(255,255,255,.06);">
+          🌟 Sponsor
+        </a>
+        <a href="#tiers" class="fc-btn ripple-btn" style="border:1px solid var(--fc-brand); color:#111; background:linear-gradient(90deg,#fde047,#facc15); box-shadow:0 8px 26px color-mix(in srgb, var(--fc-brand) 30%, transparent);">
+          🏆 VIP
+        </a>
+        <button id="theme-toggle" class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5" aria-label="Toggle theme" type="button">🌙</button>
+        <button id="mobile-toggle" class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open mobile menu" type="button">☰</button>
+      </div>
+    </div>
 
+    <!-- ROW 2 — Leaderboard Rail -->
+    <div class="hdr-rail" role="region" aria-label="Live sponsor shoutouts">
+      <button class="rail-btn" type="button" id="rail-toggle" aria-pressed="false">
+        ⏯️ <span class="lbl">Pause</span>
+      </button>
+
+      <div class="rail-track" aria-live="polite">
+        <div id="hdr-rail-mq" class="rail-marquee">
+          {# Or: {% include "partials/sponsor_leaderboard.html" ignore missing with context %} #}
+          {% for it in TICKER %}
+            <span class="rail-item">🏆 {{ it }}</span>
+          {% endfor %}
+        </div>
+      </div>
+
+      <a href="#sponsors" class="rail-cta">View Sponsors</a>
     </div>
   </div>
 
+  <style nonce="{{ NONCE }}">
+    .sheen-btn{ position:relative; overflow:hidden; }
+    .sheen-btn::before{ content:""; position:absolute; inset-block:0; left:-40%; width:40%;
+      transform:skewX(-16deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+      animation:shine 2.6s linear infinite; }
+    @keyframes shine{ from{ transform:translateX(-120%) skewX(-16deg)} to{ transform:translateX(120%) skewX(-16deg)} }
+    .ripple-btn{ position:relative; overflow:hidden; }
+    .ripple-btn:after{ content:""; position:absolute; inset:0; border-radius:inherit;
+      background:radial-gradient(circle,rgba(255,255,255,.45) 10%,transparent 10.01%);
+      transform:scale(10,10); opacity:0; transition:transform .6s, opacity .6s; }
+    .ripple-btn:active:after{ transform:scale(0,0); opacity:.35; transition:0s; }
+    @media (prefers-reduced-motion: reduce){ .sheen-btn::before{ animation:none; opacity:0 } }
+  </style>
+
   <script nonce="{{ NONCE }}">
-    // Motion/data saver hint
-    (function(){
-      const rM = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-      const sD = !!(navigator.connection && navigator.connection.saveData);
-      if (rM || sD) document.documentElement.classList.add('fc-reduced');
-    })();
-
     (() => {
-      if (window.__fcHeaderMVP_16) return; window.__fcHeaderMVP_16 = true;
-      const hdr=document.getElementById('{{ _hdr_id }}');
-      const fill=hdr.querySelector('#hdr-meter .fill');
-      const pctTxt=hdr.querySelector('#hdr-meter .pct');
-      const meter=hdr.querySelector('#hdr-meter');
-      const cta=hdr.querySelector('[data-cta="cta:header-sponsor"]');
-      const lbl=cta?.querySelector('.lbl');
+      if (window.__hdrV35) return; window.__hdrV35 = true;
+      const root = document.getElementById('{{ _hdr_id }}');
 
-      // Shrink on scroll with hysteresis
-      let s=false; const ON=64, OFF=20;
-      const on=()=>{ const y=scrollY||document.documentElement.scrollTop||0;
-        if(y>ON && !s){ s=true; hdr.classList.add('is-shrunk'); }
-        else if(y<OFF && s){ s=false; hdr.classList.remove('is-shrunk'); } };
-      on(); addEventListener('scroll', on, { passive:true });
-
-      // Compact mode (<=420px)
-      const mql = matchMedia('(max-width:420px)');
-      const updateCompact = () => {
-        const is = !!mql.matches; hdr.classList.toggle('is-compact', is);
-        if (lbl){
-          const full = cta.getAttribute('data-label-full') || 'Donate';
-          const short = cta.getAttribute('data-label-compact') || 'Donate';
-          lbl.textContent = is ? short : full;
-          cta.setAttribute('aria-label', is ? 'Donate securely' : 'Sponsor gym time securely');
-        }
+      // Shrink / compact on scroll
+      let lastY = 0;
+      const onScroll = () => {
+        const y = scrollY || document.documentElement.scrollTop;
+        root.classList.toggle('is-shrunk', y > 8);
+        root.classList.toggle('is-compact', y - lastY > 12 && y > 80);
+        lastY = y;
       };
-      updateCompact(); mql.addEventListener('change', updateCompact);
+      addEventListener('scroll', onScroll, { passive:true }); onScroll();
 
-      // Meter updates (global event)
-      function setMeter(r,g){
-        const goal=Math.max(0,+g||0), raised=Math.max(0,+r||0);
-        const p=Math.max(0,Math.min(100, goal ? (raised/goal*100) : 0));
-        if (fill) fill.style.width=p.toFixed(1)+'%';
-        if (pctTxt) pctTxt.textContent=p.toFixed(0)+'%';
-        if (meter) meter.setAttribute('aria-valuenow', p.toFixed(1));
+      // Marquee (seamless, pauseable)
+      const mq = document.getElementById('hdr-rail-mq');
+      const btn = document.getElementById('rail-toggle');
+      let w = 0, t = 0, speed = 60; // px/sec
+      function setup(){
+        if (!mq) return;
+        const trackW = mq.parentElement.clientWidth * 2;
+        while (mq.scrollWidth < trackW) mq.innerHTML += mq.innerHTML;
+        w = mq.scrollWidth; t = 0; mq.style.transform = 'translateX(0)';
       }
-      addEventListener('fc:meter:update', (e)=>{ const d=e.detail||{}; setMeter(d.raised,d.goal); }, { passive:true });
+      function tick(ts){
+        const dt = (tick.lastTs? (ts - tick.lastTs) : 16) / 1000; tick.lastTs = ts;
+        if (!btn?.dataset.paused){ t = (t + speed*dt) % w; mq.style.transform = `translateX(${-t}px)`; }
+        requestAnimationFrame(tick);
+      }
+      setup(); requestAnimationFrame(tick);
+      addEventListener('resize', setup, { passive:true });
 
-      // If Stripe link exists, append UTM on first interaction
-      const plink = {{ (stripe_payment_link or '')|tojson }};
-      if (cta && plink){
-        const decorate=(href)=> href + (href.includes('?')?'&':'?') +
-          'utm_source=site&utm_medium=header&utm_campaign=fundraiser';
-        const setOnce=()=>{ if(!cta.__utmed){ cta.href = decorate(cta.href); cta.__utmed = true; } };
-        cta.addEventListener('pointerdown', setOnce, { once:true, passive:true });
-        cta.addEventListener('keydown', e=>{ if(e.key==='Enter' || e.key===' ') setOnce(); }, { once:true });
+      btn?.addEventListener('click', () => {
+        const paused = !!btn.dataset.paused;
+        if (paused) { delete btn.dataset.paused; btn.setAttribute('aria-pressed','false'); btn.querySelector('.lbl').textContent='Pause'; }
+        else { btn.dataset.paused = '1'; btn.setAttribute('aria-pressed','true'); btn.querySelector('.lbl').textContent='Resume'; }
+      }, { passive:true });
+
+      // Optional: live SR updates for pct (if you stream updates in)
+      const sr = document.getElementById('hdr-sr');
+      const pctEl = document.getElementById('hdr-pct');
+      if (sr && pctEl) {
+        const v = pctEl.textContent?.trim();
+        if (v) sr.textContent = `Fundraiser is ${v}% to goal.`;
       }
     })();
   </script>
 </header>
-
-<!-- Quick donate pill (opt-in) -->
-<a href="#donate" class="fixed bottom-4 right-4 bg-[color:var(--fc-brand)] text-black font-bold py-2 px-6 rounded-full shadow-lg z-[60] hover:brightness-95 transition"
-   data-open-donate-modal data-cta="cta:quick-donate" aria-label="Quick donate button" hidden></a>
 

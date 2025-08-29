@@ -6,16 +6,25 @@ from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
 __all__ = [
-    "_num", "_clamp", "_pct", "_money_i",
-    "_as_players", "_normalize_stats",
-    "_generate_about_section", "_generate_impact_stats",
-    "_generate_challenge_section", "_generate_mission_section",
-    "_prepare_stats", "build_impact_buckets", "Bucket",
+    "_num",
+    "_clamp",
+    "_pct",
+    "_money_i",
+    "_as_players",
+    "_normalize_stats",
+    "_generate_about_section",
+    "_generate_impact_stats",
+    "_generate_challenge_section",
+    "_generate_mission_section",
+    "_prepare_stats",
+    "build_impact_buckets",
+    "Bucket",
 ]
 
 # ─────────────────────────────────────────────────────────────
 # Small utility helpers
 # ─────────────────────────────────────────────────────────────
+
 
 def _num(v: Any, default: float = 0.0) -> float:
     """
@@ -100,7 +109,7 @@ def _normalize_stats(stats: Any) -> List[Dict[str, Any]]:
     Attempts to parse numeric values via _num; keeps strings if not numeric.
     """
     norm: List[Dict[str, Any]] = []
-    for s in (stats or []):
+    for s in stats or []:
         if not isinstance(s, dict):
             continue
         label = str(s.get("label", "") or "").strip()
@@ -117,6 +126,7 @@ def _normalize_stats(stats: Any) -> List[Dict[str, Any]]:
 # Public helpers used by views/templates
 # (kept names for backwards-compatibility)
 # ─────────────────────────────────────────────────────────────
+
 
 def _generate_about_section(team: Dict[str, Any]) -> Dict[str, Any]:
     """
@@ -148,7 +158,9 @@ def _generate_impact_stats(team: Dict[str, Any]) -> List[Dict[str, Any]]:
     return stats or [{"label": "Players Enrolled", "value": 16}]
 
 
-def _generate_challenge_section(team: Dict[str, Any], impact_stats: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _generate_challenge_section(
+    team: Dict[str, Any], impact_stats: List[Dict[str, Any]]
+) -> Dict[str, Any]:
     """Build a succinct challenge section. Re-uses impact stats as 'metrics'."""
     return {
         "heading": team.get("challenge_heading", "The Challenge"),
@@ -160,7 +172,9 @@ def _generate_challenge_section(team: Dict[str, Any], impact_stats: List[Dict[st
     }
 
 
-def _generate_mission_section(team: Dict[str, Any], impact_stats: List[Dict[str, Any]]) -> Dict[str, Any]:
+def _generate_mission_section(
+    team: Dict[str, Any], impact_stats: List[Dict[str, Any]]
+) -> Dict[str, Any]:
     """Mission copy with optional stats accompaniment."""
     team_name = team.get("team_name", "Our Team")
     return {
@@ -205,6 +219,7 @@ def _prepare_stats(
 # Impact Lockers (Buckets) — smarter allocator
 # ─────────────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class Bucket:
     key: str
@@ -213,8 +228,8 @@ class Bucket:
     total: float
     allocated: float
     percent: float
-    next_gap: float              # $ to lock the next milestone (or remaining total if none)
-    next_label: str              # label of the upcoming milestone
+    next_gap: float  # $ to lock the next milestone (or remaining total if none)
+    next_label: str  # label of the upcoming milestone
     milestones: List[Dict[str, Any]]
     emoji: str
     locked: bool
@@ -321,47 +336,52 @@ def build_impact_buckets(
             allocated = _apply_allocation_strategy(pool, total, weight)
 
         percent = _clamp(_pct(allocated, total), 0.0, 100.0)
-        next_gap, next_label = _calc_next_milestone_gap(total, allocated, spec.get("milestones") or [])
+        next_gap, next_label = _calc_next_milestone_gap(
+            total, allocated, spec.get("milestones") or []
+        )
         locked = percent >= 100.0
 
-        buckets.append(Bucket(
-            key=key,
-            label=str(spec.get("label", key)),
-            details=str(spec.get("details", "")),
-            total=round(total, 2),
-            allocated=round(allocated, 2),
-            percent=percent,
-            next_gap=round(next_gap, 2),
-            next_label=next_label,
-            milestones=list(spec.get("milestones") or []),
-            emoji={
-                "gym_month": "🏀",
-                "tournament_travel": "🚌",
-                "uniforms": "🎽",
-                "unity_day": "🤝",
-            }.get(key, "⭐"),
-            locked=locked,
-        ))
+        buckets.append(
+            Bucket(
+                key=key,
+                label=str(spec.get("label", key)),
+                details=str(spec.get("details", "")),
+                total=round(total, 2),
+                allocated=round(allocated, 2),
+                percent=percent,
+                next_gap=round(next_gap, 2),
+                next_label=next_label,
+                milestones=list(spec.get("milestones") or []),
+                emoji={
+                    "gym_month": "🏀",
+                    "tournament_travel": "🚌",
+                    "uniforms": "🎽",
+                    "unity_day": "🤝",
+                }.get(key, "⭐"),
+                locked=locked,
+            )
+        )
 
     # Maintain intended order (gym → travel → uniforms → unity)
     out: List[Dict[str, Any]] = []
     for k in keys:
         for b in buckets:
             if b.key == k:
-                out.append({
-                    "key": b.key,
-                    "emoji": b.emoji,
-                    "label": b.label,
-                    "details": b.details,
-                    "total": b.total,
-                    "allocated": b.allocated,
-                    "percent": b.percent,
-                    "next_gap": b.next_gap,
-                    "next_label": b.next_label,
-                    "milestones": b.milestones,
-                    "locked": b.locked,
-                })
+                out.append(
+                    {
+                        "key": b.key,
+                        "emoji": b.emoji,
+                        "label": b.label,
+                        "details": b.details,
+                        "total": b.total,
+                        "allocated": b.allocated,
+                        "percent": b.percent,
+                        "next_gap": b.next_gap,
+                        "next_label": b.next_label,
+                        "milestones": b.milestones,
+                        "locked": b.locked,
+                    }
+                )
                 break
 
     return out
-

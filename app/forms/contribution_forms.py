@@ -2,15 +2,9 @@
 from __future__ import annotations
 
 from flask_wtf import FlaskForm
-from wtforms import StringField, DecimalField, SelectField, FileField
-from wtforms.validators import (
-    DataRequired,
-    Email,
-    Length,
-    NumberRange,
-    Optional,
-    Regexp,
-)
+from wtforms import DecimalField, FileField, SelectField, StringField
+from wtforms.validators import (DataRequired, Email, Length, NumberRange,
+                                Optional, Regexp)
 
 # Centralized tier options — keeps SponsorForm & DonationForm consistent
 TIER_CHOICES = [
@@ -110,4 +104,3 @@ class DonationForm(BaseContributionForm):
         validators=[Optional()],
         render_kw={"accept": "image/*"},
     )
-

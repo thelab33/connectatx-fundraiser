@@ -7,14 +7,7 @@ from decimal import Decimal, InvalidOperation
 from typing import Optional
 
 import stripe
-from flask import (
-    Blueprint,
-    current_app,
-    flash,
-    redirect,
-    request,
-    url_for,
-)
+from flask import Blueprint, current_app, flash, redirect, request, url_for
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
@@ -103,25 +96,33 @@ def create_donation():
 
     # Create Stripe Checkout Session (server-side) and bounce donor to Stripe
     if not stripe.api_key:
-        current_app.logger.warning("STRIPE_SECRET_KEY not configured; skipping checkout creation.")
+        current_app.logger.warning(
+            "STRIPE_SECRET_KEY not configured; skipping checkout creation."
+        )
         flash("Payments are temporarily unavailable. Please try again later.", "error")
         return redirect(url_for("main_bp.home"))
 
     try:
         session = stripe.checkout.Session.create(
             mode="payment",
-            payment_method_types=["card", "us_bank_account", "link"],  # Apple/Google Pay auto-enabled
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "unit_amount": amount_cents,
-                    "product_data": {
-                        "name": f"Donation — {donation.name or 'Anonymous'}",
-                        "description": f"Tier: {donation.tier or 'Custom'}",
+            payment_method_types=[
+                "card",
+                "us_bank_account",
+                "link",
+            ],  # Apple/Google Pay auto-enabled
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": amount_cents,
+                        "product_data": {
+                            "name": f"Donation — {donation.name or 'Anonymous'}",
+                            "description": f"Tier: {donation.tier or 'Custom'}",
+                        },
                     },
-                },
-                "quantity": 1,
-            }],
+                    "quantity": 1,
+                }
+            ],
             customer_email=donation.email or None,
             metadata={
                 "donation_id": str(donation.id),
@@ -136,9 +137,10 @@ def create_donation():
         return redirect(session.url, code=303)
 
     except Exception as e:
-        current_app.logger.error("Stripe checkout creation failed: %s", e, exc_info=True)
+        current_app.logger.error(
+            "Stripe checkout creation failed: %s", e, exc_info=True
+        )
         flash("We couldn’t start checkout. Please try again.", "error")
         # Optional: soft-delete the donation or keep it as pending for audit
         # donation.deleted = True; db.session.commit()
         return redirect(url_for("main_bp.home"))
-

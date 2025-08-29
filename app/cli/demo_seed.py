@@ -1,32 +1,40 @@
-import click
 import random
+
+import click
 from faker import Faker
 from sqlalchemy.inspection import inspect
 from werkzeug.security import generate_password_hash
 
 from app.extensions import db
-from app.models.team import Team
-from app.models.user import User
+from app.models.campaign_goal import CampaignGoal
 from app.models.player import Player
 from app.models.sponsor import Sponsor
-from app.models.campaign_goal import CampaignGoal
+from app.models.team import Team
+from app.models.user import User
 
 fake = Faker()
+
 
 @click.group()
 def starforge():
     """Starforge CLI tools."""
     pass
 
+
 @starforge.command("seed-demo")
 @click.option("--users", default=5, show_default=True, help="Number of demo users.")
-@click.option("--sponsors", default=8, show_default=True, help="Number of demo sponsors.")
-@click.option("--players", default=10, show_default=True, help="Number of demo players.")
+@click.option(
+    "--sponsors", default=8, show_default=True, help="Number of demo sponsors."
+)
+@click.option(
+    "--players", default=10, show_default=True, help="Number of demo players."
+)
 @click.option("--teams", default=1, show_default=True, help="Number of demo teams.")
 @click.option("--clear", is_flag=True, help="Clear existing demo data first.")
 def seed_demo(users, sponsors, players, teams, clear):
     """🌱 Seed demo data for FundChamps."""
     from app import create_app
+
     app = create_app()
     with app.app_context():
         # db.create_all()  # DISABLED by starforge: use Alembic
@@ -58,7 +66,7 @@ def _seed_teams(count):
             slug=fake.unique.slug(),
             team_name=f"{fake.city()} {fake.word().capitalize()}",
             meta_description=fake.sentence(nb_words=10),
-            theme_color=fake.hex_color()
+            theme_color=fake.hex_color(),
         )
         db.session.add(team)
         teams.append(team)
@@ -72,7 +80,7 @@ def _seed_users(count, teams):
         data = {
             "email": fake.unique.email(),
             "password_hash": pwd_hash,
-            "is_admin": fake.boolean(20)
+            "is_admin": fake.boolean(20),
         }
         if "team_id" in valid_cols and teams:
             data["team_id"] = random.choice(teams).id
@@ -86,7 +94,7 @@ def _seed_players(count, teams):
         data = {
             "name": fake.name(),
             "role": fake.random_element(roles),
-            "photo_url": f"https://i.pravatar.cc/200?img={fake.random_int(1, 70)}"
+            "photo_url": f"https://i.pravatar.cc/200?img={fake.random_int(1, 70)}",
         }
         if "team_id" in valid_cols and teams:
             data["team_id"] = random.choice(teams).id
@@ -100,7 +108,7 @@ def _seed_sponsors(count, teams):
             "name": fake.company(),
             "amount": fake.random_int(min=100, max=5000),
             "status": "approved",
-            "deleted": False
+            "deleted": False,
         }
         if "team_id" in valid_cols and teams:
             data["team_id"] = random.choice(teams).id
@@ -133,5 +141,3 @@ def _ensure_campaign_goals(teams):
                 continue
 
             db.session.add(CampaignGoal(**data))
-
-

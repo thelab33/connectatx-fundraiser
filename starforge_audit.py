@@ -150,7 +150,7 @@ def audit_routes(app_config: str) -> List[Finding]:
         add(finds, Finding("routes", "ok" if "/" in routes else "fail", "Homepage route '/' present" if "/" in routes else "Homepage route '/' missing"))
         add(finds, Finding("routes", "ok" if "main" in bps else "warn", "Blueprint 'main' registered" if "main" in bps else "Blueprint 'main' not registered"))
         # Endpoints referenced by partials (nice-to-have)
-        expected_ep = ["donate.initiate", "tiers.stats"]
+        expected_ep = ["main.donate", "main.stats_json"]
         present = {r.endpoint for r in app.url_map.iter_rules()}
         for ep in expected_ep:
             if ep in present:

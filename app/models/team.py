@@ -12,7 +12,8 @@ from typing import Any, Dict, Optional
 from sqlalchemy.dialects.postgresql import JSONB
 
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 # Minimal, practical defaults for an out-of-the-box demo team
 TEAM_CONFIG_DEFAULT: Dict[str, Any] = {
@@ -37,6 +38,7 @@ TEAM_CONFIG_DEFAULT: Dict[str, Any] = {
 
 class Team(db.Model, TimestampMixin, SoftDeleteMixin):
     """Brand & theme configuration for a team, plus roster, sponsors & stats."""
+
     __tablename__ = "teams"
 
     # ── Identity ────────────────────────────────────────────────
@@ -145,8 +147,11 @@ class Team(db.Model, TimestampMixin, SoftDeleteMixin):
             db.session.commit()
         return team
 
-    def add_player(self, name: str, role: Optional[str] = None, photo_url: Optional[str] = None):
+    def add_player(
+        self, name: str, role: Optional[str] = None, photo_url: Optional[str] = None
+    ):
         from .player import Player
+
         player = Player(name=name, role=role, photo_url=photo_url, team=self)
         db.session.add(player)
         return player
@@ -158,4 +163,3 @@ class Team(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Team {self.slug} ({self.team_name})>"
-

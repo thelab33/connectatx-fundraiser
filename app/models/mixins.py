@@ -1,11 +1,22 @@
 # app/models/mixins.py
 from datetime import datetime
+
 from sqlalchemy import event
+
 from app.extensions import db
 
+
 class TimestampMixin:
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
-    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow, index=True)
+    created_at = db.Column(
+        db.DateTime, nullable=False, default=datetime.utcnow, index=True
+    )
+    updated_at = db.Column(
+        db.DateTime,
+        nullable=False,
+        default=datetime.utcnow,
+        onupdate=datetime.utcnow,
+        index=True,
+    )
 
     @staticmethod
     def _refresh_updated_at(mapper, connection, target):
@@ -14,6 +25,7 @@ class TimestampMixin:
     @classmethod
     def __declare_last__(cls):
         event.listen(cls, "before_update", cls._refresh_updated_at)
+
 
 class SoftDeleteMixin:
     deleted = db.Column(db.Boolean, default=False, nullable=False, index=True)
@@ -38,4 +50,3 @@ class SoftDeleteMixin:
     @classmethod
     def trashed(cls):
         return cls.query.filter_by(deleted=True)
-

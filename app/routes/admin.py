@@ -4,14 +4,11 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import datetime
-from typing import Any, List, Optional
+from typing import Any
 
 import requests
-from flask import (
-    Blueprint, render_template, request, redirect,
-    url_for, flash, jsonify, Response, current_app
-)
+from flask import (Blueprint, Response, current_app, flash, jsonify, redirect,
+                   render_template, request, url_for)
 
 from app.extensions import db
 
@@ -47,6 +44,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 def _is_truthy(x: Any) -> bool:
     return str(x).lower() in {"1", "true", "yes", "on"}
 
+
 def send_slack_alert(message: str) -> None:
     webhook = current_app.config.get("SLACK_WEBHOOK_URL")
     if not webhook:
@@ -78,16 +76,38 @@ def dashboard():
 
     try:
         if Sponsor:
-            sponsors = Sponsor.query.order_by(getattr(Sponsor, "created_at", Sponsor.id).desc()).limit(10).all()
+            sponsors = (
+                Sponsor.query.order_by(
+                    getattr(Sponsor, "created_at", Sponsor.id).desc()
+                )
+                .limit(10)
+                .all()
+            )
             stats["sponsor_count"] = Sponsor.query.count()
             if hasattr(Sponsor, "status"):
-                stats["pending_sponsors"] = Sponsor.query.filter_by(status="pending").count()
-                stats["approved_sponsors"] = Sponsor.query.filter_by(status="approved").count()
+                stats["pending_sponsors"] = Sponsor.query.filter_by(
+                    status="pending"
+                ).count()
+                stats["approved_sponsors"] = Sponsor.query.filter_by(
+                    status="approved"
+                ).count()
             if hasattr(Sponsor, "amount"):
                 from sqlalchemy import func
-                stats["total_raised"] = float(db.session.query(func.coalesce(func.sum(Sponsor.amount), 0)).scalar() or 0)
+
+                stats["total_raised"] = float(
+                    db.session.query(
+                        func.coalesce(func.sum(Sponsor.amount), 0)
+                    ).scalar()
+                    or 0
+                )
         if Transaction:
-            transactions = Transaction.query.order_by(getattr(Transaction, "created_at", Transaction.id).desc()).limit(10).all()
+            transactions = (
+                Transaction.query.order_by(
+                    getattr(Transaction, "created_at", Transaction.id).desc()
+                )
+                .limit(10)
+                .all()
+            )
         if CampaignGoal:
             goal = CampaignGoal.query.filter_by(active=True).first()
             if goal:
@@ -124,7 +144,9 @@ def sponsors_list():
         query = query.filter(Sponsor.name.ilike(f"%{q}%"))
 
     try:
-        sponsors = query.order_by(getattr(Sponsor, "created_at", Sponsor.id).desc()).all()
+        sponsors = query.order_by(
+            getattr(Sponsor, "created_at", Sponsor.id).desc()
+        ).all()
     except Exception:
         current_app.logger.exception("Sponsor list query failed")
         sponsors = []
@@ -145,7 +167,9 @@ def approve_sponsor(sponsor_id: int):
         flash(f"Sponsor '{getattr(sponsor, 'name', 'Sponsor')}' approved!", "success")
         if current_app.config.get("SLACK_WEBHOOK_URL"):
             amt = float(getattr(sponsor, "amount", 0) or 0)
-            send_slack_alert(f"New Sponsor Approved: {getattr(sponsor, 'name', 'Sponsor')} (${amt:,.2f})")
+            send_slack_alert(
+                f"New Sponsor Approved: {getattr(sponsor, 'name', 'Sponsor')} (${amt:,.2f})"
+            )
     except Exception:
         db.session.rollback()
         current_app.logger.exception("Approve sponsor failed")
@@ -208,7 +232,9 @@ def export_payouts():
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=approved_sponsor_payouts.csv"},
+        headers={
+            "Content-Disposition": "attachment; filename=approved_sponsor_payouts.csv"
+        },
     )
 
 
@@ -262,7 +288,9 @@ def transactions_list():
         flash("Transaction model unavailable.", "warning")
         return render_template("admin/transactions.html", transactions=[])
     try:
-        txs = Transaction.query.order_by(getattr(Transaction, "created_at", Transaction.id).desc()).all()
+        txs = Transaction.query.order_by(
+            getattr(Transaction, "created_at", Transaction.id).desc()
+        ).all()
     except Exception:
         current_app.logger.exception("Transactions query failed")
         txs = []
@@ -304,4 +332,3 @@ def example_restore(uuid):
         db.session.rollback()
         current_app.logger.exception("Example restore failed")
         return jsonify({"error": "Restore failed"}), 500
-

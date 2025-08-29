@@ -8,12 +8,12 @@
 
 import click
 from faker import Faker
-from werkzeug.security import generate_password_hash
 from flask.cli import AppGroup
 from sqlalchemy.exc import SQLAlchemyError
+from werkzeug.security import generate_password_hash
 
 from app.extensions import db
-from app.models import CampaignGoal, Sponsor, User, Team, Player
+from app.models import CampaignGoal, Player, Sponsor, Team, User
 
 # 🎯 CLI Group
 starforge = AppGroup("starforge")
@@ -21,12 +21,25 @@ fake = Faker()
 
 
 @starforge.command("seed-demo")
-@click.option("--users", default=5, show_default=True, help="Number of demo users to create.")
-@click.option("--sponsors", default=8, show_default=True, help="Number of demo sponsors to create.")
-@click.option("--players", default=10, show_default=True, help="Number of demo players to create.")
-@click.option("--teams", default=1, show_default=True, help="Number of demo teams to create.")
+@click.option(
+    "--users", default=5, show_default=True, help="Number of demo users to create."
+)
+@click.option(
+    "--sponsors",
+    default=8,
+    show_default=True,
+    help="Number of demo sponsors to create.",
+)
+@click.option(
+    "--players", default=10, show_default=True, help="Number of demo players to create."
+)
+@click.option(
+    "--teams", default=1, show_default=True, help="Number of demo teams to create."
+)
 @click.option("--clear", is_flag=True, help="Clear existing demo data before seeding.")
-def seed_demo_cmd(users: int, sponsors: int, players: int, teams: int, clear: bool) -> None:
+def seed_demo_cmd(
+    users: int, sponsors: int, players: int, teams: int, clear: bool
+) -> None:
     """
     🌱 Seed demo data for FundChamps PaaS.
     Generates realistic Users, Players, Sponsors, and CampaignGoals — ready for live demos.
@@ -48,7 +61,9 @@ def seed_demo_cmd(users: int, sponsors: int, players: int, teams: int, clear: bo
                 _seed_sponsors(sponsors, team_objs)
                 _ensure_campaign_goals(team_objs)
 
-            click.secho("✅ Demo data seeded successfully!", fg="bright_green", bold=True)
+            click.secho(
+                "✅ Demo data seeded successfully!", fg="bright_green", bold=True
+            )
             click.echo("🔐 Demo password for all users: demo123")
         except SQLAlchemyError as e:
             db.session.rollback()
@@ -58,6 +73,7 @@ def seed_demo_cmd(users: int, sponsors: int, players: int, teams: int, clear: bo
 # -------------------------------------------------------------------
 # Helpers
 # -------------------------------------------------------------------
+
 
 def _clear_demo_data() -> None:
     click.secho("🧹 Clearing existing data…", fg="yellow")
@@ -131,6 +147,7 @@ def _ensure_campaign_goals(teams: list[Team]) -> None:
     for team in teams:
         if not CampaignGoal.query.filter_by(team_id=team.id, active=True).first():
             db.session.add(
-                CampaignGoal(goal_amount=500000, active=True, team_id=team.id)  # $5,000 goal
+                CampaignGoal(
+                    goal_amount=500000, active=True, team_id=team.id
+                )  # $5,000 goal
             )
-

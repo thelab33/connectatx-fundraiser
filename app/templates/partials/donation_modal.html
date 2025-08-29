@@ -1,23 +1,36 @@
 {# =============================================================================
-   donation_modal.html — FundChamps • Deluxe Donation Modal (Elite • CSP-safe)
-   Refactor: scroll lock + a11y + guards + input hardening
+   donation_modal.html — FundChamps • Deluxe Donation Modal (CSP-safe)
+   - One canonical place for the entire donation flow (Stripe + PayPal)
+   - Safe endpoints discovery across blueprints
    ============================================================================= #}
 
 {# ---------- Safe fallbacks & tokens ---------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set team_name         = team.team_name if team and team.team_name else 'FundChamps' %}
-{% set brand_color       = team.theme_color if team and team.theme_color else '#facc15' %}
-{% set vip_threshold     = (team.vip_amount if team and team.vip_amount else 500) | int %}
-{% set min_amount        = min_amount|default(5) | int %}
-{% set default_amount    = default_amount|default(50) | int %}
-{% set csrf              = (csrf_token() if csrf_token is defined else '') %}
+{% set team_name      = team.team_name if team and team.team_name else 'FundChamps' %}
+{% set brand_color    = team.theme_color if team and team.theme_color else '#facc15' %}
+{% set vip_threshold  = (team.vip_amount if team and team.vip_amount else 500) | int %}
+{% set min_amount     = min_amount|default(5) | int %}
+{% set default_amount = default_amount|default(50) | int %}
+{% set csrf           = (csrf_token() if csrf_token is defined else '') %}
 
-{# Endpoints (safe_url_for if available; otherwise sane defaults) #}
-{% set _has   = (has_endpoint is defined) %}
-{% set _sf    = (safe_url_for is defined) %}
-{% set stripe_intent_url  = (_sf and _has and has_endpoint('main.create_payment_intent')  and safe_url_for('main.create_payment_intent'))  or '/api/payments/stripe/intent' %}
-{% set paypal_order_url   = (_sf and _has and has_endpoint('main.create_paypal_order')    and safe_url_for('main.create_paypal_order'))    or '/api/payments/paypal/order' %}
-{% set paypal_capture_url = (_sf and _has and has_endpoint('main.capture_paypal_order')   and safe_url_for('main.capture_paypal_order'))   or '/api/payments/paypal/capture' %}
+{# ---------- Endpoint discovery (prefer fc_payments, then api, else sane defaults) ---------- #}
+{% set _has = (has_endpoint is defined) %}
+{% set _sf  = (safe_url_for is defined) %}
+{% set stripe_intent_url  = (
+      _sf and _has and has_endpoint('fc_payments.create_stripe_intent') and safe_url_for('fc_payments.create_stripe_intent')
+  ) or (
+      _sf and _has and has_endpoint('api.create_payment_intent') and safe_url_for('api.create_payment_intent')
+  ) or '/api/payments/stripe/intent' %}
+{% set paypal_order_url   = (
+      _sf and _has and has_endpoint('fc_payments.paypal_order') and safe_url_for('fc_payments.paypal_order')
+  ) or (
+      _sf and _has and has_endpoint('api.create_paypal_order') and safe_url_for('api.create_paypal_order')
+  ) or '/api/payments/paypal/order' %}
+{% set paypal_capture_url = (
+      _sf and _has and has_endpoint('fc_payments.paypal_capture') and safe_url_for('fc_payments.paypal_capture')
+  ) or (
+      _sf and _has and has_endpoint('api.capture_paypal_order') and safe_url_for('api.capture_paypal_order')
+  ) or '/api/payments/paypal/capture' %}
 
 <dialog id="donation-modal"
         class="z-50 w-[92vw] max-w-2xl rounded-2xl p-0 backdrop:bg-black/70"
@@ -27,7 +40,7 @@
        role="document" tabindex="0"
        style="--fc-brand: {{ brand_color }};">
     <!-- Left: Form -->
-    <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 p-5 md:p-6" >
+    <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 p-5 md:p-6">
       <header class="mb-3 flex items-start justify-between">
         <div>
           <h3 id="donate-title" class="text-xl font-extrabold text-yellow-300">Support {{ team_name }}</h3>
@@ -35,7 +48,7 @@
         </div>
         <button type="button"
                 class="rounded-lg border border-yellow-400/30 bg-black/60 px-3 py-1 text-lg hover:bg-black/70 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
-                aria-label="Close donation modal" data-close>×</button>
+                aria-label="Close donation modal" data-close>&times;</button>
       </header>
 
       <!-- Amount presets -->
@@ -102,7 +115,8 @@
         <div id="panel-card" role="tabpanel" aria-labelledby="tab-card">
           <div id="card-element" class="min-h-[44px] rounded-lg border border-yellow-400/20 bg-zinc-900/70 px-3 py-2"></div>
           <button id="pay-card" type="button"
-                  class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-clip-text text-transparent" style="background: linear-gradient(90deg, hsl(var(--brand)), hsl(var(--brand) / .8))">
+                  class="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 font-extrabold text-black focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300"
+                  style="background: linear-gradient(90deg, var(--fc-brand), color-mix(in srgb, var(--fc-brand) 80%, #ffffff));">
             Pay <span id="pay-total-card"></span>
           </button>
         </div>
@@ -146,7 +160,7 @@
       </div>
 
       <div class="rounded-2xl border border-yellow-400/20 bg-black/40 p-4 text-xs text-yellow-100/90">
-        💡 <strong>Where it goes:</strong> gym time, tournament travel, academic support, and gear for our student-athletes.
+        💡 <strong>Where it goes:</strong> gym time, tournament travel, academic support, and gear.
       </div>
 
       <div id="success-box" class="hidden rounded-2xl border border-green-400/25 bg-green-900/20 p-4 text-sm text-green-200">
@@ -162,9 +176,7 @@
   #donation-modal[open] #donate-box{ animation: dm-pop .22s cubic-bezier(.18,.89,.32,1.28) }
   @keyframes dm-pop{ from{opacity:0; transform:translateY(6px) scale(.98)} to{opacity:1; transform:none} }
   .pm-tab[data-active="true"]{ outline: 2px solid color-mix(in srgb, var(--fc-brand) 55%, #fde68a) }
-  @media (prefers-reduced-motion: reduce){
-    #donation-modal[open] #donate-box{ animation: none !important; }
-  }
+  @media (prefers-reduced-motion: reduce){ #donation-modal[open] #donate-box{ animation: none !important } }
 </style>
 
 <script nonce="{{ NONCE }}">
@@ -435,7 +447,7 @@
     return data.client_secret;
   }
 
-  payCardBtn.addEventListener('click', async () => {
+  document.getElementById('pay-card').addEventListener('click', async () => {
     clearErr();
     const { base, total } = getAmount();
     if (!isFinite(total) || total < MIN) { showErr(`Minimum is $${MIN}.`); return; }
@@ -490,7 +502,7 @@
   }
 
   // -------------- PayPal (Orders v2) --------------
-  payPPBtn.addEventListener('click', async () => {
+  document.getElementById('pay-paypal').addEventListener('click', async () => {
     clearErr();
     const { base, total } = getAmount();
     if (!isFinite(total) || total < MIN) { showErr(`Minimum is $${MIN}.`); return; }
@@ -525,7 +537,7 @@
       }
       window.dispatchEvent(new CustomEvent('fc:donation:success', { detail: { amount, total } }));
       window.dispatchEvent(new CustomEvent('fc:vip', { detail: { name: (nameI.value||'VIP Supporter'), amount } }));
-      // Optimistic meter bump (raise by amount; downstream can reconcile)
+      // Optimistic meter bump
       window.dispatchEvent(new CustomEvent('fc:meter:update', { detail: { raised: amount } }));
       noteI.value = '';
       setTimeout(() => {
@@ -542,7 +554,7 @@
     for (const n of a) out.push(chars[n%chars.length]); return out.join('');
   }
 
-  // Prefill when other components dispatch an open event
+  // Prefill via event
   window.addEventListener('fc:donate:open', (ev)=>{
     const d = ev.detail || {};
     if (d.amount){ amountBtns.forEach(x=>x.classList.remove('is-on')); custom.value = String(d.amount); }

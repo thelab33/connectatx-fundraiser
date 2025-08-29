@@ -8,8 +8,10 @@ from __future__ import annotations
 import uuid as _uuid
 
 from sqlalchemy import CheckConstraint, Index
+
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
@@ -89,8 +91,12 @@ class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
     )
 
     # Relationships
-    campaign_goal = db.relationship("CampaignGoal", backref=db.backref("transactions", lazy="dynamic"))
-    sponsor = db.relationship("Sponsor", backref=db.backref("transactions", lazy="dynamic"))
+    campaign_goal = db.relationship(
+        "CampaignGoal", backref=db.backref("transactions", lazy="dynamic")
+    )
+    sponsor = db.relationship(
+        "Sponsor", backref=db.backref("transactions", lazy="dynamic")
+    )
 
     # Convenience
     @property
@@ -99,4 +105,3 @@ class Transaction(db.Model, TimestampMixin, SoftDeleteMixin):
 
     def __repr__(self) -> str:  # pragma: no cover
         return f"<Transaction {self.uuid} ${self.amount_dollars:,.2f} status={self.status}>"
-

@@ -5,13 +5,13 @@ User model — FundChamps SaaS authentication & role management.
 from __future__ import annotations
 
 import uuid
-from typing import Optional
 
 from flask_login import UserMixin
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db
-from .mixins import TimestampMixin, SoftDeleteMixin
+
+from .mixins import SoftDeleteMixin, TimestampMixin
 
 
 class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
@@ -100,10 +100,11 @@ class User(db.Model, UserMixin, TimestampMixin, SoftDeleteMixin):
 
     @property
     def display_name(self) -> str:
-        return self.name or (self.email.split("@")[0] if self.email else f"User-{self.id}")
+        return self.name or (
+            self.email.split("@")[0] if self.email else f"User-{self.id}"
+        )
 
     # ── Repr ────────────────────────────────────────────────────
     def __repr__(self) -> str:  # pragma: no cover
         role = "Admin" if self.is_admin else "Sponsor"
         return f"<User {self.email} ({role})>"
-

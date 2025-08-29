@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set page_description = "Developer styleguide — components & tokens preview." %}
 {% block head_title %}Styleguide — {{ super() }}{% endblock %}
 

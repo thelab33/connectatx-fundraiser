@@ -1,8 +1,10 @@
 import os
+
 import stripe
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, current_app, jsonify, request
+
 from app import db, socketio
-from app.models import Sponsor, Transaction, CampaignGoal
+from app.models import CampaignGoal, Sponsor, Transaction
 
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 DOMAIN = os.getenv("DOMAIN", "http://localhost:5000")
@@ -27,14 +29,18 @@ def create_checkout():
         session = stripe.checkout.Session.create(
             mode="payment",
             payment_method_types=["card", "us_bank_account", "link"],
-            line_items=[{
-                "price_data": {
-                    "currency": "usd",
-                    "unit_amount": amount_cents,
-                    "product_data": {"name": f"Sponsorship — {data.get('name', 'Anonymous')}"},
-                },
-                "quantity": 1,
-            }],
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "usd",
+                        "unit_amount": amount_cents,
+                        "product_data": {
+                            "name": f"Sponsorship — {data.get('name', 'Anonymous')}"
+                        },
+                    },
+                    "quantity": 1,
+                }
+            ],
             customer_email=data.get("email"),
             metadata={
                 "sponsor_name": data.get("name", "Anonymous"),
@@ -46,7 +52,9 @@ def create_checkout():
         )
         return jsonify({"url": session.url})
     except Exception as e:
-        current_app.logger.error(f"[Stripe] Checkout session creation failed: {e}", exc_info=True)
+        current_app.logger.error(
+            f"[Stripe] Checkout session creation failed: {e}", exc_info=True
+        )
         return jsonify(error="Failed to create session"), 500
 
 
@@ -90,14 +98,13 @@ def _handle_checkout_completed(session):
 
     # Idempotency: check if this sponsor & amount already exist
     if Sponsor.query.filter_by(name=name, amount=amount_cents // 100).first():
-        current_app.logger.info(f"[Stripe] Duplicate webhook ignored for sponsor: {name}")
+        current_app.logger.info(
+            f"[Stripe] Duplicate webhook ignored for sponsor: {name}"
+        )
         return
 
     sponsor = Sponsor(
-        name=name,
-        email=email,
-        amount=amount_cents // 100,
-        status="approved"
+        name=name, email=email, amount=amount_cents // 100, status="approved"
     )
     db.session.add(sponsor)
 
@@ -116,11 +123,14 @@ def _handle_checkout_completed(session):
     db.session.commit()
 
     socketio.emit("new_donation", {"name": name, "amount": amount_cents // 100})
-    socketio.emit("new_sponsor", {
-        "name": name,
-        "amount": amount_cents // 100,
-        "goal_total": goal.total if goal else None,
-    })
+    socketio.emit(
+        "new_sponsor",
+        {
+            "name": name,
+            "amount": amount_cents // 100,
+            "goal_total": goal.total if goal else None,
+        },
+    )
 
 
 def _handle_payment_succeeded(intent):
@@ -130,10 +140,11 @@ def _handle_payment_succeeded(intent):
 
     sponsor = Sponsor.query.filter_by(payment_intent=payment_id).first()
     if not sponsor:
-        current_app.logger.warning(f"[Stripe] No sponsor linked to payment ID: {payment_id}")
+        current_app.logger.warning(
+            f"[Stripe] No sponsor linked to payment ID: {payment_id}"
+        )
         return
 
     sponsor.amount_paid = amount_received
     sponsor.payment_status = "completed"
     db.session.commit()
-
