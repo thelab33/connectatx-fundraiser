@@ -1,0 +1,1 @@
+# Contrast Report\n\n- text-1 on bg: **1.02** → Fail\n- text-2 on bg: **1.22** → Fail\n- text-3 on bg: **1.5** → Fail\n- text-1 on surface-1: **1.0** → Fail\n- text-1 on surface-2: **1.04** → Fail\n- text-1 on surface-3: **1.1** → Fail\n\n- Distance bg ↔ outline: 0.23 (>= .08 recommended)\n- Distance bg ↔ surface-2: 0.06 (>= .08 recommended)

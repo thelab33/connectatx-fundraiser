@@ -1,0 +1,428 @@
+{# ============================================================================
+   FundChamps • SaaS Base (SV-Elite 4.5-P2P • Starforge v2.1)
+   - Safer macros (no empty filename bugs)
+   - Absolute assets for OG/Twitter/JSON-LD
+   - Dual theme-color, P2P-aware SEO
+   - One (1) extra_head block (fixes {{ super() }} errors)
+   - Starforge include with render guard
+   - Web Vitals + unified analytics
+   ============================================================================ #}
+{% set _TEAM        = team|default(_team|default({})) %}
+{% set _brand_hex   = _TEAM.theme_color|default('#f2c94c') %}
+{% set _brand_name  = _TEAM.team_name|default('Connect ATX Elite') %}
+{% set _brand_slug  = (_TEAM.team_slug|default(_brand_name))|lower|replace(' ', '-')|replace('--','-') %}
+{% set _route       = request.endpoint if request is defined else '' %}
+{% set _is_donate   = (_route == 'main.donate') %}
+{% set _ver         = ASSET_VER|default(ASSET_VERSION|default(VERSION|default(None))) %}
+{% set SRI          = SRI|default({}) %}
+{% set NONCE        = NONCE|default(csp_nonce() if csp_nonce is defined else '') %}
+{% set _og_img      = _TEAM.og_image|default('images/og_default.jpg') %}
+{% set _favicon     = _TEAM.favicon|default('images/favicon.svg') %}
+{% set _apple_icon  = _TEAM.apple_icon|default('images/apple-touch-icon.png') %}
+{% set _desc_default= 'Fuel the season. Fund the future.' %}
+{% set _page_title  = (
+      _is_donate and _TEAM.og_title_donate
+   ) or _TEAM.og_title
+   or (_is_donate and (_brand_name ~ ' — Donate'))
+   or (_brand_name ~ ' — Fundraiser') %}
+{% set _page_desc   = (
+      _is_donate and _TEAM.og_description_donate
+   ) or _TEAM.og_description
+   or _desc_default %}
+{% set USE_SOCKETIO = USE_SOCKETIO|default(false) %}
+{% set _manifest    = WEB_MANIFEST|default(None) %}
+{% set GA_ID        = GA_ID|default(None) %}
+{% set POSTHOG_KEY  = POSTHOG_KEY|default(None) %}
+{% set POSTHOG_HOST = POSTHOG_HOST|default('https://app.posthog.com') %}
+
+{# --- P2P context --- #}
+{% set PEER          = peer|default(_peer|default({})) %}
+{% set P2P_CAMPAIGN  = campaign|default(_campaign|default({})) %}
+{% set _peer_name    = PEER.display_name|default(PEER.name|default(None)) %}
+{% set _peer_slug    = (PEER.slug|default(_peer_name|default(''))) and (PEER.slug|default(_peer_name|default(''))|lower|replace(' ', '-')|replace('--','-')) or None %}
+{% set _peer_img     = PEER.avatar_url|default(PEER.photo_url|default(None)) %}
+{% set _is_p2p       = (_peer_name or P2P_CAMPAIGN) and true or false %}
+
+{# --- helpers --- #}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% macro sri(path)   -%}{{ SRI.get(path) if SRI else None }}{%- endmacro %}
+
+{# Safe asset helper: requires a filename; won’t call url_for with only v= #}
+{% macro asset(path) -%}
+  {%- if path and path|length -%}
+    {{ url_for('static', filename=path, v=_ver if _ver else None) }}
+  {%- else -%}
+    {{ '' }}
+  {%- endif -%}
+{%- endmacro %}
+
+{# Absolute URL for social cards/JSON-LD #}
+{% macro asset_abs(path) -%}
+  {%- set rel = asset(path) -%}
+  {%- if rel and rel[:4] == 'http' or (rel and rel[:2] == '//') -%}
+    {{ rel }}
+  {%- elif request is defined and rel -%}
+    {{ (request.url_root ~ rel.lstrip('/')) }}
+  {%- else -%}
+    {{ rel or '' }}
+  {%- endif -%}
+{%- endmacro %}
+
+<!doctype html>
+<html lang="en" class="h-full antialiased scroll-smooth selection:bg-white/20"
+      data-theme="dark" data-brand="{{ _brand_slug }}" data-route="{{ _route|default('') }}">
+<head>
+  <!-- Core meta -->
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="color-scheme" content="dark light"/>
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/>
+  <meta name="csrf-token" content="{{ (csrf_token() if csrf_token is defined else '') }}"/>
+
+  <!-- Dual theme-color for PWA bars -->
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ _brand_hex }}"/>
+  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b0b0c" id="meta-theme-color"/>
+
+  {% if request is defined %}
+    <link rel="canonical" href="{{ request.base_url }}"/>
+    <meta property="og:url" content="{{ request.base_url }}"/>
+  {% endif %}
+
+  <!-- SEO (P2P-aware OG/Twitter) -->
+  <title>{% block title %}{{ _page_title }}{% endblock %}</title>
+  <meta name="description" content="{{ _page_desc }}"/>
+
+  {% set _og_kind       = _is_p2p and 'profile' or 'website' %}
+  {% set _og_img_final  = _peer_img or _og_img %}
+  {% set _og_title_final= (_is_p2p and (_peer_name ~ ' — ' ~ _brand_name)) or _page_title %}
+  {% set _og_desc_final = (_is_p2p and (_desc_default ~ ' Support ' ~ (_peer_name or 'our team') ~ '.')) or _page_desc %}
+
+  <meta property="og:type" content="{{ _og_kind }}"/>
+  <meta property="og:site_name" content="{{ _brand_name }}"/>
+  <meta property="og:title" content="{{ _og_title_final }}"/>
+  <meta property="og:description" content="{{ _og_desc_final }}"/>
+  <meta property="og:image" content="{{ asset_abs(_og_img_final) }}"/>
+  <meta property="og:image:alt" content="{{ _brand_name }}"/>
+
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="{{ _og_title_final }}"/>
+  <meta name="twitter:description" content="{{ _og_desc_final }}"/>
+  <meta name="twitter:image" content="{{ asset_abs(_og_img_final) }}"/>
+  <meta name="twitter:image:alt" content="{{ _brand_name }}"/>
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="{{ asset(_favicon) }}"/>
+  <link rel="alternate icon" type="image/png" href="{{ asset('images/favicon.png') }}"/>
+  <link rel="apple-touch-icon" href="{{ asset(_apple_icon) }}"/>
+  <meta name="apple-mobile-web-app-title" content="{{ _brand_name }}"/>
+
+  {% if _manifest %}
+    <link rel="manifest" href="{{ asset(_manifest) }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  {% endif %}
+
+  <!-- Hints -->
+  <link rel="preconnect" href="https://js.stripe.com" crossorigin>
+  <link rel="dns-prefetch" href="https://js.stripe.com">
+  <link rel="preconnect" href="https://www.paypal.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.paypal.com">
+  {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
+
+  <!-- CSS bundle(s) -->
+  <link rel="stylesheet" href="{{ asset('css/app.min.css') }}"
+        {% if sri('css/app.min.css') %}integrity="{{ sri('css/app.min.css') }}" crossorigin="anonymous"{% endif %}/>
+  <link rel="stylesheet" href="{{ asset('css/starforge.min.css') }}"/>
+
+  <!-- Layout layer: small, safe overrides -->
+  <style {{ nonce_attr() }}>
+    :root{
+      --fc-brand: {{ _brand_hex }};
+      --fc-gold:  var(--fc-brand);
+      --fc-ink:   #0B0B10;
+      --fc-ash:   #1B1E26;
+      --fc-coal:  #111318;
+
+      --container-max: 1200px;
+      --container-reading: 72ch;
+      --radius-xl: 1.25rem;
+      --gutter: clamp(16px, 4vw, 40px);
+      --section-y: clamp(2.25rem, 6vw, 6rem);
+      --sticky-offset: clamp(56px, 8vh, 80px);
+
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    .container{ max-width:var(--container-max); margin-inline:auto; padding-inline:var(--gutter); }
+    .container-wide{ max-width: calc(var(--container-max) + 180px); }
+    .container-narrow{ max-width:min(var(--container-reading), var(--container-max)); }
+    .section{ padding-block: var(--section-y); }
+    .section--tight{ padding-block: calc(var(--section-y) * .6); }
+    .section--loose{ padding-block: calc(var(--section-y) * 1.35); }
+    .section--flush-top{ padding-top:0 !important; }
+    .seam-header{ margin-top: calc(-1 * var(--sticky-offset)); padding-top: var(--sticky-offset); }
+    .bleed-x{ position:relative; left:50%; right:50%; margin-left:-50vw; margin-right:-50vw; width:100vw; }
+    .stack > * + *{ margin-top: clamp(1rem, 2vw, 1.75rem); }
+    .tight > * + *{ margin-top: .75rem; }
+    .bg-ash{ background: var(--fc-ash); }
+    .bg-coal{ background: var(--fc-coal); }
+    .bg-gold{ background: var(--fc-gold); }
+    .text-ink{ color: var(--fc-ink); }
+    .text-gold{ color: var(--fc-gold); }
+    .grid-auto{ display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap: clamp(12px,2vw,24px); }
+    .card{
+      background: linear-gradient(180deg,#161922 0%, #0F1117 100%);
+      border:1px solid rgba(255,255,255,.07);
+      border-radius: var(--radius-xl);
+      padding:20px;
+      display:flex; flex-direction:column;
+    }
+    .card > .grow{ flex:1; }
+    .badge{
+      display:inline-flex; align-items:center; gap:.5rem;
+      background: color-mix(in srgb, var(--fc-gold) 12%, transparent);
+      color: var(--fc-gold);
+      border:1px solid color-mix(in srgb, var(--fc-gold) 35%, transparent);
+      padding:.35rem .6rem; border-radius:999px; font-weight:600; font-size:.8rem;
+    }
+    .divider{ height:1px; background:rgba(255,255,255,.06) }
+    .shadow-soft{ box-shadow:0 10px 30px rgba(0,0,0,.35) }
+    .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
+    :focus-visible{ outline:2px solid color-mix(in srgb, var(--fc-gold) 65%, transparent); outline-offset:2px; }
+    section[aria-labelledby], section[id]{ scroll-margin-top: var(--sticky-offset); }
+    html, body{ overflow-x:hidden; }
+    .section[data-lazy]{ content-visibility:auto; contain-intrinsic-size:600px; }
+    @media (prefers-reduced-motion: reduce){
+      *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
+    }
+    @media (prefers-contrast: more){ .card{ background:#0f1117; border-color:#fff; } }
+    @media print{
+      header, footer, [role="dialog"]{ display:none !important; }
+      .bleed-x{ margin:0; width:auto; left:auto; right:auto; }
+      .section{ padding-block:1rem; }
+    }
+  </style>
+
+  {# --- JSON-LD (Organization + Person (peer) + DonateAction) --- #}
+  <script type="application/ld+json" {{ nonce_attr() }}>
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "{{ _brand_name|e }}",
+        {% if request is defined %}"url": "{{ request.base_url }}",{% endif %}
+        "logo": "{{ asset_abs(_og_img) }}",
+        "brand": "{{ _brand_slug|e }}"{% if _TEAM and (_TEAM.instagram or _TEAM.facebook or _TEAM.twitter or _TEAM.website) %},
+        "sameAs": [
+          {% if _TEAM.website %}"{{ _TEAM.website }}"{% if _TEAM.instagram or _TEAM.facebook or _TEAM.twitter %},{% endif %}{% endif %}
+          {% if _TEAM.instagram %}"{{ _TEAM.instagram }}"{% if _TEAM.facebook or _TEAM.twitter %},{% endif %}{% endif %}
+          {% if _TEAM.facebook %}"{{ _TEAM.facebook }}"{% if _TEAM.twitter %},{% endif %}{% endif %}
+          {% if _TEAM.twitter %}"{{ _TEAM.twitter }}"{% endif %}
+        ]{% endif %}
+      }
+      {% if _is_p2p and _peer_name %},
+      {
+        "@type": "Person",
+        "name": "{{ _peer_name|e }}"{% if _peer_img %},
+        "image": "{{ asset_abs(_peer_img) }}"{% endif %}
+      }
+      {% endif %},
+      {
+        "@type": "DonateAction",
+        "name": "Donate to {{ _brand_name|e }}{% if _is_p2p and _peer_name %} — {{ _peer_name|e }}{% endif %}",
+        "recipient": { "@type": "Organization", "name": "{{ _brand_name|e }}" },
+        "target": { "@type": "EntryPoint", "urlTemplate": "{% if request is defined %}{{ request.base_url }}{% else %}/donate{% endif %}" }
+      }
+    ]
+  }
+  </script>
+
+  {# --- Analytics (optional) --- #}
+  {% if GA_ID %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA_ID }}"></script>
+    <script {{ nonce_attr() }}>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', '{{ GA_ID }}', { anonymize_ip: true, send_page_view: true });
+    </script>
+  {% endif %}
+  {% if POSTHOG_KEY %}
+    <script {{ nonce_attr() }}>
+      !function(d,w){var p=w.posthog||(w.posthog=[]),s=d.createElement("script");s.async=true;
+        s.src=("{{ POSTHOG_HOST }}".replace(/\/$/,"")||"https://app.posthog.com")+"/static/array.js";
+        var x=d.getElementsByTagName("script")[0]; x.parentNode.insertBefore(s,x);
+        p.init && p.init('{{ POSTHOG_KEY }}', { api_host: '{{ POSTHOG_HOST }}' });
+      }(document, window);
+    </script>
+  {% endif %}
+
+  <script {{ nonce_attr() }}>
+    window.fcTrack = function(event, props){
+      try { window.dataLayer && window.dataLayer.push({ event, ...(props||{}) }); } catch {}
+      try { window.posthog && window.posthog.capture && window.posthog.capture(event, props||{}); } catch {}
+    };
+  </script>
+
+  {# Starforge include + idempotent render guard #}
+  {% block extra_head %}
+    {% if _rendered is not defined %}
+      {% set _rendered = namespace(hero=false, pulse=false, impact=false, tiers=false, about=false, concierge=false, bundles=false) %}
+    {% elif _rendered.bundles is not defined %}
+      {% set _rendered = namespace(hero=_rendered.hero, pulse=_rendered.pulse, impact=_rendered.impact, tiers=_rendered.tiers, about=_rendered.about, concierge=_rendered.concierge, bundles=false) %}
+    {% endif %}
+    {% if not _rendered.bundles %}
+      {% set _rendered.bundles = true %}
+      {% include "bundles/fundchamps_starforge_ui_ux_elite_enhancement_v3.html" ignore missing with context %}
+    {% endif %}
+    {{ super() }}
+  {% endblock %}
+</head>
+
+<body class="min-h-full bg-[color:var(--fc-ink)] text-zinc-100">
+  {# Render guard & skip link #}
+  {% if _rendered is not defined %}
+    {% set _rendered = namespace(hero=false, pulse=false, impact=false, tiers=false, about=false, concierge=false, bundles=_rendered.bundles if _rendered is defined else false) %}
+  {% endif %}
+  <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-black focus:text-white">Skip to content</a>
+
+  {% block header %}{% include "partials/header_and_announcement.html" ignore missing with context %}{% endblock %}
+  {% block above_main %}{% endblock %}
+
+  <main id="main" role="main" class="relative" tabindex="-1">
+    <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
+    <p id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+
+    {% block section_ticker %}{% endblock %}
+    {% block section_hero %}{% endblock %}
+    {% block section_pulse %}{% endblock %}
+    {% block section_impact %}{% endblock %}
+    {% block section_tiers %}{% endblock %}
+    {% block section_about %}{% endblock %}
+    {% block section_concierge %}{% endblock %}
+    {% block sections_extra %}{% endblock %}
+
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block below_main %}{% endblock %}
+  {% block footer %}{% include "partials/footer.html" ignore missing with context %}{% endblock %}
+
+  {% block modals %}
+    {% include "partials/donation_modal.html" ignore missing %}
+    {% include "partials/newsletter.html"      ignore missing %}
+  {% endblock %}
+
+  {# --- Preload primary bundle (non-blocking) --- #}
+  <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}"
+        {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}>
+
+  {# Preload stats/tiers to speed first CTA #}
+  <link rel="preload" as="fetch"
+        href="{% if safe_url_for is defined and has_endpoint('main.stats_json') %}{{ safe_url_for('main.stats_json') }}{% else %}/stats{% endif %}"
+        crossorigin="anonymous">
+
+  <!-- JS bundles -->
+  <script id="fc-bundle" src="{{ asset('js/bundle.min.js') }}" defer
+          data-ver="{{ _ver or '' }}"
+          {% if sri('js/bundle.min.js') %}integrity="{{ sri('js/bundle.min.js') }}" crossorigin="anonymous"{% endif %}></script>
+
+  {% if _is_donate %}
+    <script id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
+            {% if sri('js/donate.min.js') %}integrity="{{ sri('js/donate.min.js') }}" crossorigin="anonymous"{% endif %}></script>
+  {% endif %}
+
+  {% if USE_SOCKETIO %}
+    <script src="/socket.io/socket.io.js" defer></script>
+  {% endif %}
+
+  {# --- P2P Referrals & Link Propagation --- #}
+  <script {{ nonce_attr() }}>
+  (() => {
+    if (window.__fcP2P) return; window.__fcP2P = true;
+    const qs = new URLSearchParams(location.search);
+    const REF_KEYS = ['ref','ref_id','referrer','r','invite'];
+    const P2P_KEYS = ['peer','peer_id','peer_slug','p2p','campaign','campaign_id'];
+    const ctx = {
+      peer: "{{ _peer_slug or '' }}",
+      campaign: "{{ (P2P_CAMPAIGN.slug or P2P_CAMPAIGN.id)|default('') }}",
+      team: "{{ _brand_slug }}"
+    };
+    [...REF_KEYS, ...P2P_KEYS].forEach(k => { const v = qs.get(k); if (v) ctx[k] = v; });
+    try { localStorage.setItem('fc_ref_ctx', JSON.stringify(ctx)); } catch {}
+    try { document.cookie = "fc_ref="+encodeURIComponent(ctx.ref||ctx.ref_id||ctx.r||'')+"; Path=/; Max-Age="+(60*60*24*60)+"; SameSite=Lax"; } catch {}
+    try { window.fcCtx = Object.assign({}, window.fcCtx||{}, { p2p: ctx }); } catch {}
+    function decorate(url){
+      try{ const u=new URL(url,location.origin);
+        ['ref','ref_id','r','invite','peer','peer_id','peer_slug','campaign','campaign_id'].forEach(k=>{ const v=ctx[k]; if(v) u.searchParams.set(k,v); });
+        return u.toString();
+      }catch{ return url; }
+    }
+    addEventListener('click', (e) => {
+      const a = e.target.closest && e.target.closest('a[href]'); if (!a) return;
+      const href = a.getAttribute('href'); if (!href) return;
+      const internal = href.startsWith('/') && !href.startsWith('//');
+      if (!internal) return;
+      if (/\/donate\b/.test(href) || /\b(sponsor|tiers|checkout)\b/.test(href)){
+        a.setAttribute('href', decorate(href));
+      }
+    }, { capture:true, passive:true });
+    addEventListener('fc:donate:open', (ev) => { try { ev.detail = Object.assign({}, ev.detail||{}, { p2p: ctx }); } catch {} });
+    try { window.fcTrack && window.fcTrack('p2p_page', ctx); } catch {}
+  })();
+  </script>
+
+  {# --- Boot + Web Vitals --- #}
+  <script {{ nonce_attr() }}>
+  (() => {
+    if (window.__fcBoot2) return; window.__fcBoot2 = true;
+    window.fcReady = (fn) => (document.readyState === 'loading')
+      ? document.addEventListener('DOMContentLoaded', fn, { once:true })
+      : queueMicrotask(fn);
+    window.fcEmit = function(evt, detail){ try { window.dispatchEvent(new CustomEvent(evt, { detail: detail||{} })); } catch {} };
+    try{ const ab=(new URLSearchParams(location.search).get('ab')||'').toLowerCase();
+      if (ab==='monthly'||ab==='once') localStorage.setItem('fc_tiers_price_mode',ab);
+    }catch{}
+    fcReady(() => { window.fcTrack && window.fcTrack('page_ready', { route: document.documentElement.dataset.route||'', brand: document.documentElement.dataset.brand||'' }); });
+    addEventListener('load', () => {
+      try{ const t=performance.timing; const ttfb=(t.responseStart&&t.requestStart)?(t.responseStart-t.requestStart):undefined;
+        window.fcTrack && window.fcTrack('page_loaded', { route: document.documentElement.dataset.route||'', ttfb });
+      }catch{}
+    }, { once:true });
+
+    try {
+      const po = new PerformanceObserver((list) => {
+        list.getEntries().forEach((e) => {
+          let metric, val;
+          if (e.entryType==='paint' && e.name==='first-contentful-paint'){ metric='FCP'; val=e.startTime; }
+          if (e.entryType==='largest-contentful-paint'){ metric='LCP'; val=e.startTime; }
+          if (metric) window.fcTrack && window.fcTrack('web_vital', { metric, value: Math.round(val) });
+        });
+      });
+      po.observe({type:'paint', buffered:true});
+      po.observe({type:'largest-contentful-paint', buffered:true});
+
+      const po2 = new PerformanceObserver((list) => {
+        let last; list.getEntries().forEach(e => { last = e; });
+        if (last) window.fcTrack && window.fcTrack('web_vital', { metric:'INP', value: Math.round(last.duration) });
+      });
+      po2.observe({ type:'event', buffered:true, durationThreshold:40 });
+    } catch {}
+  })();
+  </script>
+
+  {# Starforge before-</body> include (honors render guard) #}
+  {% block body_scripts %}
+    {% if _rendered and _rendered.bundles %}
+      {% include "partials/starforge_patch_include.html" ignore missing with context %}
+    {% endif %}
+    {{ super() }}
+  {% endblock %}
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+

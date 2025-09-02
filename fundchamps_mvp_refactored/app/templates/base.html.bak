@@ -1,0 +1,305 @@
+{# =======================================================================
+   FundChamps • SaaS Base (SV-Elite 3.4 — Apple-clean, CSP-safe, self-hosted font)
+   - One CSS (output.css). CSP-safe nonce, SRI-ready.
+   - Neutral chrome. Brand color via --fc-brand.
+   - Single skip-link in base for a11y.
+   - Strong SEO/OG/JSON-LD. PWA optional. Motion/contrast safe.
+   - New: Self-hosted "FC Oldstyle" serif (EB Garamond variable) + preloads.
+   ======================================================================= #}
+{% set _TEAM = team if team is defined else (_team if _team is defined else {}) %}
+{% set _brand_hex  = (_TEAM.theme_color if _TEAM and _TEAM.theme_color else '#facc15') %}
+{% set _brand_name = (_TEAM.team_name  if _TEAM and _TEAM.team_name  else 'Connect ATX Elite') %}
+{% set _brand_slug = (_TEAM.team_slug  if _TEAM and _TEAM.team_slug  else _brand_name)|lower|replace(' ', '-')|replace('--','-') %}
+{% set _route      = (request.endpoint if request is defined else '') %}
+{% set _is_donate  = (_route == 'main.donate') %}
+{% set _ver        = ASSET_VER if ASSET_VER is defined else (ASSET_VERSION if ASSET_VERSION is defined else (VERSION if VERSION is defined else None)) %}
+{% set SRI         = SRI if SRI is defined else {} %}
+{% set NONCE       = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _og_img     = _TEAM.og_image  if _TEAM and _TEAM.og_image  else 'images/og_default.jpg' %}
+{% set _favicon    = _TEAM.favicon   if _TEAM and _TEAM.favicon   else 'images/favicon.svg' %}
+{% set _apple_icon = _TEAM.apple_icon if _TEAM and _TEAM.apple_icon else 'images/apple-touch-icon.png' %}
+{% set _desc_default = 'Fuel the season. Fund the future.' %}
+{% set _page_title = (
+      (_is_donate and (_TEAM.og_title_donate if _TEAM and _TEAM.og_title_donate))
+   or (_TEAM.og_title if _TEAM and _TEAM.og_title)
+   or (_is_donate and (_brand_name ~ ' — Donate'))
+   or (_brand_name ~ ' — Fundraiser')
+) %}
+{% set _page_desc = (
+      (_is_donate and (_TEAM.og_description_donate if _TEAM and _TEAM.og_description_donate))
+   or (_TEAM.og_description if _TEAM and _TEAM.og_description)
+   or _desc_default
+) %}
+{% set USE_SOCKETIO = USE_SOCKETIO if USE_SOCKETIO is defined else false %}
+{% set _manifest = WEB_MANIFEST if WEB_MANIFEST is defined else None %}
+
+{# helpers #}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% macro sri(path) -%}{{ SRI.get(path) if SRI else None }}{%- endmacro %}
+{% macro asset(path) -%}{{ url_for('static', filename=path, v=_ver) if _ver else url_for('static', filename=path) }}{%- endmacro %}
+
+<!doctype html>
+<html lang="en"
+      class="h-full antialiased scroll-smooth selection:bg-white/20"
+      data-theme="dark" data-brand="{{ _brand_slug }}" data-route="{{ _route|default('') }}">
+<head>
+  <!-- Core meta -->
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="color-scheme" content="dark light"/>
+  <meta name="theme-color" content="#0b0b0c" id="meta-theme-color"/>
+  <meta name="referrer" content="strict-origin-when-cross-origin"/>
+  <meta name="robots" content="index,follow,max-image-preview:large"/>
+  <meta name="csrf-token" content="{{ (csrf_token() if csrf_token is defined else '') }}"/>
+
+  {% if request is defined %}
+    <link rel="canonical" href="{{ request.base_url }}"/>
+    <meta property="og:url" content="{{ request.base_url }}"/>
+  {% endif %}
+
+  <!-- SEO -->
+  <title>{% block title %}{{ _page_title }}{% endblock %}</title>
+  <meta name="description" content="{{ _page_desc }}"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:site_name" content="{{ _brand_name }}"/>
+  <meta property="og:title" content="{{ _page_title }}"/>
+  <meta property="og:description" content="{{ _page_desc }}"/>
+  <meta property="og:image" content="{{ asset(_og_img) }}"/>
+  <meta property="og:locale" content="en_US"/>
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="{{ _page_title }}"/>
+  <meta name="twitter:description" content="{{ _page_desc }}"/>
+  <meta name="twitter:image" content="{{ asset(_og_img) }}"/>
+
+  <!-- Icons -->
+  <link rel="icon" type="image/svg+xml" href="{{ asset(_favicon) }}"/>
+  <link rel="alternate icon" type="image/png" href="{{ asset('images/favicon.png') }}"/>
+  <link rel="apple-touch-icon" href="{{ asset(_apple_icon) }}"/>
+  <meta name="apple-mobile-web-app-title" content="{{ _brand_name }}"/>
+
+  <!-- PWA (optional) -->
+  {% if _manifest %}
+    <link rel="manifest" href="{{ asset(_manifest) }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  {% endif %}
+
+  <!-- Hints (mild) -->
+  <link rel="preconnect" href="https://js.stripe.com" crossorigin>
+  <link rel="dns-prefetch" href="https://js.stripe.com">
+  <link rel="preconnect" href="https://www.paypal.com" crossorigin>
+  <link rel="dns-prefetch" href="https://www.paypal.com">
+  {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
+
+  {# =====================================================================
+     CSS: SINGLE build output to prevent cascade conflicts.
+     Build from app/static/css/input.css -> output.css
+     ===================================================================== #}
+  <link rel="stylesheet" href="{{ asset('css/output.css') }}"
+        {% if sri('css/output.css') %}integrity="{{ sri('css/output.css') }}" crossorigin="anonymous"{% endif %}/>
+
+  {# =====================================================================
+     Self-hosted legacy serif (EB Garamond) — CSP-safe
+     - Preload fonts to help LCP
+     - Register @font-face with nonce
+     - Expose --fc-serif token for hero/headers
+     ===================================================================== #}
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{{ asset('fonts/ebgaramond/EBGaramond-VariableFont_wght.woff2') }}">
+  <link rel="preload" as="font" type="font/woff2" crossorigin
+        href="{{ asset('fonts/ebgaramond/EBGaramond-Italic-VariableFont_wght.woff2') }}">
+
+  <style {{ nonce_attr() }}>
+  /* FC Oldstyle — EB Garamond (variable) */
+  @font-face{
+    font-family:"FC Oldstyle";
+    src:
+      url("{{ asset('fonts/ebgaramond/EBGaramond-VariableFont_wght.woff2') }}") format("woff2-variations"),
+      url("{{ asset('fonts/ebgaramond/EBGaramond-VariableFont_wght.woff2') }}") format("woff2");
+    font-weight:300 800; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:"FC Oldstyle";
+    src:
+      url("{{ asset('fonts/ebgaramond/EBGaramond-Italic-VariableFont_wght.woff2') }}") format("woff2-variations"),
+      url("{{ asset('fonts/ebgaramond/EBGaramond-Italic-VariableFont_wght.woff2') }}") format("woff2");
+    font-weight:300 800; font-style:italic; font-display:swap;
+  }
+  /* Global font tokens */
+  :root{
+    --fc-brand: {{ _brand_hex }};
+    --fc-ring: color-mix(in srgb, var(--fc-brand) 65%, transparent);
+    --fc-sticky-offset: clamp(64px, 7.5vh, 96px);
+    --fc-serif: "FC Oldstyle","Iowan Old Style","Palatino","Book Antiqua","Hoefler Text","Garamond","Georgia",ui-serif,serif;
+    --fc-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji","Segoe UI Emoji","Segoe UI Symbol";
+  }
+
+  /* Screenreader utility */
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  :focus-visible{ outline:2px solid var(--fc-ring); outline-offset:2px; }
+
+  /* Section anchor offset for sticky header */
+  section[aria-labelledby], section[id]{ scroll-margin-top: var(--fc-sticky-offset); }
+
+  .fc-container{ width:min(88rem,96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
+
+  /* Single, global skip-link (Apple-clean) */
+  .skip-link{
+    position:absolute; left:-9999px; top:auto; width:1px; height:1px; overflow:hidden;
+  }
+  .skip-link:focus{
+    left:12px; top:8px; width:auto; height:auto;
+    padding:.5rem .75rem; border-radius:.5rem;
+    background:#111; color:#fff; z-index:100;
+    box-shadow:0 6px 16px rgb(0 0 0/.35);
+  }
+  </style>
+
+  {# ---------------------------------------------------------------------
+     Apple-clean overrides (neutral chrome)
+     --------------------------------------------------------------------- #}
+  <style {{ nonce_attr() }}>
+    :root{ --fc-accent: color-mix(in srgb, var(--fc-brand) 30%, #d9d9d9 70%); }
+
+    /* Chips & primary pills */
+    .chip{ background:rgba(255,255,255,.06)!important; border:1px solid rgba(255,255,255,.14)!important; color:#e5e7eb!important; }
+    .fc-btn-primary, .btn-primary{
+      background:#111!important; color:#fff!important; border:1px solid #000!important; box-shadow:0 8px 28px rgba(0,0,0,.25)!important;
+    }
+    .fc-btn-primary:hover, .btn-primary:hover{ filter:brightness(1.08)!important; }
+
+    /* Header/hero meters → neutral */
+    .hm-track, .hdr-meter .track{ background:rgba(255,255,255,.08)!important; box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)!important; }
+    .hm-ticks{ opacity:.28!important; }
+    .hm-fill{
+      background:linear-gradient(90deg,#e5e7eb,var(--fc-accent))!important;
+      box-shadow:0 0 10px color-mix(in srgb, var(--fc-accent) 25%, transparent)!important;
+    }
+    .hdr-meter .fill{ background:linear-gradient(90deg,#e5e7eb,#d1d5db)!important; box-shadow:none!important; }
+
+    /* Tiers cards */
+    #tiers-grid .flip-card, #tiers-grid .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))!important;
+      border:1px solid rgba(255,255,255,.12)!important;
+      box-shadow:0 25px 80px rgba(0,0,0,.35)!important;
+    }
+    #tiers-grid .badge, #tiers-grid .chip{
+      background:rgba(255,255,255,.06)!important;
+      border:1px solid rgba(255,255,255,.14)!important;
+      color:#e5e7eb!important; text-shadow:none!important;
+    }
+    #tiers-grid [data-popular], #tiers-grid .most-popular{
+      color:#e5e7eb!important; background:#111!important; border:1px solid #000!important;
+    }
+    #tiers-grid .price{ color:#f3f4f6!important; }
+
+    /* Newsletter modal */
+    .newsletter-modal, .newsletter-modal .card{
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03))!important;
+      border:1px solid rgba(255,255,255,.12)!important;
+    }
+    .newsletter-modal .title, .newsletter-modal .subtitle{ color:#e5e7eb!important; }
+    .newsletter-modal .btn-primary{ background:#111!important; color:#fff!important; border:1px solid #000!important; }
+    .newsletter-modal [class*="text-yellow"], .newsletter-modal [class*="bg-yellow"]{ color:inherit!important; background:transparent!important; }
+
+    /* Sticky microbar */
+    #fundraiser-panel .chip, #fundraiser-panel .btn, #fundraiser-panel [class*="bg-yellow"]{
+      background:#111!important; color:#fff!important; border:1px solid #000!important;
+    }
+
+    /* Sponsor rail pills */
+    .rail-item{
+      background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04))!important;
+      border:1px solid rgba(255,255,255,.16)!important; color:#e5e7eb!important;
+    }
+    .rail-cta{
+      background:linear-gradient(90deg,#e5e7eb,#d9d9d9)!important; color:#0b0b0c!important; border:1px solid rgba(0,0,0,.16)!important;
+    }
+  </style>
+
+  <!-- Tiny early JS (theme + compact density) -->
+  <script nonce="{{ NONCE }}" {{ nonce_attr() }}>
+    (() => {
+      try{
+        const qs = new URLSearchParams(location.search);
+        if (qs.get('dense')==='1') localStorage.setItem('fc:dense','1');
+        if (qs.get('dense')==='0') localStorage.removeItem('fc:dense');
+        if (localStorage.getItem('fc:dense')==='1') document.documentElement.dataset.compact = '1';
+      }catch{}
+      const BRAND='{{ _brand_hex }}', meta=document.getElementById('meta-theme-color');
+      const apply=()=>{ const dark=matchMedia?.('(prefers-color-scheme: dark)').matches ?? true;
+        if(meta) meta.content = dark ? '#0b0b0c' : BRAND; };
+      apply(); matchMedia?.('(prefers-color-scheme: dark)')?.addEventListener('change', apply);
+    })();
+  </script>
+
+  <!-- JSON-LD -->
+  <script {{ nonce_attr() }} type="application/ld+json">
+    {"@context":"https://schema.org","@type":"Organization",
+     "name":{{ _brand_name|tojson }},
+     "url":{{ (request.base_url if request is defined else '/')|tojson }},
+     "logo":{{ asset(_og_img)|tojson }}}
+  </script>
+  {% if _is_donate %}
+  <script {{ nonce_attr() }} type="application/ld+json">
+    {"@context":"https://schema.org","@type":"DonateAction",
+     "name":"Donate to {{ _brand_name }}",
+     "target":{{ (request.base_url if request is defined else '/donate')|tojson }}}
+  </script>
+  {% endif %}
+
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="min-h-full bg-zinc-950 text-zinc-100">
+  {# Single, proper skip link (replaces any raw text) #}
+  <a href="#main" class="skip-link">Skip to content</a>
+
+  {# Header (meter + marquee; Apple-clean buttons live in the partial) #}
+  {% block header %}{% include "partials/header_and_announcement.html" ignore missing with context %}{% endblock %}
+
+  {% block above_main %}{% endblock %}
+
+  <main id="main" role="main" class="relative" tabindex="-1">
+    <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
+
+    {# Product page slots (compose per page) #}
+    {% block section_ticker %}{% endblock %}
+    {% block section_hero %}{% endblock %}
+    {% block section_tiers %}{% endblock %}
+    {% block section_impact %}{% endblock %}
+    {% block section_allocation %}{% endblock %}
+    {% block section_about %}{% endblock %}
+    {% block section_mid_cta %}{% endblock %}
+    {% block section_concierge %}{% endblock %}
+    {% block sections_extra %}{% endblock %}
+
+    {# Back-compat content slot #}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% block below_main %}{% endblock %}
+
+  {% block footer %}{% include "partials/footer.html" ignore missing with context %}{% endblock %}
+
+  {% block modals %}
+    {% include "partials/donation_modal.html" ignore missing %}
+    {% include "partials/newsletter.html"      ignore missing %}
+  {% endblock %}
+
+  {# JS: one main bundle + optional donate + optional socket.io #}
+  <script nonce="{{ NONCE }}" src="{{ asset('js/bundle.min.js') }}" defer
+          {% if sri('js/bundle.min.js') %}integrity="{{ sri('js/bundle.min.js') }}" crossorigin="anonymous"{% endif %}></script>
+  {% if _is_donate %}
+    <script nonce="{{ NONCE }}" src="{{ asset('js/donate.min.js') }}" defer
+            {% if sri('js/donate.min.js') %}integrity="{{ sri('js/donate.min.js') }}" crossorigin="anonymous"{% endif %}></script>
+  {% endif %}
+  {% if USE_SOCKETIO %}
+    <script nonce="{{ NONCE }}" src="/socket.io/socket.io.js" defer></script>
+  {% endif %}
+
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
+

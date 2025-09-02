@@ -456,6 +456,9 @@ def about():
             500,
         )
 
+@bp.get("/dev/stripe-smoke")
+def stripe_smoke():
+    return render_template("dev/stripe_smoke.html")
 
 @bp.get("/sponsors")
 def sponsor_list():

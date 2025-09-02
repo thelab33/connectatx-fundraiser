@@ -1,18 +1,31 @@
 {
   "version": {
-    "git": "ea59b6aa",
-    "builtAt": "2025-08-22T14:12:17.827Z",
+    "git": "920a5a27",
+    "builtAt": "2025-09-02T01:16:24.140Z",
     "mode": "production"
   },
-  "js": {
-    "bundle": {
+  "assets": {
+    "js/bundle.min.js": {
       "path": "app/static/js/bundle.min.js",
-      "bytes": 3013,
-      "gzipBytes": 1549,
+      "bytes": 10383,
+      "gzipBytes": 4367,
       "sri": {
-        "sha256": "sha256-M4XP5LjPK9jYe7THdnyhdiF5zvZ8mE9TqDA2h+kITiY=",
-        "sha384": "sha384-dLLmSeY/tpwS+KOhs9ySKTg+1kJLJJ6plpRdmt7Tsh9euIgLhEfhiOhiq8yse/NE"
+        "sha256": "sha256-UXhC2ZCQfOGFMZsY1iFjlNHdTCn8QD0GJeD19EXP0Gw=",
+        "sha384": "sha384-CoTK8W1fC28ZHA2YNXW4MliiPvhuu4dFZvIjKthXC37xvpLqZEZlyxKd0liTHkt3"
+      }
+    },
+    "css/app.min.css": {
+      "path": "app/static/css/app.min.css",
+      "bytes": 3594869,
+      "gzipBytes": 167742,
+      "sri": {
+        "sha256": "sha256-m9NOXaL1kIeosKh+qDr2KX3Wak7g6kBsA0iFxAuZuUs=",
+        "sha384": "sha384-CPih0MzfC29JvfD4KbJ5Kb4qvUI1Tykuk96sD+cPrb8epj7ch6wb+vms++8WCk+D"
       }
     }
+  },
+  "sri": {
+    "js/bundle.min.js": "sha384-CoTK8W1fC28ZHA2YNXW4MliiPvhuu4dFZvIjKthXC37xvpLqZEZlyxKd0liTHkt3",
+    "css/app.min.css": "sha384-CPih0MzfC29JvfD4KbJ5Kb4qvUI1Tykuk96sD+cPrb8epj7ch6wb+vms++8WCk+D"
   }
 }

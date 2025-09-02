@@ -1,0 +1,426 @@
+{# ============================================================
+   FC HERO — Cinematic Clean (SV-Elite 4.7.1 • Apple-clean, CSP-safe)
+   - Neutral chrome + subtle --accent
+   - Logo INSIDE card (decorative alt="")
+   - CTA builds UTM safely; opens in new tab for external/Stripe
+   - Motion intelligence, parallax, countdown, LCP beacon
+   ============================================================ #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set theme_hex   = theme_hex|default('#facc15') %}
+{% set team_name   = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set hero_title  = hero_title|default('Fuel the Season, Fund the Future — On & Off the Court') %}
+{% set catch_line  = (catch_phrase if catch_phrase is defined and catch_phrase else
+                      'Family-run AAU program transforming <strong>Austin, Texas</strong> students into honor-roll athletes and leaders.') %}
+
+{# Photo sources (robust fallbacks) #}
+{% set _hero_src = (
+  (hero_image_url if hero_image_url is defined and hero_image_url) or
+  (team.hero_bg if team and team.hero_bg) or
+  (team.hero_image if team and team.hero_image) or
+  (team.team_photo if team and team.team_photo) or
+  (team.photo_url if team and team.photo_url) or
+  'images/connect-atx-team.jpg'
+) %}
+{% set _hero_mobile   = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
+{% set hero_src       = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{% set hero_src_mobile= (_hero_mobile if '://' in _hero_mobile else (url_for('static', filename=_hero_mobile.lstrip('/')) if url_for is defined else '/static/' ~ _hero_mobile.lstrip('/'))) %}
+{% set hero_alt       = (hero_image_alt if hero_image_alt is defined and hero_image_alt else team_name ~ ' team photo') %}
+
+{# Team logo inside card (independent of header) #}
+{% set _logo   = (team.logo if team and team.logo else 'images/logo.webp') %}
+{% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
+
+{# Fundraising figures + deadline (optional) #}
+{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set _raw_pct = (fundraising_goal and (funds_raised / fundraising_goal * 100)) | default(0) %}
+{% set pct = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
+{% set fundraising_deadline = fundraising_deadline if fundraising_deadline is defined else (deadline_dt if deadline_dt is defined else None) %}
+{% set deadline_iso = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
+
+{# Visual tuning #}
+{% set img_pos_x = img_pos_x|default('50%') %}
+{% set img_pos_y = img_pos_y|default('30%') %}
+
+{# CTA href + UTM (safe encoding) #}
+{% set _raw_cta = (stripe_payment_link if stripe_payment_link else (cta_href if cta_href is defined else '#tiers')) %}
+{% set _sep = '&' if '?' in _raw_cta else '?' %}
+{% set cta_href = _raw_cta ~ _sep ~ 'utm_source=hero&utm_medium=cta&utm_campaign=' ~ (team_name|urlencode) %}
+{% set cta_label = cta_label if cta_label else 'Donate' %}
+{% set _cta_is_donate = (cta_label|default('')|lower)[:6] == 'donate' %}
+{% set _cta_external = ('://' in cta_href) %}
+
+<link rel="preload" as="image" href="{{ hero_src }}" imagesizes="100vw" fetchpriority="high" />
+
+<section id="fc-hero"
+         class="fc-hero-tilt grid place-items-center px-4 sm:px-6 w-full -translate-y-[6px] md:-translate-y-[10px]"
+         data-theme="athletic"
+         aria-labelledby="hero-heading"
+         itemscope itemtype="https://schema.org/SportsTeam"
+         style="--accent: {{ theme_hex }}; --img-x: {{ img_pos_x }}; --img-y: {{ img_pos_y }};">
+  <meta itemprop="name" content="{{ team_name }}"/>
+  <meta itemprop="sport" content="Basketball"/>
+  {% if logoSrc %}<meta itemprop="logo" content="{{ logoSrc }}"/>{% endif %}
+
+  <!-- Ambient background -->
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,#0b0b0c_0%,#050609_70%)]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_20%,rgba(0,0,0,.28),transparent_60%)] pointer-events-none"></div>
+  </div>
+
+  <!-- Hero Card -->
+  <div class="fc-hero-tilt grid place-items-center w-full">
+    <figure class="fc-hero-card" role="presentation">
+      <!-- Animated border ring -->
+      <div class="fc-hero-card__ring" aria-hidden="true"></div>
+
+      <!-- Main frame -->
+      <div class="fc-hero-card__frame">
+        <picture>
+          <source media="(max-width: 767px)" srcset="{{ hero_src_mobile }}"/>
+          <img id="fc-hero-img"
+               src="{{ hero_src }}"
+               alt=""
+               class="fc-hero-card__img"
+               loading="eager"
+               decoding="async"
+               fetchpriority="high"
+               aria-hidden="true"
+               draggable="false"
+               data-parallax-y="8"
+               data-lcp-target="1"/>
+        </picture>
+
+        <!-- Effects -->
+        <i class="fc-hero-card__glare" aria-hidden="true"></i>
+        <i class="fc-hero-card__noise" aria-hidden="true"></i>
+
+        {# ↓ figcaption overlay drops in here #}
+        
+        {# font: Proxima Nova / SF Pro stack for the hero only #}
+{% set NONCE = NONCE if NONCE is defined else '' %}
+<style nonce="{{ NONCE }}">
+  .font-pro {
+    font-family:
+      "Proxima Nova", "ProximaNova", "Proxima Nova Alt",
+      "SF Pro Display", "SF Pro Text",
+      -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Inter, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+    /* nice defaults */
+    font-feature-settings: "liga","kern","calt","ss01";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  /* optional: make the big hero type favor the display cut */
+  .font-pro .fc-hero-type {
+    font-family:
+      "Proxima Nova", "ProximaNova", "Proxima Nova Alt",
+      "SF Pro Display",
+      -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Inter, Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  }
+</style>
+
+<!-- Overlay -->
+<figcaption class="fc-hero-overlay font-pro flex flex-col items-center text-center gap-4"
+            role="group" aria-labelledby="hero-heading" aria-describedby="hero-subtitle">
+
+  <!-- Brand (logo + chip) -->
+  <div class="fc-hero-brand flex items-center gap-2">
+    <img src="{{ logoSrc }}" alt="" loading="eager" decoding="async"
+         class="h-9 w-9 rounded-xl ring-1 ring-white/10 bg-white/95"/>
+    <span class="legacy-chip font-semibold tracking-wide">{{ team_name }}</span>
+  </div>
+
+  <!-- Heading + catch line -->
+  <h1 id="hero-heading" class="fc-hero-type text-balance">
+    {{ hero_title }}
+  </h1>
+  <p id="hero-subtitle" class="fc-hero-copy text-balance max-w-prose">
+    {{ catch_line|safe }}
+  </p>
+
+  <!-- Actions (CTA • Countdown • Share) -->
+  <div class="fc-hero-actions flex flex-wrap justify-center items-center gap-2"
+       role="group" aria-label="Hero actions">
+
+    <a href="{{ cta_href }}"
+       {% if not stripe_payment_link and 'donate' in cta_href %}data-open-donate-modal{% endif %}
+       class="fc-hero-cta"
+       data-label-full="{{ cta_label }}{% if fundraising_goal %} — {{ '${:,.0f}'.format(fundraising_goal/10) }}{% endif %}"
+       data-label-compact="{{ 'Donate' if _cta_is_donate else 'Join Now' }}"
+       data-haptic="light"
+       data-autofocus-when-visible="1"
+       data-urgency-deadline="{{ deadline_iso }}"
+       data-analytics="cta:hero"
+       {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+       {{ cta_label }} <span aria-hidden="true">→</span>
+    </a>
+
+    {% if deadline_iso %}
+      <span id="hero-countdown" class="chip fc-hero-chip--mini"
+            role="timer" aria-live="polite" aria-atomic="true"
+            title="Time remaining">⏳ —</span>
+    {% endif %}
+
+    <button id="hero-share" type="button"
+            class="chip fc-hero-chip--mini"
+            aria-label="Share this fundraiser"
+            data-share='{{ {
+              "title": team_name,
+              "text": "Support our season!",
+              "url": (request.base_url if request is defined else "/")
+            } | tojson }}'>
+      ↗︎ Share
+    </button>
+  </div>
+
+  <!-- Mini meter -->
+  <div class="hero-meter w-full max-w-xl"
+       role="progressbar" aria-valuemin="0" aria-valuemax="100"
+       aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress">
+    <div class="hm-track" aria-hidden="true">
+      <div id="hero-fill" class="hm-fill" style="width: {{ pct|round(1) }}%"></div>
+      <div class="hm-ticks" aria-hidden="true"></div>
+    </div>
+    <div class="hm-stats mt-1 text-sm text-zinc-200">
+      <span id="hero-raised" class="tabular">{{ '${:,.0f}'.format(funds_raised) }}</span>
+      <span class="muted">/</span>
+      <span id="hero-goal" class="tabular">{{ '${:,.0f}'.format(fundraising_goal) }}</span>
+      <span class="muted">·</span>
+      <strong id="hero-pct" class="tabular">{{ pct|round(0) }}%</strong>
+      <span id="hero-sr" class="sr-only" aria-live="polite"></span>
+    </div>
+  </div>
+
+  <!-- Trust badges -->
+  <div class="fc-hero-badges flex flex-wrap justify-center gap-2 mt-2" aria-hidden="true">
+    <span class="badge">🏅 500+ Families</span>
+    <span class="badge">📚 3.5 Team GPA</span>
+    <span class="badge">🏀 AAU Gold Certified</span>
+  </div>
+</figcaption>
+
+{% if show_gym_ribbon is defined and show_gym_ribbon %}
+  <aside class="mt-6 w-full max-w-2xl mx-auto">
+    <div class="flex flex-col sm:flex-row items-center justify-between
+                bg-zinc-900/80 border border-white/10 rounded-2xl px-6 py-3 shadow-lg">
+      <div class="text-sm sm:text-base font-medium text-zinc-100 flex-1 text-center sm:text-left">
+        🏟️ Gym Rental:
+        <span class="ml-1 font-bold">
+          {{ gym_sponsor.name if gym_sponsor and gym_sponsor.name else "Available for Sponsorship" }}
+        </span>
+      </div>
+      <div class="text-xs sm:text-sm text-zinc-300 flex-1 text-center sm:text-right mt-2 sm:mt-0">
+        {{ gym_sponsor.location if gym_sponsor and gym_sponsor.location else 'TBD' }}
+        · {{ gym_sponsor.date if gym_sponsor and gym_sponsor.date else 'TBD' }}
+        <button type="button"
+          class="ml-3 px-4 py-1 rounded-full border border-white/15 bg-white/5
+                 text-zinc-100 hover:bg-white/10 focus:outline-none focus-visible:ring-2"
+          style="--tw-ring-color: var(--accent);"
+          {% if sponsor_modal_target is defined %}data-open-modal="{{ sponsor_modal_target }}"{% else %}data-open-modal="gym"{% endif %}>
+          Sponsor a Gym
+        </button>
+      </div>
+    </div>
+    {% if not gym_sponsor %}
+      <div class="text-center mt-1 text-xs text-zinc-400">👀 Your name could be here next week!</div>
+    {% endif %}
+  </aside>
+{% endif %}
+
+<style nonce="{{ NONCE }}">
+  /* ---------- Scope: #fc-hero ---------- */
+  #fc-hero { --shadow: 0 25px 80px rgba(0,0,0,.55); }
+  .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
+  .tabular{ font-variant-numeric: tabular-nums }
+
+/* Typography */
+#fc-hero .fc-hero-type{
+  font-family: var(--fc-serif, "FC Oldstyle", serif);
+  letter-spacing:-.012em; line-height:1.06;
+  color:#f5f5f5;
+  font-size:clamp(1.55rem,1.0rem + 2.6vw,3rem);
+  margin:0; text-wrap:balance
+}
+#fc-hero .fc-hero-copy{
+  font-family: var(--fc-sans, "Inter", sans-serif);
+  letter-spacing:.002em; text-wrap:balance; margin:.45rem 0 0;
+  color:#eaeaea; opacity:.95;
+  font-size:clamp(.98rem,.8rem + .6vw,1.2rem)
+}
+
+  /* Brand chip inside */
+  #fc-hero .fc-hero-brand{ display:inline-flex; align-items:center; gap:.65rem; margin-bottom:.35rem }
+
+  /* Tilted Photo Card */
+  #fc-hero .fc-hero-tilt{ perspective:1400px }
+  #fc-hero .fc-hero-card{ --r: clamp(20px,1.6vw,28px); position:relative; width:min(1080px,92vw); aspect-ratio:16/9; transform-style:preserve-3d; will-change:transform }
+  #fc-hero .fc-hero-card__ring{ position:absolute; inset:-2px; border-radius:calc(var(--r) + 2px); background:linear-gradient(#0000,#0000) padding-box, conic-gradient(from 180deg at 50% 50%, color-mix(in srgb, var(--accent) 55%, #ffffff 45%), #e5e7eb, color-mix(in srgb, var(--accent) 55%, #ffffff 45%)) border-box; border:1.5px solid transparent; filter:drop-shadow(0 18px 50px rgba(0,0,0,.45)); z-index:0 }
+  #fc-hero .fc-hero-card__frame{ position:absolute; inset:0; z-index:1; border-radius:var(--r); background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04); overflow:hidden; transform:translateZ(40px) }
+  #fc-hero .fc-hero-card__img{ width:100%; height:100%; object-fit:cover; object-position: var(--img-x) var(--img-y); transform:translateZ(20px) scale(1.02); filter:saturate(1.04) contrast(1.04); user-select:none; -webkit-user-drag:none }
+  #fc-hero .fc-hero-card__glare{ position:absolute; inset:-20%; mix-blend-mode:screen; pointer-events:none; transform:translateZ(60px); background:radial-gradient(40% 60% at var(--mx,50%) var(--my,40%), rgba(255,255,255,.22), transparent 60%) }
+  #fc-hero .fc-hero-card__noise{ position:absolute; inset:0; pointer-events:none; opacity:.08; transform:translateZ(80px); background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>"); background-size:160px 160px }
+
+  /* Overlay */
+  #fc-hero .fc-hero-overlay{ position:absolute; inset-inline:0; bottom:0; display:flex; flex-direction:column; gap:.75rem; align-items:center; text-align:center; padding:1rem clamp(1rem, 2vw, 1.6rem); background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 60%, rgba(0,0,0,.96) 100%) }
+
+  /* Actions */
+  #fc-hero .fc-hero-actions{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem .65rem }
+  #fc-hero .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .7rem; border-radius:.8rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-weight:800; font-size:.86rem; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px) }
+  #fc-hero .fc-hero-chip--mini{ font-size:.8rem; padding:.3rem .6rem }
+
+  /* CTA — Apple-clean black pill */
+  #fc-hero .fc-hero-cta{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:800; font-size:clamp(.95rem,.9rem + .2vw,1.1rem); padding:.85rem 1.3rem; text-decoration:none; background:#111; color:#fff; border:1px solid #000; box-shadow:0 8px 28px rgba(0,0,0,.25); transition:transform .2s, filter .2s, box-shadow .2s }
+  #fc-hero .fc-hero-cta:hover{ transform:translateY(-1px); filter:brightness(1.08); box-shadow:0 10px 34px rgba(0,0,0,.32) }
+  #fc-hero .fc-hero-cta:focus-visible{ outline:2px solid color-mix(in srgb, var(--accent) 60%, #ffffff 40%); outline-offset:3px }
+
+  /* Mini meter (neutral) */
+  #fc-hero .hero-meter{ width:100%; max-width:min(720px,92%) }
+  #fc-hero .hm-track{ position:relative; height:12px; border-radius:9999px; overflow:hidden; background:rgba(255,255,255,.08); box-shadow:inset 0 0 0 1px rgba(255,255,255,.06) }
+  #fc-hero .hm-ticks{ position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0, rgba(255,255,255,.22) 1px, transparent 1px, transparent 5%); opacity:.28 }
+  #fc-hero .hm-fill{ position:absolute; inset-block:0; left:0; width:{{ pct|round(1) }}%; background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent) 35%, #d1d5db 65%)); box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); transition:width .6s cubic-bezier(.2,.8,.2,1) }
+  #fc-hero .hm-stats{ margin-top:.35rem; color:#e5e7eb; font-size:.9rem }
+  #fc-hero .hm-stats .muted{ opacity:.7; margin:0 .35rem }
+
+  /* Badges */
+  #fc-hero .fc-hero-badges{ display:flex; flex-wrap:wrap; gap:.5rem }
+  #fc-hero .fc-hero-badges .badge{ display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .7rem; border-radius:999px; background:linear-gradient(180deg,rgba(255,255,255,.10),rgba(255,255,255,.04)); border:1px solid rgba(255,255,255,.16); color:#e5e7eb; text-shadow:0 1px 0 rgba(0,0,0,.35); font-variant-numeric:tabular-nums; font-weight:700; font-size:.92rem }
+
+  /* Guards */
+  @media (max-width:640px){ #fc-hero .fc-hero-overlay{ padding:1rem } }
+  @media (prefers-reduced-motion:reduce){ #fc-hero .fc-hero-card, #fc-hero .fc-hero-card__img{ transform:none!important } #fc-hero .hm-fill{ transition:none } }
+  @media (prefers-contrast:more){ #fc-hero .fc-hero-card__frame{ -webkit-backdrop-filter:none; backdrop-filter:none; background:#000!important } }
+  @media (forced-colors:active){ #fc-hero .fc-hero-card__frame{ border:1px solid CanvasText; box-shadow:none } #fc-hero .fc-hero-badges .badge{ background:Canvas; color:CanvasText; border:1px solid CanvasText } }
+/*[AUTO] Athletic headline theme */
+#fc-hero[data-theme="athletic"] .fc-hero-type{
+  font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;
+  text-transform:uppercase; letter-spacing:.02em; line-height:.98;
+  font-weight:900;
+  font-size:clamp(2rem,1.2rem + 4vw,3.6rem);
+  color:transparent;
+  background:linear-gradient(180deg,#f8fafc 0%, #fff6bf 55%, #facc15 100%);
+  -webkit-background-clip:text; background-clip:text;
+  text-shadow:0 2px 0 rgba(0,0,0,.35), 0 22px 40px rgba(0,0,0,.35);
+}
+#fc-hero[data-theme="athletic"] .fc-hero-copy{
+  font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;
+  font-weight:600; letter-spacing:.005em; color:#eaeaea; opacity:.98; max-width:64ch;
+}
+#fc-hero[data-theme="athletic"] #hero-heading{ position:relative }
+#fc-hero[data-theme="athletic"] #hero-heading::after{
+  content:""; position:absolute; left:8%; right:8%; bottom:-.25rem; height:.35rem; border-radius:999px;
+  background:linear-gradient(90deg,#fef9c3,#facc15,#f59e0b); opacity:.75;
+  filter:drop-shadow(0 6px 12px rgba(250,204,21,.35));
+}
+</style>
+
+<script nonce="{{ NONCE }}">
+(() => {
+  if (window.__fcHeroCard471) return; window.__fcHeroCard471 = true;
+
+  // Fallback image + Save-Data guard
+  const img = document.getElementById('fc-hero-img');
+  img?.addEventListener('error', () => {
+    try {
+      const f='{{ url_for("static", filename="images/logo.webp") if url_for is defined else "/static/images/logo.webp" }}';
+      if (img.src !== f) img.src = f;
+    } catch {}
+  });
+  if (navigator.connection?.saveData) document.documentElement.dataset.compact='1';
+
+  // Motion-safe tilt + glare
+  const rm = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const card  = document.querySelector('#fc-hero .fc-hero-card');
+  const glare = document.querySelector('#fc-hero .fc-hero-card__glare');
+  if (!rm && card){
+    const MAX=12; let raf=0;
+    const move=(e)=>{ const r=card.getBoundingClientRect(); const p=('touches'in e)?e.touches[0]:e;
+      const px=(p.clientX-r.left)/r.width, py=(p.clientY-r.top)/r.height;
+      const rx=(py-.5)*-2*MAX, ry=(px-.5)*2*MAX, mx=Math.round(px*100)+'%', my=Math.round(py*100)+'%';
+      cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ card.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`; glare?.style.setProperty('--mx',mx); glare?.style.setProperty('--my',my); });
+    };
+    const leave=()=>{ cancelAnimationFrame(raf); card.style.transform='translateZ(0) rotateX(0) rotateY(0)'; };
+    card.addEventListener('mousemove', move, {passive:true});
+    card.addEventListener('touchmove', move, {passive:true});
+    card.addEventListener('mouseleave', leave, {passive:true});
+    card.addEventListener('touchend', leave, {passive:true});
+  }
+
+  // Mini meter (live hook)
+  const fill=document.getElementById('hero-fill');
+  const raised=document.getElementById('hero-raised');
+  const goal=document.getElementById('hero-goal');
+  const pctTxt=document.getElementById('hero-pct');
+  const srLive=document.getElementById('hero-sr');
+  function setMeter(r,g){
+    const R=Math.max(0,+r||0), G=Math.max(0,+g||0);
+    const P=G?Math.max(0,Math.min(100,(R/G)*100)):0;
+    const fmt$=n=>'$'+(Math.round(+n||0)).toLocaleString();
+    if(fill) fill.style.width=P.toFixed(1)+'%';
+    if(raised) raised.textContent=fmt$(R);
+    if(goal) goal.textContent=fmt$(G);
+    if(pctTxt) pctTxt.textContent=P.toFixed(0)+'%';
+    fill?.parentElement?.parentElement?.setAttribute?.('aria-valuenow',P.toFixed(1));
+    if(srLive) srLive.textContent=`Progress: ${P.toFixed(1)}% funded — ${fmt$(R)} of ${fmt$(G)}.`;
+  }
+  addEventListener('fc:meter:update', ev => { const d=ev.detail||{}; setMeter(d.raised,d.goal); }, {passive:true});
+
+  // Countdown (if present)
+  const countdownEl=document.getElementById('hero-countdown');
+  {% if deadline_iso %}
+  (function(){
+    const deadline=new Date('{{ deadline_iso }}'); if (isNaN(deadline)||!countdownEl) return;
+    const tick=()=>{ const ms=deadline-new Date(); if(ms<=0){ countdownEl.textContent='⏳ Now'; return; }
+      const d=Math.floor(ms/86400000), h=Math.floor((ms%86400000)/3600000), m=Math.floor((ms%3600000)/60000);
+      countdownEl.textContent=`⏳ ${d}d ${h}h ${m}m`; };
+    tick(); setInterval(tick,60000);
+  })();
+  {% endif %}
+
+  // Share + haptics + responsive label + autofocus + urgency
+  const scope=document.getElementById('fc-hero');
+  const cta=scope?.querySelector('.fc-hero-cta');
+  const shareBtn=document.getElementById('hero-share');
+
+  shareBtn?.addEventListener('click', async () => {
+    try{
+      const data=JSON.parse(shareBtn.getAttribute('data-share')||'{}');
+      if (navigator.share) await navigator.share(data);
+      else if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(data.url||location.href);
+    }catch{}
+  }, {passive:true});
+
+  cta?.addEventListener('click', ()=>('vibrate' in navigator)&&navigator.vibrate(10), {passive:true});
+
+  const swap=()=>{ if(!cta) return; const full=cta.dataset.labelFull||cta.textContent; const compact=cta.dataset.labelCompact||full; cta.firstChild.nodeValue=(innerWidth<420?compact:full); };
+  swap(); addEventListener('resize', swap, {passive:true});
+
+  if (cta?.dataset.autofocusWhenVisible) new IntersectionObserver(es=>es.some(x=>x.isIntersecting)&&cta.focus(), {threshold:.45}).observe(cta);
+
+  if (cta?.dataset.urgencyDeadline) {
+    try{
+      const dl=new Date(cta.dataset.urgencyDeadline);
+      const nudge=()=>{ const ms=dl-new Date(); if(ms>0 && ms<48*3600e3) { cta.dataset.labelFull='{{ cta_label }} — Last 48h'; swap(); } };
+      nudge(); setInterval(nudge,600000);
+    }catch{}
+  }
+
+  // Parallax micro-move (motion-safe)
+  if (!rm && img?.dataset.parallaxY){
+    const amt=Math.max(0,Math.min(24,+img.dataset.parallaxY||8));
+    const onScroll=()=>{ const y=scrollY||document.documentElement.scrollTop; img.style.transform=`translateY(${Math.min(amt,y*0.04)}px) scale(1.02)`; };
+    addEventListener('scroll', onScroll, {passive:true}); onScroll();
+  }
+
+  // LCP beacon
+  try{
+    if ('PerformanceObserver' in window){ 
+      window.dataLayer = window.dataLayer || [];
+      new PerformanceObserver(list=>list.getEntries().forEach(e=>{ if (e.element?.dataset?.lcpTarget) window.dataLayer.push({event:'lcp', value:e.startTime}); }))
+        .observe({type:'largest-contentful-paint', buffered:true});
+    }
+  }catch{}
+})();
+</script>
+

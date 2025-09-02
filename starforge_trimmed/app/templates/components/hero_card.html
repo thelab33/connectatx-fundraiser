@@ -1,0 +1,31 @@
+<section class="section">
+  <div class="container">
+    <figure class="hero card">
+      <picture>
+        <source srcset="{{ url_for('static', filename='img/hero.avif') }}" type="image/avif">
+        <source srcset="{{ url_for('static', filename='img/hero.webp') }}" type="image/webp">
+        <img src="{{ url_for('static', filename='img/hero.jpg') }}" alt="Team photo" width="1440" height="720" loading="eager" fetchpriority="high">
+      </picture>
+      <figcaption class="hero__body">
+        <p class="kicker">Community • Academics • Leadership</p>
+        <h1 class="h1">Fuel the Season. <span style="color:hsl(var(--brand))">Fund the Future.</span></h1>
+        <p class="text-muted" style="max-width:60ch">Direct support for gear, travel, and tutoring—every dollar moves a kid forward.</p>
+        <div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap">
+          <a href="#donate" class="btn btn-accent">Donate</a>
+          <a href="#tiers" class="btn btn-ghost">Become a Sponsor</a>
+        </div>
+        <div style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap">
+          <span class="badge">500+ families</span>
+          <span class="badge">3.5 Team GPA</span>
+          <span class="badge">AAU Gold Certified</span>
+        </div>
+        <div style="margin-top:1rem" aria-label="Campaign progress">
+          <div class="progress" role="progressbar" aria-valuenow="{{ raised }}" aria-valuemin="0" aria-valuemax="{{ goal }}">
+            <span style="width: {{ (raised/goal*100) if goal else 0 }}%"></span>
+          </div>
+          <p class="text-muted" style="margin:.4rem 0 0">Raised ${{ raised|int }} of ${{ goal|int }}</p>
+        </div>
+      </figcaption>
+    </figure>
+  </div>
+</section>

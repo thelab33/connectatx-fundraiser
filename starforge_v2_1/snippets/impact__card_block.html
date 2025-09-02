@@ -1,0 +1,24 @@
+<article class="card card-tight card-eq" aria-label="{{ b.title }} impact">
+  <h3 class="h3">{{ b.title }}</h3>
+  <p class="text-muted">{{ b.summary }}</p>
+
+  <div class="meta" style="justify-content:space-between">
+    <span class="badge">Goal ${{ b.goal }}</span>
+    <span class="badge">Left ${{ b.goal - b.raised }}</span>
+  </div>
+
+  <div class="grow">
+    <div class="progress" role="progressbar" aria-valuenow="{{ b.raised }}" aria-valuemin="0" aria-valuemax="{{ b.goal }}">
+      <span style="width: {{ (b.raised/b.goal*100) if b.goal else 0 }}%"></span>
+    </div>
+  </div>
+
+  <div class="actions">
+    <form action="/pay/create-checkout" method="post">
+      <input type="hidden" name="label" value="{{ b.title }}">
+      <input type="hidden" name="amount_cents" value="{{ (b.default_amount or 5000) }}">
+      <button class="btn btn-accent" type="submit">Donate ${{ (b.default_amount or 5000)//100 }}</button>
+    </form>
+    <a href="/donate?bucket={{ b.slug }}" class="btn btn-ghost">Choose amount</a>
+  </div>
+</article>

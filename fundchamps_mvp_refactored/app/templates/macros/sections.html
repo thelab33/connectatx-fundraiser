@@ -1,0 +1,76 @@
+{# app/templates/macros/sections.html #}
+{% macro _once(flag, guard) -%}
+  {%- set ok = (guard is not none and (flag in guard) and (not attribute(guard, flag))) or (guard is none) -%}
+  {%- if ok and guard is not none -%}{% set attribute(guard, flag, true) %}{%- endif -%}
+  {{- ok -}}
+{%- endmacro %}
+
+{% macro hero(id='fundraiser-hero', show=True, guard=None) -%}
+  {% if show and (_once('hero', guard)) %}
+  <section id="{{ id }}" class="fc-section scene scene--flush" aria-labelledby="hero-title" role="region">
+    <h2 class="sr-only" id="hero-title">Fundraiser hero</h2>
+    {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+  </section>
+  {% endif %}
+{%- endmacro %}
+
+{% macro pulse(id='program-stats', show=True, guard=None) -%}
+  {% if show and (_once('pulse', guard)) %}
+  <div class="scene-break" aria-hidden="true"></div>
+  <section id="{{ id }}" class="fc-section scene scene--dark fc-soft" aria-labelledby="stats-title" role="region">
+    <h2 class="sr-only" id="stats-title">Program stats and calendar</h2>
+    <div class="fc-container">
+      {% include "partials/program_stats_and_calendar.html" ignore missing with context %}
+    </div>
+  </section>
+  {% endif %}
+{%- endmacro %}
+
+{% macro impact(id='impact', show=True, guard=None) -%}
+  {% if show and (_once('impact', guard)) %}
+  <div class="scene-break" aria-hidden="true"></div>
+  <section id="{{ id }}" class="fc-section scene scene--dim" aria-labelledby="impact-title" role="region">
+    <h2 class="sr-only" id="impact-title">Impact buckets</h2>
+    <div class="fc-container">
+      {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+    </div>
+  </section>
+  {% endif %}
+{%- endmacro %}
+
+{% macro tiers(id='tiers', show=True, guard=None) -%}
+  {% if show and (_once('tiers', guard)) %}
+  <div class="scene-break" aria-hidden="true"></div>
+  <section id="{{ id }}" class="fc-section scene scene--dark" aria-labelledby="tiers-title" role="region">
+    <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
+    <div class="fc-container" id="tiers-grid">
+      {% include "partials/tiers.html" ignore missing with context %}
+    </div>
+  </section>
+  {% endif %}
+{%- endmacro %}
+
+{% macro about(id='mission', show=True, guard=None) -%}
+  {% if show and (_once('about', guard)) %}
+  <div class="scene-break" aria-hidden="true"></div>
+  <section id="{{ id }}" class="fc-section scene scene--dim" aria-labelledby="about-title" role="region">
+    <h2 class="sr-only" id="about-title">About our program</h2>
+    <div class="fc-container">
+      {% include "partials/about_section.html" ignore missing with context %}
+    </div>
+  </section>
+  {% endif %}
+{%- endmacro %}
+
+{% macro concierge(id='concierge', show=True, guard=None) -%}
+  {% if show and (_once('concierge', guard)) %}
+  <div class="scene-break" aria-hidden="true"></div>
+  <section id="{{ id }}" class="fc-section scene scene--dark" aria-labelledby="concierge-title" role="region">
+    <h2 class="sr-only" id="concierge-title">AI concierge</h2>
+    <div class="fc-container">
+      {% include "partials/ai_concierge.html" ignore missing with context %}
+    </div>
+  </section>
+  {% endif %}
+{%- endmacro %}
+

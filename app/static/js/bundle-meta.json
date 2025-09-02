@@ -1,0 +1,57 @@
+{
+  "inputs": {
+    "app/static/js/payments.js": {
+      "bytes": 5179,
+      "imports": [],
+      "format": "esm"
+    },
+    "app/static/js/app.entry.js": {
+      "bytes": 11951,
+      "imports": [
+        {
+          "path": "app/static/js/payments.js",
+          "kind": "dynamic-import",
+          "original": "./payments.js"
+        },
+        {
+          "path": "./vendor/socketio.mjs",
+          "kind": "dynamic-import",
+          "external": true
+        },
+        {
+          "path": "alpinejs",
+          "kind": "dynamic-import",
+          "external": true
+        }
+      ],
+      "format": "esm"
+    }
+  },
+  "outputs": {
+    "app/static/js/bundle.min.js": {
+      "imports": [
+        {
+          "path": "./vendor/socketio.mjs",
+          "kind": "dynamic-import",
+          "external": true
+        },
+        {
+          "path": "alpinejs",
+          "kind": "dynamic-import",
+          "external": true
+        }
+      ],
+      "exports": [],
+      "entryPoint": "app/static/js/app.entry.js",
+      "inputs": {
+        "app/static/js/payments.js": {
+          "bytesInOutput": 3398
+        },
+        "app/static/js/app.entry.js": {
+          "bytesInOutput": 6142
+        }
+      },
+      "bytes": 10383
+    }
+  }
+}

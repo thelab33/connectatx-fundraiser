@@ -1,0 +1,310 @@
+
+{# macros/tiers.html — flip-card tiers with nonce-aware CSS/JS #}
+{% macro render_tiers(tiers=None, opts={}) %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set brand_color = opts.brand_color or '#facc15' %}
+{% set currency    = opts.currency    or 'USD' %}
+{% set team_name   = opts.team_name   or 'FundChamps' %}
+{% set id_attr     = opts.id          or 'tiers' %}
+{% set donate_url  = opts.donate_url  or '/donate' %}
+{% set stats_url   = opts.stats_url   or '/stats' %}
+{% set spl         = opts.stripe_payment_link or '' %}
+{% set has_stripe  = '1' if opts.stripe_publishable_key else '0' %}
+
+{% set demo_tiers = [
+  {"title":"Platinum","amount":"5,000+","benefits":["Logo on jerseys","Shout-outs on social","VIP invites"],"emoji":"🏆","badge":"VIP","fomo":"Only 2 Platinum spots left!","slots_left":2},
+  {"title":"Gold","amount":"2,500","benefits":["Warm-ups logo","Social features","Appreciation invites"],"emoji":"🥇","popular":true,"fomo":"Most Popular! Limited to 4 sponsors.","slots_left":4},
+  {"title":"Silver","amount":"1,000","benefits":["Social shout-outs","Thank-you certificate","Board listing"],"emoji":"🥈","fomo":"Recognition on sponsor board.","slots_left":8},
+  {"title":"Bronze","amount":"500","benefits":["Public thank-you","Board listing"],"emoji":"🥉","fomo":"Perfect for first-timers.","slots_left":12},
+  {"title":"Custom","amount":"Custom","benefits":["Tailored benefits","Personalized impact"],"emoji":"✨","fomo":"We build a package for you.","slots_left":999}
+] %}
+{% set _tiers = tiers if tiers is defined and tiers else demo_tiers %}
+
+<style nonce="{{ NONCE }}">
+  /* Scoped to #[id_attr] */
+  #{% raw %}{{{% endraw %} id_attr %} .heading{
+    font-weight:1000;letter-spacing:-.02em;
+    font-size:clamp(1.6rem,2.8vw,2.25rem);
+    background-image:linear-gradient(180deg,#fff 0%, color-mix(in srgb, {{ brand_color }} 72%, #fff) 100%);
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+    text-shadow:0 0 .5px rgba(0,0,0,.65),0 12px 28px rgba(0,0,0,.35);
+  }
+  @supports not ((-webkit-background-clip:text) or (background-clip:text)){
+    #{% raw %}{{{% endraw %} id_attr %} .heading{color:{{ brand_color }};background:none;text-shadow:none}
+  }
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card{perspective:1800px;min-height:400px;cursor:pointer;position:relative}
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card-inner{position:relative;width:100%;height:100%;min-height:372px;transform-style:preserve-3d;will-change:transform;transition:transform .7s cubic-bezier(.4,1.6,.6,1)}
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card.card-flipped .flip-card-inner,
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card:focus-visible .flip-card-inner,
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card:hover .flip-card-inner{transform:rotateY(180deg)}
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card-front, #{% raw %}{{{% endraw %} id_attr %} .flip-card-back{position:absolute;inset:0;backface-visibility:hidden;border-radius:1rem;overflow:hidden;z-index:1}
+  #{% raw %}{{{% endraw %} id_attr %} .flip-card-back{transform:rotateY(180deg);display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #{% raw %}{{{% endraw %} id_attr %} .glassy-card{background:rgba(17,17,17,.58);position:relative;isolation:isolate;border:1px solid color-mix(in srgb, {{ brand_color }} 26%, transparent);box-shadow:0 10px 34px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06)}
+  @supports (backdrop-filter: blur(1px)){
+    #{% raw %}{{{% endraw %} id_attr %} .glassy-card{-webkit-backdrop-filter:blur(16px) saturate(120%);backdrop-filter:blur(16px) saturate(120%)}
+  }
+</style>
+
+<section id="{{ id_attr }}" class="mt-4" aria-labelledby="{{ id_attr }}-heading" data-dedupe-key="tiers">
+  <div class="section-head">
+    <h2 id="{{ id_attr }}-heading" class="heading" tabindex="0">Sponsorship&nbsp;Tiers</h2>
+    <p class="sr-only">Press Enter or Space on a card to flip and see details.</p>
+  </div>
+
+  <div class="controls" aria-label="Tier controls">
+    <label class="chip" for="{{ id_attr }}-monthly">
+      <input id="{{ id_attr }}-monthly" type="checkbox" class="accent-yellow-400" />
+      Show monthly
+    </label>
+    <div class="spacer" aria-hidden="true"></div>
+    <label class="sr-only" for="{{ id_attr }}-sort">Sort tiers</label>
+    <select id="{{ id_attr }}-sort" aria-label="Sort tiers">
+      <option value="rec">Sort: Recommended</option>
+      <option value="price-desc">Price: High → Low</option>
+      <option value="price-asc">Price: Low → High</option>
+      <option value="availability">Availability</option>
+    </select>
+  </div>
+
+  <div class="fc-tiers grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
+       role="list" aria-label="Available sponsorship tiers"
+       id="{{ id_attr }}-grid"
+       data-stats-url="{{ stats_url }}"
+       data-donate-url="{{ donate_url }}"
+       data-has-stripe="{{ has_stripe }}"
+       data-spl="{{ spl|e }}"
+       data-currency="{{ currency }}"
+       data-team="{{ team_name|e }}">
+    {% for tier in _tiers %}
+      {% set is_premium = tier.title in ['Gold','Platinum','VIP'] %}
+      {% set amt_clean  = 'custom' if tier.amount|string|lower == 'custom' else (tier.amount|string|replace('+','')|replace(',','')) %}
+      {% set sold_out   = (tier.slots_left is not none and (tier.slots_left|int) <= 0) %}
+      <article class="flip-card group rounded-2xl outline-none focus:ring-2 focus:ring-yellow-300 {% if sold_out %}soldout{% endif %}"
+        tabindex="0" role="listitem" aria-roledescription="sponsorship tier"
+        aria-labelledby="{{ id_attr }}-tier-{{ loop.index }}-title" aria-describedby="{{ id_attr }}-tier-{{ loop.index }}-benefits"
+        aria-expanded="false"
+        data-tier="{{ tier.title }}" data-amount="{{ amt_clean }}" data-slots="{{ tier.slots_left or 0 }}">
+        <div class="flip-card-inner">
+          <div class="flip-card-front glassy-card bg-zinc-900/60 p-5 shadow-xl">
+            {% if tier.popular %}<div class="ribbon" aria-hidden="true">Most&nbsp;popular</div>{% endif %}
+            <div class="flex items-start justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <div class="text-2xl" aria-hidden="true">{{ tier.emoji }}</div>
+                <div>
+                  <h3 id="{{ id_attr }}-tier-{{ loop.index }}-title" class="text-xl font-extrabold text-yellow-300">{{ tier.title }}</h3>
+                  <p class="text-sm text-zinc-300">
+                    {% if tier.amount|string|lower == 'custom' %}
+                      <span class="price" data-original="custom" data-monthly="custom">Custom package</span>
+                    {% else %}
+                      From <span class="price font-semibold text-yellow-200" data-original="${{ tier.amount }}" data-amt="{{ amt_clean }}">{{ "$" ~ tier.amount }}</span>{% if '+' in tier.amount|string %}<span class="opacity-80">+</span>{% endif %}
+                      <span class="sr-only">one-time</span>
+                    {% endif %}
+                  </p>
+                </div>
+              </div>
+            </div>
+            <ul id="{{ id_attr }}-tier-{{ loop.index }}-benefits" class="mt-4 space-y-2 text-sm tier-perks">
+              {% for ben in tier.benefits %}
+              <li class="flex items-start gap-2">
+                <svg viewBox="0 0 20 20" class="mt-0.5 h-4 w-4" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+                <span>{{ ben }}</span>
+              </li>
+              {% endfor %}
+            </ul>
+            <div class="slots" aria-hidden="true"><i></i></div>
+            <div class="mt-4 flex items-center gap-2">
+              <button class="{% if sold_out %}opacity-60 cursor-not-allowed {% endif %}{% if is_premium %}bg-yellow-400 text-black{% else %}bg-zinc-900 text-yellow-200 border-yellow-400/30{% endif %} inline-flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2 font-bold shadow ring-1 ring-[color:color-mix(in srgb, {{ brand_color }} 20%, transparent)] transition hover:scale-[1.02]"
+                data-tier-cta type="button" aria-describedby="{{ id_attr }}-tier-{{ loop.index }}-benefits"
+                aria-label="Sponsor the {{ tier.title }} tier{% if tier.amount|string|lower != 'custom' %} for ${{ tier.amount }}{% endif %}">
+                Sponsor {{ tier.title }}
+                <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12.293 4.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 11-1.414-1.414L14.586 10H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 011.414 0z"/></svg>
+              </button>
+              <button type="button" class="chip" data-share aria-label="Share {{ tier.title }} tier">Share</button>
+            </div>
+            <p class="mt-2 text-xs text-zinc-300/80">Limited spots • Fast, secure checkout</p>
+          </div>
+          <div class="flip-card-back border border-[color:color-mix(in srgb, {{ brand_color }} 20%, transparent)] bg-black/70 p-6 text-center shadow-2xl">
+            <span class="text-3xl" aria-hidden="true">{{ tier.emoji }}</span>
+            <h3 class="mt-2 text-xl font-extrabold text-yellow-300">{{ tier.title }} Tier</h3>
+            <p class="mt-2 text-sm text-zinc-200/90">{{ tier.fomo or "Sponsor now for max impact!" }}</p>
+            <button class="{% if sold_out %}opacity-60 cursor-not-allowed {% endif %}{% if is_premium %}bg-yellow-400 text-black{% else %}bg-zinc-900 text-yellow-200 border-yellow-400/30{% endif %} mt-4 inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 font-bold shadow ring-1 ring-[color:color-mix(in srgb, {{ brand_color }} 20%, transparent)] transition hover:scale-[1.02]"
+              type="button" data-tier-cta aria-label="Sponsor the {{ tier.title }} tier now">
+              Become a {{ tier.title }} Sponsor
+              <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12.293 4.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 11-1.414-1.414L14.586 10H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"/></svg>
+            </button>
+          </div>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+</section>
+
+<script nonce="{{ NONCE }}">
+(() => {
+  const root = document.getElementById('{{ id_attr }}');
+  if (!root || root.__bound) return; root.__bound = true;
+
+  // runtime dedupe: hide exact duplicate blocks (same innerHTML ignoring whitespace)
+  (function dedupe(){
+    const all = Array.from(document.querySelectorAll('[data-dedupe-key="tiers"]'));
+    if (all.length <= 1) return;
+    const norm = s => s.replace(/\s+/g,' ').trim();
+    const seen = new Set();
+    for (const el of all){
+      const key = norm(el.innerHTML);
+      if (seen.has(key)) { el.style.display='none'; el.setAttribute('data-duplicate','true'); }
+      else seen.add(key);
+    }
+  })();
+
+  const grid = document.getElementById('{{ id_attr }}-grid');
+  const monthlyToggle = document.getElementById('{{ id_attr }}-monthly');
+  const sortSel = document.getElementById('{{ id_attr }}-sort');
+  const CURRENCY = grid?.dataset?.currency || '{{ currency }}';
+  const HAS_STRIPE = (grid?.dataset?.hasStripe === '1');
+  const SPL = grid?.dataset?.spl || '';
+  const TEAM_NAME = grid?.dataset?.team || '{{ team_name }}';
+  const donateUrl = grid?.dataset?.donateUrl || '/donate';
+  const statsUrl = grid?.dataset?.statsUrl || '/stats';
+  const prefersReduced = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  const nfmt = (v) => new Intl.NumberFormat(navigator.language || 'en-US', { style:'currency', currency: CURRENCY, maximumFractionDigits:0 }).format(v);
+
+  const parseAmt = (raw) => {
+    if (raw == null) return null;
+    const s = String(raw);
+    if (/custom/i.test(s)) return null;
+    const n = parseFloat(s.replace(/[^0-9.]/g,'')); return Number.isFinite(n) ? n : null;
+  };
+
+  // flip behavior
+  function toggleCard(card){
+    card.classList.toggle('card-flipped');
+    card.setAttribute('aria-expanded', String(card.classList.contains('card-flipped')));
+  }
+  root.addEventListener('click', (e) => {
+    const card = e.target.closest?.('.flip-card'); if (!card || !root.contains(card)) return;
+    if (e.target.closest('[data-tier-cta],[data-share],button,select,input,label')) return;
+    toggleCard(card);
+  });
+  root.addEventListener('keydown', (e) => {
+    const card = e.target.closest?.('.flip-card'); if (!card || !root.contains(card)) return;
+    if (e.key === 'Enter' || e.key === ' ') { if (document.activeElement?.hasAttribute('data-tier-cta')) return; e.preventDefault(); toggleCard(card); }
+  });
+
+  // monthly toggle
+  function renderPrices(){
+    const monthly = !!monthlyToggle?.checked;
+    root.querySelectorAll('.price').forEach(el=>{
+      const rawAmt = el.getAttribute('data-amt');
+      const base = parseAmt(rawAmt);
+      if (!base){
+        el.textContent = monthly ? 'Custom / mo' : (el.getAttribute('data-original') || 'Custom package');
+        return;
+      }
+      if (monthly){
+        const per = Math.max(1, Math.round(base/12));
+        el.textContent = nfmt(per).replace(/\s/g,'') + '/mo';
+      } else {
+        el.textContent = nfmt(base).replace(/\s/g,'');
+      }
+    });
+  }
+  monthlyToggle?.addEventListener('change', renderPrices);
+  renderPrices();
+
+  // sort
+  function sortCards(mode){
+    const cards = Array.from(grid.querySelectorAll('.flip-card'));
+    const score = (c)=>{
+      const amt = parseAmt(c.dataset.amount) || 0;
+      const slots = parseInt(c.dataset.slots||'0',10);
+      const cap = Math.max(1, parseInt(c.dataset.cap||'1',10));
+      const availPct = slots/cap;
+      const popular = c.querySelector('.ribbon') ? 1 : 0;
+      return (popular*3) + (amt/5000) + (availPct*0.5);
+    };
+    cards.sort((a,b)=>{
+      if (mode==='price-desc') return (parseAmt(b.dataset.amount)||0) - (parseAmt(a.dataset.amount)||0);
+      if (mode==='price-asc')  return (parseAmt(a.dataset.amount)||0) - (parseAmt(b.dataset.amount)||0);
+      if (mode==='availability'){
+        const aAvail = (parseInt(a.dataset.slots||'0',10))/Math.max(1,parseInt(a.dataset.cap||'1',10));
+        const bAvail = (parseInt(b.dataset.slots||'0',10))/Math.max(1,parseInt(b.dataset.cap||'1',10));
+        return bAvail - aAvail;
+      }
+      return score(b) - score(a);
+    });
+    cards.forEach(c=>grid.appendChild(c));
+  }
+  sortSel?.addEventListener('change', ()=>sortCards(sortSel.value));
+  sortCards('rec');
+
+  // scarcity meter init
+  function updateSlotsUI(card){
+    const slotsLeft = Math.max(0, parseInt(card.dataset.slots||'0',10));
+    const cap = Math.max(1, parseInt(card.dataset.cap||'1',10));
+    const filled = Math.max(0, cap - slotsLeft);
+    const pct = Math.min(100, Math.round((filled/cap)*100));
+    const bar = card.querySelector('.slots > i'); if (bar){ bar.style.width = pct + '%'; }
+  }
+  root.querySelectorAll('.flip-card').forEach(updateSlotsUI);
+
+  // share
+  async function shareTier(card){
+    const tier = card.dataset.tier || 'Sponsor';
+    const url = new URL(location.href); url.hash = 'sponsor=' + encodeURIComponent(tier);
+    const shareData = { title: `${tier} Sponsor — ${TEAM_NAME}`, text: `Join as a ${tier} Sponsor for ${TEAM_NAME}!`, url: url.toString() };
+    try{ if (navigator.share){ await navigator.share(shareData); return; } }catch{}
+    try{ await navigator.clipboard.writeText(url.toString()); }catch{}
+  }
+  root.addEventListener('click', (e)=>{
+    const btn = e.target.closest?.('[data-share]'); if (!btn) return;
+    const card = btn.closest('.flip-card'); if (!card || !root.contains(card)) return;
+    shareTier(card);
+  });
+
+  // CTA
+  async function startCheckout({ tier, amount, card }) {
+    const checkoutUrl = card?.dataset?.checkoutUrl || null;
+    if (checkoutUrl) { try { location.assign(checkoutUrl); } catch {} return; }
+    if (HAS_STRIPE && SPL) { try { location.assign(SPL); } catch {} return; }
+    const qs = new URLSearchParams({ tier, amount: amount ?? 'custom' }).toString();
+    location.assign(donateUrl + '?' + qs);
+  }
+  root.addEventListener('click', (e) => {
+    const btn = e.target.closest?.('[data-tier-cta]'); if (!btn) return;
+    const card = btn.closest('.flip-card'); if (!card || !root.contains(card)) return;
+    const title  = card?.dataset?.tier || 'Custom';
+    const amount = parseAmt(card?.dataset?.amount);
+    startCheckout({ tier: title, amount, card });
+  });
+
+  // live polling (optional)
+  if (statsUrl){
+    setTimeout(() => {
+      const poll = async () => {
+        try {
+          const res = await fetch(statsUrl, { headers: { 'Accept': 'application/json' }});
+          if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data)) {
+              data.forEach(row => {
+                const title = (row?.title || '').toString().toLowerCase();
+                const card = Array.from(root.querySelectorAll('.flip-card')).find(el => (el.dataset.tier||'').toLowerCase() === title);
+                if (!card) return;
+                const slots = parseInt(row?.slots_left ?? 0, 10);
+                card.dataset.slots = String(Math.max(0, slots));
+                updateSlotsUI(card);
+              });
+            }
+          }
+        } catch {}
+        setTimeout(poll, prefersReduced ? 45000 : 20000);
+      };
+      poll();
+    }, 800);
+  }
+})();
+</script>
+{% endmacro %}

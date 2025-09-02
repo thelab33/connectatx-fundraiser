@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import click, sys, runpy, inspect
+import click, sys, runpy, inspect, types
 from pathlib import Path
 import importlib.util
 
@@ -24,18 +24,33 @@ def _load_module(abs_path: Path):
     spec.loader.exec_module(mod)
     return mod
 
+def _call_safely(fn, *args):
+    """Try calling fn with given args; on TypeError (arity), try without args."""
+    try:
+        return fn(*args)
+    except TypeError:
+        return fn()
+
 def _invoke_best_effort(mod, cmd_name: str, abs_path: Path):
-    # Try run(cmd), run(), main(), else run as script via runpy.
-    if hasattr(mod, "run"):
-        sig = inspect.signature(mod.run)
-        if len(sig.parameters) == 1:
-            return mod.run(cmd_name)
-        return mod.run()
-    if hasattr(mod, "main"):
-        return mod.main()
-    # Last resort: execute file (may define __main__ behavior)
+    # Prefer a module-level "run"
+    rn = getattr(mod, "run", None)
+    if callable(rn) and not isinstance(rn, click.Command):
+        # Always try run(cmd_name) first, then run()
+        try:
+            return _call_safely(rn, cmd_name)
+        except SystemExit:
+            raise
+        except Exception:
+            # Last chance: try no-arg again explicitly
+            return rn()
+
+    # Then try a module-level "main"
+    mn = getattr(mod, "main", None)
+    if callable(mn) and not isinstance(mn, click.Command):
+        return _call_safely(mn, cmd_name)
+
+    # Fallback: execute the file (may define __main__ behavior)
     ns = runpy.run_path(str(abs_path))
-    # If it exposes RESULT, use it; otherwise assume success
     return ns.get("RESULT", 0)
 
 @click.group(help="Starforge MVP CLI — safe, read-only audits")

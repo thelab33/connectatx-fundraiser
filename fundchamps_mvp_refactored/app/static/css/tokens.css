@@ -1,0 +1,12 @@
+:root{
+  --fc-brand:#facc15;
+  --fc-bg:#0b0c0f;
+  --fc-text:#e5e7eb;
+  --fc-muted:#a1a1aa;
+  --fc-radius:16px;
+  --fc-gap:0.75rem;
+  --fc-shadow:0 22px 70px rgba(0,0,0,.35);
+  --fc-ring:1px solid color-mix(in srgb, var(--fc-brand) 20%, transparent);
+  --fc-focus:0 0 0 3px color-mix(in srgb, var(--fc-brand) 60%, transparent);
+}
+@media (prefers-reduced-motion:reduce){ *{scroll-behavior:auto!important} }

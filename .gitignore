@@ -1,84 +1,28 @@
-# =========================
-# Python / Flask
-# =========================
-instance/
+# Node
+node_modules/
+dist/
+*.log
+
+# Python
+.venv/
+venv/
+env/
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-*.bak*
-*.db
-*.sqlite
-*.sqlite3
+.mypy_cache/
+.pytest_cache/
 
-# Local env/config
-.env
-.env.*
-*.env
-
-# Flask app data
-app/data/
-app/data/*.db
-
-# =========================
-# Node / Frontend
-# =========================
-node_modules/
-web-frontend/node_modules/
-dist/
-build/
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Bundled / compiled JS
-app/static/js/bundle*.js
-app/static/js/*.min.js
-app/static/js/vendor/
+# Frontend build
+/static/build/
 *.map
 
-# Generated CSS
-*.min.css
-app/static/css/output.css
-app/static/css/archive/
-
-# =========================
-# Editor / IDE
-# =========================
-.vscode/
-<<<<<<< HEAD
-node_modules/
-app/data/
-app/data/app.db
-
-__pycache__/
-*.pyc
-.venv/
-.venv/
-=======
+# OS
 .DS_Store
 Thumbs.db
 
-# =========================
-# FundChamps hard-ignore
-# =========================
-app/templates/_unused/
-app/static/_unused/
-pa11y-report.html
-
->>>>>>> rescue-wip
-_archive/
-backups/
-starforge-archive/
-starforge-backup-*/
-partials_bundle_*/
-migrations.backup.*/
-app/static/_unused/
-app/data/*.db
-instance/*.db
-C:/Users/*/AppData/Local/lighthouse.*/
-*.Zone.Identifier
+# Secrets
+.env
+*.pem
+*.key
+*.p12
 

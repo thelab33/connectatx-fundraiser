@@ -1,13 +1,15 @@
 {# =============================================================================
-   donation_modal.html — FundChamps • Deluxe Donation Modal (CSP-safe)
-   - One canonical place for the entire donation flow (Stripe + PayPal)
-   - Safe endpoints discovery across blueprints
+   donation_modal.html — FundChamps • Deluxe Donation Modal (SV-ELITE polished)
+   - Stripe(Card/PaymentRequest) + PayPal (server endpoints, CSRF-safe)
+   - True SR live region, labeled tabs, focus trap, scroll lock
+   - Works with data-open-donate-modal triggers anywhere on the page
    ============================================================================= #}
 
 {# ---------- Safe fallbacks & tokens ---------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set team_name      = team.team_name if team and team.team_name else 'FundChamps' %}
 {% set brand_color    = team.theme_color if team and team.theme_color else '#facc15' %}
+{% set currency       = team.currency if team and team.currency else 'usd' %}
 {% set vip_threshold  = (team.vip_amount if team and team.vip_amount else 500) | int %}
 {% set min_amount     = min_amount|default(5) | int %}
 {% set default_amount = default_amount|default(50) | int %}
@@ -39,6 +41,9 @@
        class="relative grid grid-cols-1 gap-0 overflow-hidden rounded-2xl border border-yellow-400/25 bg-zinc-950 text-zinc-100 shadow-2xl md:grid-cols-2"
        role="document" tabindex="0"
        style="--fc-brand: {{ brand_color }};">
+    <!-- Screen reader live region -->
+    <span id="sr-live" class="sr-only" aria-live="polite"></span>
+
     <!-- Left: Form -->
     <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 p-5 md:p-6">
       <header class="mb-3 flex items-start justify-between">
@@ -53,9 +58,9 @@
 
       <!-- Amount presets -->
       <fieldset class="mb-3" aria-label="Select amount">
-        <div class="grid grid-cols-3 gap-2">
+        <div class="grid grid-cols-3 gap-2" role="group" aria-label="Quick amounts">
           {% for amt in [25,50,100,250,500,1000] %}
-          <button type="button" data-amount="{{ amt }}"
+          <button type="button" data-amount="{{ amt }}" aria-pressed="false"
                   class="fc-amt w-full rounded-xl border border-yellow-400/20 bg-zinc-900/70 px-3 py-2 font-bold hover:bg-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-300">
             ${{ '{:,.0f}'.format(amt) }}
           </button>
@@ -101,11 +106,11 @@
 
       <!-- Payment method tabs -->
       <nav class="mt-4 flex gap-2 text-sm" role="tablist" aria-label="Payment methods">
-        <button class="pm-tab rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
+        <button id="tab-card" class="pm-tab rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
                 data-tab="card" aria-selected="true" role="tab">💳 Card</button>
-        <button class="pm-tab rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
+        <button id="tab-paypal" class="pm-tab rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
                 data-tab="paypal" aria-selected="false" role="tab">🅿 PayPal</button>
-        <button id="prb-tab" class="pm-tab hidden rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
+        <button id="tab-payreq" class="pm-tab hidden rounded-full bg-yellow-300/20 px-3 py-1.5 font-semibold text-yellow-200 data-[active=true]:bg-yellow-400 data-[active=true]:text-black"
                 data-tab="payreq" aria-selected="false" role="tab">⚡️ Apple/Google Pay</button>
       </nav>
 
@@ -176,6 +181,7 @@
   #donation-modal[open] #donate-box{ animation: dm-pop .22s cubic-bezier(.18,.89,.32,1.28) }
   @keyframes dm-pop{ from{opacity:0; transform:translateY(6px) scale(.98)} to{opacity:1; transform:none} }
   .pm-tab[data-active="true"]{ outline: 2px solid color-mix(in srgb, var(--fc-brand) 55%, #fde68a) }
+  .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
   @media (prefers-reduced-motion: reduce){ #donation-modal[open] #donate-box{ animation: none !important } }
 </style>
 
@@ -241,12 +247,13 @@
   const vipBadge   = document.getElementById('vip-badge');
   const successBox = document.getElementById('success-box');
   const amountBtns = Array.from(dlg.querySelectorAll('.fc-amt'));
-  const prbTab     = document.getElementById('prb-tab');
+  const prbTab     = document.getElementById('tab-payreq');
 
   // ---- Config (from server)
   const VIP   = {{ vip_threshold|int }};
   const MIN   = {{ min_amount|int }};
   const DEF   = {{ default_amount|int }};
+  const CURRENCY = {{ currency|lower|tojson }};
   const ENDPOINTS = {
     stripeIntent: {{ stripe_intent_url|tojson if tojson is defined else '"' ~ stripe_intent_url ~ '"' }},
     paypalOrder : {{ paypal_order_url|tojson  if tojson  is defined else '"' ~ paypal_order_url  ~ '"' }},
@@ -254,9 +261,9 @@
   };
 
   // ---- Helpers
-  const fmt = (n)=> '$' + (Math.round((+n||0)*100)/100).toLocaleString(undefined,{minimumFractionDigits:2});
+  const fmt = (n)=> new Intl.NumberFormat(undefined,{ style:'currency', currency: CURRENCY.toUpperCase(), minimumFractionDigits:2 }).format(+n||0);
   const cents = (n)=> Math.round((+n||0)*100);
-  const feeFor = (n)=> { const pct=0.029, fix=0.30; return +(n*pct + fix).toFixed(2); }; // Stripe-like
+  const feeFor = (n)=> { const pct=0.029, fix=0.30; return +(n*pct + fix).toFixed(2); }; // Stripe-like default
   const setBusy = (on)=> [payCardBtn, payPPBtn].forEach(b => b && (b.disabled = on, b.classList.toggle('opacity-60', on)));
   const showErr = (m='Something went wrong.')=> { err.textContent = m; };
   const clearErr= ()=> { err.textContent = ''; };
@@ -285,20 +292,20 @@
     vipBadge.classList.toggle('hidden', base < VIP);
   }
 
-  // Amount interactions (hardened)
+  // Amount interactions (added aria-pressed toggling)
   amountBtns.forEach(b => b.addEventListener('click', () => {
-    amountBtns.forEach(x => x.classList.remove('is-on'));
-    b.classList.add('is-on');
+    amountBtns.forEach(x => { x.classList.remove('is-on'); x.setAttribute('aria-pressed','false'); });
+    b.classList.add('is-on'); b.setAttribute('aria-pressed','true');
     custom.value = '';
     clearErr(); paint();
   }));
-  custom.addEventListener('input', () => { sanitizeAmountInput(); amountBtns.forEach(x => x.classList.remove('is-on')); paint(); });
+  custom.addEventListener('input', () => { sanitizeAmountInput(); amountBtns.forEach(x => { x.classList.remove('is-on'); x.setAttribute('aria-pressed','false'); }); paint(); });
   feeCb.addEventListener('change', paint);
 
   // Default selected button
   (function initDefault(){
     const match = amountBtns.find(b => +b.dataset.amount === DEF) || amountBtns[1] || amountBtns[0];
-    match?.classList.add('is-on');
+    if (match){ match.classList.add('is-on'); match.setAttribute('aria-pressed','true'); }
     custom.placeholder = String(DEF);
     paint();
   })();
@@ -338,7 +345,7 @@
     try { dlg.showModal?.(); } catch {}
     clearErr();
     if (prefill && typeof prefill === 'object'){
-      if (prefill.amount){ amountBtns.forEach(x=>x.classList.remove('is-on')); custom.value = String(prefill.amount); }
+      if (prefill.amount){ amountBtns.forEach(x=>{x.classList.remove('is-on'); x.setAttribute('aria-pressed','false');}); custom.value = String(prefill.amount); }
       if (prefill.name)  nameI.value = prefill.name;
       if (prefill.email) mailI.value = prefill.email;
       paint();
@@ -363,8 +370,8 @@
   }
 
   document.addEventListener('click', (e) => {
-    if (e.target.closest('[data-open-donate-modal]')) { e.preventDefault(); openModal(); }
-    if (e.target.closest('[data-close]'))            { e.preventDefault(); closeModal(); }
+    if (e.target.closest?.('[data-open-donate-modal]')) { e.preventDefault(); openModal(); }
+    if (e.target.closest?.('[data-close]'))            { e.preventDefault(); closeModal(); }
   });
   dlg.addEventListener('click', (e)=>{ if (e.target === dlg) closeModal(); });
   document.addEventListener('keydown', (e)=>{ if (e.key==='Escape' && dlg.open) closeModal(); });
@@ -397,7 +404,8 @@
       res = await fetch(ENDPOINTS.stripeIntent, {
         method: 'POST',
         headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
-        body: JSON.stringify({ amount: total })
+        credentials: 'same-origin',
+        body: JSON.stringify({ amount: total, currency: CURRENCY })
       });
       data = await res.json().catch(()=>({}));
       if (!res.ok || !data.client_secret || !data.publishable_key) throw 0;
@@ -425,7 +433,7 @@
   async function createPI(){
     const { base, fee, total } = getAmount();
     const payload = {
-      amount: total, currency:'usd',
+      amount: total, currency: CURRENCY,
       metadata: {
         donor_name: nameI.value || '',
         donor_email: mailI.value || '',
@@ -439,6 +447,7 @@
     const res = await fetch(ENDPOINTS.stripeIntent, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'X-CSRFToken': getCSRF(), 'Idempotency-Key': cryptoRandom() },
+      credentials: 'same-origin',
       body: JSON.stringify(payload)
     });
     const data = await res.json().catch(()=>({}));
@@ -450,7 +459,7 @@
   document.getElementById('pay-card').addEventListener('click', async () => {
     clearErr();
     const { base, total } = getAmount();
-    if (!isFinite(total) || total < MIN) { showErr(`Minimum is $${MIN}.`); return; }
+    if (!isFinite(total) || total < MIN) { showErr(`Minimum is ${fmt(MIN)}.`); return; }
     try {
       const s = await ensureStripe();
       if (!s) return;
@@ -474,9 +483,9 @@
     const { total } = getAmount();
     try{
       pr = stripe.paymentRequest({
-        country:'US', currency:'usd',
-        total:{ label: {{ team_name|tojson if tojson is defined else '"' ~ team_name ~ '"' }}, amount: cents(total) },
-        requestPayerEmail:true, requestPayerName:true
+        country: 'US', currency: CURRENCY,
+        total: { label: {{ team_name|tojson if tojson is defined else '"' ~ team_name ~ '"' }}, amount: cents(total) },
+        requestPayerEmail: true, requestPayerName: true
       });
       const can = await pr.canMakePayment();
       if (can) {
@@ -505,18 +514,22 @@
   document.getElementById('pay-paypal').addEventListener('click', async () => {
     clearErr();
     const { base, total } = getAmount();
-    if (!isFinite(total) || total < MIN) { showErr(`Minimum is $${MIN}.`); return; }
+    if (!isFinite(total) || total < MIN) { showErr(`Minimum is ${fmt(MIN)}.`); return; }
     try {
       setBusy(true);
       const r1 = await fetch(ENDPOINTS.paypalOrder, {
-        method:'POST', headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
-        body: JSON.stringify({ amount: total, note: noteI.value||'', donor_email: mailI.value||'' })
+        method:'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        credentials: 'same-origin',
+        body: JSON.stringify({ amount: total, currency: CURRENCY, note: noteI.value||'', donor_email: mailI.value||'' })
       });
       const j1 = await r1.json().catch(()=>({}));
       if (!r1.ok || !j1.order_id) throw new Error(j1.error?.message || 'Unable to start PayPal');
 
       const r2 = await fetch(ENDPOINTS.paypalCapture, {
-        method:'POST', headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        method:'POST',
+        headers: { 'Content-Type':'application/json', 'X-CSRFToken': getCSRF() },
+        credentials: 'same-origin',
         body: JSON.stringify({ order_id: j1.order_id })
       });
       const j2 = await r2.json().catch(()=>({}));
@@ -554,10 +567,10 @@
     for (const n of a) out.push(chars[n%chars.length]); return out.join('');
   }
 
-  // Prefill via event
+  // Prefill via event (optional)
   window.addEventListener('fc:donate:open', (ev)=>{
     const d = ev.detail || {};
-    if (d.amount){ amountBtns.forEach(x=>x.classList.remove('is-on')); custom.value = String(d.amount); }
+    if (d.amount){ amountBtns.forEach(x=>{x.classList.remove('is-on'); x.setAttribute('aria-pressed','false');}); custom.value = String(d.amount); }
     if (d.name)  nameI.value = d.name;
     if (d.email) mailI.value = d.email;
     paint();

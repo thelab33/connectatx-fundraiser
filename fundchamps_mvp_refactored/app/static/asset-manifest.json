@@ -1,0 +1,18 @@
+{
+  "version": {
+    "git": "920a5a27",
+    "builtAt": "2025-08-29T18:31:57.336Z",
+    "mode": "production"
+  },
+  "js": {
+    "bundle": {
+      "path": "app/static/js/bundle.min.js",
+      "bytes": 3744,
+      "gzipBytes": 1855,
+      "sri": {
+        "sha256": "sha256-WySnF3ka1xD+BDJA1hXP741YUxu0BuipkniCcs2VpFo=",
+        "sha384": "sha384-f37w1V3mjm/1D3DuBTt+/0oOM+tXBPq1nLJil+fc7/QI9lZkJttfL7GH+riuBpgI"
+      }
+    }
+  }
+}

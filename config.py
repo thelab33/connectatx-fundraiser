@@ -59,9 +59,7 @@ class BaseConfig:
     # SQLAlchemy
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     SQLALCHEMY_ECHO = _bool("SQLALCHEMY_ECHO", False)
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_pre_ping": True,
-    }
+    SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     # Mail (Flask-Mail)
     MAIL_SERVER = os.getenv("MAIL_SERVER", "smtp.example.com")
@@ -73,17 +71,36 @@ class BaseConfig:
     # Alias used elsewhere in your code:
     DEFAULT_MAIL_SENDER = MAIL_DEFAULT_SENDER
 
-    # Payments
+    # ── Brand / SEO defaults ────────────────────────────────────────────────
+    BRAND_NAME = os.getenv("BRAND_NAME", "FundChamps")
+    # Default OG image used when a team doesn’t supply one (Jinja will call asset/asset_abs)
+    # Matches your request: _TEAM.og_image = "images/og_connect_atx_elite.jpg"
+    OG_DEFAULT_IMAGE = os.getenv("OG_IMAGE", "images/og_connect_atx_elite.jpg")
+
+    # ── Front-end preferences ───────────────────────────────────────────────
+    # Used by base.html boot script to set initial tiers mode if user has no prior choice.
+    # Accepts: "monthly" | "once"
+    TIERS_DEFAULT_MODE = os.getenv("TIERS_DEFAULT_MODE", "monthly")
+
+    # ── Payments ────────────────────────────────────────────────────────────
+    # Strategy: "intents" (custom amounts, modal flow) or "payment_link" (super simple)
+    STRIPE_CHECKOUT_MODE = os.getenv("STRIPE_CHECKOUT_MODE", "intents").lower()
+    # Optional Stripe Payment Link URL (used when STRIPE_CHECKOUT_MODE=="payment_link")
+    STRIPE_PAYMENT_LINK_URL = os.getenv("STRIPE_PAYMENT_LINK_URL", "")
+
     STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-    STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY")
+    STRIPE_PUBLIC_KEY = os.getenv("STRIPE_PUBLIC_KEY") or os.getenv("STRIPE_PUBLISHABLE_KEY")
     STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
     PAYPAL_CLIENT_ID = os.getenv("PAYPAL_CLIENT_ID")
     PAYPAL_SECRET = os.getenv("PAYPAL_SECRET")
+    PAYPAL_ENV = os.getenv("PAYPAL_ENV", "live")  # "live" or "sandbox"
 
     # CORS / Socket
     CORS_ORIGINS = os.getenv("CORS_ORIGINS", "*")
     PRIMARY_ORIGIN = os.getenv("PRIMARY_ORIGIN", "https://connect-atx-elite.com")
     SOCKET_ASYNC_MODE = os.getenv("SOCKET_ASYNC_MODE", "threading")  # matches your SocketIO init
+    USE_SOCKETIO = _bool("USE_SOCKETIO", False)
 
     # Cache / Redis (optional)
     REDIS_URL = os.getenv("REDIS_URL")
@@ -107,6 +124,7 @@ class BaseConfig:
                 level=cls.LOG_LEVEL,
                 format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
             )
+
         # Ensure alias consistency for email helpers
         app.config.setdefault("DEFAULT_MAIL_SENDER", app.config.get("MAIL_DEFAULT_SENDER"))
 

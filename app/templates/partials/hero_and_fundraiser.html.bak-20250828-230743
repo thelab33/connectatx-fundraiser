@@ -1,0 +1,388 @@
+{# ============================================================
+   FC HERO — Cinematic Clean (SV-Elite 4.5 • Logo parity + Mini Meter)
+   - Same logo+chip treatment as header (independent of header)
+   - Full-width bottom overlay (face-safe) w/ mini meter + countdown
+   - Share action (Web Share API w/ clipboard fallback)
+   - Sponsor ribbon preserved; a11y/contrast/motion guards
+   ============================================================ #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set theme_hex   = theme_hex|default('#facc15') %}
+{% set team_name   = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set hero_title  = hero_title|default('Fuel the Season, Fund the Future — On & Off the Court') %}
+{% set catch_line  = catch_phrase if catch_phrase is defined and catch_phrase else
+                     'Family-run AAU program transforming <strong>Austin, Texas</strong> students into honor-roll athletes and leaders.' %}
+
+{# Photo sources (robust fallbacks) #}
+{% set _hero_src = (
+    (hero_image_url if hero_image_url is defined and hero_image_url) or
+    (team.hero_bg if team and team.hero_bg) or
+    (team.hero_image if team and team.hero_image) or
+    (team.team_photo if team and team.team_photo) or
+    (team.photo_url if team and team.photo_url) or
+    'images/connect-atx-team.jpg'
+) %}
+{% set _hero_mobile = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
+{% set hero_src = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{% set hero_src_mobile = (_hero_mobile if '://' in _hero_mobile else (url_for('static', filename=_hero_mobile.lstrip('/')) if url_for is defined else '/static/' ~ _hero_mobile.lstrip('/'))) %}
+{% set hero_alt = (hero_image_alt if hero_image_alt is defined and hero_image_alt else team_name ~ ' team photo') %}
+
+{# Team logo (same resolver as your header, but LOCAL so it's stable without header) #}
+{% set _logo = (team.logo if team and team.logo else 'images/logo.webp') %}
+{% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
+
+{# Fundraising figures + deadline (optional) #}
+{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set _raw_pct = (fundraising_goal and (funds_raised / fundraising_goal * 100)) | default(0) %}
+{% set pct = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
+{% set fundraising_deadline = fundraising_deadline if fundraising_deadline is defined else (deadline_dt if deadline_dt is defined else None) %}
+{% set deadline_iso = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
+
+{# Visual tuning #}
+{% set img_pos_x = img_pos_x|default('50%') %}
+{% set img_pos_y = img_pos_y|default('30%') %}
+
+<link rel="preload" as="image" href="{{ hero_src }}" imagesizes="100vw" fetchpriority="high" />
+
+<section id="fc-hero"
+         class="fc-hero-cinema relative isolate min-h-[92vh] md:min-h-[100svh] flex items-center justify-center overflow-hidden"
+         aria-labelledby="hero-heading" itemscope itemtype="https://schema.org/SportsTeam"
+         style="--accent: {{ theme_hex }}; --img-x: {{ img_pos_x }}; --img-y: {{ img_pos_y }};">
+  <meta itemprop="name" content="{{ team_name }}"/>
+
+  <!-- Ambient background -->
+  <div class="absolute inset-0 -z-10">
+    <div class="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,#0b0b0c_0%,#050609_70%)]"></div>
+    <div class="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_20%,rgba(0,0,0,.28),transparent_60%)] pointer-events-none"></div>
+  </div>
+
+  <!-- Logo + chip (header parity, independent) -->
+  <div class="absolute top-6 md:top-10 left-1/2 -translate-x-1/2 z-30 fc-hero-chip px-3 py-2">
+    <a href="{{ home_url|default('/') }}" class="flex items-center gap-3" aria-label="{{ team_name }} home">
+      <img src="{{ logoSrc }}" alt="{{ team_name }} logo"
+           class="h-10 w-10 rounded-xl ring-1 ring-white/10 bg-white/95"
+           loading="eager" decoding="async" />
+      <span class="legacy-chip"><span class="txt">{{ team_name }}</span></span>
+    </a>
+  </div>
+
+  <!-- Tilted Photo Card -->
+  <div class="fc-hero-tilt grid place-items-center px-4 sm:px-6 w-full">
+    <figure class="fc-hero-card" role="img" aria-label="{{ hero_alt }}">
+      <div class="fc-hero-card__ring" aria-hidden="true"></div>
+      <div class="fc-hero-card__frame">
+        <picture>
+          <source media="(max-width: 767px)" srcset="{{ hero_src_mobile }}"/>
+          <img id="fc-hero-img" src="{{ hero_src }}" alt="" class="fc-hero-card__img"
+               loading="eager" decoding="async" fetchpriority="high" aria-hidden="true" draggable="false"/>
+        </picture>
+        <i class="fc-hero-card__glare" aria-hidden="true"></i>
+        <i class="fc-hero-card__noise" aria-hidden="true"></i>
+
+        <!-- Face-safe full-width bottom overlay -->
+        <figcaption class="fc-hero-overlay" role="group" aria-labelledby="hero-heading" aria-describedby="hero-subtitle">
+          <h1 id="hero-heading" class="fc-hero-type">{{ hero_title }}</h1>
+          <p id="hero-subtitle" class="fc-hero-copy">{{ catch_line | safe }}</p>
+
+          <!-- Action row: CTA • Countdown • Share -->
+          <div class="fc-hero-actions" role="group" aria-label="Hero actions">
+            {% set cta_href = (stripe_payment_link if stripe_payment_link else (cta_href if cta_href is defined else '#tiers')) %}
+            {% set cta_label = (cta_label if cta_label else 'Join Our Champion Circle') %}
+            <a href="{{ cta_href }}"
+               {% if not stripe_payment_link and 'donate' in cta_href %}data-open-donate-modal{% endif %}
+               class="fc-hero-cta sheen-btn" data-analytics="cta:hero">
+              {{ cta_label }} <span aria-hidden="true">🌟</span>
+            </a>
+
+            {% if deadline_iso %}
+            <span id="hero-countdown" class="chip fc-hero-chip--mini" role="timer" aria-live="polite" aria-atomic="true" title="Time remaining">
+              ⏳ —
+            </span>
+            {% endif %}
+
+            <button id="hero-share" type="button" class="chip fc-hero-chip--mini" aria-label="Share this fundraiser">
+              🔗 Share
+            </button>
+          </div>
+
+          <!-- Compact mini-meter (optional, listens to fc:meter:update) -->
+          <div class="hero-meter" role="progressbar"
+               aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ pct|round(1) }}"
+               aria-label="Fundraising progress">
+            <div class="hm-track" aria-hidden="true">
+              <div id="hero-fill" class="hm-fill" style="width: {{ pct|round(1) }}%"></div>
+              <div class="hm-ticks" aria-hidden="true"></div>
+            </div>
+            <div class="hm-stats">
+              <span id="hero-raised" class="tabular">{{ '${:,.0f}'.format(funds_raised) }}</span>
+              <span class="muted">/</span>
+              <span id="hero-goal" class="tabular">{{ '${:,.0f}'.format(fundraising_goal) }}</span>
+              <span class="muted">·</span>
+              <strong id="hero-pct" class="tabular">{{ pct|round(0) }}%</strong>
+              <span id="hero-sr" class="sr-only" aria-live="polite"></span>
+            </div>
+          </div>
+
+          <div class="fc-hero-badges" aria-hidden="true">
+            <span class="badge">🏅 500+ Families</span>
+            <span class="badge">📚 3.5 Team GPA</span>
+            <span class="badge">🏀 AAU Gold Certified</span>
+          </div>
+        </figcaption>
+      </div>
+    </figure>
+  </div>
+
+  <!-- Gym Sponsor Ribbon -->
+  {% if show_gym_ribbon is not defined or show_gym_ribbon %}
+  <div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-4 z-30">
+    <div class="flex flex-col sm:flex-row items-center justify-between
+                bg-gradient-to-r from-yellow-400/90 via-yellow-300/85 to-yellow-200/90
+                border border-yellow-300 rounded-2xl px-6 py-3 shadow-xl">
+      <div class="text-base sm:text-lg font-bold text-zinc-900 flex-1 text-center sm:text-left">
+        🏟️ Gym Rental Sponsored By:
+        <span class="ml-2 text-yellow-900 font-black">
+          {{ gym_sponsor.name if gym_sponsor and gym_sponsor.name else "⭐ Available for Sponsorship" }}
+        </span>
+      </div>
+      <div class="text-xs sm:text-sm font-semibold text-yellow-900 flex-1 text-center sm:text-right mt-2 sm:mt-0">
+        Location: {{ gym_sponsor.location if gym_sponsor and gym_sponsor.location else 'TBD' }}
+        &nbsp;|&nbsp;
+        Practice: {{ gym_sponsor.date if gym_sponsor and gym_sponsor.date else 'TBD' }}
+        <button type="button"
+                class="ml-3 px-4 py-1 bg-zinc-900 text-yellow-300 font-bold rounded-full shadow
+                       hover:bg-yellow-400 hover:text-zinc-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400"
+                {% if sponsor_modal_target is defined %}data-open-modal="{{ sponsor_modal_target }}"{% else %}data-open-modal="gym"{% endif %}>
+          Sponsor a Gym
+        </button>
+      </div>
+    </div>
+    {% if not gym_sponsor %}
+      <div class="text-center mt-1 text-xs text-yellow-800">👀 Your name could be here next week!</div>
+    {% endif %}
+  </div>
+  {% endif %}
+</section>
+
+<style nonce="{{ NONCE }}">
+  /* ---------- Scope: #fc-hero ---------- */
+  #fc-hero { --shadow: 0 25px 80px rgba(0,0,0,.55); }
+  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+  .tabular{ font-variant-numeric: tabular-nums; }
+
+  /* Typography */
+  #fc-hero .fc-hero-type{
+    font-family:"Plus Jakarta Sans","Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+    letter-spacing:-.012em; line-height:1.06;
+    background:linear-gradient(90deg,#fef08a,#fbbf24,#fb923c); -webkit-background-clip:text; background-clip:text; color:transparent;
+    font-size:clamp(1.55rem,1.0rem + 2.6vw,3rem); margin:0; text-wrap:balance;
+  }
+  #fc-hero .fc-hero-copy{ letter-spacing:.002em; text-wrap:balance; margin:.45rem 0 0; color:#fafafa; opacity:.96; font-size:clamp(.98rem,.8rem + .6vw,1.2rem); }
+
+  /* Header-like chip */
+  #fc-hero .fc-hero-chip{
+    background:linear-gradient(180deg,rgba(0,0,0,.50),rgba(0,0,0,.30));
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:0.9rem; -webkit-backdrop-filter:blur(8px) saturate(140%); backdrop-filter:blur(8px) saturate(140%);
+    box-shadow:0 10px 30px rgba(0,0,0,.45);
+  }
+  #fc-hero .legacy-chip{
+    position:relative; padding:.42rem .72rem; border-radius:1rem;
+    background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.02)),linear-gradient(90deg,var(--accent),#fff7cc);
+    box-shadow:0 8px 24px rgba(0,0,0,.25), inset 0 0 0 1px rgba(0,0,0,.2); -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+  }
+  #fc-hero .legacy-chip .txt{ font-weight:900; letter-spacing:-.02em; font-size:clamp(15px,1.4vw,20px); color:#0b0c0f; }
+
+  /* Tilted Photo Card */
+  #fc-hero .fc-hero-tilt{ perspective:1400px; }
+  #fc-hero .fc-hero-card{
+    --r: clamp(20px, 1.6vw, 28px);
+    position:relative; width:min(1080px,92vw); aspect-ratio:16/9; transform-style:preserve-3d; will-change:transform;
+  }
+  #fc-hero .fc-hero-card__ring{ position:absolute; inset:-2px; border-radius:calc(var(--r) + 2px);
+    background:linear-gradient(#0000,#0000) padding-box,
+               conic-gradient(from 180deg at 50% 50%, var(--accent), #fff7cc, var(--accent)) border-box;
+    border:1.5px solid transparent; filter:drop-shadow(0 18px 50px rgba(0,0,0,.45)); z-index:0;
+  }
+  #fc-hero .fc-hero-card__frame{
+    position:absolute; inset:0; z-index:1; border-radius:var(--r);
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
+    border:1px solid rgba(255,255,255,.12); box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
+    overflow:hidden; transform:translateZ(40px);
+  }
+  #fc-hero .fc-hero-card__img{
+    width:100%; height:100%; object-fit:cover; object-position: var(--img-x) var(--img-y);
+    transform:translateZ(20px) scale(1.02); filter:saturate(1.06) contrast(1.05);
+    user-select:none; -webkit-user-drag:none;
+  }
+  #fc-hero .fc-hero-card__glare{
+    position:absolute; inset:-20%; mix-blend-mode:screen; pointer-events:none; transform:translateZ(60px);
+    background:radial-gradient(40% 60% at var(--mx,50%) var(--my,40%), rgba(255,255,255,.26), transparent 60%);
+  }
+  #fc-hero .fc-hero-card__noise{
+    position:absolute; inset:0; pointer-events:none; opacity:.08; transform:translateZ(80px);
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>");
+    background-size:160px 160px;
+  }
+
+  /* Face-safe bottom overlay */
+  #fc-hero .fc-hero-overlay{
+    position:absolute; inset-inline:0; bottom:0;
+    display:flex; flex-direction:column; gap:.75rem; align-items:center; text-align:center;
+    padding:1rem clamp(1rem, 2vw, 1.6rem);
+    background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.72) 60%, rgba(0,0,0,.96) 100%);
+  }
+
+  /* Actions row */
+  #fc-hero .fc-hero-actions{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem .65rem; }
+  #fc-hero .chip{
+    display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .7rem; border-radius:.8rem;
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e5e7eb; font-weight:800; font-size:.86rem;
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  }
+  #fc-hero .fc-hero-chip--mini{ font-size:.8rem; padding:.3rem .6rem; }
+
+  /* CTA */
+  #fc-hero .fc-hero-cta{
+    display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+    border-radius:999px; font-weight:900; font-size:clamp(.95rem, .9rem + .2vw, 1.1rem);
+    padding:.8rem 1.25rem; color:#111827;
+    background:linear-gradient(180deg,#fde047,#facc15);
+    box-shadow:0 10px 30px rgba(250,204,21,.22); text-decoration:none;
+  }
+  #fc-hero .fc-hero-cta:focus-visible{ box-shadow:0 0 0 3px rgba(255,255,255,.30),0 0 0 6px rgba(250,204,21,.45); }
+  #fc-hero .fc-hero-cta:hover{ transform:translateY(-1px) scale(1.02); transition:transform .2s ease; }
+
+  /* Mini meter */
+  #fc-hero .hero-meter{ width:100%; max-width:min(720px,92%); }
+  #fc-hero .hm-track{ position:relative; height:12px; border-radius:9999px; overflow:hidden;
+    background:rgba(255,255,255,.10); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08); }
+  #fc-hero .hm-ticks{ position:absolute; inset:0; pointer-events:none;
+    background:repeating-linear-gradient(90deg,rgba(255,255,255,.24) 0, rgba(255,255,255,.24) 1px, transparent 1px, transparent 5%); opacity:.35; }
+  #fc-hero .hm-fill{ position:absolute; inset-block:0; left:0; width:{{ pct|round(1) }}%;
+    background:linear-gradient(90deg,#fffbe6,var(--accent),#f59e0b); box-shadow:0 0 10px rgba(250,204,21,.45);
+    transition:width .6s cubic-bezier(.2,.8,.2,1); }
+  #fc-hero .hm-stats{ margin-top:.35rem; color:#e5e7eb; font-size:.9rem; }
+  #fc-hero .hm-stats .muted{ opacity:.7; margin:0 .35rem; }
+
+  /* Badges */
+  #fc-hero .fc-hero-badges{ display:flex; flex-wrap:wrap; gap:.5rem; }
+  #fc-hero .fc-hero-badges .badge{
+    display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .7rem; border-radius:999px;
+    background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.06));
+    border:1px solid rgba(255,255,255,.18); color:#e5e7eb; text-shadow:0 1px 0 rgba(0,0,0,.35);
+    font-variant-numeric:tabular-nums; font-weight:700; font-size:.92rem;
+    -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
+  }
+
+  /* Micro-interactions */
+  #fc-hero .sheen-btn{ position:relative; overflow:hidden; }
+  #fc-hero .sheen-btn::before{ content:""; position:absolute; inset-block:0; left:-40%; width:40%;
+    transform:skewX(-16deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
+    animation:shine 2.6s linear infinite; }
+  @keyframes shine{ from{ transform:translateX(-120%) skewX(-16deg)} to{ transform:translateX(120%) skewX(-16deg)} }
+
+  /* Guards */
+  @media (max-width: 640px){ #fc-hero .fc-hero-overlay{ padding:1rem 1rem; } }
+  @media (prefers-reduced-motion: reduce){
+    #fc-hero .fc-hero-card{ transform:none!important; }
+    #fc-hero .fc-hero-card__img{ transform:none!important; }
+    #fc-hero .sheen-btn::before{ animation:none; opacity:0; }
+    #fc-hero .hm-fill{ transition:none; }
+  }
+  @media (prefers-contrast: more){
+    #fc-hero .fc-hero-card__frame{ -webkit-backdrop-filter:none; backdrop-filter:none; background:#000!important; }
+  }
+  @media (forced-colors: active){
+    #fc-hero .fc-hero-card__frame{ border:1px solid CanvasText; box-shadow:none; }
+    #fc-hero .fc-hero-badges .badge{ background:Canvas; color:CanvasText; border:1px solid CanvasText; }
+  }
+</style>
+
+<script nonce="{{ NONCE }}">
+  (() => {
+    if (window.__fcHeroCard45) return; window.__fcHeroCard45 = true;
+
+    // Fallback image
+    const img = document.getElementById('fc-hero-img');
+    img?.addEventListener('error', () => {
+      try {
+        const f = '{{ url_for("static", filename="images/logo.webp") if url_for is defined else "/static/images/logo.webp" }}';
+        if (img.src !== f) img.src = f;
+      } catch {}
+    });
+
+    // Tilt + glare (motion-safe)
+    const rm = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const card  = document.querySelector('#fc-hero .fc-hero-card');
+    const glare = document.querySelector('#fc-hero .fc-hero-card__glare');
+    if (!rm && card){
+      const MAX = 12; let raf=0;
+      function move(e){
+        const r = card.getBoundingClientRect();
+        const p = ('touches' in e) ? e.touches[0] : e;
+        const px = (p.clientX - r.left) / r.width;
+        const py = (p.clientY - r.top) / r.height;
+        const rx = (py-.5)*-2*MAX, ry = (px-.5)*2*MAX;
+        const mx = Math.round(px*100)+'%', my = Math.round(py*100)+'%';
+        cancelAnimationFrame(raf);
+        raf=requestAnimationFrame(()=>{ card.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`; glare?.style.setProperty('--mx',mx); glare?.style.setProperty('--my',my); });
+      }
+      function leave(){ cancelAnimationFrame(raf); card.style.transform='translateZ(0) rotateX(0) rotateY(0)'; }
+      card.addEventListener('mousemove', move, {passive:true});
+      card.addEventListener('touchmove', move,   {passive:true});
+      card.addEventListener('mouseleave', leave, {passive:true});
+      card.addEventListener('touchend',  leave,  {passive:true});
+    }
+
+    // Mini meter wiring (listens to fc:meter:update; primes with SSR values)
+    const fill   = document.getElementById('hero-fill');
+    const raised = document.getElementById('hero-raised');
+    const goal   = document.getElementById('hero-goal');
+    const pctTxt = document.getElementById('hero-pct');
+    const srLive = document.getElementById('hero-sr');
+    function setMeter(r,g){
+      const R = Math.max(0, +r||0), G = Math.max(0, +g||0);
+      const P = G ? Math.max(0, Math.min(100, (R/G)*100)) : 0;
+      const fmt$ = n => '$' + (Math.round(+n||0)).toLocaleString();
+      if (fill)   fill.style.width = P.toFixed(1) + '%';
+      if (raised) raised.textContent = fmt$(R);
+      if (goal)   goal.textContent   = fmt$(G);
+      if (pctTxt) pctTxt.textContent = P.toFixed(0) + '%';
+      if (fill?.parentElement?.parentElement) fill.parentElement.parentElement.setAttribute('aria-valuenow', P.toFixed(1));
+      if (srLive) srLive.textContent = `Progress: ${P.toFixed(1)}% funded — ${fmt$(R)} of ${fmt$(G)}.`;
+    }
+    addEventListener('fc:meter:update', ev => {
+      const d = ev.detail||{}; setMeter(d.raised, d.goal);
+    }, { passive:true });
+
+    // Countdown (if deadline present)
+    const countdownEl = document.getElementById('hero-countdown');
+    {% if deadline_iso %}
+    (function(){
+      const deadline = new Date('{{ deadline_iso }}');
+      if (isNaN(deadline) || !countdownEl) return;
+      const tick = () => {
+        const ms = deadline - new Date();
+        if (ms <= 0){ countdownEl.textContent = '⏳ Now'; return; }
+        const d = Math.floor(ms/86400000);
+        const h = Math.floor((ms%86400000)/3600000);
+        const m = Math.floor((ms%3600000)/60000);
+        countdownEl.textContent = `⏳ ${d}d ${h}h ${m}m`;
+      };
+      tick(); setInterval(tick, 60000);
+    })();
+    {% endif %}
+
+    // Share (Web Share API + clipboard fallback)
+    const shareBtn = document.getElementById('hero-share');
+    shareBtn?.addEventListener('click', async () => {
+      const data = { title: '{{ team_name }}', text: 'Support our season!', url: location.href };
+      try {
+        if (navigator.share) { await navigator.share(data); }
+        else if (navigator.clipboard?.writeText){ await navigator.clipboard.writeText(location.href); shareBtn.textContent = '✅ Copied'; setTimeout(()=>shareBtn.textContent='🔗 Share',1400); }
+      } catch(_) {}
+    }, { passive:true });
+  })();
+</script>
+

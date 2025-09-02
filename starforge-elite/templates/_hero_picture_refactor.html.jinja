@@ -1,0 +1,51 @@
+{# starforge/_hero_picture_refactor.html.jinja
+   Smart <picture> that switches to forged responsive set when using the stock photo.
+#}
+{% set use_prebuilt = 'connect-atx-team.jpg' in hero_src %}
+<picture>
+  {% if use_prebuilt %}
+    <!-- AVIF / WEBP responsive set (forged by Starforge) -->
+    <source
+      type="image/avif"
+      srcset="{{ url_for('static', filename='images/hero/hero-1920.avif') if url_for is defined else '/static/images/hero/hero-1920.avif' }} 1920w,
+              {{ url_for('static', filename='images/hero/hero-1280.avif') if url_for is defined else '/static/images/hero/hero-1280.avif' }} 1280w,
+              {{ url_for('static', filename='images/hero/hero-960.avif')  if url_for is defined else '/static/images/hero/hero-960.avif'  }} 960w"
+      sizes="100vw" />
+    <source
+      type="image/webp"
+      srcset="{{ url_for('static', filename='images/hero/hero-1920.webp') if url_for is defined else '/static/images/hero/hero-1920.webp' }} 1920w,
+              {{ url_for('static', filename='images/hero/hero-1280.webp') if url_for is defined else '/static/images/hero/hero-1280.webp' }} 1280w,
+              {{ url_for('static', filename='images/hero/hero-960.webp')  if url_for is defined else '/static/images/hero/hero-960.webp'  }} 960w"
+      sizes="100vw" />
+    <img id="fc-hero-img"
+         src="{{ url_for('static', filename='images/hero/hero-1280.webp') if url_for is defined else '/static/images/hero/hero-1280.webp' }}"
+         alt="{{ hero_alt }}"
+         class="fc-hero-card__img"
+         loading="eager"
+         decoding="async"
+         fetchpriority="high"
+         width="1920" height="1080"
+         draggable="false"
+         data-parallax-y="8"
+         data-lcp-target="1"
+         crossorigin="anonymous" />
+  {% else %}
+    <!-- Fall back to team-provided image -->
+    <source type="image/avif"  srcset="{{ hero_src }} 1920w"        media="(min-width:768px)" sizes="100vw"/>
+    <source type="image/webp"  srcset="{{ hero_src }} 1920w"        media="(min-width:768px)" sizes="100vw"/>
+    <source type="image/avif"  srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw"/>
+    <source type="image/webp"  srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw"/>
+    <img id="fc-hero-img"
+         src="{{ hero_src }}"
+         alt="{{ hero_alt }}"
+         class="fc-hero-card__img"
+         loading="eager"
+         decoding="async"
+         fetchpriority="high"
+         width="1920" height="1080"
+         draggable="false"
+         data-parallax-y="8"
+         data-lcp-target="1"
+         crossorigin="anonymous" />
+  {% endif %}
+</picture>

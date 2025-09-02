@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+venv/
+.env
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Node
+node_modules/
+.eslintcache
+.npm/
+.yarn/
+.yarn-cache/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Coverage / reports
+.coverage
+htmlcov/
+pytest_cache/
+
+# Playwright/Artifacts
+test-results/
+playwright-report/

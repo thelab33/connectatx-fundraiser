@@ -1,0 +1,61 @@
+/* === FC HERO core (SV-Elite 6.1) === */
+#fc-hero{color-scheme:light dark}
+#fc-hero .fc-hero-card{position:relative;width:min(100%,1120px);border-radius:1.25rem;overflow:clip}
+#fc-hero .fc-hero-card__frame{position:relative;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);box-shadow:0 25px 80px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);overflow:hidden}
+#fc-hero .fc-hero-card__img{width:100%;height:auto;object-fit:cover;object-position:var(--img-x) var(--img-y);transform:translateZ(0)}
+#fc-hero .fc-hero-card__tint{position:absolute;inset:0;pointer-events:none;background:radial-gradient(120% 70% at 50% 20%,rgba(0,0,0,var(--tint,0)),rgba(0,0,0,calc(var(--tint,0)*.52)) 60%,transparent)}
+#fc-hero .fc-hero-card__belt{position:absolute;inset-inline:6%;top:45%;height:var(--belt-h,5rem);pointer-events:none;background:linear-gradient(180deg,transparent,rgba(0,0,0,.42) 18%,rgba(0,0,0,.52) 50%,rgba(0,0,0,.42) 82%,transparent);border-radius:22px;filter:blur(1px)}
+#fc-hero .fc-hero-card__glare{position:absolute;inset:-20%;mix-blend-mode:screen;pointer-events:none;background:radial-gradient(40% 60% at var(--mx,50%) var(--my,40%),rgba(255,255,255,.16),transparent 60%)}
+#fc-hero .fc-hero-card__noise{position:absolute;inset:0;pointer-events:none;opacity:.08;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>");background-size:160px 160px}
+
+/* Overlay */
+#fc-hero .fc-hero-overlay{position:absolute;inset:0;display:grid;place-items:end center;padding:1rem;gap:.75rem;text-align:center;background:linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,.68) 42%,rgba(0,0,0,.97))}
+:root.light #fc-hero .fc-hero-overlay{background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.86) 58%,rgba(255,255,255,.96));color:#111}
+
+/* Headline hologram */
+#fc-hero .holo3d{position:relative;font-weight:800;font-size:clamp(1.8rem,5.6vw,3.2rem);letter-spacing:.01em;color:#f5f7ff;text-shadow:0 0 .5px rgba(255,255,255,.9),0 1px 0 rgba(0,0,0,.35);transform:translateZ(90px)}
+#fc-hero .holo3d::after{content:attr(data-text);position:absolute;inset:0;translate:.02em -.02em;color:#00ffff;mix-blend-mode:screen;opacity:.35;pointer-events:none}
+#fc-hero[data-holo-boost="1"] .holo3d{filter:drop-shadow(0 14px 28px rgba(0,0,0,.42))}
+@media (forced-colors:active){#fc-hero .holo3d,#fc-hero .holo3d::after{color:CanvasText;text-shadow:none;filter:none}}
+
+/* Brand chip / tiles / badges */
+#fc-hero .legacy-chip{display:inline-flex;gap:.4rem;padding:.28rem .6rem;border-radius:.65rem;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.24);color:#eef2f7;font-size:.82rem}
+:root.light #fc-hero .legacy-chip{background:rgba(255,255,255,.85);border-color:#e5e7eb;color:#0f1117}
+#fc-hero .stats-pill,#fc-hero .badge{display:inline-flex;align-items:center;gap:.35rem;padding:.36rem .6rem;border-radius:999px;background:rgba(0,0,0,.55);color:#fff;font-variant-numeric:tabular-nums}
+:root.light #fc-hero .stats-pill,:root.light #fc-hero .badge{background:rgba(17,17,17,.06);color:#111}
+#fc-hero .impact-tiles{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center}
+#fc-hero .impact-tiles .tile{display:inline-flex;gap:.45rem;padding:.4rem .7rem;border-radius:.9rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);font-weight:800;color:#e7ebf2}
+:root.light #fc-hero .impact-tiles .tile{background:rgba(17,17,17,.06);border-color:rgba(17,17,17,.12);color:#111}
+
+/* Actions */
+#fc-hero .actions{display:flex;flex-wrap:wrap;gap:.55rem .65rem;justify-content:center}
+#fc-hero .fc-hero-cta{display:inline-flex;align-items:center;gap:.5rem;padding:.85rem 1.3rem;border-radius:999px;background:var(--accent);color:#111;font-weight:800;box-shadow:0 8px 28px rgba(0,0,0,.25)}
+#fc-hero .chip{display:inline-flex;gap:.4rem;padding:.38rem .7rem;border-radius:.8rem;background:rgba(0,0,0,.35);color:#fff}
+:root.light #fc-hero .chip{background:rgba(0,0,0,.06);color:#111}
+@media (prefers-reduced-motion:no-preference){.cta-pulse{position:relative}.cta-pulse:after{content:"";position:absolute;inset:-3px;border-radius:999px;border:2px solid color-mix(in srgb,var(--accent) 55%,transparent);opacity:0;animation:heroPulse 2.6s ease-out infinite}@keyframes heroPulse{0%{transform:scale(.98);opacity:0}40%{opacity:.55}100%{transform:scale(1.08);opacity:0}}}
+
+/* Meter */
+#fc-hero .hero-meter{width:100%;max-width:min(720px,92%)}
+#fc-hero .hm-track{position:relative;height:12px;border-radius:9999px;background:rgba(255,255,255,.16);overflow:hidden}
+#fc-hero .hm-ticks{position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(90deg,rgba(255,255,255,.24) 0,rgba(255,255,255,.24) 1px,transparent 1px,transparent 5%);opacity:.22}
+#fc-hero .hm-fill{position:absolute;inset-block:0;left:0;background:var(--accent);box-shadow:0 0 10px color-mix(in srgb,var(--accent) 25%,transparent);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+#fc-hero .milestones{display:flex;gap:.35rem;justify-content:center;margin-top:.4rem;flex-wrap:wrap}
+#fc-hero .milestones .ms{list-style:none;font-size:.72rem;font-weight:800;padding:.18rem .45rem;border-radius:.6rem;border:1px solid rgba(255,255,255,.20);background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.05));color:#e5e7eb}
+#fc-hero .milestones .ms.hit{transform:scale(1.02)}
+
+/* Donor ticker / proof rail */
+#donor-ticker{width:100%;max-width:48rem;overflow:hidden;display:none;margin-top:.25rem}
+#donor-ticker .dt-track{display:flex;gap:10px;white-space:nowrap;will-change:transform;mask-image:linear-gradient(to right,transparent 0,black 5%,black 95%,transparent)}
+@media (prefers-reduced-motion:no-preference){#donor-ticker[data-run="1"] .dt-track{animation:ticker 20s linear infinite}@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}}
+#fc-hero .proof-rail{display:flex;gap:.5rem;justify-content:center;margin-top:.35rem;overflow:auto;scrollbar-width:none;-ms-overflow-style:none}
+#fc-hero .proof-rail::-webkit-scrollbar{display:none}
+
+/* A11y / guards */
+@media (forced-colors:active){
+  #fc-hero .fc-hero-card__belt,#fc-hero .fc-hero-card__tint,#fc-hero .tile,#fc-hero .chip,#fc-hero .stats-pill,#fc-hero .badge{background:CanvasText;color:Canvas}
+  #fc-hero .hm-track{background:CanvasText} #fc-hero .hm-fill{background:LinkText}
+}
+@media (prefers-reduced-motion:reduce){
+  #fc-hero .hm-fill{transition:none} .cta-pulse:after{animation:none!important} #donor-ticker .dt-track{animation:none!important}
+}
+

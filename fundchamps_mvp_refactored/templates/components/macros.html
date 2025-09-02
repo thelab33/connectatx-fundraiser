@@ -1,0 +1,9 @@
+{% macro tier_card(t) -%}
+<div class="rounded-2xl border p-4 bg-white shadow-sm">
+  <div class="text-sm font-medium text-gray-500">{{ t.title }}</div>
+  <div class="text-3xl font-bold my-2">
+    {% if t.amount %}${{ '{:,}'.format(t.amount) }}{% else %}Custom{% endif %}
+  </div>
+  <div class="text-xs text-gray-500">Slots left: {{ t.slots_left }}</div>
+</div>
+{%- endmacro %}

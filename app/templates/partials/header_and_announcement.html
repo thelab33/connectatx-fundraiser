@@ -1,290 +1,344 @@
-{# ======================================================================
-   Header — SV Elite v3.5 (Sticky + Sponsor Leaderboard Rail, SV polish)
-   - A11y-first, CSP-safe, conflict-proof (scoped to header id)
-   - Micro-meter + Donate CTA; pauseable sponsor marquee rail
-   ====================================================================== #}
-{% set NONCE    = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
-{% set _team    = team if team is defined and team else none %}
+{# ============================================================
+   Header • SV-Elite 6.0 (Starforge Polish • CSP-safe)
+   - Glass 3.0, brand glow, AA+ contrast
+   - Smart sticky (hide on down / show on up) + shadow
+   - Mobile focus-trap + inert + ESC + restore focus
+   - Section scroll-spy → aria-current
+   - Persistent announcement dismiss (team+message)
+   - Theme-color sync, anchor scroll padding to header height
+   - UTM + P2P propagation for Donate (and any [data-p2p-propagate])
+   - Keyboard hotkeys: D → Donate
+   - Stripe seal flip + keyboard parity + width-sync
+   - Optional Starforge brand spine hook
+   ============================================================ #}
+{% set NONCE        = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set HAS_ENDPOINT = has_endpoint is defined %}
+{% set _sf          = safe_url_for is defined and safe_url_for %}
+{% set href_home    = (_sf and HAS_ENDPOINT and has_endpoint('main.home')   and safe_url_for('main.home'))   or '/' %}
+{% set href_donate  = (_sf and HAS_ENDPOINT and has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate' %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 
-{% set platform_name  = platform_name if platform_name is defined and platform_name else 'FundChamps' %}
-{% set platform_url   = platform_url if platform_url is defined and platform_url else '/' %}
-{% set _p_logo_svg    = 'images/fundchamps-logo.svg' %}
-{% set platform_logo_svg = (url_for('static', filename=_p_logo_svg) if url_for is defined else '/static/' ~ _p_logo_svg) %}
+<a href="#main" class="skip-link sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-black focus:text-white">
+  Skip to content
+</a>
 
-{% set team_name   = _team.team_name if _team and _team.team_name is defined else 'Connect ATX Elite' %}
-{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
-{% set stripe_payment_link = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
+<header id="site-header"
+        class="hdr sf-sticky sf-ring transition-shadow duration-300"
+        role="banner"
+        aria-label="Site header"
+        data-sticky-shadow="1"
+        data-smart-sticky="1">
+  <div class="sf-container hdr-glass hdr-glow flex items-center justify-between gap-3 py-2 rounded-2xl">
+    <!-- Brand (links home) -->
+    <a href="{{ href_home }}"
+       class="group flex items-center gap-2 font-black text-[clamp(1rem,2vw,1.125rem)] tracking-tight"
+       aria-label="FundChamps Home"
+       data-analytics="nav:home">
+      <span class="text-gold">FundChamps</span>
+      <span class="hidden sm:inline text-zinc-200">for {{ (team.team_name if team and team.team_name else 'Your Team') }}</span>
+    </a>
 
-{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
-{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
-{% set _raw_pct = (funds_raised / (fundraising_goal if fundraising_goal else 1) * 100) %}
-{% set pct = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
+    <!-- Mobile toggle -->
+    <button id="menu-toggle" type="button"
+            class="md:hidden sf-btn sf-btn-lite sf-btn-sm"
+            aria-controls="site-nav" aria-expanded="false" aria-haspopup="true"
+            aria-label="Open menu" data-focus-trap="1">
+      <span class="sr-only">Toggle navigation</span> ☰
+    </button>
 
-{% set _logo = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
-{% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
+    <!-- Primary nav -->
+    <nav id="site-nav"
+         class="hdr-nav hidden md:flex items-center gap-6"
+         aria-label="Primary" role="navigation" aria-hidden="true">
+      <ul class="flex items-center gap-6">
+        <li><a href="#tiers"  class="nav-link" data-analytics="nav:tiers">Tiers</a></li>
+        <li><a href="#impact" class="nav-link" data-analytics="nav:impact">Impact</a></li>
+        <li><a href="#about"  class="nav-link" data-analytics="nav:about">About</a></li>
+      </ul>
+    </nav>
 
-{% set TICKER = (
-  ticker_items if ticker_items is defined and ticker_items
-  else [
-    'Shoutout: The Jackson Family — $250 🙌',
-    'Shoutout: Austin Realty — $500 🏠',
-    'Shoutout: Coach Rivera — $100 💪',
-    'Shoutout: Anonymous — $50 💛'
-  ]
-) %}
+    <!-- CTAs (desktop) -->
+    <div class="hidden md:flex items-center gap-2">
+      <a href="#tiers" class="sf-btn sf-btn-ghost sf-btn-sm" data-analytics="cta:header:tiers">Sponsor</a>
 
-{% if stripe_payment_link %}
-<link rel="preconnect" href="https://js.stripe.com" crossorigin>
-{% endif %}
-
-<header id="{{ _hdr_id }}" role="banner"
-        class="sticky top-0 z-50 print:hidden"
-        style="--fc-brand: {{ brand_color }};">
-  <style nonce="{{ NONCE }}">
-    #{{ _hdr_id }}{
-      isolation:isolate;
-      background:linear-gradient(180deg,rgb(5 6 9/.82),rgb(5 6 9/.66));
-      -webkit-backdrop-filter:blur(14px) saturate(150%); backdrop-filter:blur(14px) saturate(150%);
-      border-bottom:1px solid rgba(255,255,255,.08);
-      padding-top:max(0px, env(safe-area-inset-top));
-      padding-inline:max(0px, env(safe-area-inset-left)) max(0px, env(safe-area-inset-right));
-      contain:content;
-    }
-    #{{ _hdr_id }} .fc-container{ width:min(88rem,96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem); }
-
-    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-
-    /* Row 1 — brand | nav+meter | ctas */
-    .hdr-row{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; padding:.55rem 0; }
-    .fc-brand{ display:inline-flex; align-items:center; gap:.6rem; text-decoration:none; }
-    .fc-brand .logo{ height:clamp(36px,4.2vw,52px); width:auto; }
-    .fc-brand .word{
-      font-weight:900; letter-spacing:-.02em; font-size:clamp(18px,1.75vw,28px);
-      background:linear-gradient(90deg,#f87171,#facc15,#4ade80,#38bdf8,#a78bfa);
-      background-size:200% auto; -webkit-background-clip:text; background-clip:text; color:transparent;
-      white-space:nowrap; animation:rainbow-shift 8s linear infinite, rainbow-glow 2.5s ease-in-out infinite;
-    }
-    @keyframes rainbow-shift{ to{ background-position:200% center } }
-    @keyframes rainbow-glow{ 0%,100%{ text-shadow:0 0 6px rgba(255,255,255,.15) } 50%{ text-shadow:0 0 16px rgba(255,255,255,.35) } }
-
-    nav.primary a{
-      color:rgba(255,255,255,.86); text-decoration:none; font-weight:600;
-      transition:color .18s ease;
-    }
-    nav.primary a:hover, nav.primary a:focus-visible{ color: color-mix(in srgb, var(--fc-brand) 80%, white 20%); outline:none; }
-
-    .hdr-center{ display:flex; align-items:center; justify-content:center; gap:1rem; }
-
-    /* Compact prestige meter */
-    .hdr-meter{ display:flex; align-items:center; gap:.5rem; }
-    .hdr-meter .track{
-      position:relative; width: clamp(140px, 22vw, 220px); height: 12px; border-radius:9999px; overflow:hidden;
-      background:rgba(255,255,255,.12); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1);
-    }
-    .hdr-meter .ticks{
-      position:absolute; inset:0; pointer-events:none;
-      background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0, rgba(255,255,255,.22) 1px, transparent 1px, transparent 5%);
-      opacity:.35;
-    }
-    .hdr-meter .fill{
-      position:absolute; inset-block:0; left:0; width:{{ pct|round(1) }}%;
-      background:linear-gradient(90deg,#fffbe6,var(--fc-brand),#f59e0b);
-      box-shadow:0 0 8px rgba(250,204,21,.45);
-      transition:width .6s cubic-bezier(.2,.8,.2,1);
-    }
-    .hdr-meter .pct{ font-variant-numeric:tabular-nums; min-width:3ch; font-size:.9rem; color:#fde68a; }
-
-    /* Row 2 — Sponsor Leaderboard Rail */
-    .hdr-rail{
-      display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.5rem;
-      padding:.4rem .25rem .55rem; border-top:1px solid rgba(255,255,255,.08);
-    }
-    .rail-btn{
-      --b: rgba(255,255,255,.16);
-      display:inline-flex; align-items:center; gap:.45rem; font-weight:800; font-size:.85rem;
-      padding:.35rem .65rem; border-radius:.65rem; border:1px solid var(--b); background:rgba(255,255,255,.06);
-      color:#e5e7eb;
-    }
-    .rail-track{ position:relative; overflow:hidden; height:30px; }
-    .rail-marquee{ display:flex; align-items:center; gap:1.25rem; white-space:nowrap; will-change:transform; }
-    .rail-item{
-      display:inline-flex; align-items:center; gap:.45rem; padding:.28rem .55rem; border-radius:999px;
-      background:linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
-      border:1px solid rgba(255,255,255,.18); color:#e5e7eb; font-weight:700; font-size:.9rem;
-      text-shadow:0 1px 0 rgba(0,0,0,.35); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
-    }
-    .rail-cta{ color:#0b0b0c; background:linear-gradient(90deg,#fde047,#facc15); border:1px solid rgba(0,0,0,.16);
-      border-radius:999px; padding:.35rem .7rem; font-weight:900; font-size:.85rem; text-decoration:none; }
-
-    /* CTAs */
-    .fc-btn{ display:inline-flex; align-items:center; gap:.55rem; border-radius:999px; padding:.6rem 1rem; font-weight:800; }
-    .fc-btn-primary{
-      background:linear-gradient(90deg,#fde047,#facc15,#fbbf24); color:#0b0b0c;
-      box-shadow:0 6px 18px rgba(250,204,21,.35); transition:transform .2s ease;
-    }
-    .fc-btn-primary:hover{ transform:translateY(-1px) scale(1.02); }
-    .fc-btn-primary:focus-visible{ outline:2px solid #fff7cc; outline-offset:3px; }
-
-    /* Scroll/shrink behavior */
-    #{{ _hdr_id }}.is-shrunk{ -webkit-backdrop-filter:blur(16px) saturate(160%); backdrop-filter:blur(16px) saturate(160%); box-shadow:0 8px 30px rgb(0 0 0/.35); }
-    #{{ _hdr_id }}.is-compact .hdr-meter{ display:none; }
-    #{{ _hdr_id }}.is-compact .fc-btn-primary{ padding:.55rem .85rem; font-size:.95rem; }
-
-    @media (max-width:980px){
-      nav.primary{ display:none; }
-      .hdr-row{ grid-template-columns:auto 1fr auto; }
-    }
-    @media (max-width:720px){
-      .fc-brand .word{ display:none; }
-      .rail-item{ font-size:.85rem; }
-    }
-
-    /* Motion/forced colors */
-    @media (prefers-reduced-motion: reduce){
-      .rail-marquee{ animation:none !important; transform:none !important; }
-      .fc-btn-primary{ transition:none; }
-    }
-    @media (forced-colors: active){
-      #{{ _hdr_id }}{ background:Canvas; border-bottom:1px solid CanvasText; }
-      .rail-item{ background:Canvas; color:CanvasText; border:1px solid CanvasText; }
-      .rail-cta{ background:CanvasText; color:Canvas; border:1px solid CanvasText; }
-      .hdr-meter .track{ background:Canvas; border:1px solid CanvasText; }
-    }
-  </style>
-
-  <div class="fc-container">
-    <!-- ROW 1 -->
-    <div class="hdr-row">
-      <!-- Brand -->
-      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home">
-        <img src="{{ platform_logo_svg }}" alt="{{ platform_name }} logo" class="logo" loading="eager" decoding="async" fetchpriority="high"
-             onerror="this.style.display='none';var s=this.nextElementSibling;s&&s.classList.remove('hidden')" />
-        <span class="word hidden">{{ platform_name }}</span>
+      <a id="hdr-donate"
+         href="{{ href_donate }}"
+         class="sf-btn sf-btn-primary sf-btn-sm cta-pulse"
+         data-analytics="cta:header:donate"
+         data-p2p-propagate="1">
+        Donate
       </a>
 
-      <!-- Center: Nav + Meter (desktop) -->
-      <div class="hdr-center">
-        <nav class="primary hidden md:flex items-center gap-8" aria-label="Primary">
-          <a href="#mission">Mission</a>
-          <a href="#tiers">Sponsorship Tiers</a>
-          <a href="#program-stats-calendar">Schedule</a>
-        </nav>
+      <!-- Stripe security seal (flip + keyboard parity) -->
+      <a href="https://stripe.com/docs/security/stripe"
+         target="_blank" rel="noopener noreferrer"
+         class="stripe-seal seal flip group relative px-2 py-1 rounded-md border border-white/20 text-[12px] text-zinc-100"
+         aria-label="Stripe Security (PCI, TLS 1.2+)">
+        <span class="flex items-center gap-1 seal-front">
+          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="currentColor" d="M12 2L2 7v7c0 5 3.8 8.7 10 10c6.2-1.3 10-5 10-10V7zM7 12l3 3l7-7l1.4 1.4L10 17.8L5.6 13.4z"/>
+          </svg>
+          Stripe Secure
+        </span>
+        <span class="seal-back absolute inset-0 hidden items-center justify-center font-semibold text-gold">PCI • TLS 1.2+</span>
+      </a>
 
-        <div class="hidden md:flex flex-col items-end gap-2 min-w-[16rem]" role="region" aria-label="Fundraising progress">
-          <div class="flex items-baseline gap-2 text-sm">
-            <span class="font-bold text-[color:var(--fc-brand)]">{{ '${:,.0f}'.format(funds_raised) }}</span>
-            <span class="opacity-60">/</span>
-            <span class="opacity-80">{{ '${:,.0f}'.format(fundraising_goal) }}</span>
-            <span class="ml-2 text-xs font-semibold text-yellow-200"><span id="hdr-pct">{{ pct|round(1) }}</span>%</span>
-          </div>
-          <div class="hdr-meter w-full" aria-hidden="true">
-            <div class="track">
-              <div class="ticks"></div>
-              <div class="fill"></div>
-            </div>
-          </div>
-          <div id="hdr-sr" class="sr-only" aria-live="polite"></div>
-        </div>
-      </div>
-
-      <!-- CTAs -->
-      <div class="flex items-center gap-3">
-        <button type="button" class="fc-btn fc-btn-primary sheen-btn"
-                data-open-donate-modal data-analytics="cta:donate">
-          💸 Donate
-        </button>
-        <a href="#tiers" class="fc-btn ripple-btn" style="border:1px solid color-mix(in srgb, var(--fc-brand) 35%, white 65%); color:#ffeeb0; background:rgba(255,255,255,.06);">
-          🌟 Sponsor
-        </a>
-        <a href="#tiers" class="fc-btn ripple-btn" style="border:1px solid var(--fc-brand); color:#111; background:linear-gradient(90deg,#fde047,#facc15); box-shadow:0 8px 26px color-mix(in srgb, var(--fc-brand) 30%, transparent);">
-          🏆 VIP
-        </a>
-        <button id="theme-toggle" class="ml-1 text-xl text-[color:var(--fc-brand)] px-2 py-1 rounded hover:bg-white/5" aria-label="Toggle theme" type="button">🌙</button>
-        <button id="mobile-toggle" class="md:hidden ml-1 text-[color:var(--fc-brand)] text-2xl" aria-expanded="false" aria-controls="mobile-menu" aria-label="Open mobile menu" type="button">☰</button>
-      </div>
-    </div>
-
-    <!-- ROW 2 — Leaderboard Rail -->
-    <div class="hdr-rail" role="region" aria-label="Live sponsor shoutouts">
-      <button class="rail-btn" type="button" id="rail-toggle" aria-pressed="false">
-        ⏯️ <span class="lbl">Pause</span>
+      <button id="hdr-share"
+              type="button"
+              class="sf-btn sf-btn-lite sf-btn-sm"
+              aria-label="Share this fundraiser"
+              data-analytics="cta:header:share"
+              data-share='{{ {
+                "title": "Support " ~ (team.team_name if team and team.team_name else "our team"),
+                "text": "Every dollar moves a kid forward — join us!",
+                "url": (request.base_url if request is defined else "/")
+              } | tojson }}'>
+        Share
       </button>
-
-      <div class="rail-track" aria-live="polite">
-        <div id="hdr-rail-mq" class="rail-marquee">
-          {# Or: {% include "partials/sponsor_leaderboard.html" ignore missing with context %} #}
-          {% for it in TICKER %}
-            <span class="rail-item">🏆 {{ it }}</span>
-          {% endfor %}
-        </div>
-      </div>
-
-      <a href="#sponsors" class="rail-cta">View Sponsors</a>
     </div>
   </div>
 
-  <style nonce="{{ NONCE }}">
-    .sheen-btn{ position:relative; overflow:hidden; }
-    .sheen-btn::before{ content:""; position:absolute; inset-block:0; left:-40%; width:40%;
-      transform:skewX(-16deg); background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);
-      animation:shine 2.6s linear infinite; }
-    @keyframes shine{ from{ transform:translateX(-120%) skewX(-16deg)} to{ transform:translateX(120%) skewX(-16deg)} }
-    .ripple-btn{ position:relative; overflow:hidden; }
-    .ripple-btn:after{ content:""; position:absolute; inset:0; border-radius:inherit;
-      background:radial-gradient(circle,rgba(255,255,255,.45) 10%,transparent 10.01%);
-      transform:scale(10,10); opacity:0; transition:transform .6s, opacity .6s; }
-    .ripple-btn:active:after{ transform:scale(0,0); opacity:.35; transition:0s; }
-    @media (prefers-reduced-motion: reduce){ .sheen-btn::before{ animation:none; opacity:0 } }
-  </style>
+  {% if announcement or launch_note %}
+  <div class="sf-container pb-2" id="announce-wrap" data-annc-key="{{ (team.team_id if team and team.team_id else 'global') }}">
+    <section class="sf-card sf-card-inner flex items-center justify-between gap-3"
+             role="region" aria-label="Announcement" id="announcement" aria-live="polite">
+      <div class="flex items-center gap-2">
+        <span class="sf-chip sf-chip-gold">{{ badge_text|default('🚀 Launch Week') }}</span>
+        <p class="text-sm text-zinc-100" id="announcement-text">
+          {{ announcement|default('Every gift this week unlocks a matched $25 toward gym time.') }}
+        </p>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="#impact" class="sf-btn sf-btn-lite sf-btn-sm" data-analytics="announcement:impact">See impact</a>
+        <button type="button" id="announcement-dismiss" class="sf-btn sf-btn-ghost sf-btn-sm" aria-label="Dismiss announcement">Dismiss</button>
+      </div>
+    </section>
+  </div>
+  {% endif %}
 
-  <script nonce="{{ NONCE }}">
-    (() => {
-      if (window.__hdrV35) return; window.__hdrV35 = true;
-      const root = document.getElementById('{{ _hdr_id }}');
-
-      // Shrink / compact on scroll
-      let lastY = 0;
-      const onScroll = () => {
-        const y = scrollY || document.documentElement.scrollTop;
-        root.classList.toggle('is-shrunk', y > 8);
-        root.classList.toggle('is-compact', y - lastY > 12 && y > 80);
-        lastY = y;
-      };
-      addEventListener('scroll', onScroll, { passive:true }); onScroll();
-
-      // Marquee (seamless, pauseable)
-      const mq = document.getElementById('hdr-rail-mq');
-      const btn = document.getElementById('rail-toggle');
-      let w = 0, t = 0, speed = 60; // px/sec
-      function setup(){
-        if (!mq) return;
-        const trackW = mq.parentElement.clientWidth * 2;
-        while (mq.scrollWidth < trackW) mq.innerHTML += mq.innerHTML;
-        w = mq.scrollWidth; t = 0; mq.style.transform = 'translateX(0)';
-      }
-      function tick(ts){
-        const dt = (tick.lastTs? (ts - tick.lastTs) : 16) / 1000; tick.lastTs = ts;
-        if (!btn?.dataset.paused){ t = (t + speed*dt) % w; mq.style.transform = `translateX(${-t}px)`; }
-        requestAnimationFrame(tick);
-      }
-      setup(); requestAnimationFrame(tick);
-      addEventListener('resize', setup, { passive:true });
-
-      btn?.addEventListener('click', () => {
-        const paused = !!btn.dataset.paused;
-        if (paused) { delete btn.dataset.paused; btn.setAttribute('aria-pressed','false'); btn.querySelector('.lbl').textContent='Pause'; }
-        else { btn.dataset.paused = '1'; btn.setAttribute('aria-pressed','true'); btn.querySelector('.lbl').textContent='Resume'; }
-      }, { passive:true });
-
-      // Optional: live SR updates for pct (if you stream updates in)
-      const sr = document.getElementById('hdr-sr');
-      const pctEl = document.getElementById('hdr-pct');
-      if (sr && pctEl) {
-        const v = pctEl.textContent?.trim();
-        if (v) sr.textContent = `Fundraiser is ${v}% to goal.`;
-      }
-    })();
-  </script>
+  {# Optional Starforge brand spine slot (vertical brand rail) #}
+  {% include "starforge/_brand_spine.html.jinja" ignore missing with context %}
 </header>
+
+<style {{ nonce_attr() }}>
+  /* ---------- Glass 3.0 + ambient glow (hero-match) ---------- */
+  .hdr-glass{
+    background: linear-gradient(180deg, rgba(18,20,26,.78), rgba(10,12,16,.52));
+    border: 1px solid rgba(255,255,255,.12);
+    -webkit-backdrop-filter: saturate(140%) blur(10px);
+    backdrop-filter: saturate(140%) blur(10px);
+  }
+  .hdr-glow{ position:relative }
+  .hdr-glow:before{
+    content:""; position:absolute; inset:-1px; border-radius: inherit; pointer-events:none; z-index:-1;
+    background: radial-gradient(1100px 220px at 50% -80%,
+      color-mix(in srgb, var(--fc-gold, #facc15) 26%, transparent), transparent 70%);
+    opacity:.32;
+  }
+
+  /* Sticky shadow / hide-on-down */
+  .hdr.sf-sticky.is-scrolled{ box-shadow: 0 10px 34px rgba(0,0,0,.40) }
+  .hdr.sf-sticky.is-hidden{ transform: translateY(-105%); transition: transform .28s ease; }
+  @media (prefers-reduced-motion: reduce){ .hdr.sf-sticky.is-hidden{ transform:none } }
+
+  /* Nav link polish */
+  #site-header .nav-link{ position:relative; transition:color .18s ease }
+  #site-header .nav-link:hover{ color:#fff }
+  #site-header .nav-link.active{
+    color: var(--fc-gold, #facc15); font-weight:800;
+    text-decoration: underline; text-underline-offset:6px;
+  }
+  @media (forced-colors: active){
+    #site-header .nav-link.active{ outline: 1px solid CanvasText; text-decoration:none }
+  }
+
+  /* CTA pulse (hero-match) */
+  .cta-pulse{ position:relative }
+  @media (prefers-reduced-motion: no-preference){
+    .cta-pulse:after{
+      content:""; position:absolute; inset:-3px; border-radius:12px;
+      border:2px solid color-mix(in srgb, var(--fc-gold, #facc15) 55%, transparent);
+      opacity:0; animation: hdrPulse 2.4s ease-out infinite;
+    }
+    @keyframes hdrPulse{ 0%{transform:scale(.98);opacity:0} 40%{opacity:.55} 100%{transform:scale(1.08);opacity:0} }
+  }
+
+  /* Stripe seal – flip with keyboard parity + width sync target */
+  .seal{ perspective:700px; position:relative; min-width:112px }
+  .seal .seal-front, .seal .seal-back{ display:flex; align-items:center; justify-content:center; backface-visibility:hidden; transform-style:preserve-3d; transition:transform .5s }
+  .seal .seal-back{ transform: rotateY(180deg) }
+  .seal.flip:hover .seal-front, .seal.flip:focus-within .seal-front{ transform: rotateY(180deg) }
+  .seal.flip:hover .seal-back,  .seal.flip:focus-within .seal-back { transform: rotateY(360deg) }
+
+  /* Anchor comfort vs header */
+  :root{ scroll-padding-top: var(--hdr-h, 64px) }
+</style>
+
+<script {{ nonce_attr() }}>
+(function(){
+  'use strict';
+  const header     = document.getElementById('site-header');
+  const toggle     = document.getElementById('menu-toggle');
+  const nav        = document.getElementById('site-nav');
+  const donate     = document.getElementById('hdr-donate');
+  const shareBtn   = document.getElementById('hdr-share');
+  const annWrap    = document.getElementById('announce-wrap');
+  const annDismiss = document.getElementById('announcement-dismiss');
+  const annText    = document.getElementById('announcement-text');
+
+  /* ---------- Scroll: sticky + smart hide ---------- */
+  try{
+    let lastY=0, hidden=false, ticking=false;
+    addEventListener('scroll', () => {
+      if (ticking) return; ticking = true;
+      requestAnimationFrame(() => {
+        const y = scrollY || 0;
+        header.classList.toggle('is-scrolled', y > 4);
+        if (y-lastY > 10 && y > 96 && !hidden){ header.classList.add('is-hidden'); hidden=true; }
+        else if (lastY-y > 10 || y <= 96){ header.classList.remove('is-hidden'); hidden=false; }
+        lastY = y; ticking = false;
+      });
+    }, { passive:true });
+  }catch{}
+
+  /* ---------- Mobile menu: focus trap + inert + restore ---------- */
+  const focusables = (root) => Array.from(root.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])'))
+    .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+
+  let previousFocus = null, untrap = () => {};
+  const trapFocus = (container) => {
+    const nodes = focusables(container); if (!nodes.length) return () => {};
+    const first = nodes[0], last = nodes[nodes.length-1];
+    const onKey = (e) => {
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    try{ first.focus(); }catch{}
+    return () => document.removeEventListener('keydown', onKey);
+  };
+
+  function setMenu(open){
+    if (!toggle || !nav) return;
+    toggle.setAttribute('aria-expanded', String(open));
+    nav.classList.toggle('hidden', !open);
+    nav.setAttribute('aria-hidden', String(!open));
+    try{ nav.inert = !open; }catch{}
+    document.documentElement.classList.toggle('overflow-hidden', open);
+    if (open){ previousFocus = document.activeElement; untrap = trapFocus(nav); }
+    else { try{ untrap(); }catch{} try{ previousFocus && previousFocus.focus(); }catch{} }
+  }
+
+  if (toggle && nav){
+    setMenu(false);
+    toggle.addEventListener('click', () => setMenu(toggle.getAttribute('aria-expanded') !== 'true'));
+    addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); }, { passive:true });
+    document.addEventListener('click', (e) => {
+      if (!nav.contains(e.target) && !toggle.contains(e.target)) setMenu(false);
+    }, { passive:true });
+    nav.addEventListener('click', (e) => { const a=e.target.closest && e.target.closest('a[href^="#"]'); if (a) setMenu(false); });
+  }
+
+  /* ---------- Scroll-spy: aria-current ---------- */
+  try{
+    const links = Array.from((nav||document).querySelectorAll('.nav-link'));
+    const pairs = links.map(a => [a, document.querySelector(a.getAttribute('href'))]).filter(x => x[1]);
+    const io = new IntersectionObserver((ents) => {
+      ents.forEach(ent => {
+        if (!ent.isIntersecting) return;
+        const id = '#' + ent.target.id;
+        links.forEach(a => {
+          const on = a.getAttribute('href') === id;
+          a.classList.toggle('active', on);
+          if (on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
+        });
+      });
+    }, { rootMargin:'-20% 0px -70% 0px', threshold:0.01 });
+    pairs.forEach(([,sec]) => io.observe(sec));
+  }catch{}
+
+  /* ---------- Announcement: persist dismiss ---------- */
+  (function persistAnnc(){
+    if (!annWrap || !annText) return;
+    try{
+      const teamKey = annWrap.getAttribute('data-annc-key') || 'global';
+      const msg = (annText.textContent||'').trim().slice(0,160);
+      const key = 'fc_announce_dismissed:'+teamKey+':'+msg;
+      if (localStorage.getItem(key) === '1') annWrap.style.display='none';
+      annDismiss && annDismiss.addEventListener('click', () => { try{ localStorage.setItem(key,'1'); }catch{} annWrap.style.display='none'; });
+    }catch{}
+  })();
+
+  /* ---------- Donate: propagate P2P + UTM ---------- */
+  (function decorateDonate(){
+    const targets = [donate, ...Array.from(document.querySelectorAll('[data-p2p-propagate="1"] a[href], a[data-p2p-propagate="1"]'))].filter(Boolean);
+    if (!targets.length) return;
+    targets.forEach(a => {
+      try{
+        let ctx={}; try{ ctx = JSON.parse(localStorage.getItem('fc_ref_ctx') || '{}'); }catch{}
+        const u = new URL(a.getAttribute('href')||'', location.origin);
+        ['ref','ref_id','r','invite','peer','peer_id','peer_slug','campaign','campaign_id'].forEach(k => { if (ctx[k]) u.searchParams.set(k, ctx[k]); });
+        if (!u.searchParams.get('utm_source')) u.searchParams.set('utm_source','header');
+        if (!u.searchParams.get('utm_medium')) u.searchParams.set('utm_medium','cta');
+        if (!u.searchParams.get('utm_campaign')) u.searchParams.set('utm_campaign','fundraiser');
+        a.setAttribute('href', u.toString());
+      }catch{}
+    });
+  })();
+
+  /* ---------- Share ---------- */
+  if (shareBtn){
+    shareBtn.addEventListener('click', async () => {
+      let data = { title: document.title, text: 'Support our team!', url: location.href };
+      try{ data = Object.assign(data, JSON.parse(shareBtn.getAttribute('data-share') || '{}')); }catch{}
+      try{ if (navigator.share){ await navigator.share(data); return; } }catch{}
+      try{
+        await navigator.clipboard.writeText(data.url);
+        const t=shareBtn.textContent; shareBtn.textContent='Copied!'; setTimeout(()=>shareBtn.textContent=t, 1200);
+      }catch{}
+    }, { passive:true });
+  }
+
+  /* ---------- Hotkeys: D → Donate ---------- */
+  addEventListener('keydown', (e) => {
+    if ((e.key==='d'||e.key==='D') && !/input|textarea|select/i.test(e.target.tagName)){
+      try{ donate && donate.click(); }catch{}
+    }
+  }, { passive:true });
+
+  /* ---------- Theme-color sync + scroll-padding token ---------- */
+  (function uiPolish(){
+    function setHdrVar(){
+      try{ const h = header.offsetHeight || 64; document.documentElement.style.setProperty('--hdr-h', h+'px'); }catch{}
+    }
+    setHdrVar();
+    try{ new ResizeObserver(setHdrVar).observe(header); }catch{ addEventListener('resize', setHdrVar, { passive:true }); }
+
+    function syncTheme(){
+      try{
+        const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
+        const dark = matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
+        const scrolled = header.classList.contains('is-scrolled');
+        meta.setAttribute('content', (dark || scrolled) ? '#0b0b0c' : '#111318');
+      }catch{}
+    }
+    syncTheme(); addEventListener('scroll', syncTheme, { passive:true });
+    try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme); }catch{}
+  })();
+
+  /* ---------- Stripe seal width-sync (prevents flip jump) ---------- */
+  (function sealSync(){
+    const seal = document.querySelector('.stripe-seal'); if (!seal) return;
+    const front = seal.querySelector('.seal-front'); const back = seal.querySelector('.seal-back');
+    if (front && back) back.classList.remove('hidden');
+    const sync = () => {
+      const w = Math.max(front?.offsetWidth||0, back?.offsetWidth||0);
+      seal.style.minWidth = (w + 12) + 'px';
+    };
+    requestAnimationFrame(sync);
+    addEventListener('resize', sync, { passive:true });
+  })();
+})();
+</script>
 

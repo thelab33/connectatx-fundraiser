@@ -1,0 +1,68 @@
+{# FundChamps • Starforge UI/UX Elite Enhancement v3 — Bundle Include #}
+{% macro render(opts={}) %}
+  {% set show_hero        = opts.get('hero', True) %}
+  {% set show_tiers       = opts.get('tiers', True) %}
+  {% set show_impact      = opts.get('impact', True) %}
+  {% set show_about       = opts.get('about', True) %}
+  {% set include_news     = opts.get('newsletter', True) %}
+  {% set include_donate   = opts.get('donation_modal', True) %}
+
+  {% if _rendered is not defined %}
+    {% set _rendered = namespace(hero=false, pulse=false, impact=false, tiers=false, about=false, concierge=false) %}
+  {% endif %}
+
+  {% if show_hero and not _rendered.hero %}
+    {% set _rendered.hero = true %}
+    <section id="fundraiser-hero" class="section" aria-label="Hero">
+      {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+    </section>
+  {% endif %}
+
+  {% if show_tiers and not _rendered.tiers %}
+    {% set _rendered.tiers = true %}
+    <section id="tiers" class="section" aria-labelledby="tiers-title" role="region">
+      <div class="container">
+        <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
+        {% include "partials/tiers.html" ignore missing with context %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if show_impact and not _rendered.impact %}
+    {% set _rendered.impact = true %}
+    <section id="impact" class="section" aria-labelledby="impact-title" role="region">
+      <div class="container">
+        <h2 class="sr-only" id="impact-title">Impact buckets</h2>
+        {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if show_about and not _rendered.about %}
+    {% set _rendered.about = true %}
+    <section id="about" class="section" aria-label="About our program">
+      <div class="container">
+        {% include "partials/about_section.html" ignore missing with context %}
+      </div>
+    </section>
+  {% endif %}
+
+  {% if include_donate %}
+    {% include "partials/donation_modal.html" ignore missing with context %}
+  {% endif %}
+  {% if include_news %}
+    {% include "partials/newsletter.html" ignore missing with context %}
+  {% endif %}
+
+  <script {{ nonce_attr()|default('') }}>
+    (function(){
+      try{
+        var raised={{ (funds_raised or 0)|round(0) }}, goal={{ (fundraising_goal or 0)|round(0) }};
+        if (goal>0) window.dispatchEvent(new CustomEvent('fc:meter:update',{detail:{raised:raised,goal:goal}}));
+        var h=(location.hash||'');
+        if (h.startsWith('#sponsor=')){var key=decodeURIComponent(h.split('=').slice(1).join('='));var card=document.querySelector('#tiers [data-tier="'+CSS.escape(key)+'"]');if(card){card.classList.add('is-selected');card.scrollIntoView({block:'center',behavior:'smooth'});}}
+        if (h.startsWith('#impact=')){var ikey=decodeURIComponent(h.split('=').slice(1).join('='));var ic=document.querySelector('#impact [data-bucket="'+CSS.escape(ikey)+'"]');if(ic){ic.scrollIntoView({block:'center',behavior:'smooth'});ic.classList.add('ring-2','ring-yellow-300');setTimeout(()=>ic.classList.remove('ring-2','ring-yellow-300'),1200);}}
+      }catch(e){}
+    })();
+  </script>
+{% endmacro %}

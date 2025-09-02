@@ -1,0 +1,10 @@
+<footer class="section" role="contentinfo">
+  <div class="container" style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <div>
+      <strong>{{ org.name or 'Your Organization' }}</strong><br>
+      <span class="text-muted">{{ org.city or 'City' }}, {{ org.state or 'ST' }}</span>
+    </div>
+    <div class="text-muted">Mission • Privacy • Terms</div>
+    <div class="text-muted">Contact: {{ org.contact_email or 'contact@example.com' }}</div>
+  </div>
+</footer>

@@ -1,0 +1,4 @@
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set _sf   = (safe_url_for is defined) %}
+{% set static_js = (_sf and safe_url_for('static', filename='js/starforge_elite_addons.min.js')) or '/static/js/starforge_elite_addons.min.js' %}
+<script nonce="{{ NONCE }}" src="{{ static_js }}" defer></script>

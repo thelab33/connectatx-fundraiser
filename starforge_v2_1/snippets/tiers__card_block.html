@@ -1,0 +1,31 @@
+<article class="card tier card-eq" aria-label="{{ t.name }}">
+  {% if t.price_cents >= (vip_threshold_cents or 250000) %}
+    <div class="ribbon">VIP</div>
+  {% endif %}
+
+  <div class="tier__head" style="display:flex;align-items:center;justify-content:space-between">
+    <h3 class="h3">{{ t.name }}</h3>
+    <div class="price">${{ (t.price_cents/100)|int }}</div>
+  </div>
+
+  <div class="grow">
+    <p class="text-muted">{{ t.perk_summary }}</p>
+    <ul style="list-style:none;margin:.5rem 0 1rem;padding:0">
+      {% for perk in t.perks %}
+        <li style="display:flex;gap:.5rem"><span>✔</span><span>{{ perk }}</span></li>
+      {% endfor %}
+    </ul>
+    <div class="meta">
+      {% if t.spots_left is not none %}<span class="badge">{{ t.spots_left }} left</span>{% endif %}
+      {% if t.price_cents >= (vip_threshold_cents or 250000) %}<span class="badge">Leaderboard spotlight</span>{% endif %}
+    </div>
+  </div>
+
+  <div class="actions">
+    <form action="/pay/create-checkout" method="post">
+      <input type="hidden" name="tier" value="{{ t.name }}">
+      <button class="btn btn-accent" type="submit">Sponsor {{ t.name }}</button>
+    </form>
+    <button class="btn btn-ghost" type="button" data-analytics="tiers:share">Share</button>
+  </div>
+</article>

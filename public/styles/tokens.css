@@ -1,0 +1,95 @@
+
+/* FundChamps UI Tokens
+   Drop-in variables for dark-first sites. Includes light fallbacks.
+   Modify values under :root to rebrand quickly.
+*/
+:root {
+  /* brand */
+  --brand-50:  #fff5cc;
+  --brand-100: #ffe999;
+  --brand-200: #ffd866;
+  --brand-300: #ffcb33;
+  --brand-400: #ffbf00;
+  --brand-500: #e4a800; /* default */
+  --brand-600: #b38400;
+  --brand-700: #806100;
+  --brand-800: #4d3a00;
+  --brand-900: #1f1600;
+  --brand-contrast: #0b0b0b; /* text on brand-bg */
+
+  /* neutrals (dark-first) */
+  --bg:        #0d0f14;
+  --surface-1: #11131a;
+  --surface-2: #161922;
+  --surface-3: #1d2130;
+  --outline:   #2a3042;
+
+  --text-1:    #f5f7ff;
+  --text-2:    #c7cbe0;
+  --text-3:    #8d94b0;
+
+  /* semantic */
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger:  #ef4444;
+  --info:    #38bdf8;
+
+  /* elevation, radius, spacing */
+  --shadow-1: 0 8px 20px rgba(0,0,0,.35);
+  --shadow-2: 0 16px 40px rgba(0,0,0,.45);
+  --radius-sm: .5rem;
+  --radius-md: .875rem;
+  --radius-lg: 1.25rem;
+  --radius-xl: 1.75rem;
+
+  /* typography */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  /* scale via clamp: */
+  --step--1: clamp(0.85rem, 0.82rem + 0.2vw, 0.95rem);
+  --step-0:  clamp(1.00rem, 0.95rem + 0.3vw, 1.125rem);
+  --step-1:  clamp(1.125rem, 1.05rem + 0.4vw, 1.35rem);
+  --step-2:  clamp(1.35rem,  1.20rem + 0.8vw, 1.75rem);
+  --step-3:  clamp(1.6rem,   1.35rem + 1.2vw, 2.2rem);
+  --step-4:  clamp(2.0rem,   1.6rem + 1.9vw,  2.9rem);
+  --step-5:  clamp(2.4rem,   1.8rem + 2.6vw,  3.6rem);
+
+  /* spacing scale */
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+}
+
+/* Light mode (auto) */
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg:        #fafbff;
+    --surface-1: #ffffff;
+    --surface-2: #f3f5ff;
+    --surface-3: #eef1ff;
+    --outline:   #d9def7;
+
+    --text-1:    #0c1024;
+    --text-2:    #2a2f49;
+    --text-3:    #555b7a;
+
+    --brand-contrast: #111111;
+    --shadow-1: 0 8px 20px rgba(15,23,42,.08);
+    --shadow-2: 0 16px 40px rgba(15,23,42,.12);
+  }
+}
+
+/* Container */
+.container {
+  width: min(110ch, 92vw);
+  margin-inline: auto;
+  padding-inline: var(--space-4);
+}

@@ -1,0 +1,15 @@
+**/__pycache__/
+*.pyc
+*.pyo
+*.db
+*.sqlite*
+node_modules
+.git
+.gitignore
+.github
+tests
+env
+venv
+.DS_Store
+playwright-report
+test-results

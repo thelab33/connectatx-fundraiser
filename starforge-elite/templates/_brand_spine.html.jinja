@@ -1,0 +1,12 @@
+{# starforge/_brand_spine.html.jinja
+   Vertical brand spine — relocates team name into a sleek rail.
+   Place inside the hero figure wrapper.
+#}
+{% set _brand = team_name if team_name is defined and team_name else 'Connect ATX Elite' %}
+<aside class="brand-spine" aria-hidden="true">
+  <span class="brand-spine__rail">
+    <i class="dot" aria-hidden="true"></i>
+    <em class="brand-spine__name">{{ _brand }}</em>
+    <i class="dot" aria-hidden="true"></i>
+  </span>
+</aside>
