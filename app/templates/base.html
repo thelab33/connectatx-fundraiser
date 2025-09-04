@@ -1,9 +1,8 @@
 {# ============================================================================
    base.html — FundChamps • SV-Elite (P2P • CSP-safe • ESM-first)
-   - ESM-first loader (loads /static/js/main.js; falls back to bundle.min.js)
-   - CSP nonce-friendly; optional SRI passthrough
-   - Tight rhythm & seam math (unchanged behavior)
-   - SEO/OG/JSON-LD and P2P propagation (kept)
+   - Clean render flow: sections are block-scoped; base does NOT auto-render hero
+   - No duplicate hero: child templates own {% block section_hero %} explicitly
+   - Keeps your assets/SEO/metrics as-is; adds light de-dupe guard
    ========================================================================== #}
 {% set _TEAM        = team|default(_team|default({})) %}
 {% set _brand_hex   = _TEAM.theme_color|default('#f2c94c') %}
@@ -93,13 +92,11 @@
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ _brand_hex }}"/>
   <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b0b0c" id="meta-theme-color"/>
 
-  {# --- Canonical + OG URL --- #}
   {% if request is defined %}
     <link rel="canonical" href="{{ request.base_url }}"/>
     <meta property="og:url" content="{{ request.base_url }}"/>
   {% endif %}
 
-  {# --- SEO / Social --- #}
   <title>{% block title %}{{ _page_title }}{% endblock %}</title>
   <meta name="description" content="{{ _page_desc }}"/>
   <meta property="og:type" content="{{ _is_p2p and 'profile' or 'website' }}"/>
@@ -307,25 +304,11 @@
     };
   </script>
 
-  {# allow child templates to inject head extras while preserving render guard #}
-  {% block extra_head %}
-    {% if _rendered is not defined %}
-      {% set _rendered = namespace(hero=false, pulse=false, impact=false, tiers=false, about=false, concierge=false, bundles=false) %}
-    {% elif _rendered.bundles is not defined %}
-      {% set _rendered = namespace(hero=_rendered.hero, pulse=_rendered.pulse, impact=_rendered.impact, tiers=_rendered.tiers, about=_rendered.about, concierge=_rendered.concierge, bundles=false) %}
-    {% endif %}
-    {% if not _rendered.bundles %}
-      {% set _rendered.bundles = true %}
-      {% include "bundles/fundchamps_starforge_ui_ux_elite_enhancement_v3.html" ignore missing with context %}
-    {% endif %}
-  {% endblock %}
+  {# NOTE: removed bundle auto-include that injected the hero and caused duplicates #}
+  {% block extra_head %}{% endblock %}
 </head>
 
 <body class="min-h-full bg-[color:var(--fc-ink)] text-zinc-100">
-  {# Render guard & skip link #}
-  {% if _rendered is not defined %}
-    {% set _rendered = namespace(hero=false, pulse=false, impact=false, tiers=false, about=false, concierge=false, bundles=_rendered.bundles if _rendered is defined else false) %}
-  {% endif %}
   <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-black focus:text-white">Skip to content</a>
 
   {% block header %}{% include "partials/header_and_announcement.html" ignore missing with context %}{% endblock %}
@@ -335,8 +318,12 @@
     <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
     <p id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
+    {# SECTION BLOCKS — child pages override; base does NOT render hero by default #}
     {% block section_ticker %}{% endblock %}
+
+    {# IMPORTANT: leave empty to avoid duplicates. Home page should define this block. #}
     {% block section_hero %}{% endblock %}
+
     {% block section_pulse %}{% endblock %}
     {% block section_impact %}{% endblock %}
     {% block section_tiers %}{% endblock %}
@@ -350,16 +337,10 @@
   {% block below_main %}{% endblock %}
   {% block footer %}{% include "partials/footer.html" ignore missing with context %}{% endblock %}
 
-  {# ---------- JS Loader: prefer ESM main.js; fallback to bundle.min.js ---------- #}
-
-  <!-- Preload preferred ESM -->
+  {# ---------- JS Loader ---------- #}
   <link rel="modulepreload" href="{{ asset('js/main.js') }}"/>
-
-  <!-- Preload legacy/bundled fallback -->
   <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}"
         {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}/>
-
-  <!-- ESM-first, CSP-safe, with onerror fallback to bundle.min.js -->
   <script {{ nonce_attr() }}>
   (function(){
     var head = document.head;
@@ -392,7 +373,6 @@
     <script src="/socket.io/socket.io.js" defer></script>
   {% endif %}
 
-  {# SV-Elite config + theme-color auto-tune #}
   <script {{ nonce_attr() }}>
     window.FC_CFG = { donorsURL: "/api/donors?limit=20" };
     (function(){
@@ -404,12 +384,11 @@
     })();
   </script>
 
-  {# Shopify body include (skin toggle & persistence) #}
   {% if SKIN == 'shopify' %}
     {% include "partials/_shopify_body_include.html" ignore missing %}
   {% endif %}
 
-  {# P2P referral propagation (internal eligible links only) #}
+  {# P2P referral propagation #}
   <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcP2P) return; window.__fcP2P = true;
@@ -527,12 +506,10 @@
   {# SV-Elite JS (counters, ticker, micro-interactions) #}
   <script src="{{ asset('js/fc_elite.js') }}" defer
           {% if sri('js/fc_elite.js') %}integrity="{{ sri('js/fc_elite.js') }}" crossorigin="anonymous"{% endif %}></script>
-          <script src="{{ url_for('static', filename='js/ux.js') }}" nonce="{{ csp_nonce() }}"></script>
+  <script src="{{ url_for('static', filename='js/ux.js') }}" {{ nonce_attr() }}></script>
 
-  {# Lazy images (once) #}
   <script src="{{ url_for('static', filename='js/lazy-img.js') }}" {{ nonce_attr() }} defer></script>
 
-  {# Reveal-on-view helper #}
   <script {{ nonce_attr() }}>
     (function(){
       try{
@@ -547,18 +524,20 @@
 
   <div class="mobile-cta"><a class="btn" href="#tiers" aria-label="Donate now">Donate&nbsp;Now</a></div>
 
-  {# Starforge before-</body> include (honors render guard) #}
   {% block body_scripts %}
-    {% if _rendered and _rendered.bundles %}
-      {% include "partials/starforge_patch_include.html" ignore missing with context %}
-    {% endif %}
+    {% include "partials/starforge_patch_include.html" ignore missing with context %}
   {% endblock %}
 
   {% block extra_js %}{% endblock %}
 
-  {# Optional: spin up brand spine JS if shipped #}
   <script {{ nonce_attr() }} type="module">
     try{ import('{{ asset("starforge/enable-brand-spine.js") }}').catch(()=>{}); }catch(_){}
+  </script>
+
+  {# ---- tiny duplicate guard (safe) ---- #}
+  <script {{ nonce_attr() }} type="module">
+    const nodes = document.querySelectorAll('#fc-hero');
+    if (nodes.length > 1) { [...nodes].slice(1).forEach(n => n.remove()); console.warn('[fc-hero] duplicate removed'); }
   </script>
 </body>
 </html>

@@ -13,9 +13,6 @@
 
   {% if show_hero and not _rendered.hero %}
     {% set _rendered.hero = true %}
-    <section id="fundraiser-hero" class="section" aria-label="Hero">
-      {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-    </section>
   {% endif %}
 
   {% if show_tiers and not _rendered.tiers %}

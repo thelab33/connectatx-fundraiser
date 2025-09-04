@@ -148,11 +148,70 @@
           <h1 id="hero-heading" class="fc-hero-type holo holo3d text-balance text-white drop-shadow"
               data-text="{{ hero_title }}">{{ hero_title }}</h1>
 
-          {# Hero bar INSIDE overlay (default on) #}
-          {% if show_hero_bar is not defined or show_hero_bar %}
-            {% include "partials/hero_bar.html" %}
-          {% endif %}
-          <noscript>{% include "partials/hero_bar.html" %}</noscript>
+          {# Hero bar INSIDE overlay (inlined) #}
+<div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary">
+  <!-- Top stats + countdown -->
+  <p class="hm-stats tabular" aria-live="polite">
+    <strong id="fc-hero-raised" data-raw="{{ funds_raised|round(0) }}" data-count="{{ funds_raised|round(0) }}">{{ '${:,.0f}'.format(funds_raised) }}</strong>
+    <span class="muted">of</span>
+    <strong id="fc-hero-goal" data-raw="{{ fundraising_goal|round(0) }}">{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
+    <span class="muted">•</span>
+    <strong id="fc-hero-pct" class="tabular" data-count="{{ pct|round(0) }}">{{ pct|round(0) }}%</strong>
+  </p>
+  <p id="fc-hero-countdown" role="timer" aria-live="polite" aria-atomic="true">⏳ —</p>
+
+  <!-- CTA + chips -->
+  <div class="fc-hero-actions" role="group" aria-label="Hero actions">
+    <a href="{{ cta_href }}"
+       class="fc-hero-cta cta-pulse"
+       data-label-full="{{ cta_label }}"
+       data-label-compact="{{ 'Donate' if (cta_label|lower)[:6]=='donate' else 'Join Now' }}"
+       data-urgency-deadline="{{ deadline_iso }}"
+       {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+      <span class="cta-text">{{ cta_label }}</span> <span aria-hidden="true">→</span>
+    </a>
+
+    <button id="fc-hero-share" type="button" class="chip" data-share-text="Support our season!" aria-label="Share this fundraiser">↗︎ Share</button>
+    <a href="#tiers" class="chip" data-check-target="#tiers">💎 View Tiers</a>
+    <span id="match-chip" class="chip hidden"
+          data-match-start="{{ match_start_iso }}"
+          data-match-end="{{ match_end_iso }}"
+          data-match-label="{{ match_label|default('Match ×2 Active') }}">
+      🎯 Match ×2 Active
+    </span>
+  </div>
+
+  <!-- Mini progress meter + milestones -->
+  <div class="hero-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+       aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress"
+       data-milestones="{{ hero_milestones|default('25,50,75,100') }}">
+    <div class="hm-track" aria-hidden="true">
+      <div id="fc-hero-fill" class="hm-fill" style="width: {{ pct|round(1) }}%" data-pct="{{ pct|round(1) }}"></div>
+      <div class="hm-ticks" aria-hidden="true"></div>
+    </div>
+    <ul id="fc-hero-milestones" class="milestones" aria-hidden="true"></ul>
+    <p class="hm-stats sr-only" aria-live="polite">
+      <span id="fc-hero-sr">Raised {{ '${:,.0f}'.format(funds_raised) }} of goal {{ '${:,.0f}'.format(fundraising_goal) }}.</span>
+    </p>
+  </div>
+</div>
+
+<noscript>
+  <div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary (noscript)">
+    <p class="hm-stats tabular">
+      <strong>{{ '${:,.0f}'.format(funds_raised) }}</strong>
+      <span class="muted">of</span>
+      <strong>{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
+      <span class="muted">•</span>
+      <strong>{{ pct|round(0) }}%</strong>
+    </p>
+    {% if deadline_iso %}<p class="tabular">⏳ Deadline: {{ fundraising_deadline.strftime('%b %d, %Y') if fundraising_deadline else '' }}</p>{% endif %}
+    <a href="{{ cta_href }}" class="fc-hero-cta" {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}><span class="cta-text">{{ cta_label }}</span> →</a>
+    <div class="hero-meter" aria-hidden="true">
+      <div class="hm-track"><div class="hm-fill" style="width: {{ pct|round(1) }}%"></div></div>
+    </div>
+  </div>
+</noscript>
         </figcaption>
       </div>
     </figure>
@@ -465,83 +524,6 @@
       imagesizes="100vw" fetchpriority="high">
 {% endif %}
 
-<section id="fc-hero"
-         class="fc-hero-tilt grid place-items-center px-4 sm:px-6 w-full -translate-y-[6px] md:-translate-y-[10px]"
-         data-theme="athletic"
-         data-team="{{ team_name }}"
-         data-name-style="gradient"
-         aria-labelledby="hero-heading"
-         itemscope itemtype="https://schema.org/SportsTeam"
-         style="--accent: {{ theme_hex }}; --img-x: {{ img_pos_x }}; --img-y: {{ img_pos_y }};"
-         data-locale="{{ locale_str }}" data-currency="{{ currency_code }}"
-         data-urgency-deadline="{{ deadline_iso }}">
-  <meta itemprop="name" content="{{ team_name }}"/>
-  <meta itemprop="sport" content="Basketball"/>
-  {% if logoSrc %}<meta itemprop="logo" content="{{ logoSrc }}"/>{% endif %}
-  <meta itemprop="image" content="{{ hero_src }}"/>
-
-  <!-- Ambient background -->
-  <div class="absolute inset-0 -z-10" aria-hidden="true">
-    <div class="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,#0b0b0c_0%,#050609_70%)] light:bg-[radial-gradient(80%_60%_at_50%_0%,#f9fafb_0%,#e5e7eb_70%)]"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_20%,rgba(0,0,0,.28),transparent_60%)] light:bg-[radial-gradient(120%_70%_at_50%_20%,rgba(0,0,0,.06),transparent_60%)] pointer-events-none"></div>
-  </div>
-
-  <!-- Hero Card -->
-  <div class="fc-hero-tilt grid place-items-center w-full">
-    <figure class="fc-hero-card" role="group" aria-label="Team hero">
-      <div class="fc-hero-card__ring" aria-hidden="true"></div>
-
-      <!-- Vertical neon spine -->
-      <aside class="fc-hero-spine" aria-hidden="true"><span class="spine-text">{{ team_name }}</span></aside>
-
-      <div class="fc-hero-card__frame">
-        <picture>
-          {% if use_prebuilt %}
-            <source type="image/avif" srcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w" sizes="100vw"/>
-            <source type="image/webp" srcset="/static/images/hero/hero-1920.webp 1920w, /static/images/hero/hero-1280.webp 1280w, /static/images/hero/hero-960.webp 960w" sizes="100vw"/>
-            <img id="fc-hero-img" src="/static/images/hero/hero-1280.webp" alt="{{ hero_alt }}" class="fc-hero-card__img"
-                 loading="eager" decoding="async" fetchpriority="high" width="1920" height="1080"
-                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous"/>
-          {% else %}
-            <source type="image/avif" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw"/>
-            <source type="image/webp" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw"/>
-            <source type="image/avif" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw"/>
-            <source type="image/webp" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw"/>
-            <img id="fc-hero-img" src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img"
-                 loading="eager" decoding="async" fetchpriority="high" width="1920" height="1080"
-                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous"/>
-          {% endif %}
-          <noscript><img src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img" width="1920" height="1080"/></noscript>
-        </picture>
-
-        <!-- Dynamic tint + belt + FX (decorative) -->
-        <i class="fc-hero-card__tint" aria-hidden="true"></i>
-        <i class="fc-hero-card__belt" aria-hidden="true"></i>
-        <i class="fc-hero-card__glare" aria-hidden="true"></i>
-        <i class="fc-hero-card__noise" aria-hidden="true"></i>
-
-        <!-- Overlay -->
-        <figcaption class="fc-hero-overlay flex flex-col items-center text-center gap-4">
-          <!-- Mobile brand chip -->
-          <div class="fc-hero-brand mobile-only flex items-center gap-2">
-            <img src="{{ logoSrc }}" alt="" loading="eager" decoding="async" class="h-9 w-9 rounded-xl ring-1 ring-white/10 bg-white/95" width="36" height="36"/>
-            <span class="legacy-chip font-semibold tracking-wide">{{ team_name }}</span>
-          </div>
-
-          <!-- Hologram headline -->
-          <h1 id="hero-heading" class="fc-hero-type holo holo3d text-balance text-white drop-shadow"
-              data-text="{{ hero_title }}">{{ hero_title }}</h1>
-
-          {# Hero bar INSIDE overlay (default on) #}
-          {% if show_hero_bar is not defined or show_hero_bar %}
-            {% include "partials/hero_bar.html" %}
-          {% endif %}
-          <noscript>{% include "partials/hero_bar.html" %}</noscript>
-        </figcaption>
-      </div>
-    </figure>
-  </div>
-</section>
 
 <style {{ nonce_attr() }}>
 /* ===== Scope: #fc-hero (Premier) ===== */
