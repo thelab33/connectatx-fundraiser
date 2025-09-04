@@ -8,21 +8,13 @@
       "extensions.py"
     ],
     "config": {
-      "_files": [
-        "config.py"
-      ],
+      "_files": ["config.py"],
       "__pycache__": {
-        "_files": [
-          "config.cpython-312.pyc"
-        ]
+        "_files": ["config.cpython-312.pyc"]
       }
     },
     "static": {
-      "_files": [
-        "robots.txt",
-        "site.webmanifest",
-        "favicon.png"
-      ],
+      "_files": ["robots.txt", "site.webmanifest", "favicon.png"],
       "js": {
         "_files": [
           "main.js",
@@ -105,14 +97,9 @@
       }
     },
     "admin": {
-      "_files": [
-        "routes.py",
-        "dashboard.html"
-      ],
+      "_files": ["routes.py", "dashboard.html"],
       "__pycache__": {
-        "_files": [
-          "routes.cpython-312.pyc"
-        ]
+        "_files": ["routes.cpython-312.pyc"]
       }
     },
     "templates": {
@@ -190,10 +177,7 @@
       }
     },
     "__pycache__": {
-      "_files": [
-        "extensions.cpython-312.pyc",
-        "__init__.cpython-312.pyc"
-      ]
+      "_files": ["extensions.cpython-312.pyc", "__init__.cpython-312.pyc"]
     },
     "forms": {
       "_files": []
@@ -222,14 +206,8 @@
       }
     }
   },
-  "partials": [
-    "sponsor_form.html"
-  ],
-  "macros": [
-    "progress.html",
-    "starforge.html",
-    "ui.html"
-  ],
+  "partials": ["sponsor_form.html"],
+  "macros": ["progress.html", "starforge.html", "ui.html"],
   "css": [
     "elevated.css",
     "globals.css",

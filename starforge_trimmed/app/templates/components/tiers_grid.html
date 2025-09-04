@@ -1,27 +1,43 @@
 <section class="section" id="tiers">
   <div class="container">
-    <h2 class="h2" style="margin-bottom:.75rem">Sponsorship Tiers</h2>
+    <h2 class="h2" style="margin-bottom: 0.75rem">Sponsorship Tiers</h2>
     <div class="grid grid-3">
       {% for t in tiers %}
       <article class="card tier" aria-label="{{ t.name }}">
         {% if t.price_cents >= (vip_threshold_cents or 250000) %}
-          <div class="ribbon">VIP</div>
+        <div class="ribbon">VIP</div>
         {% endif %}
-        <div style="display:flex;align-items:center;justify-content:space-between">
+        <div
+          style="
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+          "
+        >
           <h3 class="h3">{{ t.name }}</h3>
-          <div style="font-weight:800;font-size:var(--step-1)">${{ (t.price_cents/100)|int }}</div>
+          <div style="font-weight: 800; font-size: var(--step-1)">
+            ${{ (t.price_cents/100)|int }}
+          </div>
         </div>
         <p class="text-muted">{{ t.perk_summary }}</p>
         <ul>
-          {% for perk in t.perks %}<li>{{ perk }}</li>{% endfor %}
+          {% for perk in t.perks %}
+          <li>{{ perk }}</li>
+          {% endfor %}
         </ul>
-        <div style="display:flex;gap:.5rem;flex-wrap:wrap;margin:.5rem 0">
-          {% if t.spots_left is not none %}<span class="badge">{{ t.spots_left }} left</span>{% endif %}
-          {% if t.price_cents >= (vip_threshold_cents or 250000) %}<span class="badge">Leaderboard spotlight</span>{% endif %}
+        <div
+          style="display: flex; gap: 0.5rem; flex-wrap: wrap; margin: 0.5rem 0"
+        >
+          {% if t.spots_left is not none %}<span class="badge"
+            >{{ t.spots_left }} left</span
+          >{% endif %} {% if t.price_cents >= (vip_threshold_cents or 250000)
+          %}<span class="badge">Leaderboard spotlight</span>{% endif %}
         </div>
         <form action="/pay/create-checkout" method="post">
-          <input type="hidden" name="tier" value="{{ t.name }}">
-          <button class="btn btn-accent" type="submit">Become a {{ t.name }} Sponsor</button>
+          <input type="hidden" name="tier" value="{{ t.name }}" />
+          <button class="btn btn-accent" type="submit">
+            Become a {{ t.name }} Sponsor
+          </button>
         </form>
       </article>
       {% endfor %}

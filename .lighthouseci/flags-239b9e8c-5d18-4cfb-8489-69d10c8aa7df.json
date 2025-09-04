@@ -1,1 +1,4 @@
-{"chromeFlags":"--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --headless=new --headless=new","chromePath":"/usr/bin/chromium"}
+{
+  "chromeFlags": "--headless=new --no-sandbox --disable-gpu --disable-dev-shm-usage --headless=new --headless=new",
+  "chromePath": "/usr/bin/chromium"
+}

@@ -1,64 +1,97 @@
-{# ====================== FundChamps • About + Mission (Refactor: Stacked Flow) ====================== #}
-{% include "shared/ui_bootstrap.html" ignore missing with context %}
+{# ====================== FundChamps • About + Mission (Refactor: Stacked Flow)
+====================== #} {% include "shared/ui_bootstrap.html" ignore missing
+with context %} {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if
+csp_nonce is defined else '') %} {% set _team = team if team is defined and team
+else none %} {% set player_team = _team.team_name if _team and _team.team_name
+else "Connect ATX Elite" %} {% set team_league = _team.league if _team and
+_team.league else "AAU" %} {% set team_region = _team.region if _team and
+_team.region else "Austin, TX" %} {% set founder_last = _team.founder_lastname
+if _team and _team.founder_lastname else "Smith" %} {% set brand_color =
+_team.theme_color if _team and _team.theme_color else "#facc15" %}
 
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _team        = team if team is defined and team else none %}
-{% set player_team  = _team.team_name if _team and _team.team_name else "Connect ATX Elite" %}
-{% set team_league  = _team.league if _team and _team.league else "AAU" %}
-{% set team_region  = _team.region if _team and _team.region else "Austin, TX" %}
-{% set founder_last = _team.founder_lastname if _team and _team.founder_lastname else "Smith" %}
-{% set brand_color  = _team.theme_color if _team and _team.theme_color else "#facc15" %}
-
-<section id="mission" class="relative overflow-hidden bg-zinc-950/95 py-20 text-white md:py-28"
-         style="--fc-brand: {{ brand_color }}" aria-labelledby="about-heading">
-
+<section
+  id="mission"
+  class="relative overflow-hidden bg-zinc-950/95 py-20 text-white md:py-28"
+  style="--fc-brand: {{ brand_color }}"
+  aria-labelledby="about-heading"
+>
   <!-- Ambient glow -->
-  <div class="absolute inset-0 pointer-events-none bg-gradient-to-b from-[var(--fc-brand)]/10 via-transparent to-transparent"></div>
+  <div
+    class="absolute inset-0 pointer-events-none bg-gradient-to-b from-[var(--fc-brand)]/10 via-transparent to-transparent"
+  ></div>
 
   <div class="relative z-10 mx-auto max-w-4xl px-6 text-center">
     <!-- Heading -->
-    <h2 id="about-heading" class="text-3xl md:text-4xl font-extrabold tracking-tight text-yellow-400">
+    <h2
+      id="about-heading"
+      class="text-3xl md:text-4xl font-extrabold tracking-tight text-yellow-400"
+    >
       About {{ player_team }}
     </h2>
     <p class="mt-4 text-lg text-zinc-200 max-w-2xl mx-auto">
-      <strong class="text-yellow-300">{{ player_team }}</strong> isn’t just basketball — it’s a 
-      <span class="font-semibold text-amber-400">family movement</span> in {{ team_region }}.  
-      We build <span class="font-semibold text-yellow-200">teamwork</span>, 
-      <span class="font-semibold text-amber-200">respect</span>, and 
-      <span class="font-black text-yellow-300">championship character</span> for life.
+      <strong class="text-yellow-300">{{ player_team }}</strong> isn’t just
+      basketball — it’s a
+      <span class="font-semibold text-amber-400">family movement</span> in {{
+      team_region }}. We build
+      <span class="font-semibold text-yellow-200">teamwork</span>,
+      <span class="font-semibold text-amber-200">respect</span>, and
+      <span class="font-black text-yellow-300">championship character</span> for
+      life.
     </p>
 
     <!-- Founder Line -->
     <p class="mt-4 text-zinc-300">
-      Founded by the <span class="text-yellow-200">{{ founder_last }}</span> family, our 
-      <span class="text-yellow-100">{{ team_league }}</span> program grew from one father’s dream 
-      into a thriving community. Every child matters here.
+      Founded by the
+      <span class="text-yellow-200">{{ founder_last }}</span> family, our
+      <span class="text-yellow-100">{{ team_league }}</span> program grew from
+      one father’s dream into a thriving community. Every child matters here.
     </p>
 
     <!-- CTAs -->
     <div class="mt-8 flex flex-wrap justify-center gap-4">
-      <a href="#" class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 px-7 py-3 font-bold text-black shadow-lg hover:scale-105 transition"
-         data-modal-open="story-modal">▶️ Watch Our Story</a>
-      <a href="#donate" class="inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-300/10 px-6 py-3 font-semibold text-yellow-200 hover:bg-yellow-300/20 transition"
-         data-open-donate-modal>💛 Donate Now</a>
+      <a
+        href="#"
+        class="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-300 via-yellow-400 to-yellow-300 px-7 py-3 font-bold text-black shadow-lg hover:scale-105 transition"
+        data-modal-open="story-modal"
+        >▶️ Watch Our Story</a
+      >
+      <a
+        href="#donate"
+        class="inline-flex items-center gap-2 rounded-full border border-yellow-400/50 bg-yellow-300/10 px-6 py-3 font-semibold text-yellow-200 hover:bg-yellow-300/20 transition"
+        data-open-donate-modal
+        >💛 Donate Now</a
+      >
     </div>
   </div>
 
   <!-- Testimonials -->
   <div class="relative z-10 mx-auto mt-16 max-w-3xl px-6">
     <div class="glass-card p-8 text-left">
-      <h3 class="text-xl font-bold text-yellow-300 mb-5">💬 What Families Say</h3>
+      <h3 class="text-xl font-bold text-yellow-300 mb-5">
+        💬 What Families Say
+      </h3>
       <div id="testimonial-carousel" data-carousel aria-live="polite">
         {% for t in testimonials %}
         <figure class="{% if not loop.first %}hidden{% endif %}" data-slide>
-          <blockquote class="mb-3 text-lg italic text-yellow-100">“{{ t.quote }}”</blockquote>
-          <figcaption class="text-sm font-semibold text-yellow-200">— {{ t.author }}</figcaption>
+          <blockquote class="mb-3 text-lg italic text-yellow-100">
+            “{{ t.quote }}”
+          </blockquote>
+          <figcaption class="text-sm font-semibold text-yellow-200">
+            — {{ t.author }}
+          </figcaption>
         </figure>
         {% endfor %}
-        <nav class="mt-4 flex justify-center gap-2" aria-label="Testimonial navigation">
+        <nav
+          class="mt-4 flex justify-center gap-2"
+          aria-label="Testimonial navigation"
+        >
           {% for i in range(testimonials|length) %}
-          <button class="h-2.5 w-2.5 rounded-full bg-yellow-300/40 hover:bg-yellow-300 focus:ring-2 ring-yellow-300"
-                  type="button" data-dot aria-current="{{ 'true' if i == 0 else 'false' }}"></button>
+          <button
+            class="h-2.5 w-2.5 rounded-full bg-yellow-300/40 hover:bg-yellow-300 focus:ring-2 ring-yellow-300"
+            type="button"
+            data-dot
+            aria-current="{{ 'true' if i == 0 else 'false' }}"
+          ></button>
           {% endfor %}
         </nav>
       </div>
@@ -66,10 +99,17 @@
   </div>
 
   <!-- Impact Stats -->
-  <div class="relative z-10 mx-auto mt-16 max-w-5xl px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+  <div
+    class="relative z-10 mx-auto mt-16 max-w-5xl px-6 grid grid-cols-2 md:grid-cols-4 gap-6 text-center"
+  >
     {% for item in impact %}
     <div class="glass-card py-6">
-      <p class="text-3xl font-extrabold text-yellow-300 count" data-target="{{ item.value }}">0</p>
+      <p
+        class="text-3xl font-extrabold text-yellow-300 count"
+        data-target="{{ item.value }}"
+      >
+        0
+      </p>
       <p class="mt-2 text-sm font-medium text-zinc-300">{{ item.label }}</p>
     </div>
     {% endfor %}
@@ -77,19 +117,46 @@
 </section>
 
 <script nonce="{{ NONCE }}">
-(function(){
-  // Carousel
-  const root=document.getElementById('testimonial-carousel');if(!root) return;
-  const slides=[...root.querySelectorAll('[data-slide]')];
-  const dots=[...root.querySelectorAll('[data-dot]')];
-  let idx=0;function show(i){idx=(i+slides.length)%slides.length;slides.forEach((s,k)=>s.classList.toggle('hidden',k!==idx));dots.forEach((d,k)=>d.setAttribute('aria-current',k===idx));}
-  dots.forEach((d,i)=>d.addEventListener('click',()=>show(i)));show(0);
+  (function () {
+    // Carousel
+    const root = document.getElementById("testimonial-carousel");
+    if (!root) return;
+    const slides = [...root.querySelectorAll("[data-slide]")];
+    const dots = [...root.querySelectorAll("[data-dot]")];
+    let idx = 0;
+    function show(i) {
+      idx = (i + slides.length) % slides.length;
+      slides.forEach((s, k) => s.classList.toggle("hidden", k !== idx));
+      dots.forEach((d, k) => d.setAttribute("aria-current", k === idx));
+    }
+    dots.forEach((d, i) => d.addEventListener("click", () => show(i)));
+    show(0);
 
-  // Impact counters
-  const counters=document.querySelectorAll('.count[data-target]');if(counters.length){
-    const io=new IntersectionObserver((entries,obs)=>{if(entries.some(e=>e.isIntersecting)){counters.forEach(el=>{const target=+el.dataset.target||0;let n=0;const step=Math.max(1,Math.ceil(target/50));const id=setInterval(()=>{n+=step;if(n>=target){n=target;clearInterval(id);}el.textContent=n;},20)});obs.disconnect();}}, {threshold:.3});
-    counters.forEach(c=>io.observe(c));
-  }
-})();
+    // Impact counters
+    const counters = document.querySelectorAll(".count[data-target]");
+    if (counters.length) {
+      const io = new IntersectionObserver(
+        (entries, obs) => {
+          if (entries.some((e) => e.isIntersecting)) {
+            counters.forEach((el) => {
+              const target = +el.dataset.target || 0;
+              let n = 0;
+              const step = Math.max(1, Math.ceil(target / 50));
+              const id = setInterval(() => {
+                n += step;
+                if (n >= target) {
+                  n = target;
+                  clearInterval(id);
+                }
+                el.textContent = n;
+              }, 20);
+            });
+            obs.disconnect();
+          }
+        },
+        { threshold: 0.3 },
+      );
+      counters.forEach((c) => io.observe(c));
+    }
+  })();
 </script>
-

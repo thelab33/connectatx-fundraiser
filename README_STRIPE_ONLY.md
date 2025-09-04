@@ -3,6 +3,7 @@
 This patch removes **all PayPal code** and leaves Stripe as the only gateway.
 
 ## What it does
+
 - Replaces `app/blueprints/fc_payments.py` with a **Stripe-only** blueprint (PaymentIntent + webhook).
 - Replaces `app/routes/api.py` and removes PayPal endpoints/fields.
 - Replaces `app/blueprints/health.py` and removes PayPal health checks.
@@ -12,6 +13,7 @@ This patch removes **all PayPal code** and leaves Stripe as the only gateway.
   - verify that PayPal is fully removed
 
 ## Apply
+
 ```bash
 unzip -o stripe_only_patch.zip -d ./
 
@@ -33,5 +35,6 @@ curl -sS http://localhost:5003/api/payments/readiness | jq
 ```
 
 ## Notes
+
 - If any template still references `paypal_*` variables, it will simply render empty/False. The script tries to clean common strings.
 - Webhook: keep forwarding only Stripe events you handle (e.g., `payment_intent.succeeded`, `charge.succeeded`).

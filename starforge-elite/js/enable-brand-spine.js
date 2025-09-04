@@ -1,9 +1,9 @@
 // enable-brand-spine.js — anchors the vertical spine to the hero card
 (() => {
-  const root = document.getElementById('fc-hero');
+  const root = document.getElementById("fc-hero");
   if (!root) return;
-  const frame = root.querySelector('.fc-hero-card');
-  const spine = root.querySelector('.brand-spine');
+  const frame = root.querySelector(".fc-hero-card");
+  const spine = root.querySelector(".brand-spine");
   if (!frame || !spine) return;
 
   const position = () => {
@@ -13,5 +13,5 @@
     spine.style.left = `calc(${Math.max(0, left)}px - 1.6rem)`;
   };
   position();
-  window.addEventListener('resize', position, { passive: true });
+  window.addEventListener("resize", position, { passive: true });
 })();

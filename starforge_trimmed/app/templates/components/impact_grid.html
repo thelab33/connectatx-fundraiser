@@ -1,25 +1,58 @@
 <section class="section" id="impact">
   <div class="container">
-    <h2 class="h2" style="margin-bottom:.75rem">Unlock What Matters — <span style="color:hsl(var(--brand))">Real Impact Buckets</span></h2>
+    <h2 class="h2" style="margin-bottom: 0.75rem">
+      Unlock What Matters —
+      <span style="color: hsl(var(--brand))">Real Impact Buckets</span>
+    </h2>
     <div class="grid grid-3">
       {% for b in buckets %}
       <article class="card card-tight" aria-label="{{ b.title }} impact">
         <h3 class="h3">{{ b.title }}</h3>
         <p class="text-muted">{{ b.summary }}</p>
-        <div style="display:flex;gap:.5rem;justify-content:space-between;margin:.4rem 0 .8rem">
+        <div
+          style="
+            display: flex;
+            gap: 0.5rem;
+            justify-content: space-between;
+            margin: 0.4rem 0 0.8rem;
+          "
+        >
           <span class="badge">Goal ${{ b.goal }}</span>
           <span class="badge">Left ${{ b.goal - b.raised }}</span>
         </div>
-        <div class="progress" role="progressbar" aria-valuenow="{{ b.raised }}" aria-valuemin="0" aria-valuemax="{{ b.goal }}">
-          <span style="width: {{ (b.raised/b.goal*100) if b.goal else 0 }}%"></span>
+        <div
+          class="progress"
+          role="progressbar"
+          aria-valuenow="{{ b.raised }}"
+          aria-valuemin="0"
+          aria-valuemax="{{ b.goal }}"
+        >
+          <span
+            style="width: {{ (b.raised/b.goal*100) if b.goal else 0 }}%"
+          ></span>
         </div>
-        <div style="margin-top:.8rem;display:flex;gap:.5rem;flex-wrap:wrap">
+        <div
+          style="
+            margin-top: 0.8rem;
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+          "
+        >
           <form action="/pay/create-checkout" method="post">
-            <input type="hidden" name="label" value="{{ b.title }}">
-            <input type="hidden" name="amount_cents" value="{{ (b.default_amount or 5000) }}">
-            <button class="btn btn-accent" type="submit">Donate ${{ (b.default_amount or 5000)//100 }}</button>
+            <input type="hidden" name="label" value="{{ b.title }}" />
+            <input
+              type="hidden"
+              name="amount_cents"
+              value="{{ (b.default_amount or 5000) }}"
+            />
+            <button class="btn btn-accent" type="submit">
+              Donate ${{ (b.default_amount or 5000)//100 }}
+            </button>
           </form>
-          <a href="/donate?bucket={{ b.slug }}" class="btn btn-ghost">Choose amount</a>
+          <a href="/donate?bucket={{ b.slug }}" class="btn btn-ghost"
+            >Choose amount</a
+          >
         </div>
       </article>
       {% endfor %}

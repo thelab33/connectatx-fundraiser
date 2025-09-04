@@ -1,24 +1,39 @@
 <p class="kicker">Community • Academics • Leadership</p>
-<h1 class="h1">Fuel the Season. <span style="color:hsl(var(--brand))">Fund the Future.</span></h1>
-<p class="text-muted" style="max-width:60ch">
-  Direct support for gear, travel, and tutoring—every dollar moves a kid forward.
+<h1 class="h1">
+  Fuel the Season.
+  <span style="color: hsl(var(--brand))">Fund the Future.</span>
+</h1>
+<p class="text-muted" style="max-width: 60ch">
+  Direct support for gear, travel, and tutoring—every dollar moves a kid
+  forward.
 </p>
 
-<div style="margin-top:1rem;display:flex;gap:.75rem;flex-wrap:wrap">
-  <a href="#donate" class="btn btn-accent" data-analytics="hero:primary">Donate</a>
-  <a href="#tiers" class="btn btn-ghost" data-analytics="hero:secondary">Become a Sponsor</a>
+<div style="margin-top: 1rem; display: flex; gap: 0.75rem; flex-wrap: wrap">
+  <a href="#donate" class="btn btn-accent" data-analytics="hero:primary"
+    >Donate</a
+  >
+  <a href="#tiers" class="btn btn-ghost" data-analytics="hero:secondary"
+    >Become a Sponsor</a
+  >
 </div>
 
-<div style="margin-top:.75rem;display:flex;gap:.5rem;flex-wrap:wrap">
+<div style="margin-top: 0.75rem; display: flex; gap: 0.5rem; flex-wrap: wrap">
   <span class="badge">500+ families</span>
   <span class="badge">3.5 Team GPA</span>
   <span class="badge">AAU Gold Certified</span>
 </div>
 
-<div style="margin-top:1rem" aria-label="Campaign progress">
-  <div class="progress" role="progressbar" aria-valuenow="{{ funds_raised|default(0) }}"
-       aria-valuemin="0" aria-valuemax="{{ fundraising_goal|default(0) }}">
-    <span style="width: {{ (funds_raised / fundraising_goal * 100) if fundraising_goal else 0 }}%"></span>
+<div style="margin-top: 1rem" aria-label="Campaign progress">
+  <div
+    class="progress"
+    role="progressbar"
+    aria-valuenow="{{ funds_raised|default(0) }}"
+    aria-valuemin="0"
+    aria-valuemax="{{ fundraising_goal|default(0) }}"
+  >
+    <span
+      style="width: {{ (funds_raised / fundraising_goal * 100) if fundraising_goal else 0 }}%"
+    ></span>
   </div>
   <div class="progress__label">
     <span>Raised ${{ funds_raised|int }}</span>

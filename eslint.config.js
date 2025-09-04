@@ -1,14 +1,15 @@
-// eslint.config.js — FundChamps Prestige (fixed for ESLint 9+)
+// eslint.config.js — FundChamps Prestige (ESLint 9+ Ready)
 
 import js from "@eslint/js";
 import globals from "globals";
 import stylistic from "@stylistic/eslint-plugin";
 
 export default [
-  // Base recommended
+  // ✅ Base recommended rules from ESLint
   js.configs.recommended,
 
   {
+    // 🌐 Language + environment setup
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "module",
@@ -19,31 +20,38 @@ export default [
         Alpine: "readonly",
       },
     },
+
+    // 🎨 Stylistic plugin for consistent code style
     plugins: {
       "@stylistic": stylistic,
     },
-    rules: {
-      // Core
-      "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
-      "no-undef": "error",
-      "eqeqeq": ["error", "smart"],
-      "no-console": "off",
 
-      // Stylistic
+    // 🚦 Global ruleset
+    rules: {
+      // --- Core ---
+      "no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "no-undef": "error",
+      eqeqeq: ["error", "smart"],
+      "no-console": "off", // Allow debug logs during dev
+
+      // --- Style ---
       "@stylistic/semi": ["error", "always"],
       "@stylistic/quotes": ["error", "double", { avoidEscape: true }],
       "@stylistic/indent": ["error", 2, { SwitchCase: 1 }],
       "@stylistic/no-trailing-spaces": "error",
       "@stylistic/comma-dangle": ["error", "only-multiline"],
 
-      // Modern JS
+      // --- Modern JS ---
       "prefer-const": "warn",
       "no-var": "error",
       "object-shorthand": ["error", "always"],
     },
   },
 
-  // Special case: CommonJS files
+  // 📦 CommonJS support (build scripts, configs, etc.)
   {
     files: ["**/*.cjs"],
     languageOptions: {
@@ -51,24 +59,23 @@ export default [
     },
   },
 
-  // Frontend snippets (htmx/alpine scripts)
+  // 🎭 Frontend micro-scripts (htmx, Alpine, inline widgets)
   {
     files: ["app/static/js/**/*.js"],
     rules: {
-      "no-undef": "off",
+      "no-undef": "off", // ignore Alpine/htmx globals inside snippets
     },
   },
 
-  // Ignored paths (replaces .eslintignore)
+  // 🚫 Ignore heavy/minified/vendor builds
   {
     ignores: [
-      'app/static/js/main.js',
-      'app/static/js/bundle.min.js',
-      'app/static/js/**/vendor/**',
-      'app/static/js/**/dist/**',
-      'app/static/js/elite-sw.js',
-      'app/static/js/elite-upgrades.js'
+      "app/static/js/main.js",
+      "app/static/js/bundle.min.js",
+      "app/static/js/**/vendor/**",
+      "app/static/js/**/dist/**",
+      "app/static/js/elite-sw.js",
+      "app/static/js/elite-upgrades.js",
     ],
   },
 ];
-

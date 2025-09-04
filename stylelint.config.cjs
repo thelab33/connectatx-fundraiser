@@ -1,15 +1,15 @@
 /** @type {import('stylelint').Config} */
 module.exports = {
-  extends: [
-    "stylelint-config-standard",
-    "stylelint-config-recommended",
-  ],
+  extends: ["stylelint-config-standard", "stylelint-config-recommended"],
 
   rules: {
     // ✅ Custom properties: brand tokens, private vars, steps, segmented
     "custom-property-pattern": [
       "^--(?:[a-z][a-z0-9-]*|_[a-z0-9-]+|step--\\d+)(?:[./][a-z0-9-]+)*$",
-      { message: "Use kebab-case (e.g. --brand-color). Private vars may start with --_." }
+      {
+        message:
+          "Use kebab-case (e.g. --brand-color). Private vars may start with --_.",
+      },
     ],
 
     // 🌀 Tailwind / utility CSS
@@ -17,10 +17,19 @@ module.exports = {
       true,
       {
         ignoreAtRules: [
-          "tailwind", "apply", "layer", "variants",
-          "responsive", "screen", "config",
-          "theme", "plugin", "reference",
-          "container", "property", "supports",
+          "tailwind",
+          "apply",
+          "layer",
+          "variants",
+          "responsive",
+          "screen",
+          "config",
+          "theme",
+          "plugin",
+          "reference",
+          "container",
+          "property",
+          "supports",
         ],
       },
     ],
@@ -28,16 +37,32 @@ module.exports = {
     // 🎨 Modern CSS features you use
     "function-no-unknown": [
       true,
-      { ignoreFunctions: ["color-mix", "lab", "lch", "oklab", "oklch", "min", "max", "clamp"] },
+      {
+        ignoreFunctions: [
+          "color-mix",
+          "lab",
+          "lch",
+          "oklab",
+          "oklch",
+          "min",
+          "max",
+          "clamp",
+        ],
+      },
     ],
     "property-no-unknown": [
       true,
       {
         ignoreProperties: [
-          "contain", "contain-intrinsic-size", "content-visibility",
-          "scrollbar-gutter", "text-wrap",
-          "view-timeline-name", "view-timeline-axis",
-          "animation-timeline", "timeline-scope",
+          "contain",
+          "contain-intrinsic-size",
+          "content-visibility",
+          "scrollbar-gutter",
+          "text-wrap",
+          "view-timeline-name",
+          "view-timeline-axis",
+          "animation-timeline",
+          "timeline-scope",
         ],
       },
     ],
@@ -45,8 +70,15 @@ module.exports = {
       true,
       {
         ignoreMediaFeatureNames: [
-          "prefers-reduced-motion", "prefers-contrast", "prefers-color-scheme",
-          "dynamic-range", "scripting", "hover", "any-hover", "pointer", "any-pointer",
+          "prefers-reduced-motion",
+          "prefers-contrast",
+          "prefers-color-scheme",
+          "dynamic-range",
+          "scripting",
+          "hover",
+          "any-hover",
+          "pointer",
+          "any-pointer",
         ],
       },
     ],
@@ -73,4 +105,3 @@ module.exports = {
     "app/static/css/src/**/*.css",
   ],
 };
-

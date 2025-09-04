@@ -1,13 +1,15 @@
 # Starforge Elite — Hero Auto‑Enhance Kit
 
 This mini‑toolchain for your FundChamps hero does three things fast:
-1) **Forge responsive AVIF/WEBP** from your source hero image.
-2) **Drop‑in Jinja snippets** to use the forged set automatically.
-3) **Relocate the team name** into a *vertical brand spine* (surprise placement) with sleek CSS.
+
+1. **Forge responsive AVIF/WEBP** from your source hero image.
+2. **Drop‑in Jinja snippets** to use the forged set automatically.
+3. **Relocate the team name** into a _vertical brand spine_ (surprise placement) with sleek CSS.
 
 ---
 
 ## 0) Install dependencies
+
 ```bash
 cd path/to/your/repo
 npm i -D sharp svgo
@@ -27,6 +29,7 @@ node starforge-elite/scripts/starforge.mjs images
 ```
 
 Outputs (created if missing):
+
 ```
 app/static/images/hero/hero-1920.avif
 app/static/images/hero/hero-1280.avif
@@ -38,6 +41,7 @@ app/static/images/hero/hero-lqip.txt   (base64 data URI for tiny preview)
 ```
 
 You can override the source and output via env vars:
+
 ```bash
 SRC="static/images/connect-atx-team.jpg" OUTDIR="static/images/hero" node starforge-elite/scripts/starforge.mjs images
 ```
@@ -45,6 +49,7 @@ SRC="static/images/connect-atx-team.jpg" OUTDIR="static/images/hero" node starfo
 ---
 
 ## 2) (Optional) Optimize any SVG logos
+
 ```bash
 npx svgo -f app/static/images -o app/static/images
 ```
@@ -65,7 +70,7 @@ It uses your existing `hero_src` / `hero_src_mobile` variables, but **switches t
 
 ## 4) Vertical Brand Spine (relocates “Connect ATX Elite”)
 
-Drop this *inside* your hero figure wrapper (e.g., as the first child of `.fc-hero-tilt` or `.fc-hero-card`):
+Drop this _inside_ your hero figure wrapper (e.g., as the first child of `.fc-hero-tilt` or `.fc-hero-card`):
 
 ```jinja
 {% set _brand = team_name if team_name else "Connect ATX Elite" %}
@@ -73,8 +78,9 @@ Drop this *inside* your hero figure wrapper (e.g., as the first child of `.fc-he
 ```
 
 Then include the CSS once on the page:
+
 ```html
-<link rel="stylesheet" href="/starforge/brand-spine.css">
+<link rel="stylesheet" href="/starforge/brand-spine.css" />
 ```
 
 Or paste the CSS into your main stylesheet (content is in `css/brand-spine.css`).
@@ -82,7 +88,9 @@ Or paste the CSS into your main stylesheet (content is in `css/brand-spine.css`)
 ---
 
 ## 5) Helpful NPM scripts (optional)
+
 Add to your `package.json`:
+
 ```json
 {
   "scripts": {
@@ -93,6 +101,7 @@ Add to your `package.json`:
 ```
 
 Now:
+
 ```bash
 npm run forge        # build AVIF/WEBP set
 npm run forge:lqip   # regenerate the LQIP only
@@ -101,6 +110,7 @@ npm run forge:lqip   # regenerate the LQIP only
 ---
 
 ## Notes
+
 - The forging script crops to **16:9 cover**, keeps the subject centered, and uses tuned quality (AVIF ~62, WEBP ~70).
 - The brand spine is fully keyboard‑accessible on small screens (it becomes a top ribbon).
 - No build system required — pure Node + CSS.

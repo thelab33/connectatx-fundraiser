@@ -1,7 +1,11 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+defined else '') %}
 <h2 class="sr-only">Starforge</h2>
 <!doctype html>
 
 {% macro badge(label, color="gold") -%}
-<span class="badge bg-{{ color }} text-zinc-900 px-3 py-1 rounded-full font-bold">{{ label }}</span>
+<span
+  class="badge bg-{{ color }} text-zinc-900 px-3 py-1 rounded-full font-bold"
+  >{{ label }}</span
+>
 {%- endmacro %}

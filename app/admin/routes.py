@@ -1,55 +1,109 @@
-# app/admin/routes.py
 from __future__ import annotations
 
 """
-Admin & API blueprints (refactored for robustness in dev/offline modes).
+Admin & API blueprints (production-ready, schema-tolerant)
 
 Highlights:
-- Schema-tolerant queries with safe table checks
-- Guarded use of optional model attributes (status/deleted/amount/created_at)
+- Optional admin auth (uses flask_login if available; otherwise no-op)
+- Schema-tolerant ORM helpers with safe table checks
+- Defensive list/detail operations (status/deleted/amount/created_at may not exist)
 - Async Slack notifications with short timeouts
-- Defensive CSV export (no failures on missing columns)
+- Robust CSV export (doesn't crash on missing columns)
 - Clear blueprint exports for auto-registration (bp/admin_bp/api_bp)
 """
 
 import csv
 import io
 import threading
+from dataclasses import dataclass
 from decimal import Decimal
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterable, List, Optional
 
-from flask import (Blueprint, Response, current_app, flash, jsonify, redirect,
-                   render_template, request, url_for)
+from flask import (
+    Blueprint,
+    Response,
+    current_app,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    url_for,
+)
 from sqlalchemy import desc, func
 from sqlalchemy import inspect as sa_inspect
 
 from app.extensions import db
 
-# ── Models (tolerant imports; continue gracefully if missing) ──────
+# ── Optional admin auth (flask_login) ────────────────────────────────────────
 try:
-    from app.models import (CampaignGoal, Example, Sponsor,  # type: ignore
-                            Transaction)
+    from flask_login import current_user, login_required  # type: ignore
+except Exception:  # pragma: no cover
+    current_user = None  # type: ignore
+
+    def login_required(fn):  # type: ignore
+        return fn
+
+
+def _require_admin_guard() -> bool:
+    """
+    Returns True if current request passes admin guard.
+    If flask_login present and User has is_admin flag, require it.
+    Otherwise, allow through (dev/offline safe).
+    """
+    try:
+        if current_user is None:
+            return True
+        if getattr(current_user, "is_authenticated", False) is False:
+            return False
+        # If the model exposes is_admin (bool), require it; else allow
+        is_admin = getattr(current_user, "is_admin", True)
+        return bool(is_admin)
+    except Exception:
+        return True
+
+
+# ── Models (tolerant imports; continue gracefully if missing) ────────────────
+try:
+    from app.models import (  # type: ignore
+        CampaignGoal,
+        Example,
+        Sponsor,
+        Transaction,
+    )
 except Exception:  # pragma: no cover
     Sponsor = Transaction = CampaignGoal = Example = None  # type: ignore
 
-# ── Blueprints ─────────────────────────────────────────────────────
+
+# ── Blueprints ───────────────────────────────────────────────────────────────
 admin = Blueprint("admin", __name__, url_prefix="/admin")
 api = Blueprint("api", __name__, url_prefix="/api")
 
-# Expose aliases for auto-registrar (it searches for bp/admin_bp/api_bp/etc.)
+# Export aliases for auto-registrar
 bp = admin
 admin_bp = admin
 api_bp = api
 __all__ = ["bp", "admin_bp", "api_bp", "admin", "api"]
 
 
-# ── Helpers ────────────────────────────────────────────────────────
+# ── Helpers ─────────────────────────────────────────────────────────────────
 def _table_exists(name_or_model: Any) -> bool:
+    """Safe table existence check (won’t raise in dev)."""
     try:
         name = getattr(name_or_model, "__tablename__", None) or str(name_or_model)
+        if not name:
+            return False
         return bool(sa_inspect(db.engine).has_table(name))
     except Exception:
         return False
+
+
+def _first_attr(obj: Any, candidates: Iterable[str]) -> Any:
+    """Return first present attribute from candidates, else None."""
+    for c in candidates:
+        if hasattr(obj, c):
+            return getattr(obj, c)
+    return None
 
 
 def _sponsor_query():
@@ -61,8 +115,7 @@ def _sponsor_query():
         q = q.filter(Sponsor.deleted.is_(False))
     if hasattr(Sponsor, "status"):
         q = q.filter(Sponsor.status == "approved")
-    # Default ordering
-    order_col = getattr(Sponsor, "created_at", None) or getattr(Sponsor, "id", None)
+    order_col = _first_attr(Sponsor, ("created_at", "id"))
     if order_col is not None:
         q = q.order_by(desc(order_col))
     return q
@@ -74,12 +127,18 @@ def _sum_sponsor_amounts() -> float:
         return 0.0
     try:
         if hasattr(Sponsor, "amount"):
-            q = db.session.query(func.coalesce(func.sum(Sponsor.amount), 0.0))
+            q = db.session.query(func.coalesce(Sponsor.amount, 0.0))
             if hasattr(Sponsor, "deleted"):
                 q = q.filter(Sponsor.deleted.is_(False))
             if hasattr(Sponsor, "status"):
                 q = q.filter(Sponsor.status == "approved")
-            return float(q.scalar() or 0.0)
+            # SUM(amount)
+            total = db.session.query(func.coalesce(func.sum(Sponsor.amount), 0.0))
+            if hasattr(Sponsor, "deleted"):
+                total = total.filter(Sponsor.deleted.is_(False))
+            if hasattr(Sponsor, "status"):
+                total = total.filter(Sponsor.status == "approved")
+            return float(total.scalar() or 0.0)
         # Fallback: iterate
         items = (_sponsor_query() or db.session.query(Sponsor)).all()
         return float(sum((getattr(s, "amount", 0) or 0) for s in items))
@@ -88,9 +147,9 @@ def _sum_sponsor_amounts() -> float:
         return 0.0
 
 
-def _count(query_prop: str, **filters) -> int:
-    """Count records if model/table exists; otherwise 0."""
-    model = globals().get(query_prop, None)
+def _count(model_name: str, **filters) -> int:
+    """Count records if model/table exists; otherwise 0 (schema-tolerant)."""
+    model = globals().get(model_name, None)
     if not model or not _table_exists(getattr(model, "__tablename__", "")):
         return 0
     try:
@@ -98,26 +157,24 @@ def _count(query_prop: str, **filters) -> int:
         for k, v in filters.items():
             if hasattr(model, k):
                 q = q.filter(getattr(model, k) == v)
-        return q.count()
+        return int(q.count())
     except Exception:
-        current_app.logger.exception("Count failed for %s", query_prop)
+        current_app.logger.exception("Count failed for %s", model_name)
         return 0
 
 
 def _active_goal() -> Optional[Any]:
+    """Return most recent active goal if table/columns exist."""
     if not CampaignGoal or not _table_exists(
         getattr(CampaignGoal, "__tablename__", "campaign_goals")
     ):
         return None
     try:
         q = db.session.query(CampaignGoal)
-        if hasattr(CampaignGoal, "active"):
-            q = q.filter(CampaignGoal.active.is_(True))
-        elif hasattr(CampaignGoal, "is_active"):
-            q = q.filter(CampaignGoal.is_active.is_(True))
-        order_col = getattr(CampaignGoal, "updated_at", None) or getattr(
-            CampaignGoal, "created_at", None
-        )
+        active_col = _first_attr(CampaignGoal, ("active", "is_active"))
+        if active_col is not None:
+            q = q.filter(active_col.is_(True))  # type: ignore[attr-defined]
+        order_col = _first_attr(CampaignGoal, ("updated_at", "created_at", "id"))
         if order_col is not None:
             q = q.order_by(desc(order_col))
         return q.first()
@@ -133,22 +190,19 @@ def _as_dict_sponsor(s: Any) -> Dict[str, Any]:
             return s.as_dict()  # type: ignore[attr-defined]
         except Exception:
             pass
+    created = _first_attr(s, ("created_at",))
     return {
         "id": getattr(s, "id", None),
         "name": getattr(s, "name", None),
         "email": getattr(s, "email", None),
         "amount": float(getattr(s, "amount", 0) or 0),
         "status": getattr(s, "status", None),
-        "created_at": (
-            getattr(s, "created_at", None).isoformat()
-            if getattr(s, "created_at", None)
-            else None
-        ),
+        "created_at": created.isoformat() if getattr(created, "isoformat", None) else None,
     }
 
 
 def send_slack_alert_async(message: str) -> None:
-    """Fire-and-forget Slack webhook with short timeout."""
+    """Fire-and-forget Slack webhook with short timeout (non-blocking)."""
     webhook = current_app.config.get("SLACK_WEBHOOK_URL")
     if not webhook:
         return
@@ -164,10 +218,20 @@ def send_slack_alert_async(message: str) -> None:
     threading.Thread(target=_post, daemon=True).start()
 
 
+# ── Admin: before_request guard (optional) ───────────────────────────────────
+@admin.before_request
+def _admin_guard():
+    if request.endpoint and request.endpoint.startswith("admin."):
+        if current_user is not None and not _require_admin_guard():
+            flash("Please sign in with an admin account.", "warning")
+            return redirect(url_for("main.home"))
+
+
 # ───────────────────────────────
 # 🧭 ADMIN DASHBOARD
 # ───────────────────────────────
 @admin.route("/")
+@login_required
 def dashboard():
     sponsors: List[Any] = []
     transactions: List[Any] = []
@@ -178,9 +242,7 @@ def dashboard():
             q = db.session.query(Sponsor)
             if hasattr(Sponsor, "deleted"):
                 q = q.filter(Sponsor.deleted.is_(False))
-            order_col = getattr(Sponsor, "created_at", None) or getattr(
-                Sponsor, "id", None
-            )
+            order_col = _first_attr(Sponsor, ("created_at", "id"))
             if order_col is not None:
                 q = q.order_by(desc(order_col))
             sponsors = q.limit(10).all()
@@ -188,14 +250,10 @@ def dashboard():
             current_app.logger.exception("Failed loading recent sponsors")
 
     # Recent transactions
-    if Transaction and _table_exists(
-        getattr(Transaction, "__tablename__", "transactions")
-    ):
+    if Transaction and _table_exists(getattr(Transaction, "__tablename__", "transactions")):
         try:
             q = db.session.query(Transaction)
-            order_col = getattr(Transaction, "created_at", None) or getattr(
-                Transaction, "id", None
-            )
+            order_col = _first_attr(Transaction, ("created_at", "id"))
             if order_col is not None:
                 q = q.order_by(desc(order_col))
             transactions = q.limit(10).all()
@@ -203,25 +261,16 @@ def dashboard():
             current_app.logger.exception("Failed loading recent transactions")
 
     goal = _active_goal()
-
     stats = {
         "total_raised": _sum_sponsor_amounts(),
         "sponsor_count": _count("Sponsor"),
-        "pending_sponsors": (
-            _count("Sponsor", status="pending")
-            if hasattr(Sponsor or object(), "status")
-            else 0
-        ),
-        "approved_sponsors": (
-            _count("Sponsor", status="approved")
-            if hasattr(Sponsor or object(), "status")
-            else 0
-        ),
-        "goal_amount": (
-            float(getattr(goal, "amount", getattr(goal, "goal_amount", 0)) or 0)
-            if goal
-            else 0
-        ),
+        "pending_sponsors": _count("Sponsor", status="pending") if hasattr(Sponsor or object(), "status") else 0,
+        "approved_sponsors": _count("Sponsor", status="approved") if hasattr(Sponsor or object(), "status") else 0,
+        "goal_amount": float(
+            getattr(goal, "amount", getattr(goal, "goal_amount", 0)) or 0
+        )
+        if goal
+        else 0.0,
     }
     return render_template(
         "admin/dashboard.html",
@@ -236,6 +285,7 @@ def dashboard():
 # 👥 SPONSOR MANAGEMENT
 # ───────────────────────────────
 @admin.route("/sponsors")
+@login_required
 def sponsors_list():
     sponsors: List[Any] = []
     q_text = (request.args.get("q") or "").strip()
@@ -249,7 +299,7 @@ def sponsors_list():
             q = q.filter(Sponsor.deleted.is_(False))
         if q_text and hasattr(Sponsor, "name"):
             q = q.filter(getattr(Sponsor, "name").ilike(f"%{q_text}%"))
-        order_col = getattr(Sponsor, "created_at", None) or getattr(Sponsor, "id", None)
+        order_col = _first_attr(Sponsor, ("created_at", "id"))
         if order_col is not None:
             q = q.order_by(desc(order_col))
         sponsors = q.all()
@@ -261,12 +311,13 @@ def sponsors_list():
 
 
 @admin.route("/sponsors/approve/<int:sponsor_id>", methods=["POST"])
+@login_required
 def approve_sponsor(sponsor_id: int):
     if not Sponsor or not _table_exists(getattr(Sponsor, "__tablename__", "sponsors")):
         flash("Sponsors table is unavailable.", "warning")
         return redirect(url_for("admin.sponsors_list"))
 
-    sponsor = db.session.get(Sponsor, sponsor_id)  # get_or_404 alternative in SA2 style
+    sponsor = db.session.get(Sponsor, sponsor_id)  # SA 2.x style
     if not sponsor:
         flash("Sponsor not found.", "warning")
         return redirect(url_for("admin.sponsors_list"))
@@ -289,6 +340,7 @@ def approve_sponsor(sponsor_id: int):
 
 
 @admin.route("/sponsors/delete/<int:sponsor_id>", methods=["POST"])
+@login_required
 def delete_sponsor(sponsor_id: int):
     if not Sponsor or not _table_exists(getattr(Sponsor, "__tablename__", "sponsors")):
         flash("Sponsors table is unavailable.", "warning")
@@ -316,11 +368,16 @@ def delete_sponsor(sponsor_id: int):
 # 💸 EXPORT PAYOUTS CSV
 # ───────────────────────────────
 @admin.route("/payouts/export")
+@login_required
 def export_payouts():
+    """
+    CSV of approved sponsors (Name, Email, Amount, Approved Date).
+    Tolerant to missing columns; never 500s.
+    """
     if not Sponsor or not _table_exists(getattr(Sponsor, "__tablename__", "sponsors")):
         return Response("Name,Email,Amount,Approved Date\n", mimetype="text/csv")
 
-    # Only approved + not deleted if those fields exist
+    # Query
     try:
         q = db.session.query(Sponsor)
         if hasattr(Sponsor, "status"):
@@ -332,6 +389,7 @@ def export_payouts():
         current_app.logger.exception("Export CSV query failed")
         items = []
 
+    # Write CSV
     output = io.StringIO(newline="")
     writer = csv.writer(output)
     writer.writerow(["Name", "Email", "Amount", "Approved Date"])
@@ -340,23 +398,18 @@ def export_payouts():
         name = getattr(s, "name", "") or ""
         email = getattr(s, "email", "") or ""
         amount = float(getattr(s, "amount", 0) or 0)
-        updated = getattr(s, "updated_at", None)
-        writer.writerow(
-            [
-                name,
-                email,
-                f"{amount:.2f}",
-                updated.strftime("%Y-%m-%d") if updated else "",
-            ]
-        )
+        approved_at = _first_attr(s, ("updated_at", "created_at"))
+        try:
+            approved_str = approved_at.strftime("%Y-%m-%d") if approved_at else ""
+        except Exception:
+            approved_str = str(approved_at or "")
+        writer.writerow([name, email, f"{amount:.2f}", approved_str])
 
     output.seek(0)
     return Response(
         output.getvalue(),
         mimetype="text/csv",
-        headers={
-            "Content-Disposition": "attachment; filename=approved_sponsor_payouts.csv"
-        },
+        headers={"Content-Disposition": "attachment; filename=approved_sponsor_payouts.csv"},
     )
 
 
@@ -364,6 +417,7 @@ def export_payouts():
 # 🎯 CAMPAIGN GOAL MANAGEMENT
 # ───────────────────────────────
 @admin.route("/goals", methods=["GET", "POST"])
+@login_required
 def goals():
     if not CampaignGoal or not _table_exists(
         getattr(CampaignGoal, "__tablename__", "campaign_goals")
@@ -382,7 +436,7 @@ def goals():
             return redirect(url_for("admin.goals"))
 
         try:
-            # Optional: deactivate others if schema supports it
+            # Deactivate others if supported
             if hasattr(CampaignGoal, "active"):
                 db.session.query(CampaignGoal).update({CampaignGoal.active: False})  # type: ignore[arg-type]
             elif hasattr(CampaignGoal, "is_active"):
@@ -425,16 +479,13 @@ def goals():
 # 💳 TRANSACTIONS
 # ───────────────────────────────
 @admin.route("/transactions")
+@login_required
 def transactions_list():
     txs: List[Any] = []
-    if Transaction and _table_exists(
-        getattr(Transaction, "__tablename__", "transactions")
-    ):
+    if Transaction and _table_exists(getattr(Transaction, "__tablename__", "transactions")):
         try:
             q = db.session.query(Transaction)
-            order_col = getattr(Transaction, "created_at", None) or getattr(
-                Transaction, "id", None
-            )
+            order_col = _first_attr(Transaction, ("created_at", "id"))
             if order_col is not None:
                 q = q.order_by(desc(order_col))
             txs = q.all()
@@ -452,7 +503,6 @@ def _example_by_uuid(uuid: str):
     try:
         if hasattr(Example, "by_uuid"):
             return Example.by_uuid(uuid)  # type: ignore[attr-defined]
-        # Fallback lookups
         if hasattr(Example, "uuid"):
             return db.session.query(Example).filter(Example.uuid == uuid).first()
         if hasattr(Example, "get"):
@@ -517,3 +567,4 @@ def api_approved_sponsors():
             items = []
 
     return jsonify([_as_dict_sponsor(s) for s in items])
+

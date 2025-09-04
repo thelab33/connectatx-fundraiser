@@ -66,7 +66,12 @@ export default [
       "import/order": [
         "warn",
         {
-          groups: ["builtin", "external", "internal", ["parent", "sibling", "index"]],
+          groups: [
+            "builtin",
+            "external",
+            "internal",
+            ["parent", "sibling", "index"],
+          ],
           "newlines-between": "always",
         },
       ],
@@ -77,7 +82,12 @@ export default [
       "unused-imports/no-unused-imports": "warn",
       "unused-imports/no-unused-vars": [
         "warn",
-        { vars: "all", varsIgnorePattern: "^_", args: "after-used", argsIgnorePattern: "^_" },
+        {
+          vars: "all",
+          varsIgnorePattern: "^_",
+          args: "after-used",
+          argsIgnorePattern: "^_",
+        },
       ],
 
       // Promises & basic security
@@ -107,4 +117,3 @@ export default [
   // 4) Disable stylistic rules that conflict with Prettier (optional)
   eslintConfigPrettier,
 ];
-

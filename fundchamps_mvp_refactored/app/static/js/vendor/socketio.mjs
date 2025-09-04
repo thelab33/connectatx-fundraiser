@@ -21,7 +21,10 @@ const io = (url, opts = {}) => {
 };
 
 // Attach legacy global (once, safe, non-writable)
-if (typeof window !== "undefined" && !Object.prototype.hasOwnProperty.call(window, "io")) {
+if (
+  typeof window !== "undefined" &&
+  !Object.prototype.hasOwnProperty.call(window, "io")
+) {
   try {
     Object.defineProperty(window, "io", {
       value: io,
@@ -37,4 +40,3 @@ if (typeof window !== "undefined" && !Object.prototype.hasOwnProperty.call(windo
 export default io;
 export { io, Manager, Socket };
 export * from "socket.io-client";
-

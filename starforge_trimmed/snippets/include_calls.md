@@ -9,6 +9,10 @@ Add these includes to your landing template (e.g., `app/templates/pages/home.htm
 ```
 
 Ensure `starforge.min.css` is linked in your base layout `<head>`:
+
 ```html
-<link rel="stylesheet" href="{{ url_for('static', filename='css/starforge.min.css') }}">
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/starforge.min.css') }}"
+/>
 ```

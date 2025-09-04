@@ -1,4 +1,14 @@
 # tests/conftest.py
+# --- ensure project root is importable as a package ---
+import sys, pathlib
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+# ------------------------------------------------------
+
+import importlib
+# (rest of your file — the fixture that imports app.helpers, etc.)
+
 import importlib
 import pytest
 

@@ -1,8 +1,37 @@
-:root{ --fc-vr: clamp(28px, 6vw, 72px); --fc-vr-sm: clamp(16px, 3.5vw, 36px) }
-.fc-section{ padding-block: var(--fc-vr) }
-.fc-section--tight{ padding-block: var(--fc-vr-sm) }
-.fc-container{ width:min(92rem,96vw); margin-inline:auto; padding-inline:clamp(.5rem,2.5vw,1.25rem) }
-.fc-topbar{ padding:.35rem .6rem }
-.fc-marquee{ animation: fc-slide 26s linear infinite; will-change: transform }
-@keyframes fc-slide{ from{ transform: translateX(0) } to{ transform: translateX(-50%) } }
+:root {
+  --fc-vr: clamp(28px, 6vw, 72px);
+  --fc-vr-sm: clamp(16px, 3.5vw, 36px);
+}
 
+.fc-section {
+  padding-block: var(--fc-vr);
+}
+
+.fc-section--tight {
+  padding-block: var(--fc-vr-sm);
+}
+
+.fc-container {
+  width: min(92rem, 96vw);
+  margin-inline: auto;
+  padding-inline: clamp(0.5rem, 2.5vw, 1.25rem);
+}
+
+.fc-topbar {
+  padding: 0.35rem 0.6rem;
+}
+
+.fc-marquee {
+  animation: fc-slide 26s linear infinite;
+  will-change: transform;
+}
+
+@keyframes fc-slide {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}

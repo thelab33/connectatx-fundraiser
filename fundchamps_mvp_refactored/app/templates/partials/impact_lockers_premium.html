@@ -1,233 +1,374 @@
-{# FC • IMPACT BUCKETS — SV-ELITE v3.3 (polished, no outer section) #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set team_name = (team.name if team and team.name else 'FundChamps') %}
+{# FC • IMPACT BUCKETS — SV-ELITE v3.3 (polished, no outer section) #} {% set
+NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else
+'') %} {% set team_name = (team.name if team and team.name else 'FundChamps') %}
 {% set IMPACT = IMPACT if IMPACT is defined and IMPACT else [
-  {'key':'gym','title':'Gym Access (rentals)','icon':'🏟️','raised':900,'goal':1200,'blurb':'Keep practices strong.'},
-  {'key':'travel','title':'Tournament Travel','icon':'🚌','raised':240,'goal':900,'blurb':'Gas, hotels on the road.'},
-  {'key':'gear','title':'Team Gear','icon':'🎒','raised':60,'goal':400,'blurb':'Shoes, uniforms, socks.'},
-] %}
+{'key':'gym','title':'Gym Access
+(rentals)','icon':'🏟️','raised':900,'goal':1200,'blurb':'Keep practices
+strong.'}, {'key':'travel','title':'Tournament
+Travel','icon':'🚌','raised':240,'goal':900,'blurb':'Gas, hotels on the road.'},
+{'key':'gear','title':'Team
+Gear','icon':'🎒','raised':60,'goal':400,'blurb':'Shoes, uniforms, socks.'}, ]
+%}
 
 <style nonce="{{ NONCE }}">
   /* Scoped to parent #impact */
-  #impact .optical-tight{letter-spacing:-.01em}
+  #impact .optical-tight {
+    letter-spacing: -0.01em;
+  }
 
   /* Glass (with graceful fallback) */
-  #impact .hero-glass{position:relative;background:rgba(255,255,255,.05)}
-  @supports (backdrop-filter: blur(1px)){
-    #impact .hero-glass{-webkit-backdrop-filter:blur(12px) saturate(120%);backdrop-filter:blur(12px) saturate(120%)}
+  #impact .hero-glass {
+    position: relative;
+    background: rgba(255, 255, 255, 0.05);
   }
-  @media (forced-colors: active){
-    #impact .hero-glass{border:1px solid CanvasText;background:transparent}
+  @supports (backdrop-filter: blur(1px)) {
+    #impact .hero-glass {
+      -webkit-backdrop-filter: blur(12px) saturate(120%);
+      backdrop-filter: blur(12px) saturate(120%);
+    }
+  }
+  @media (forced-colors: active) {
+    #impact .hero-glass {
+      border: 1px solid CanvasText;
+      background: transparent;
+    }
   }
 
   /* SV-Elite meter */
-  #impact .fc-meter{position:relative;height:10px;border-radius:999px;overflow:hidden;isolation:isolate}
-  #impact .fc-meter__track{position:absolute;inset:0;background:linear-gradient(90deg,#111,#0f1315);border:1px solid rgba(255,255,255,.08);border-radius:inherit}
-  #impact .fc-meter__ticks{position:absolute;inset:0;background:
-    linear-gradient(90deg,rgba(255,255,255,.12) 0 1px,transparent 1px 25%) repeat-x;background-size:25% 100%;opacity:.12;mix-blend-mode:soft-light;pointer-events:none}
-  #impact .fc-meter__bar{position:absolute;inset:0;transform-origin:left center;transform:scaleX(var(--p,0));
-    background:linear-gradient(90deg,#fde047,#34d399 70%,#22c55e 100%);
-    box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 4px 14px rgba(34,197,94,.25)}
-  #impact .fc-meter__shine{position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.22),rgba(255,255,255,.06) 35%,rgba(255,255,255,.16));mix-blend-mode:soft-light;pointer-events:none}
-  @media (prefers-reduced-motion: reduce){
-    #impact .fc-meter__bar{transition:none!important}
-    #impact .fc-meter__shine{display:none}
+  #impact .fc-meter {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    overflow: hidden;
+    isolation: isolate;
+  }
+  #impact .fc-meter__track {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #111, #0f1315);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: inherit;
+  }
+  #impact .fc-meter__ticks {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.12) 0 1px,
+        transparent 1px 25%
+      )
+      repeat-x;
+    background-size: 25% 100%;
+    opacity: 0.12;
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+  }
+  #impact .fc-meter__bar {
+    position: absolute;
+    inset: 0;
+    transform-origin: left center;
+    transform: scaleX(var(--p, 0));
+    background: linear-gradient(90deg, #fde047, #34d399 70%, #22c55e 100%);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+      0 4px 14px rgba(34, 197, 94, 0.25);
+  }
+  #impact .fc-meter__shine {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.22),
+      rgba(255, 255, 255, 0.06) 35%,
+      rgba(255, 255, 255, 0.16)
+    );
+    mix-blend-mode: soft-light;
+    pointer-events: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    #impact .fc-meter__bar {
+      transition: none !important;
+    }
+    #impact .fc-meter__shine {
+      display: none;
+    }
   }
 
-  #impact .btn-compact{padding:.55rem .75rem;font-size:.92rem}
-  #impact .sr-only{position:absolute;clip:rect(1px,1px,1px,1px);padding:0;border:0;height:1px;width:1px;overflow:hidden;white-space:nowrap}
+  #impact .btn-compact {
+    padding: 0.55rem 0.75rem;
+    font-size: 0.92rem;
+  }
+  #impact .sr-only {
+    position: absolute;
+    clip: rect(1px, 1px, 1px, 1px);
+    padding: 0;
+    border: 0;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    white-space: nowrap;
+  }
 </style>
 
 <header class="mb-4">
-  <h2 class="text-fluid-h2 font-extrabold tracking-tight text-white optical-tight" id="impact-heading">
-    Unlock What Matters — <span class="text-yellow-300">Real Impact Buckets</span>
+  <h2
+    class="text-fluid-h2 font-extrabold tracking-tight text-white optical-tight"
+    id="impact-heading"
+  >
+    Unlock What Matters —
+    <span class="text-yellow-300">Real Impact Buckets</span>
   </h2>
-  <p class="mt-1 max-w-3xl text-sm text-zinc-400">Pick a bucket and we’ll route your gift to that need.</p>
+  <p class="mt-1 max-w-3xl text-sm text-zinc-400">
+    Pick a bucket and we’ll route your gift to that need.
+  </p>
 </header>
 
-<div class="grid gap-4 md:grid-cols-3" role="list" aria-labelledby="impact-heading">
-  {% for b in IMPACT[:3] %}
-    {% set goal       = (b.goal|default(0)|float) %}
-    {% set raised     = (b.raised|default(0)|float) %}
-    {% set remaining  = (goal - raised) if goal > raised else 0 %}
-    {% set pct_raw    = (0 if goal <= 0 else (raised/goal*100)) %}
-    {% set pct        = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw))|round(1) %}
-    {% set pct_frac   = (pct/100)|round(4) %}
-    {% set prefill    = (b.prefill if b.prefill is defined else (50 if remaining > 50 else remaining))|int %}
-    {% set locked     = (remaining <= 0) %}
-    {% set _id        = 'impact-' ~ b.key %}
-    {% set aria_text  = (('$' ~ raised|int) ~ ' raised of $' ~ goal|int ~ ' — ' ~ ('%.0f' % pct) ~ '%') %}
+<div
+  class="grid gap-4 md:grid-cols-3"
+  role="list"
+  aria-labelledby="impact-heading"
+>
+  {% for b in IMPACT[:3] %} {% set goal = (b.goal|default(0)|float) %} {% set
+  raised = (b.raised|default(0)|float) %} {% set remaining = (goal - raised) if
+  goal > raised else 0 %} {% set pct_raw = (0 if goal <= 0 else
+  (raised/goal*100)) %} {% set pct = (0 if pct_raw < 0 else (100 if pct_raw >
+  100 else pct_raw))|round(1) %} {% set pct_frac = (pct/100)|round(4) %} {% set
+  prefill = (b.prefill if b.prefill is defined else (50 if remaining > 50 else
+  remaining))|int %} {% set locked = (remaining <= 0) %} {% set _id = 'impact-'
+  ~ b.key %} {% set aria_text = (('$' ~ raised|int) ~ ' raised of $' ~ goal|int
+  ~ ' — ' ~ ('%.0f' % pct) ~ '%') %}
 
-    <article id="{{ _id }}" class="hero-glass rounded-2xl p-4 ring-1 ring-white/10 bg-white/5"
-             role="listitem" aria-labelledby="{{ _id }}-title"
-             data-bucket="{{ b.key }}" data-goal="{{ goal|int }}" data-raised="{{ raised|int }}">
-      <div class="flex items-center justify-between">
-        <h3 id="{{ _id }}-title" class="truncate text-[15px] font-extrabold text-white">
-          <span aria-hidden="true">{{ b.icon }}</span> {{ b.title }}
-        </h3>
+  <article
+    id="{{ _id }}"
+    class="hero-glass rounded-2xl p-4 ring-1 ring-white/10 bg-white/5"
+    role="listitem"
+    aria-labelledby="{{ _id }}-title"
+    data-bucket="{{ b.key }}"
+    data-goal="{{ goal|int }}"
+    data-raised="{{ raised|int }}"
+  >
+    <div class="flex items-center justify-between">
+      <h3
+        id="{{ _id }}-title"
+        class="truncate text-[15px] font-extrabold text-white"
+      >
+        <span aria-hidden="true">{{ b.icon }}</span> {{ b.title }}
+      </h3>
 
-        {% if locked %}
-          <span class="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">Fully funded ✅</span>
-        {% else %}
-          <span class="rounded-full bg-yellow-300/15 px-2 py-0.5 text-[11px] font-semibold text-yellow-300 tabular-nums">
-            ${{ goal|int }} goal
-          </span>
-        {% endif %}
-      </div>
-
-      {% if b.blurb %}
-        <p class="mt-1 text-[13px] text-zinc-400">{{ b.blurb }}</p>
+      {% if locked %}
+      <span
+        class="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300"
+        >Fully funded ✅</span
+      >
+      {% else %}
+      <span
+        class="rounded-full bg-yellow-300/15 px-2 py-0.5 text-[11px] font-semibold text-yellow-300 tabular-nums"
+      >
+        ${{ goal|int }} goal
+      </span>
       {% endif %}
+    </div>
 
-      <!-- Meter -->
-      <div class="mt-3">
-        <div class="fc-meter" role="progressbar"
-             aria-label="{{ b.title }} funding progress"
-             aria-valuemin="0" aria-valuemax="{{ goal|int }}" aria-valuenow="{{ raised|int }}"
-             aria-valuetext="{{ aria_text }}">
-          <div class="fc-meter__track" aria-hidden="true"></div>
-          <div class="fc-meter__ticks" aria-hidden="true"></div>
-          <div class="fc-meter__bar" style="--p: {{ pct_frac }};" aria-hidden="true"></div>
-          <div class="fc-meter__shine" aria-hidden="true"></div>
-        </div>
+    {% if b.blurb %}
+    <p class="mt-1 text-[13px] text-zinc-400">{{ b.blurb }}</p>
+    {% endif %}
 
-        <p class="mt-1 flex items-center justify-between text-[12px] text-zinc-400 tabular-nums" data-progress-row>
-          <span><span class="font-semibold text-zinc-200">${{ raised|int }}</span> raised • {{ '%.0f' % pct }}%</span>
-          {% if not locked and remaining > 0 %}
-            <span>Left: <span class="font-semibold text-yellow-200">${{ remaining|int }}</span></span>
-          {% endif %}
-        </p>
-        <span class="sr-only" aria-live="polite" data-live></span>
+    <!-- Meter -->
+    <div class="mt-3">
+      <div
+        class="fc-meter"
+        role="progressbar"
+        aria-label="{{ b.title }} funding progress"
+        aria-valuemin="0"
+        aria-valuemax="{{ goal|int }}"
+        aria-valuenow="{{ raised|int }}"
+        aria-valuetext="{{ aria_text }}"
+      >
+        <div class="fc-meter__track" aria-hidden="true"></div>
+        <div class="fc-meter__ticks" aria-hidden="true"></div>
+        <div
+          class="fc-meter__bar"
+          style="--p: {{ pct_frac }};"
+          aria-hidden="true"
+        ></div>
+        <div class="fc-meter__shine" aria-hidden="true"></div>
       </div>
 
-      <!-- Actions -->
-      <div class="mt-3 grid grid-cols-2 gap-2">
-        {% if not locked %}
-          <button class="fc-btn fc-btn-primary btn-compact w-full justify-center"
-                  data-open="#donate-modal" data-bucket="{{ b.key }}"
-                  {% if prefill > 0 %}data-amount="{{ prefill }}"{% endif %}
-                  data-analytics="impact:quick-donate:{{ b.key }}"
-                  aria-describedby="{{ _id }}-title"
-                  aria-label="Donate{% if prefill>0 %} ${{ prefill }}{% endif %} to {{ b.title }}">
-            {% if prefill > 0 %}Donate ${{ prefill }}{% else %}Donate{% endif %}
-          </button>
-
-          <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center"
-                  data-open="#donate-modal" data-bucket="{{ b.key }}"
-                  data-analytics="impact:choose:{{ b.key }}" aria-describedby="{{ _id }}-title"
-                  aria-label="Choose custom amount for {{ b.title }}">
-            💛 Choose amount
-          </button>
-        {% else %}
-          <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center" disabled>Thank you, sponsors! 🎉</button>
-          <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center" data-share data-analytics="impact:share:{{ b.key }}">🔗 Share</button>
+      <p
+        class="mt-1 flex items-center justify-between text-[12px] text-zinc-400 tabular-nums"
+        data-progress-row
+      >
+        <span
+          ><span class="font-semibold text-zinc-200">${{ raised|int }}</span>
+          raised • {{ '%.0f' % pct }}%</span
+        >
+        {% if not locked and remaining > 0 %}
+        <span
+          >Left:
+          <span class="font-semibold text-yellow-200"
+            >${{ remaining|int }}</span
+          ></span
+        >
         {% endif %}
-      </div>
+      </p>
+      <span class="sr-only" aria-live="polite" data-live></span>
+    </div>
 
+    <!-- Actions -->
+    <div class="mt-3 grid grid-cols-2 gap-2">
       {% if not locked %}
-        <button class="mt-2 fc-btn fc-btn-ghost btn-compact w-full justify-center" data-share data-analytics="impact:share:{{ b.key }}" aria-describedby="{{ _id }}-title">🔗 Share</button>
+      <button
+        class="fc-btn fc-btn-primary btn-compact w-full justify-center"
+        data-open="#donate-modal"
+        data-bucket="{{ b.key }}"
+        {%
+        if
+        prefill
+      >
+        0 %}data-amount="{{ prefill }}"{% endif %}
+        data-analytics="impact:quick-donate:{{ b.key }}" aria-describedby="{{
+        _id }}-title" aria-label="Donate{% if prefill>0 %} ${{ prefill }}{%
+        endif %} to {{ b.title }}"> {% if prefill > 0 %}Donate ${{ prefill }}{%
+        else %}Donate{% endif %}
+      </button>
+
+      <button
+        class="fc-btn fc-btn-ghost btn-compact w-full justify-center"
+        data-open="#donate-modal"
+        data-bucket="{{ b.key }}"
+        data-analytics="impact:choose:{{ b.key }}"
+        aria-describedby="{{ _id }}-title"
+        aria-label="Choose custom amount for {{ b.title }}"
+      >
+        💛 Choose amount
+      </button>
+      {% else %}
+      <button
+        class="fc-btn fc-btn-ghost btn-compact w-full justify-center"
+        disabled
+      >
+        Thank you, sponsors! 🎉
+      </button>
+      <button
+        class="fc-btn fc-btn-ghost btn-compact w-full justify-center"
+        data-share
+        data-analytics="impact:share:{{ b.key }}"
+      >
+        🔗 Share
+      </button>
       {% endif %}
-    </article>
+    </div>
+
+    {% if not locked %}
+    <button
+      class="mt-2 fc-btn fc-btn-ghost btn-compact w-full justify-center"
+      data-share
+      data-analytics="impact:share:{{ b.key }}"
+      aria-describedby="{{ _id }}-title"
+    >
+      🔗 Share
+    </button>
+    {% endif %}
+  </article>
   {% endfor %}
 </div>
 
 <script nonce="{{ NONCE }}">
-// Impact Buckets — share + live updates + analytics + ARIA polish
-(() => {
-  const TEAM_NAME = {{ team_name|tojson }};
-  const root = document.getElementById('impact');
-  if (!root) return;
+  // Impact Buckets — share + live updates + analytics + ARIA polish
+  (() => {
+    const TEAM_NAME = {{ team_name|tojson }};
+    const root = document.getElementById('impact');
+    if (!root) return;
 
-  const $$ = (sel, r=root) => Array.from(r.querySelectorAll(sel));
+    const $$ = (sel, r=root) => Array.from(r.querySelectorAll(sel));
 
-  // Share (deep link per bucket: #impact=<key>)
-  root.addEventListener('click', async (e) => {
-    const btn = e.target.closest('[data-share]');
-    if (!btn) return;
-    const card = btn.closest('[data-bucket]');
-    const key = card?.dataset?.bucket || '';
-    const url = new URL(location.href);
-    url.hash = 'impact=' + encodeURIComponent(key || 'all');
-    const shareData = { title: `Support ${TEAM_NAME}`, text: `Help fund ${key || 'our program'} for ${TEAM_NAME}.`, url: url.toString() };
-    try { if (navigator.share) { await navigator.share(shareData); return; } } catch {}
+    // Share (deep link per bucket: #impact=<key>)
+    root.addEventListener('click', async (e) => {
+      const btn = e.target.closest('[data-share]');
+      if (!btn) return;
+      const card = btn.closest('[data-bucket]');
+      const key = card?.dataset?.bucket || '';
+      const url = new URL(location.href);
+      url.hash = 'impact=' + encodeURIComponent(key || 'all');
+      const shareData = { title: `Support ${TEAM_NAME}`, text: `Help fund ${key || 'our program'} for ${TEAM_NAME}.`, url: url.toString() };
+      try { if (navigator.share) { await navigator.share(shareData); return; } } catch {}
+      try {
+        await navigator.clipboard.writeText(url.toString());
+        const t = btn.textContent; btn.textContent = 'Link copied!'; setTimeout(()=>btn.textContent=t, 1200);
+      } catch {}
+    });
+
+    // Analytics beacons (impressions)
     try {
-      await navigator.clipboard.writeText(url.toString());
-      const t = btn.textContent; btn.textContent = 'Link copied!'; setTimeout(()=>btn.textContent=t, 1200);
+      const seen = new WeakSet();
+      const io = new IntersectionObserver((ents)=>{
+        ents.forEach(ent=>{
+          if (ent.isIntersecting && !seen.has(ent.target)) {
+            seen.add(ent.target);
+            const key = ent.target.dataset.bucket || 'unknown';
+            const detail = { bucket:key, source:'impact', time:Date.now() };
+            window.dataLayer?.push({ event:'impact_impression', ...detail });
+            window.dispatchEvent(new CustomEvent('fundchamps:impact:impression', { detail }));
+          }
+        });
+      }, { rootMargin:'-10% 0px', threshold:.5 });
+      $$('.hero-glass[data-bucket]').forEach(el=>io.observe(el));
     } catch {}
-  });
 
-  // Analytics beacons (impressions)
-  try {
-    const seen = new WeakSet();
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent=>{
-        if (ent.isIntersecting && !seen.has(ent.target)) {
-          seen.add(ent.target);
-          const key = ent.target.dataset.bucket || 'unknown';
-          const detail = { bucket:key, source:'impact', time:Date.now() };
-          window.dataLayer?.push({ event:'impact_impression', ...detail });
-          window.dispatchEvent(new CustomEvent('fundchamps:impact:impression', { detail }));
-        }
-      });
-    }, { rootMargin:'-10% 0px', threshold:.5 });
-    $$('.hero-glass[data-bucket]').forEach(el=>io.observe(el));
-  } catch {}
+    // Donate button analytics
+    root.addEventListener('click', (e)=>{
+      const cta = e.target.closest('[data-open][data-bucket]');
+      if (!cta) return;
+      const detail = {
+        bucket: cta.dataset.bucket,
+        amount: cta.dataset.amount ? Number(cta.dataset.amount) : null,
+        source: 'impact',
+        time: Date.now()
+      };
+      try { window.dataLayer?.push({ event: 'impact_cta', ...detail }); } catch {}
+      try { window.dispatchEvent(new CustomEvent('fundchamps:impact:cta', { detail })); } catch {}
+    });
 
-  // Donate button analytics
-  root.addEventListener('click', (e)=>{
-    const cta = e.target.closest('[data-open][data-bucket]');
-    if (!cta) return;
-    const detail = {
-      bucket: cta.dataset.bucket,
-      amount: cta.dataset.amount ? Number(cta.dataset.amount) : null,
-      source: 'impact',
-      time: Date.now()
-    };
-    try { window.dataLayer?.push({ event: 'impact_cta', ...detail }); } catch {}
-    try { window.dispatchEvent(new CustomEvent('fundchamps:impact:cta', { detail })); } catch {}
-  });
+    // Live bucket updates:
+    // dispatchEvent(new CustomEvent('fc:bucket:update', { detail: { key:'gym', raised: 1100, goal: 1200 }}))
+    addEventListener('fc:bucket:update', ev => {
+      const d = ev.detail || {}; if (!d.key) return;
+      const card = root.querySelector(`[data-bucket="${CSS.escape(d.key)}"]`); if (!card) return;
 
-  // Live bucket updates:
-  // dispatchEvent(new CustomEvent('fc:bucket:update', { detail: { key:'gym', raised: 1100, goal: 1200 }}))
-  addEventListener('fc:bucket:update', ev => {
-    const d = ev.detail || {}; if (!d.key) return;
-    const card = root.querySelector(`[data-bucket="${CSS.escape(d.key)}"]`); if (!card) return;
+      const goal   = Math.max(0, Number(d.goal   ?? card.dataset.goal   ?? 0));
+      const raised = Math.max(0, Number(d.raised ?? card.dataset.raised ?? 0));
+      card.dataset.goal = String(goal); card.dataset.raised = String(raised);
 
-    const goal   = Math.max(0, Number(d.goal   ?? card.dataset.goal   ?? 0));
-    const raised = Math.max(0, Number(d.raised ?? card.dataset.raised ?? 0));
-    card.dataset.goal = String(goal); card.dataset.raised = String(raised);
+      const pct = goal ? Math.max(0, Math.min(1, raised/goal)) : 0;
+      card.querySelector('.fc-meter__bar')?.style.setProperty('--p', pct.toFixed(4));
 
-    const pct = goal ? Math.max(0, Math.min(1, raised/goal)) : 0;
-    card.querySelector('.fc-meter__bar')?.style.setProperty('--p', pct.toFixed(4));
+      const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+      const progressRow = card.querySelector('[data-progress-row]');
+      const left = Math.max(0, goal - raised);
 
-    const nf = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
-    const progressRow = card.querySelector('[data-progress-row]');
-    const left = Math.max(0, goal - raised);
+      // Update ARIA
+      const meter = card.querySelector('.fc-meter');
+      if (meter){
+        meter.setAttribute('aria-valuenow', String(Math.round(raised)));
+        meter.setAttribute('aria-valuetext', `$${nf.format(Math.round(raised))} raised of $${nf.format(Math.round(goal))} — ${Math.round(pct*100)}%`);
+      }
+      const live = card.querySelector('[data-live]');
+      if (live){ live.textContent = `Updated: $${nf.format(Math.round(raised))} of $${nf.format(Math.round(goal))}`; }
 
-    // Update ARIA
-    const meter = card.querySelector('.fc-meter');
-    if (meter){
-      meter.setAttribute('aria-valuenow', String(Math.round(raised)));
-      meter.setAttribute('aria-valuetext', `$${nf.format(Math.round(raised))} raised of $${nf.format(Math.round(goal))} — ${Math.round(pct*100)}%`);
-    }
-    const live = card.querySelector('[data-live]');
-    if (live){ live.textContent = `Updated: $${nf.format(Math.round(raised))} of $${nf.format(Math.round(goal))}`; }
+      // Update visible copy
+      if (progressRow){
+        const pctTxt = Math.round(pct*100);
+        progressRow.innerHTML =
+          `<span><span class="font-semibold text-zinc-200">$${nf.format(Math.round(raised))}</span> raised • ${pctTxt}%</span>` +
+          (goal ? `<span>Left: <span class="font-semibold text-yellow-200">$${nf.format(Math.round(left))}</span></span>` : '');
+      }
 
-    // Update visible copy
-    if (progressRow){
-      const pctTxt = Math.round(pct*100);
-      progressRow.innerHTML =
-        `<span><span class="font-semibold text-zinc-200">$${nf.format(Math.round(raised))}</span> raised • ${pctTxt}%</span>` +
-        (goal ? `<span>Left: <span class="font-semibold text-yellow-200">$${nf.format(Math.round(left))}</span></span>` : '');
-    }
-
-    // Lock if fully funded
-    if (left <= 0){
-      const badges = card.querySelectorAll('.rounded-full.bg-yellow-300/15');
-      badges.forEach(b => { b.className = 'rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300'; b.textContent = 'Fully funded ✅'; });
-      card.querySelectorAll('[data-open]').forEach(btn => { btn.setAttribute('disabled',''); btn.classList.add('opacity-60','cursor-not-allowed'); });
-    }
-  });
-})();
+      // Lock if fully funded
+      if (left <= 0){
+        const badges = card.querySelectorAll('.rounded-full.bg-yellow-300/15');
+        badges.forEach(b => { b.className = 'rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300'; b.textContent = 'Fully funded ✅'; });
+        card.querySelectorAll('[data-open]').forEach(btn => { btn.setAttribute('disabled',''); btn.classList.add('opacity-60','cursor-not-allowed'); });
+      }
+    });
+  })();
 </script>
-

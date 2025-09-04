@@ -1,18 +1,18 @@
 /* brand-spine.css — vertical rail for the team name */
-.brand-spine{
-  position:absolute;
+.brand-spine {
+  position: absolute;
   left: clamp(-2.2rem, -3vw, -1.6rem);
   top: 8%;
   bottom: 8%;
   width: 2.4rem;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  pointer-events:none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
   z-index: 5;
 }
-@media (max-width: 768px){
-  .brand-spine{
+@media (max-width: 768px) {
+  .brand-spine {
     left: 0;
     right: 0;
     top: -0.25rem;
@@ -21,56 +21,65 @@
     height: 2.2rem;
   }
 }
-.brand-spine__rail{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:.35rem;
+.brand-spine__rail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
   height: 100%;
   width: 100%;
   border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.02));
-  border: 1px solid rgba(255,255,255,.18);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), 0 8px 24px rgba(0,0,0,.35);
-  padding: .25rem;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.02)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 8px 24px rgba(0, 0, 0, 0.35);
+  padding: 0.25rem;
 }
-@media (max-width: 768px){
-  .brand-spine__rail{
+@media (max-width: 768px) {
+  .brand-spine__rail {
     height: 100%;
-    padding: .15rem .5rem;
+    padding: 0.15rem 0.5rem;
   }
 }
 
-.brand-spine__name{
+.brand-spine__name {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
-  letter-spacing: .22em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
   font-weight: 900;
-  font-size: .72rem;
+  font-size: 0.72rem;
   color: #e5e7eb;
-  opacity: .88;
-  filter: drop-shadow(0 1px 0 rgba(0,0,0,.55));
-  font-family: "Plus Jakarta Sans","Inter",system-ui,sans-serif;
+  opacity: 0.88;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.55));
+  font-family: "Plus Jakarta Sans", "Inter", system-ui, sans-serif;
 }
-@media (max-width: 768px){
-  .brand-spine__name{
+@media (max-width: 768px) {
+  .brand-spine__name {
     writing-mode: initial;
     transform: none;
-    font-size: .78rem;
-    letter-spacing: .18em;
+    font-size: 0.78rem;
+    letter-spacing: 0.18em;
   }
 }
 
-.brand-spine .dot{
-  display:block;
+.brand-spine .dot {
+  display: block;
   width: 6px;
   height: 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent, #facc15) 65%, white 35%);
-  opacity: .9;
-  box-shadow: 0 0 10px color-mix(in srgb, var(--accent, #facc15) 45%, transparent);
+  opacity: 0.9;
+  box-shadow: 0 0 10px
+    color-mix(in srgb, var(--accent, #facc15) 45%, transparent);
 }
-@supports not (color: color-mix(in srgb, black, white)){
-  .brand-spine .dot{ background: var(--accent, #facc15); }
+@supports not (color: color-mix(in srgb, black, white)) {
+  .brand-spine .dot {
+    background: var(--accent, #facc15);
+  }
 }

@@ -25,6 +25,7 @@ shared/components/about_section.html
 ## ✅ PASS — Hero glass class present
 
 **Files:**
+
 - `partials/hero_and_fundraiser.html`
 
 **Advice:** Add class="hero-glass" to the main hero card wrapper.
@@ -32,6 +33,7 @@ shared/components/about_section.html
 ## ✅ PASS — Hero meter elements present
 
 **Files:**
+
 - `partials/hero_and_fundraiser.html`
 
 **Advice:** Ensure the progress bar uses id="fundraiser-meter" and inner fill id="fc-bar".
@@ -52,7 +54,7 @@ src/index.css
 
 - fc_prestige.css
 - header-safe.css
-- _legacy_input.css
+- \_legacy_input.css
 - input.css
 - tiers-elite.css
 - elite-upgrades.css
@@ -61,7 +63,7 @@ src/index.css
 - brand.tokens.css
 - tailwind.min.css
 - fc_prestige-header.css
-- archive/_legacy_input.css
+- archive/\_legacy_input.css
 - src/base.css
 - src/components.css
 - src/input.css

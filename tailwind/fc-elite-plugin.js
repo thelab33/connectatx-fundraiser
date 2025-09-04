@@ -1,1 +1,3 @@
-module.exports = function(){return {name:'fc-elite', handler(){}}}
+module.exports = function () {
+  return { name: "fc-elite", handler() {} };
+};

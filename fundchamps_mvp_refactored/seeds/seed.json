@@ -8,11 +8,10 @@
     "payment_link": ""
   },
   "tiers": [
-    {"title":"Platinum","amount":5000,"cap":2,"slots_left":2},
-    {"title":"Gold","amount":2500,"cap":4,"slots_left":4},
-    {"title":"Silver","amount":1000,"cap":8,"slots_left":8},
-    {"title":"Bronze","amount":500,"cap":12,"slots_left":12},
-    {"title":"Custom","amount":null,"cap":999,"slots_left":999}
+    { "title": "Platinum", "amount": 5000, "cap": 2, "slots_left": 2 },
+    { "title": "Gold", "amount": 2500, "cap": 4, "slots_left": 4 },
+    { "title": "Silver", "amount": 1000, "cap": 8, "slots_left": 8 },
+    { "title": "Bronze", "amount": 500, "cap": 12, "slots_left": 12 },
+    { "title": "Custom", "amount": null, "cap": 999, "slots_left": 999 }
   ]
 }
-

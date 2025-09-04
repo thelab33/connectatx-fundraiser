@@ -1,0 +1,238 @@
+{{% raw %}} {# FC HERO — SV-Elite 6.1 (refactored) #} {% set NONCE = NONCE if
+NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %} {% macro
+nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %} {% set theme_hex =
+theme_hex|default('#facc15') %} {% set team_name = (team.team_name if team and
+team.team_name else 'Connect ATX Elite') %} {% set hero_title =
+hero_title|default('Fuel the Season. Fund the Future.') %} {% set catch_line =
+(catch_phrase if catch_phrase is defined and catch_phrase else 'Direct support
+for gear, travel, and tutoring—every dollar moves a kid forward.') %} {% set
+_hero_src = (hero_image_url if hero_image_url is defined and hero_image_url else
+'images/connect-atx-team.jpg') %} {% set hero_src = (_hero_src if '://' in
+_hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is
+defined else '/static/' ~ _hero_src.lstrip('/'))) %} {% set hero_alt = (hero_alt
+if hero_alt is defined and hero_alt) or (team_name ~ ' team photo') %} {% set
+funds_raised = (funds_raised if funds_raised is defined else 0) | float %} {%
+set fundraising_goal = (fundraising_goal if fundraising_goal is defined and
+fundraising_goal is not none and fundraising_goal != 0 else 10000) | float %} {%
+set _raw_pct = (funds_raised / fundraising_goal * 100) if fundraising_goal else
+0 %} {% set pct = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct)
+%} {% set fundraising_deadline = fundraising_deadline if fundraising_deadline is
+defined else (deadline_dt if deadline_dt is defined else None) %} {% set
+deadline_iso = fundraising_deadline.isoformat() if fundraising_deadline else ''
+%}
+
+<section
+  id="fc-hero"
+  class="container section"
+  style="--accent: {{ theme_hex }};"
+>
+  <figure
+    class="card"
+    role="group"
+    aria-label="Team hero"
+    style="position: relative; overflow: hidden"
+  >
+    <img
+      id="fc-hero-img"
+      src="{{ hero_src }}"
+      alt="{{ hero_alt }}"
+      width="1920"
+      height="1080"
+      style="
+        width: 100%;
+        height: auto;
+        display: block;
+        filter: saturate(1.05) contrast(1.05) brightness(0.9);
+      "
+      loading="eager"
+      decoding="async"
+      fetchpriority="high"
+    />
+    <figcaption
+      class="fc-hero-overlay"
+      style="
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-end;
+        text-align: center;
+        padding: 1rem;
+        background: linear-gradient(
+          180deg,
+          rgba(0, 0, 0, 0) 0%,
+          rgba(0, 0, 0, 0.68) 42%,
+          rgba(0, 0, 0, 0.97) 100%
+        );
+      "
+    >
+      <h1
+        id="hero-heading"
+        class="fc-hero-type"
+        style="
+          margin: 0;
+          font-weight: 900;
+          text-transform: uppercase;
+          letter-spacing: 0.02em;
+          font-size: clamp(1.8rem, 1.2rem + 3.5vw, 3.2rem);
+          background: linear-gradient(
+            180deg,
+            #f8fafc 0%,
+            #fff6bf 55%,
+            var(--accent) 100%
+          );
+          -webkit-background-clip: text;
+          background-clip: text;
+          color: transparent;
+          text-shadow:
+            0 2px 0 rgba(0, 0, 0, 0.45),
+            0 22px 40px rgba(0, 0, 0, 0.35);
+        "
+      >
+        {{ hero_title }}
+      </h1>
+      <p
+        class="subhead"
+        style="max-width: 60ch; margin: 0.5rem 0 0; opacity: 0.95"
+      >
+        Equip the team. Fund the miles.
+        <span style="color: var(--accent)">Fuel the minds.</span>
+      </p>
+
+      <div
+        class="hero-meta"
+        style="
+          margin-top: 0.5rem;
+          display: flex;
+          gap: 0.5rem;
+          align-items: center;
+          flex-wrap: wrap;
+          justify-content: center;
+        "
+      >
+        <span
+          id="hero-stats-pill"
+          class="stats-pill"
+          aria-live="polite"
+          style="
+            display: inline-flex;
+            gap: 0.5rem;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 0.35rem 0.6rem;
+            border-radius: 999px;
+            font-weight: 800;
+          "
+        >
+          {{ '${:,.0f}'.format(funds_raised) }} of {{
+          '${:,.0f}'.format(fundraising_goal) }} • {{ pct|round(0) }}%
+        </span>
+        {% if deadline_iso %}
+        <span
+          id="hero-countdown"
+          class="badge badge-deadline"
+          role="timer"
+          aria-live="polite"
+          aria-atomic="true"
+          title="Time remaining"
+          data-deadline="{{ deadline_iso }}"
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            background: rgba(255, 255, 255, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            padding: 0.35rem 0.55rem;
+            border-radius: 999px;
+          "
+        >
+          ⏳ —
+        </span>
+        {% endif %}
+      </div>
+
+      <div
+        class="actions"
+        style="
+          margin: 0.8rem 0 1rem;
+          display: flex;
+          gap: 0.5rem;
+          flex-wrap: wrap;
+          justify-content: center;
+        "
+      >
+        {% set _raw_cta = (stripe_payment_link if stripe_payment_link else
+        (cta_href if cta_href is defined else '#tiers')) %} {% set _sep = '&' if
+        '?' in _raw_cta else '?' %} {% set cta_href = _raw_cta ~ _sep ~
+        'utm_source=hero&utm_medium=cta' %}
+        <a
+          href="{{ cta_href }}"
+          class="fc-hero-cta"
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            border-radius: 999px;
+            font-weight: 800;
+            font-size: clamp(0.95rem, 0.9rem + 0.2vw, 1.1rem);
+            padding: 0.85rem 1.3rem;
+            text-decoration: none;
+            background: #0b0f15;
+            color: #fff;
+            border: 1px solid #000;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+          "
+        >
+          <span class="cta-text">{{ cta_label or 'Donate' }}</span>
+          <span aria-hidden="true">→</span>
+        </a>
+        <a
+          href="#tiers"
+          class="chip"
+          style="
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.38rem 0.7rem;
+            border-radius: 0.8rem;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.16);
+            font-weight: 800;
+          "
+          >💎 View Tiers</a
+        >
+      </div>
+
+      <div
+        class="hero-meter"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="{{ pct|round(1) }}"
+        aria-label="Fundraising progress"
+        style="width: 100%; max-width: min(720px, 92%); margin-bottom: 0.8rem"
+      >
+        <div
+          class="hm-track"
+          style="
+            position: relative;
+            height: 14px;
+            border-radius: 9999px;
+            overflow: hidden;
+            background: rgba(255, 255, 255, 0.16);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+          "
+        >
+          <div
+            id="hero-fill"
+            class="hm-fill"
+            style="position:absolute;inset-block:0;left:0;background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent) 45%, #d1d5db 55%));box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent);width: {{ pct|round(1) }}%;"
+          ></div>
+        </div>
+      </div>
+    </figcaption>
+  </figure>
+</section>
+{{% endraw %}}

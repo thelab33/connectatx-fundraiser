@@ -21,16 +21,36 @@ export default {
 
   // Keep only classes we *know* we need + dynamic anim/gradient ranges
   safelist: [
-    "bg-zinc-950", "bg-zinc-900", "bg-black",
-    "bg-yellow-400", "text-yellow-400",
-    "rounded-xl", "rounded-2xl", "sr-only",
-    "shadow-gold-glow", "shadow-xl-gold",
+    "bg-zinc-950",
+    "bg-zinc-900",
+    "bg-black",
+    "bg-yellow-400",
+    "text-yellow-400",
+    "rounded-xl",
+    "rounded-2xl",
+    "sr-only",
+    "shadow-gold-glow",
+    "shadow-xl-gold",
     // animation (optionally with motion-safe: prefix)
-    { pattern: /^(motion-safe:)?animate-(kenburns|bounce-in|fade-in|sparkle|shine|spin(?:-reverse)?(?:-slow)?)$/ },
+    {
+      pattern:
+        /^(motion-safe:)?animate-(kenburns|bounce-in|fade-in|sparkle|shine|spin(?:-reverse)?(?:-slow)?)$/,
+    },
     // gradient color helpers used across templates
-    { pattern: /^(from|via|to)-(zinc|yellow|black|white|amber|gray)-(50|100|200|300|400|500|600|700|800|900|950)$/ },
+    {
+      pattern:
+        /^(from|via|to)-(zinc|yellow|black|white|amber|gray)-(50|100|200|300|400|500|600|700|800|900|950)$/,
+    },
     // arbitrary z helpers sometimes injected via data-ui
-    "z-10","z-20","z-30","z-40","z-50","z-99","z-999","z-9999","z-99999",
+    "z-10",
+    "z-20",
+    "z-30",
+    "z-40",
+    "z-50",
+    "z-99",
+    "z-999",
+    "z-9999",
+    "z-99999",
   ],
 
   theme: {
@@ -49,7 +69,14 @@ export default {
 
     extend: {
       fontFamily: {
-        sans: ["Inter", "Montserrat", "Roboto", "Segoe UI", "Arial", "sans-serif"],
+        sans: [
+          "Inter",
+          "Montserrat",
+          "Roboto",
+          "Segoe UI",
+          "Arial",
+          "sans-serif",
+        ],
       },
 
       // Brand via CSS var with alpha support
@@ -65,8 +92,10 @@ export default {
 
       boxShadow: {
         "gold-glow": "0 0 8px 2px #facc15, 0 0 24px 0 #fde68a44",
-        glass: "0 4px 32px 0 rgba(250,204,21,0.06), 0 1.5px 4.5px rgba(60,60,60,0.05)",
-        "xl-gold": "0 20px 25px -5px rgba(250, 204, 21, 0.4), 0 10px 10px -5px rgba(250, 204, 21, 0.2)",
+        glass:
+          "0 4px 32px 0 rgba(250,204,21,0.06), 0 1.5px 4.5px rgba(60,60,60,0.05)",
+        "xl-gold":
+          "0 20px 25px -5px rgba(250, 204, 21, 0.4), 0 10px 10px -5px rgba(250, 204, 21, 0.2)",
         "inner-glow": "inset 0 0 15px #facc15cc",
       },
 
@@ -169,36 +198,55 @@ export default {
       // Brand helpers (map to CSS var --fc-brand or fallback)
       addUtilities(
         {
-          ".bg-brand": { backgroundColor: "rgb(var(--fc-brand-rgb, 250 204 21) / 1)" },
+          ".bg-brand": {
+            backgroundColor: "rgb(var(--fc-brand-rgb, 250 204 21) / 1)",
+          },
           ".text-brand": { color: "rgb(var(--fc-brand-rgb, 250 204 21) / 1)" },
-          ".border-brand": { borderColor: "rgb(var(--fc-brand-rgb, 250 204 21) / 1)" },
+          ".border-brand": {
+            borderColor: "rgb(var(--fc-brand-rgb, 250 204 21) / 1)",
+          },
           ".ring-brand": { "--tw-ring-color": theme("ringColor.brand") },
-          ".focus-ring-primary": { outline: `2px solid ${theme("colors.primary")}`, outlineOffset: "4px" },
+          ".focus-ring-primary": {
+            outline: `2px solid ${theme("colors.primary")}`,
+            outlineOffset: "4px",
+          },
           ".shadow-xl-gold": { boxShadow: theme("boxShadow.xl-gold") },
           ".transition-smooth": {
             transitionProperty: `${theme("transitionProperty.colors")}, box-shadow, opacity`,
             transitionDuration: "300ms",
-            transitionTimingFunction: theme("transitionTimingFunction.ease-in-out"),
+            transitionTimingFunction: theme(
+              "transitionTimingFunction.ease-in-out",
+            ),
           },
-          ".bg-gold-gradient": { backgroundImage: theme("backgroundImage.gold-gradient") },
-          ".bg-amber-gradient": { backgroundImage: theme("backgroundImage.amber-gradient") },
-          ".bg-brand-glass": { backgroundImage: theme("backgroundImage.brand-glass") },
+          ".bg-gold-gradient": {
+            backgroundImage: theme("backgroundImage.gold-gradient"),
+          },
+          ".bg-amber-gradient": {
+            backgroundImage: theme("backgroundImage.amber-gradient"),
+          },
+          ".bg-brand-glass": {
+            backgroundImage: theme("backgroundImage.brand-glass"),
+          },
         },
-        ["responsive", "hover", "focus", "focus-visible"]
+        ["responsive", "hover", "focus", "focus-visible"],
       );
 
       // iOS safe-area padding/margin shorthands
       addUtilities(
         {
-          ".p-safe-b": { paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)" },
-          ".p-safe-t": { paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)" },
+          ".p-safe-b": {
+            paddingBottom: "calc(env(safe-area-inset-bottom) + 0.5rem)",
+          },
+          ".p-safe-t": {
+            paddingTop: "calc(env(safe-area-inset-top) + 0.5rem)",
+          },
           ".p-safe-x": {
             paddingLeft: "calc(env(safe-area-inset-left) + 1rem)",
             paddingRight: "calc(env(safe-area-inset-right) + 1rem)",
           },
           ".m-safe-b": { marginBottom: "env(safe-area-inset-bottom)" },
         },
-        ["responsive"]
+        ["responsive"],
       );
 
       // Data/ARIA/state variants that recur in your UI
@@ -218,13 +266,12 @@ export default {
       matchUtilities(
         {
           shimmer: (value) => ({
-            backgroundImage:
-              `linear-gradient(110deg, ${value} 8%, rgba(255,255,255,.15) 18%, ${value} 33%)`,
+            backgroundImage: `linear-gradient(110deg, ${value} 8%, rgba(255,255,255,.15) 18%, ${value} 33%)`,
             backgroundSize: "200% 100%",
             animation: "shine 1.8s linear infinite",
           }),
         },
-        { values: { DEFAULT: "rgba(0,0,0,.12)" } }
+        { values: { DEFAULT: "rgba(0,0,0,.12)" } },
       );
     }),
   ],
@@ -238,4 +285,3 @@ export default {
     optimizeUniversalDefaults: true,
   },
 };
-

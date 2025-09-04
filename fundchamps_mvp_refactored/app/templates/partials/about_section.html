@@ -1,167 +1,310 @@
-{# ================================
-   about_section.html — SV-ELITE (v6.0 • fundraising-ready)
-   - Primary Donate Now + Text-to-Donate + UTM beacons
-   - Motion-safe counters + optional impact snapshot meter
-   - CSP-safe video modal + Web Share w/ clipboard fallback
-   - Trust ribbon (IO-gated gentle auto-scroll + dedupe)
-   - Live stats hook (fc:stats:update) + meter hook (fc:meter:update)
-   - A11y/forced-colors polish + analytics beacons
-   - SEO JSON-LD (SportsTeam + DonateAction)
-   ================================ #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _team = team if team is defined and team else none %}
+{# ================================ about_section.html — SV-ELITE (v6.0 •
+fundraising-ready) - Primary Donate Now + Text-to-Donate + UTM beacons -
+Motion-safe counters + optional impact snapshot meter - CSP-safe video modal +
+Web Share w/ clipboard fallback - Trust ribbon (IO-gated gentle auto-scroll +
+dedupe) - Live stats hook (fc:stats:update) + meter hook (fc:meter:update) -
+A11y/forced-colors polish + analytics beacons - SEO JSON-LD (SportsTeam +
+DonateAction) ================================ #} {% set NONCE = NONCE if NONCE
+is defined else (csp_nonce() if csp_nonce is defined else '') %} {% set _team =
+team if team is defined and team else none %} {% set TEAM_NAME = _team.team_name
+if _team and _team.team_name else "Connect ATX Elite" %} {% set REGION =
+_team.region if _team and _team.region else "Austin, TX" %} {% set MISSION_TXT =
+_team.mission if _team and _team.mission else "Beyond basketball—we’re shaping
+leaders, scholars, and role models for our community." %} {# Trust/impact data
+#} {% set EIN = _team.ein if _team and _team.ein else "" %} {% set IS_501C3 =
+_team.is_501c3 if _team is defined and _team is not none and _team.is_501c3 else
+true %} {% set IMPACT_BADGES = IMPACT_BADGES if IMPACT_BADGES is defined and
+IMPACT_BADGES else [ "Need-based scholarships", "Tutoring & mentoring", "Travel
+assistance" ] %} {# Video #} {% set SHOW_VIDEO = SHOW_VIDEO if SHOW_VIDEO is
+defined else True %} {% set VIDEO_URL = VIDEO_URL if VIDEO_URL is defined and
+VIDEO_URL else (_team.video_url if _team and _team.video_url else
+'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1') %} {#
+Stats #} {% set STATS = STATS if STATS is defined and STATS else [
+{"icon":"🏀","label":"Regionals record","value": (_team.regionals_record if
+_team and _team.regionals_record else "15")},
+{"icon":"🏆","label":"Championships","value": (_team.championships if _team and
+_team.championships else "3")}, {"icon":"🎓","label":"Top academic
+athletes","value": (_team.top_academic if _team and _team.top_academic else
+"12")} ] %} {# Logos #} {% set TRUST_LOGOS = TRUST_LOGOS if TRUST_LOGOS is
+defined and TRUST_LOGOS else [] %} {% set default_logo = (url_for('static',
+filename='images/logo.webp') if url_for is defined else
+'/static/images/logo.webp') %} {# Donate & SMS fallbacks #} {% set donate_link =
+( stripe_payment_link if stripe_payment_link is defined and stripe_payment_link
+else (safe_url_for('main.donate') if (safe_url_for is defined and
+has_endpoint('main.donate')) else '/donate') ) %} {% set sms_number =
+(_team.sms_number if _team and _team.sms_number else '+15125551234') %} {#
+Optional server numbers for impact meter (auto-hidden if not provided) #} {% set
+_raised = (funds_raised if funds_raised is defined else none) %} {% set _goal =
+(fundraising_goal if fundraising_goal is defined else none) %}
 
-{% set TEAM_NAME   = _team.team_name if _team and _team.team_name else "Connect ATX Elite" %}
-{% set REGION      = _team.region     if _team and _team.region     else "Austin, TX" %}
-{% set MISSION_TXT = _team.mission    if _team and _team.mission    else
-"Beyond basketball—we’re shaping leaders, scholars, and role models for our community." %}
-
-{# Trust/impact data #}
-{% set EIN         = _team.ein if _team and _team.ein else "" %}
-{% set IS_501C3    = _team.is_501c3 if _team is defined and _team is not none and _team.is_501c3 else true %}
-{% set IMPACT_BADGES = IMPACT_BADGES if IMPACT_BADGES is defined and IMPACT_BADGES else [
-  "Need-based scholarships", "Tutoring & mentoring", "Travel assistance"
-] %}
-
-{# Video #}
-{% set SHOW_VIDEO  = SHOW_VIDEO if SHOW_VIDEO is defined else True %}
-{% set VIDEO_URL   = VIDEO_URL if VIDEO_URL is defined and VIDEO_URL
-  else (_team.video_url if _team and _team.video_url else 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1') %}
-
-{# Stats #}
-{% set STATS = STATS if STATS is defined and STATS else [
-  {"icon":"🏀","label":"Regionals record","value": (_team.regionals_record if _team and _team.regionals_record else "15")},
-  {"icon":"🏆","label":"Championships","value": (_team.championships    if _team and _team.championships    else "3")},
-  {"icon":"🎓","label":"Top academic athletes","value": (_team.top_academic if _team and _team.top_academic else "12")}
-] %}
-
-{# Logos #}
-{% set TRUST_LOGOS = TRUST_LOGOS if TRUST_LOGOS is defined and TRUST_LOGOS else [] %}
-{% set default_logo = (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
-
-{# Donate & SMS fallbacks #}
-{% set donate_link = (
-  stripe_payment_link if stripe_payment_link is defined and stripe_payment_link
-  else (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint('main.donate')) else '/donate')
-) %}
-{% set sms_number = (_team.sms_number if _team and _team.sms_number else '+15125551234') %}
-
-{# Optional server numbers for impact meter (auto-hidden if not provided) #}
-{% set _raised = (funds_raised if funds_raised is defined else none) %}
-{% set _goal   = (fundraising_goal if fundraising_goal is defined else none) %}
-
-<div id="fc-about" role="region" aria-labelledby="fc-about-title"
-     data-share-url="{{ share_url|default(request.url if request is defined else '') }}"
-     data-donate="{{ donate_link }}"
-     data-sms="{{ sms_number }}"
-     data-team="{{ TEAM_NAME }}">
+<div
+  id="fc-about"
+  role="region"
+  aria-labelledby="fc-about-title"
+  data-share-url="{{ share_url|default(request.url if request is defined else '') }}"
+  data-donate="{{ donate_link }}"
+  data-sms="{{ sms_number }}"
+  data-team="{{ TEAM_NAME }}"
+>
   <style nonce="{{ NONCE }}">
     /* ── Scoped to #fc-about ───────────────────────────────────────────── */
-    #fc-about{ scroll-margin-top: var(--fc-sticky-offset, 80px); }
+    #fc-about {
+      scroll-margin-top: var(--fc-sticky-offset, 80px);
+    }
 
-    #fc-about .about-card{
+    #fc-about .about-card {
       --about-max: 60rem;
-      background: rgba(255,255,255,.04);
-      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: clamp(18px, 16px + 1vw, 28px);
       max-width: var(--about-max);
-      margin-inline:auto;
+      margin-inline: auto;
       padding: clamp(1rem, 1rem + 1.4vw, 2rem);
-      box-shadow: 0 22px 70px rgba(0,0,0,.35);
-      content-visibility:auto; contain-intrinsic-size: 800px;
-      color:#f5f5f4;
+      box-shadow: 0 22px 70px rgba(0, 0, 0, 0.35);
+      content-visibility: auto;
+      contain-intrinsic-size: 800px;
+      color: #f5f5f4;
     }
-    @media (min-width:1024px){ #fc-about .about-card{ padding: 2.25rem 2.5rem; } }
+    @media (min-width: 1024px) {
+      #fc-about .about-card {
+        padding: 2.25rem 2.5rem;
+      }
+    }
 
     /* Headline sheen (motion-safe) */
-    #fc-about .shine-text{
+    #fc-about .shine-text {
       background-image: linear-gradient(90deg, #f5d04c, #facc15, #f5d04c);
       background-size: 200% 100%;
-      -webkit-background-clip: text; background-clip: text; color: transparent;
-      animation: about-shine 6s linear infinite; letter-spacing:-.01em;
-      text-shadow: 0 0 .4px rgba(0,0,0,.65);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: about-shine 6s linear infinite;
+      letter-spacing: -0.01em;
+      text-shadow: 0 0 0.4px rgba(0, 0, 0, 0.65);
     }
-    @supports not ((-webkit-background-clip:text) or (background-clip:text)){
-      #fc-about .shine-text{ color:#facc15; background:none; text-shadow:none }
+    @supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+      #fc-about .shine-text {
+        color: #facc15;
+        background: none;
+        text-shadow: none;
+      }
     }
-    @keyframes about-shine { to { background-position: 200% 0 } }
-    @media (prefers-reduced-motion: reduce){ #fc-about .shine-text{ animation:none } }
+    @keyframes about-shine {
+      to {
+        background-position: 200% 0;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      #fc-about .shine-text {
+        animation: none;
+      }
+    }
 
     /* Stats row */
-    #fc-about .stats-grid{ display:grid; gap:.6rem; grid-template-columns: repeat(3, minmax(0,1fr)); }
-    @media (max-width:520px){ #fc-about .stats-grid{ grid-template-columns: 1fr 1fr 1fr; } }
-    #fc-about .stat{ display:flex; flex-direction:column; align-items:center; text-align:center; gap:.25rem;
-      padding:.85rem .9rem; border-radius:.9rem; background: color-mix(in srgb, #fff 6%, transparent);
-      border:1px solid rgba(255,255,255,.10);
+    #fc-about .stats-grid {
+      display: grid;
+      gap: 0.6rem;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
-    #fc-about .stat .v{ font-variant-numeric:tabular-nums; font-weight:900; font-size:clamp(1.1rem,.9rem + .8vw,1.6rem) }
-    #fc-about .stat .k{ font-size:.8rem; color:#d4d4d8 }
+    @media (max-width: 520px) {
+      #fc-about .stats-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+    }
+    #fc-about .stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 0.25rem;
+      padding: 0.85rem 0.9rem;
+      border-radius: 0.9rem;
+      background: color-mix(in srgb, #fff 6%, transparent);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    #fc-about .stat .v {
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      font-size: clamp(1.1rem, 0.9rem + 0.8vw, 1.6rem);
+    }
+    #fc-about .stat .k {
+      font-size: 0.8rem;
+      color: #d4d4d8;
+    }
 
     /* Impact badges row */
-    #fc-about .impact{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.75rem }
-    #fc-about .impact .chip{ border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06);
-      padding:.3rem .6rem; border-radius:999px; font-weight:800; color:#e5e7eb; font-size:.85rem; cursor:default }
+    #fc-about .impact {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    #fc-about .impact .chip {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.06);
+      padding: 0.3rem 0.6rem;
+      border-radius: 999px;
+      font-weight: 800;
+      color: #e5e7eb;
+      font-size: 0.85rem;
+      cursor: default;
+    }
 
     /* CTA row */
-    #fc-about .cta-row{ display:flex; flex-wrap:wrap; gap:.65rem; align-items:center }
-    #fc-about .fc-btn{ border-radius:.85rem; padding:.6rem .9rem; font-weight:900; border:1px solid rgba(255,255,255,.12); }
-    #fc-about .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#111827; }
-    #fc-about .fc-btn-ghost{ background:#0b0b0c; color:#e5e7eb; }
-    #fc-about .fc-btn:focus-visible{ outline:2px solid #fff7cc; outline-offset:2px; }
+    #fc-about .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+      align-items: center;
+    }
+    #fc-about .fc-btn {
+      border-radius: 0.85rem;
+      padding: 0.6rem 0.9rem;
+      font-weight: 900;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+    #fc-about .fc-btn-primary {
+      background: linear-gradient(180deg, #fde047, #facc15);
+      color: #111827;
+    }
+    #fc-about .fc-btn-ghost {
+      background: #0b0b0c;
+      color: #e5e7eb;
+    }
+    #fc-about .fc-btn:focus-visible {
+      outline: 2px solid #fff7cc;
+      outline-offset: 2px;
+    }
 
     /* Impact snapshot meter (optional) */
-    #fc-about .snapshot{ margin-top:.85rem }
-    #fc-about .meter{ position:relative; height:10px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.10); }
-    #fc-about .meter .fill{ position:absolute; inset-block:0; left:0; width:0%;
-      background: linear-gradient(90deg, #fffbe6, #facc15, #f59e0b);
-      box-shadow: 0 0 8px rgba(250, 204, 21, .4);
-      transition: width .7s cubic-bezier(.2,.8,.2,1);
+    #fc-about .snapshot {
+      margin-top: 0.85rem;
     }
-    #fc-about .mini{ display:flex; justify-content:space-between; font-size:.86rem; color:#d4d4d8; margin-top:.35rem }
-    #fc-about .kbd{ font-variant-numeric:tabular-nums; }
+    #fc-about .meter {
+      position: relative;
+      height: 10px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.1);
+    }
+    #fc-about .meter .fill {
+      position: absolute;
+      inset-block: 0;
+      left: 0;
+      width: 0%;
+      background: linear-gradient(90deg, #fffbe6, #facc15, #f59e0b);
+      box-shadow: 0 0 8px rgba(250, 204, 21, 0.4);
+      transition: width 0.7s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+    #fc-about .mini {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.86rem;
+      color: #d4d4d8;
+      margin-top: 0.35rem;
+    }
+    #fc-about .kbd {
+      font-variant-numeric: tabular-nums;
+    }
 
     /* Trust ribbon */
-    #fc-about .trust{ margin-top:1rem }
-    #fc-about .ribbon{ display:flex; gap:.6rem; overflow:auto hidden; padding:.35rem 0; scroll-behavior:auto }
-    #fc-about .slogo{ height:28px; width:auto; border-radius:.4rem; background:#fff; padding:.18rem .35rem;
-      box-shadow: inset 0 0 0 1px rgba(0,0,0,.06) }
+    #fc-about .trust {
+      margin-top: 1rem;
+    }
+    #fc-about .ribbon {
+      display: flex;
+      gap: 0.6rem;
+      overflow: auto hidden;
+      padding: 0.35rem 0;
+      scroll-behavior: auto;
+    }
+    #fc-about .slogo {
+      height: 28px;
+      width: auto;
+      border-radius: 0.4rem;
+      background: #fff;
+      padding: 0.18rem 0.35rem;
+      box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.06);
+    }
 
     /* Small helpers */
-    #fc-about .note{ color:#d4d4d8; font-size:.8rem }
+    #fc-about .note {
+      color: #d4d4d8;
+      font-size: 0.8rem;
+    }
 
     /* Forced-colors a11y */
-    @media (forced-colors: active){
-      #fc-about .fc-btn-primary{ background:CanvasText; color:Canvas !important; border:1px solid CanvasText }
-      #fc-about .fc-btn-ghost{ border:1px solid CanvasText }
-      #fc-about .meter{ border:1px solid CanvasText }
+    @media (forced-colors: active) {
+      #fc-about .fc-btn-primary {
+        background: CanvasText;
+        color: Canvas !important;
+        border: 1px solid CanvasText;
+      }
+      #fc-about .fc-btn-ghost {
+        border: 1px solid CanvasText;
+      }
+      #fc-about .meter {
+        border: 1px solid CanvasText;
+      }
     }
   </style>
 
-  <div class="about-card" itemscope itemtype="https://schema.org/SportsTeam" aria-live="polite">
-    <meta itemprop="name" content="{{ TEAM_NAME }}"/>
-    <h2 id="fc-about-title" class="mb-2 text-fluid-h1 font-extrabold shine-text">
+  <div
+    class="about-card"
+    itemscope
+    itemtype="https://schema.org/SportsTeam"
+    aria-live="polite"
+  >
+    <meta itemprop="name" content="{{ TEAM_NAME }}" />
+    <h2
+      id="fc-about-title"
+      class="mb-2 text-fluid-h1 font-extrabold shine-text"
+    >
       More Than Basketball — We’re Family
     </h2>
 
     <p class="text-base text-white/90 sm:text-lg">
-      <span class="text-yellow-400" itemprop="name">{{ TEAM_NAME }}</span> (<span itemprop="areaServed">{{ REGION }}</span>) is more than a team—it’s a movement built by families, for families.
-      We give kids a second home where teamwork, respect, and championship character are built for life.
+      <span class="text-yellow-400" itemprop="name">{{ TEAM_NAME }}</span>
+      (<span itemprop="areaServed">{{ REGION }}</span>) is more than a team—it’s
+      a movement built by families, for families. We give kids a second home
+      where teamwork, respect, and championship character are built for life.
     </p>
 
-    <p class="mt-3 text-base text-white/85 sm:text-lg" itemprop="mission">{{ MISSION_TXT }}</p>
+    <p class="mt-3 text-base text-white/85 sm:text-lg" itemprop="mission">
+      {{ MISSION_TXT }}
+    </p>
 
     <p class="mt-2 italic text-yellow-200/90 text-sm">
-      “Family means showing up, believing in each other, and making sure no one is left behind.
-      That’s what we do—on the court, and off.” <span class="text-amber-300">&mdash; Coach Angel Rodriguez</span>
+      “Family means showing up, believing in each other, and making sure no one
+      is left behind. That’s what we do—on the court, and off.”
+      <span class="text-amber-300">&mdash; Coach Angel Rodriguez</span>
     </p>
 
-    {# Impact badges (auto-hidden if all empty) #}
-    {% set show_impact = (IMPACT_BADGES and IMPACT_BADGES|length > 0) or IS_501C3 or EIN %}
-    {% if show_impact %}
+    {# Impact badges (auto-hidden if all empty) #} {% set show_impact =
+    (IMPACT_BADGES and IMPACT_BADGES|length > 0) or IS_501C3 or EIN %} {% if
+    show_impact %}
     <div class="impact" role="list" aria-label="Impact highlights">
-      {% if IS_501C3 %}<button class="chip" role="listitem" type="button" id="chip-501c3" title="Copy 501(c)(3) status">✅ 501(c)(3)</button>{% endif %}
-      {% if EIN %}<button class="chip" role="listitem" type="button" id="chip-ein" title="Copy EIN to clipboard">EIN: {{ EIN }}</button>{% endif %}
-      {% for b in IMPACT_BADGES %}<span class="chip" role="listitem">{{ b }}</span>{% endfor %}
+      {% if IS_501C3 %}<button
+        class="chip"
+        role="listitem"
+        type="button"
+        id="chip-501c3"
+        title="Copy 501(c)(3) status"
+      >
+        ✅ 501(c)(3)</button
+      >{% endif %} {% if EIN %}<button
+        class="chip"
+        role="listitem"
+        type="button"
+        id="chip-ein"
+        title="Copy EIN to clipboard"
+      >
+        EIN: {{ EIN }}</button
+      >{% endif %} {% for b in IMPACT_BADGES %}<span
+        class="chip"
+        role="listitem"
+        >{{ b }}</span
+      >{% endfor %}
     </div>
     {% endif %}
 
@@ -170,32 +313,99 @@
       {% for s in STATS %}
       <div class="stat" role="group" aria-label="{{ s.label }}">
         <div class="text-lg" aria-hidden="true">{{ s.icon }}</div>
-        <div class="v fc-counter" data-target="{{ (s.value|string)|replace('–','-') }}">{{ s.value }}</div>
+        <div
+          class="v fc-counter"
+          data-target="{{ (s.value|string)|replace('–','-') }}"
+        >
+          {{ s.value }}
+        </div>
         <div class="k">{{ s.label }}</div>
       </div>
       {% endfor %}
     </div>
 
-    {# Optional impact snapshot (shows if both numbers exist or will update via fc:meter:update) #}
-    <div class="snapshot" id="about-snapshot" {% if _raised is none or _goal is none %}hidden{% endif %}>
-      <div class="meter" aria-hidden="true"><div class="fill" id="about-fill" style="width:0%"></div></div>
-      <div class="mini"><span><span id="about-raised" class="kbd">{{ _raised if _raised is not none else '—' }}</span> / <span id="about-goal" class="kbd">{{ _goal if _goal is not none else '—' }}</span></span><strong id="about-pct">0%</strong></div>
+    {# Optional impact snapshot (shows if both numbers exist or will update via
+    fc:meter:update) #}
+    <div
+      class="snapshot"
+      id="about-snapshot"
+      {%
+      if
+      _raised
+      is
+      none
+      or
+      _goal
+      is
+      none
+      %}hidden{%
+      endif
+      %}
+    >
+      <div class="meter" aria-hidden="true">
+        <div class="fill" id="about-fill" style="width: 0%"></div>
+      </div>
+      <div class="mini">
+        <span
+          ><span id="about-raised" class="kbd"
+            >{{ _raised if _raised is not none else '—' }}</span
+          >
+          /
+          <span id="about-goal" class="kbd"
+            >{{ _goal if _goal is not none else '—' }}</span
+          ></span
+        ><strong id="about-pct">0%</strong>
+      </div>
     </div>
 
     <!-- CTAs -->
     <div class="mt-5 cta-row" role="group" aria-label="Actions">
-      <a href="{{ donate_link }}?utm_source=about&utm_medium=cta&utm_campaign=donate_now" target="_blank" rel="noopener" class="fc-btn fc-btn-primary" data-cta="about:donate">💛 Donate Now</a>
-      <a href="{{ tiers_url|default('#tiers') }}" class="fc-btn fc-btn-ghost" data-cta="about:become-champion">🏅 Sponsor Tiers</a>
+      <a
+        href="{{ donate_link }}?utm_source=about&utm_medium=cta&utm_campaign=donate_now"
+        target="_blank"
+        rel="noopener"
+        class="fc-btn fc-btn-primary"
+        data-cta="about:donate"
+        >💛 Donate Now</a
+      >
+      <a
+        href="{{ tiers_url|default('#tiers') }}"
+        class="fc-btn fc-btn-ghost"
+        data-cta="about:become-champion"
+        >🏅 Sponsor Tiers</a
+      >
       {% if SHOW_VIDEO %}
-      <button id="fc-video-open" class="fc-btn fc-btn-ghost" type="button" data-video-src="{{ VIDEO_URL }}"
-              aria-haspopup="dialog" aria-expanded="false">▶ Watch Our Story</button>
+      <button
+        id="fc-video-open"
+        class="fc-btn fc-btn-ghost"
+        type="button"
+        data-video-src="{{ VIDEO_URL }}"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      >
+        ▶ Watch Our Story
+      </button>
       {% endif %}
-      <a id="fc-sms" class="fc-btn fc-btn-ghost" href="sms:{{ sms_number }}?&body={{ ('Pledge for ' ~ TEAM_NAME ~ ' — ' ~ (share_url if share_url is defined else (request.url if request is defined else ''))) | urlencode }}">💬 Text to Donate</a>
-      <button id="fc-share" class="fc-btn fc-btn-ghost" type="button" aria-label="Share this program" data-cta="about:share">🔗 Share</button>
+      <a
+        id="fc-sms"
+        class="fc-btn fc-btn-ghost"
+        href="sms:{{ sms_number }}?&body={{ ('Pledge for ' ~ TEAM_NAME ~ ' — ' ~ (share_url if share_url is defined else (request.url if request is defined else ''))) | urlencode }}"
+        >💬 Text to Donate</a
+      >
+      <button
+        id="fc-share"
+        class="fc-btn fc-btn-ghost"
+        type="button"
+        aria-label="Share this program"
+        data-cta="about:share"
+      >
+        🔗 Share
+      </button>
     </div>
 
     <p class="mt-2 note">
-      Every sponsorship fuels gym time, tutoring, travel, and more. Keep our kids dreaming big.
+      Every sponsorship fuels gym time, tutoring, travel, and more. Keep our
+      kids dreaming big.
     </p>
 
     {% if TRUST_LOGOS and TRUST_LOGOS|length > 0 %}
@@ -203,7 +413,13 @@
       <div class="mb-1 note">Trusted by partners &amp; featured in:</div>
       <div class="ribbon" id="about-ribbon" aria-label="Partners and press">
         {% for src in TRUST_LOGOS[:12] %}
-          <img class="slogo" src="{{ src or default_logo }}" alt="Partner logo" loading="lazy" decoding="async" />
+        <img
+          class="slogo"
+          src="{{ src or default_logo }}"
+          alt="Partner logo"
+          loading="lazy"
+          decoding="async"
+        />
         {% endfor %}
       </div>
     </div>
@@ -212,221 +428,243 @@
 
   {% if SHOW_VIDEO %}
   <!-- Accessible modal (CSP-safe) -->
-  <div id="fc-video-modal" class="fixed inset-0 z-[80] hidden" role="dialog" aria-modal="true" aria-labelledby="fc-video-title" tabindex="-1">
+  <div
+    id="fc-video-modal"
+    class="fixed inset-0 z-[80] hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="fc-video-title"
+    tabindex="-1"
+  >
     <div data-modal-overlay class="absolute inset-0 bg-black/70"></div>
-    <div class="relative mx-auto my-10 w-[min(100vw-2rem,960px)] overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10">
-      <div class="flex items-center justify-between border-b border-white/10 px-4 py-3">
+    <div
+      class="relative mx-auto my-10 w-[min(100vw-2rem,960px)] overflow-hidden rounded-2xl bg-black shadow-2xl ring-1 ring-white/10"
+    >
+      <div
+        class="flex items-center justify-between border-b border-white/10 px-4 py-3"
+      >
         <h4 id="fc-video-title" class="font-bold">Program Highlights</h4>
-        <button type="button" class="fc-btn fc-btn-ghost px-3 py-1.5" data-modal-close aria-label="Close video">✕</button>
+        <button
+          type="button"
+          class="fc-btn fc-btn-ghost px-3 py-1.5"
+          data-modal-close
+          aria-label="Close video"
+        >
+          ✕
+        </button>
       </div>
       <div class="relative aspect-video">
-        <iframe class="absolute inset-0 h-full w-full" src="" title="Team highlight video"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                referrerpolicy="strict-origin-when-cross-origin"></iframe>
+        <iframe
+          class="absolute inset-0 h-full w-full"
+          src=""
+          title="Team highlight video"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          referrerpolicy="strict-origin-when-cross-origin"
+        ></iframe>
       </div>
     </div>
   </div>
   {% endif %}
 </div>
 
-{# --- JS: counters + modal + share + trust ribbon + snapshot meter (IO-gated) --- #}
+{# --- JS: counters + modal + share + trust ribbon + snapshot meter (IO-gated)
+--- #}
 <script nonce="{{ NONCE }}">
-(() => {
-  const root = document.getElementById('fc-about'); if (!root || root.__init) return; root.__init = true;
-  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-  const saveData = !!(navigator.connection && navigator.connection.saveData);
+  (() => {
+    const root = document.getElementById('fc-about'); if (!root || root.__init) return; root.__init = true;
+    const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+    const saveData = !!(navigator.connection && navigator.connection.saveData);
 
-  const ribbon = document.getElementById('about-ribbon');
-  const snapshot = document.getElementById('about-snapshot');
-  const fill = document.getElementById('about-fill');
-  const rEl = document.getElementById('about-raised');
-  const gEl = document.getElementById('about-goal');
-  const pEl = document.getElementById('about-pct');
+    const ribbon = document.getElementById('about-ribbon');
+    const snapshot = document.getElementById('about-snapshot');
+    const fill = document.getElementById('about-fill');
+    const rEl = document.getElementById('about-raised');
+    const gEl = document.getElementById('about-goal');
+    const pEl = document.getElementById('about-pct');
 
-  const fmt$ = n => '$' + (Math.round(+n||0)).toLocaleString();
+    const fmt$ = n => '$' + (Math.round(+n||0)).toLocaleString();
 
-  // Counter animation (numbers only; strings just render)
-  function anim(el){
-    const raw = (el.getAttribute('data-target') || el.textContent || '').trim();
-    if(!/^\d+(\.\d+)?$/.test(raw)){ el.textContent = raw; return; }
-    const target = parseFloat(raw);
-    if (prefersReduce){ el.textContent = target.toLocaleString(); return; }
-    let t0=null, dur=900;
-    const step=(ts)=>{ if(!t0) t0=ts; const p=Math.min(1,(ts-t0)/dur);
-      el.textContent = Math.round(target*p).toLocaleString();
-      if(p<1) requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
-  function bootCounters(){ root.querySelectorAll('.fc-counter').forEach(anim); }
-
-  // Snapshot meter helpers
-  function setSnapshot(raised, goal){
-    if (raised==null || goal==null) return;
-    snapshot?.removeAttribute('hidden');
-    const R = Math.max(0, +raised||0), G = Math.max(0, +goal||0);
-    const P = G ? Math.max(0, Math.min(100, (R/G)*100)) : 0;
-    rEl && (rEl.textContent = fmt$(R));
-    gEl && (gEl.textContent = fmt$(G));
-    pEl && (pEl.textContent = P.toFixed(0) + '%');
-    if (fill){
-      if (saveData || prefersReduce) fill.style.transition = 'none';
-      fill.style.width = P.toFixed(1) + '%';
-    }
-  }
-
-  // IO gate for counters + ribbon scroll + impression
-  let seenBeacon = false;
-  const io = ('IntersectionObserver' in window) ? new IntersectionObserver((ents)=>{
-    if (ents.some(e=>e.isIntersecting)) {
-      bootCounters(); io.disconnect();
-      if (!prefersReduce && !saveData && ribbon) startRibbon();
-      if (!seenBeacon){ seenBeacon = true; try { window.dataLayer?.push({ event:'about_impression', time: Date.now() }); } catch {} }
-    }
-  },{threshold:0.2}) : null;
-  io ? io.observe(root) : bootCounters();
-
-  // Trust ribbon gentle auto-scroll + dedupe
-  function startRibbon(){
-    const imgs = ribbon.querySelectorAll('img[src]');
-    const seen = new Set();
-    imgs.forEach(img => { try{ const key=new URL(img.src, location.href).href; if(seen.has(key)) img.remove(); else seen.add(key); }catch{} });
-    let last=0, sp=28;
-    const step = (ts)=>{ const dt=(last?ts-last:16)/1000; last=ts;
-      ribbon.scrollLeft += sp*dt;
-      if (ribbon.scrollLeft + ribbon.clientWidth + 2 >= ribbon.scrollWidth) ribbon.scrollLeft = 0;
+    // Counter animation (numbers only; strings just render)
+    function anim(el){
+      const raw = (el.getAttribute('data-target') || el.textContent || '').trim();
+      if(!/^\d+(\.\d+)?$/.test(raw)){ el.textContent = raw; return; }
+      const target = parseFloat(raw);
+      if (prefersReduce){ el.textContent = target.toLocaleString(); return; }
+      let t0=null, dur=900;
+      const step=(ts)=>{ if(!t0) t0=ts; const p=Math.min(1,(ts-t0)/dur);
+        el.textContent = Math.round(target*p).toLocaleString();
+        if(p<1) requestAnimationFrame(step);
+      };
       requestAnimationFrame(step);
-    };
-    requestAnimationFrame(step);
-  }
-
-  // Video modal (optional)
-  const modal = document.getElementById('fc-video-modal');
-  const trigger = document.getElementById('fc-video-open');
-  if (modal && trigger){
-    const iframe  = modal.querySelector('iframe');
-    const overlay = modal.querySelector('[data-modal-overlay]');
-    const closeBtn= modal.querySelector('[data-modal-close]');
-    let lastFocus=null;
-    const focusables = (r) => Array.from(r.querySelectorAll('a[href],button,[tabindex]:not([tabindex="-1"])')).filter(el=>!el.disabled && !el.getAttribute('aria-hidden'));
-    function lock(){ document.documentElement.style.overflow='hidden'; }
-    function unlock(){ document.documentElement.style.overflow=''; }
-    function trap(e){ if(e.key!=='Tab') return; const f=focusables(modal); if(!f.length) return; const [first,last]=[f[0],f[f.length-1]];
-      if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
-      else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } }
-    function esc(e){ if(e.key==='Escape') close(); }
-    function open(){
-      lastFocus=document.activeElement;
-      modal.classList.remove('hidden');
-      const safeSrc = trigger.getAttribute('data-video-src') || '';
-      if (iframe) iframe.src = safeSrc;
-      lock();
-      (focusables(modal)[0]||modal).focus();
-      document.addEventListener('keydown',trap);
-      document.addEventListener('keydown',esc);
-      try { window.dataLayer?.push({ event:'about_video_open' }); } catch {}
     }
-    function close(){
-      modal.classList.add('hidden');
-      if (iframe) iframe.src='';
-      unlock();
-      document.removeEventListener('keydown',trap);
-      document.removeEventListener('keydown',esc);
-      lastFocus?.focus?.();
-      try { window.dataLayer?.push({ event:'about_video_close' }); } catch {}
-    }
-    trigger.addEventListener('click', open, {passive:true});
-    (closeBtn||modal).addEventListener('click', (e)=>{ if(e.target===overlay || e.currentTarget===closeBtn) close(); });
-  }
+    function bootCounters(){ root.querySelectorAll('.fc-counter').forEach(anim); }
 
-  // Share button (Web Share → clipboard fallback)
-  const shareBtn = document.getElementById('fc-share');
-  if (shareBtn){
-    const url = root.dataset.shareUrl || location.href;
-    shareBtn.addEventListener('click', async () => {
+    // Snapshot meter helpers
+    function setSnapshot(raised, goal){
+      if (raised==null || goal==null) return;
+      snapshot?.removeAttribute('hidden');
+      const R = Math.max(0, +raised||0), G = Math.max(0, +goal||0);
+      const P = G ? Math.max(0, Math.min(100, (R/G)*100)) : 0;
+      rEl && (rEl.textContent = fmt$(R));
+      gEl && (gEl.textContent = fmt$(G));
+      pEl && (pEl.textContent = P.toFixed(0) + '%');
+      if (fill){
+        if (saveData || prefersReduce) fill.style.transition = 'none';
+        fill.style.width = P.toFixed(1) + '%';
+      }
+    }
+
+    // IO gate for counters + ribbon scroll + impression
+    let seenBeacon = false;
+    const io = ('IntersectionObserver' in window) ? new IntersectionObserver((ents)=>{
+      if (ents.some(e=>e.isIntersecting)) {
+        bootCounters(); io.disconnect();
+        if (!prefersReduce && !saveData && ribbon) startRibbon();
+        if (!seenBeacon){ seenBeacon = true; try { window.dataLayer?.push({ event:'about_impression', time: Date.now() }); } catch {} }
+      }
+    },{threshold:0.2}) : null;
+    io ? io.observe(root) : bootCounters();
+
+    // Trust ribbon gentle auto-scroll + dedupe
+    function startRibbon(){
+      const imgs = ribbon.querySelectorAll('img[src]');
+      const seen = new Set();
+      imgs.forEach(img => { try{ const key=new URL(img.src, location.href).href; if(seen.has(key)) img.remove(); else seen.add(key); }catch{} });
+      let last=0, sp=28;
+      const step = (ts)=>{ const dt=(last?ts-last:16)/1000; last=ts;
+        ribbon.scrollLeft += sp*dt;
+        if (ribbon.scrollLeft + ribbon.clientWidth + 2 >= ribbon.scrollWidth) ribbon.scrollLeft = 0;
+        requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }
+
+    // Video modal (optional)
+    const modal = document.getElementById('fc-video-modal');
+    const trigger = document.getElementById('fc-video-open');
+    if (modal && trigger){
+      const iframe  = modal.querySelector('iframe');
+      const overlay = modal.querySelector('[data-modal-overlay]');
+      const closeBtn= modal.querySelector('[data-modal-close]');
+      let lastFocus=null;
+      const focusables = (r) => Array.from(r.querySelectorAll('a[href],button,[tabindex]:not([tabindex="-1"])')).filter(el=>!el.disabled && !el.getAttribute('aria-hidden'));
+      function lock(){ document.documentElement.style.overflow='hidden'; }
+      function unlock(){ document.documentElement.style.overflow=''; }
+      function trap(e){ if(e.key!=='Tab') return; const f=focusables(modal); if(!f.length) return; const [first,last]=[f[0],f[f.length-1]];
+        if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+        else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); } }
+      function esc(e){ if(e.key==='Escape') close(); }
+      function open(){
+        lastFocus=document.activeElement;
+        modal.classList.remove('hidden');
+        const safeSrc = trigger.getAttribute('data-video-src') || '';
+        if (iframe) iframe.src = safeSrc;
+        lock();
+        (focusables(modal)[0]||modal).focus();
+        document.addEventListener('keydown',trap);
+        document.addEventListener('keydown',esc);
+        try { window.dataLayer?.push({ event:'about_video_open' }); } catch {}
+      }
+      function close(){
+        modal.classList.add('hidden');
+        if (iframe) iframe.src='';
+        unlock();
+        document.removeEventListener('keydown',trap);
+        document.removeEventListener('keydown',esc);
+        lastFocus?.focus?.();
+        try { window.dataLayer?.push({ event:'about_video_close' }); } catch {}
+      }
+      trigger.addEventListener('click', open, {passive:true});
+      (closeBtn||modal).addEventListener('click', (e)=>{ if(e.target===overlay || e.currentTarget===closeBtn) close(); });
+    }
+
+    // Share button (Web Share → clipboard fallback)
+    const shareBtn = document.getElementById('fc-share');
+    if (shareBtn){
+      const url = root.dataset.shareUrl || location.href;
+      shareBtn.addEventListener('click', async () => {
+        try{
+          if (navigator.share) {
+            await navigator.share({ title: document.title || 'FundChamps', text: 'Support our program!', url: url + '?utm_source=share&utm_medium=about&utm_campaign=fan_share' });
+          } else if (navigator.clipboard?.writeText) {
+            await navigator.clipboard.writeText(url);
+            const old = shareBtn.textContent; shareBtn.textContent = '✅ Copied link'; setTimeout(()=> shareBtn.textContent=old, 1400);
+          }
+          try { window.dataLayer?.push({ event:'about_share' }); } catch {}
+        }catch{}
+      }, {passive:true});
+    }
+
+    // Copy EIN / 501(c)(3)
+    const chipEIN = document.getElementById('chip-ein');
+    const chip501 = document.getElementById('chip-501c3');
+    function copyText(txt, el){
+      if (!txt) return;
+      navigator.clipboard?.writeText(txt).then(()=>{
+        const old = el.textContent; el.textContent = '✅ Copied'; setTimeout(()=> el.textContent = old, 1200);
+      }).catch(()=>{});
+    }
+    chipEIN && chipEIN.addEventListener('click', ()=> copyText(chipEIN.textContent.replace(/^EIN:\s*/,'').trim(), chipEIN), {passive:true});
+    chip501 && chip501.addEventListener('click', ()=> copyText('501(c)(3)', chip501), {passive:true});
+
+    // Live stats update API (fc:stats:update)
+    window.addEventListener('fc:stats:update', (e)=>{
+      const items = (e.detail?.stats)||[]; // [{label, value, icon?}]
+      if (!items.length) return;
+      const grid = root.querySelector('.stats-grid'); if(!grid) return;
+      grid.innerHTML = '';
+      for (const s of items.slice(0,6)){
+        const card = document.createElement('div'); card.className='stat';
+        card.setAttribute('role','group'); card.setAttribute('aria-label', s.label || 'Stat');
+        const v = String(s.value ?? '').replace('–','-');
+        card.innerHTML = `<div class="text-lg" aria-hidden="true">${s.icon||'📊'}</div>
+                          <div class="v fc-counter" data-target="${v}">${v}</div>
+                          <div class="k">${s.label||''}</div>`;
+        grid.appendChild(card);
+      }
+      bootCounters();
+    }, { passive:true });
+
+    // Impact snapshot updates (fc:meter:update)
+    window.addEventListener('fc:meter:update', (e)=>{
+      const d = e.detail||{};
+      if (d && ('raised' in d) && ('goal' in d)) setSnapshot(d.raised, d.goal);
+      // subtle haptics on milestones
       try{
-        if (navigator.share) {
-          await navigator.share({ title: document.title || 'FundChamps', text: 'Support our program!', url: url + '?utm_source=share&utm_medium=about&utm_campaign=fan_share' });
-        } else if (navigator.clipboard?.writeText) {
-          await navigator.clipboard.writeText(url);
-          const old = shareBtn.textContent; shareBtn.textContent = '✅ Copied link'; setTimeout(()=> shareBtn.textContent=old, 1400);
-        }
-        try { window.dataLayer?.push({ event:'about_share' }); } catch {}
+        const p = (Math.max(0,+d.raised||0)) / Math.max(1,(+d.goal||1));
+        if ([.25,.5,.75,1].some(m => p >= m && p < m + .01)) navigator.vibrate?.(40);
       }catch{}
-    }, {passive:true});
-  }
+    }, { passive:true });
 
-  // Copy EIN / 501(c)(3)
-  const chipEIN = document.getElementById('chip-ein');
-  const chip501 = document.getElementById('chip-501c3');
-  function copyText(txt, el){
-    if (!txt) return;
-    navigator.clipboard?.writeText(txt).then(()=>{
-      const old = el.textContent; el.textContent = '✅ Copied'; setTimeout(()=> el.textContent = old, 1200);
-    }).catch(()=>{});
-  }
-  chipEIN && chipEIN.addEventListener('click', ()=> copyText(chipEIN.textContent.replace(/^EIN:\s*/,'').trim(), chipEIN), {passive:true});
-  chip501 && chip501.addEventListener('click', ()=> copyText('501(c)(3)', chip501), {passive:true});
-
-  // Live stats update API (fc:stats:update)
-  window.addEventListener('fc:stats:update', (e)=>{
-    const items = (e.detail?.stats)||[]; // [{label, value, icon?}]
-    if (!items.length) return;
-    const grid = root.querySelector('.stats-grid'); if(!grid) return;
-    grid.innerHTML = '';
-    for (const s of items.slice(0,6)){
-      const card = document.createElement('div'); card.className='stat';
-      card.setAttribute('role','group'); card.setAttribute('aria-label', s.label || 'Stat');
-      const v = String(s.value ?? '').replace('–','-');
-      card.innerHTML = `<div class="text-lg" aria-hidden="true">${s.icon||'📊'}</div>
-                        <div class="v fc-counter" data-target="${v}">${v}</div>
-                        <div class="k">${s.label||''}</div>`;
-      grid.appendChild(card);
-    }
-    bootCounters();
-  }, { passive:true });
-
-  // Impact snapshot updates (fc:meter:update)
-  window.addEventListener('fc:meter:update', (e)=>{
-    const d = e.detail||{};
-    if (d && ('raised' in d) && ('goal' in d)) setSnapshot(d.raised, d.goal);
-    // subtle haptics on milestones
-    try{
-      const p = (Math.max(0,+d.raised||0)) / Math.max(1,(+d.goal||1));
-      if ([.25,.5,.75,1].some(m => p >= m && p < m + .01)) navigator.vibrate?.(40);
-    }catch{}
-  }, { passive:true });
-
-  // Prime snapshot if server rendered numbers exist
-  {% if _raised is not none and _goal is not none %}
-  setSnapshot({{ _raised|round(0) }}, {{ _goal|round(0) }});
-  {% endif %}
-})();
+    // Prime snapshot if server rendered numbers exist
+    {% if _raised is not none and _goal is not none %}
+    setSnapshot({{ _raised|round(0) }}, {{ _goal|round(0) }});
+    {% endif %}
+  })();
 </script>
 
 {# --- SEO JSON-LD (SportsTeam + DonateAction) --- #}
 <script type="application/ld+json" nonce="{{ NONCE }}">
-{
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "SportsTeam",
-      "name": {{ TEAM_NAME | tojson }},
-      "areaServed": {{ REGION | tojson }},
-      "memberOf": { "@type": "Organization", "name": "FundChamps" },
-      "description": {{ MISSION_TXT | tojson }},
-      "url": {{ (share_url if share_url is defined else (request.url if request is defined else '/')) | tojson }}
-    },
-    {
-      "@type": "DonateAction",
-      "name": "Donate to " + {{ TEAM_NAME | tojson }},
-      "target": {
-        "@type": "EntryPoint",
-        "urlTemplate": {{ (donate_link ~ '?utm_source=seo&utm_medium=jsonld&utm_campaign=donate_action') | tojson }},
-        "actionPlatform": [ "http://schema.org/DesktopWebPlatform", "http://schema.org/MobileWebPlatform" ]
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "SportsTeam",
+        "name": {{ TEAM_NAME | tojson }},
+        "areaServed": {{ REGION | tojson }},
+        "memberOf": { "@type": "Organization", "name": "FundChamps" },
+        "description": {{ MISSION_TXT | tojson }},
+        "url": {{ (share_url if share_url is defined else (request.url if request is defined else '/')) | tojson }}
+      },
+      {
+        "@type": "DonateAction",
+        "name": "Donate to " + {{ TEAM_NAME | tojson }},
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": {{ (donate_link ~ '?utm_source=seo&utm_medium=jsonld&utm_campaign=donate_action') | tojson }},
+          "actionPlatform": [ "http://schema.org/DesktopWebPlatform", "http://schema.org/MobileWebPlatform" ]
+        }
       }
-    }
-  ]
-}
+    ]
+  }
 </script>
-

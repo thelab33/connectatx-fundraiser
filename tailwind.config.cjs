@@ -7,11 +7,13 @@ const typography = require("@tailwindcss/typography");
 const aspect = require("@tailwindcss/aspect-ratio");
 
 module.exports = {
-  // keep `.dark` class support
+  // -------------------------------------------------------------------
+  // Dark mode strategy
+  // -------------------------------------------------------------------
   darkMode: ["class", ".dark"],
 
   // -------------------------------------------------------------------
-  // Content (Jinja templates, JS, and Python strings)
+  // Content scanning (templates, JS, and Python strings)
   // -------------------------------------------------------------------
   content: [
     "./app/templates/**/*.{html,jinja,jinja2}",
@@ -20,39 +22,49 @@ module.exports = {
     "./app/templates/admin/**/*.{html,jinja,jinja2}",
     "./partials_bundle*/app/templates/**/*.{html,jinja,jinja2}",
     "./app/static/js/**/*.{js,ts,mjs}",
-    "./app/**/*.py"
+    "./app/**/*.py",
   ],
 
   // -------------------------------------------------------------------
-  // Safelist (explicit; remove the broad /(w|max-w|h)-\[.*\]/ pattern)
+  // Safelist — keep only what’s explicitly needed
   // -------------------------------------------------------------------
   safelist: [
+    // Effects
     { pattern: /backdrop-blur.*/ },
     { pattern: /blur.*/ },
     { pattern: /bg-gradient-to-.*/ },
     { pattern: /from-.*/ },
     { pattern: /via-.*/ },
     { pattern: /to-.*/ },
-    { pattern: /z-.*/ },
-    { pattern: /ring-.*/ },
-    { pattern: /text-(zinc|yellow).*/ },
     { pattern: /will-change.*/ },
 
-    // prose + invert for rich text blocks if used
-    "prose",
-    "prose-invert",
-    "sr-only",
-
-    // common bracketed utilities you actually use; add/remove as needed
+    // Layout
+    { pattern: /z-.*/ },
     "w-[min(92rem,96vw)]",
     "max-w-[72rem]",
     "max-w-[92rem]",
     "h-[var(--meter-h)]",
     "w-[28ch]",
+
+    // Typography & content
+    { pattern: /text-(zinc|yellow).*/ },
+    "prose",
+    "prose-invert",
+    "sr-only",
+
+    // Border radius (common sizes used with @apply)
+    "rounded",
+    "rounded-sm",
+    "rounded-md",
+    "rounded-lg",
+    "rounded-xl",
+    "rounded-2xl",
+    "rounded-3xl",
+    "rounded-full",
   ],
 
   // -------------------------------------------------------------------
-  // Theme
+  // Theme extensions
   // -------------------------------------------------------------------
   theme: {
     container: {
@@ -70,10 +82,18 @@ module.exports = {
 
     extend: {
       fontFamily: {
-        sans: ["Inter var", "Inter", "Montserrat", "Roboto", "Segoe UI", "Arial", "sans-serif"],
+        sans: [
+          "Inter var",
+          "Inter",
+          "Montserrat",
+          "Roboto",
+          "Segoe UI",
+          "Arial",
+          "sans-serif",
+        ],
       },
 
-      // Map to CSS variables so branding can change without recompiling
+      // Branding colors
       colors: {
         primary: "#facc15",
         "primary-gold": "#fbbf24",
@@ -82,13 +102,17 @@ module.exports = {
         surface: "var(--fc-surface, #ffffff)",
         text: "var(--fc-text, #111111)",
         accent: "var(--fc-accent, #facc15)",
-        brand: { DEFAULT: "rgb(var(--fc-brand-rgb, 250 204 21) / <alpha-value>)" },
+        brand: {
+          DEFAULT: "rgb(var(--fc-brand-rgb, 250 204 21) / <alpha-value>)",
+        },
       },
 
       boxShadow: {
         "gold-glow": "0 0 8px 2px #facc15, 0 0 24px 0 #fde68a44",
-        glass: "0 4px 32px 0 rgba(250,204,21,0.06), 0 1.5px 4.5px rgba(60,60,60,0.05)",
-        "xl-gold": "0 20px 25px -5px rgba(250, 204, 21, 0.40), 0 10px 10px -5px rgba(250, 204, 21, 0.20)",
+        glass:
+          "0 4px 32px 0 rgba(250,204,21,0.06), 0 1.5px 4.5px rgba(60,60,60,0.05)",
+        "xl-gold":
+          "0 20px 25px -5px rgba(250, 204, 21, 0.40), 0 10px 10px -5px rgba(250, 204, 21, 0.20)",
         "inner-glow": "inset 0 0 15px #facc15cc",
       },
 
@@ -111,23 +135,45 @@ module.exports = {
       },
 
       transitionProperty: {
-        colors: "color, background-color, border-color, text-decoration-color, fill, stroke",
+        colors:
+          "color, background-color, border-color, text-decoration-color, fill, stroke",
         shadow: "box-shadow",
         opacity: "opacity",
         size: "width, height",
       },
 
-      zIndex: { 99: "99", 999: "999", 9999: "9999", 99999: "99999" },
+      zIndex: {
+        99: "99",
+        999: "999",
+        9999: "9999",
+        99999: "99999",
+      },
 
+      // Animations
       keyframes: {
         kenburns: {
-          "0%": { transform: "scale(1.12) translateY(6px)", opacity: "0.94" },
-          "100%": { transform: "scale(1.01) translateY(0)", opacity: "1" },
+          "0%": {
+            transform: "scale(1.12) translateY(6px)",
+            opacity: "0.94",
+          },
+          "100%": {
+            transform: "scale(1.01) translateY(0)",
+            opacity: "1",
+          },
         },
         "bounce-in": {
-          "0%": { transform: "scale(0.9) translateY(22px)", opacity: "0" },
-          "70%": { transform: "scale(1.08) translateY(-3px)", opacity: "1" },
-          "100%": { transform: "scale(1) translateY(0)", opacity: "1" },
+          "0%": {
+            transform: "scale(0.9) translateY(22px)",
+            opacity: "0",
+          },
+          "70%": {
+            transform: "scale(1.08) translateY(-3px)",
+            opacity: "1",
+          },
+          "100%": {
+            transform: "scale(1) translateY(0)",
+            opacity: "1",
+          },
         },
         shine: { "100%": { backgroundPosition: "200% center" } },
         sparkle: {
@@ -153,7 +199,10 @@ module.exports = {
         DEFAULT: {
           css: {
             color: theme("colors.zinc.200"),
-            a: { color: theme("colors.yellow.300"), textDecoration: "none" },
+            a: {
+              color: theme("colors.yellow.300"),
+              textDecoration: "none",
+            },
             strong: { color: theme("colors.zinc.50") },
             h1: { color: theme("colors.yellow.300") },
             h2: { color: theme("colors.yellow.300") },
@@ -172,7 +221,7 @@ module.exports = {
   },
 
   // -------------------------------------------------------------------
-  // Plugins (first-party + SV-Prestige helpers)
+  // Plugins (first-party + Prestige helpers)
   // -------------------------------------------------------------------
   plugins: [
     forms({ strategy: "class" }),
@@ -180,15 +229,18 @@ module.exports = {
     aspect,
 
     plugin(function fcPrestige({ addUtilities, addVariant }) {
-      // “hover or focus-visible” combo
+      // Variants
       addVariant("hocus", ["&:hover", "&:focus-visible"]);
-
-      // Blur feature queries
       addVariant("supports-blur", "@supports (backdrop-filter: blur(1px))");
-      addVariant("no-supports-blur", "@supports not (backdrop-filter: blur(1px))");
-
-      // Useful state variants for menus/dialogs
-      addVariant("data-open", ['&[data-open="true"]', "&[open]", '&[data-state="open"]']);
+      addVariant(
+        "no-supports-blur",
+        "@supports not (backdrop-filter: blur(1px))",
+      );
+      addVariant("data-open", [
+        '&[data-open="true"]',
+        "&[open]",
+        '&[data-state="open"]',
+      ]);
       addVariant("aria-expanded", ['&[aria-expanded="true"]']);
       addVariant("aria-selected", ['&[aria-selected="true"]']);
       addVariant("group-data-open", [
@@ -200,7 +252,7 @@ module.exports = {
         ":merge(.peer)[data-state='open'] ~ &",
       ]);
 
-      // Small quality-of-life utilities (alias the common arbitrary values)
+      // Utilities
       addUtilities({
         ".glass-card": {
           backgroundColor: "rgba(11,11,12,0.60)",
@@ -224,14 +276,15 @@ module.exports = {
           "padding-bottom": "max(1rem, env(safe-area-inset-bottom))",
         },
 
-        // Compact helpers (match input.css tokens)
+        // Compact helpers
         ".btn-compact": {
           "font-size": "calc(.95rem * var(--scale, .94))",
-          padding: "calc(.62rem * var(--scale, .94)) calc(.96rem * var(--scale, .94))",
+          padding:
+            "calc(.62rem * var(--scale, .94)) calc(.96rem * var(--scale, .94))",
         },
         ".meter-compact": { height: "var(--meter-h, 12px)" },
 
-        // Aliases for common arbitrary sizes (so we can drop the regex safelist)
+        // Aliases (replace regex safelist)
         ".u-container-w": { width: "min(92rem, 96vw)" },
         ".u-container-max": { maxWidth: "72rem" },
         ".u-card-h": { height: "var(--meter-h, 12px)" },
@@ -239,7 +292,8 @@ module.exports = {
     }),
   ],
 
-  // Keep hover-only behavior modern
+  // -------------------------------------------------------------------
+  // Future options
+  // -------------------------------------------------------------------
   future: { hoverOnlyWhenSupported: true },
 };
-

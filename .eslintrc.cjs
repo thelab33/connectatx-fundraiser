@@ -4,9 +4,12 @@ module.exports = {
   plugins: ["compat", "security", "unused-imports"],
   rules: {
     "no-unused-vars": "off",
-    "unused-imports/no-unused-vars": ["error", { "args": "none", "ignoreRestSiblings": true }],
+    "unused-imports/no-unused-vars": [
+      "error",
+      { args: "none", ignoreRestSiblings: true },
+    ],
     "no-implicit-globals": "error",
-    "no-console": ["warn", { allow: ["warn", "error"] }]
+    "no-console": ["warn", { allow: ["warn", "error"] }],
   },
-  globals: { Stripe: "readonly", paypal: "readonly" }
+  globals: { Stripe: "readonly", paypal: "readonly" },
 };

@@ -41,4 +41,3 @@ services:
       # Logging
       LOG_LEVEL: ${LOG_LEVEL:-DEBUG}
       WERKZEUG_LOG_LEVEL: ${WERKZEUG_LOG_LEVEL:-WARNING}
-

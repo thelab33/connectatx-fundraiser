@@ -11,13 +11,13 @@
 [data-theme="neon"] #fc-hero .fc-hero-cta {
   background: linear-gradient(90deg, #0ff, #f0f);
   color: #000;
-  text-shadow: 0 0 8px rgba(255,255,255,.75);
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.75);
 }
 
 /* Campus: bold uppercase brand */
 [data-theme="campus"] .fc-hero-brand .txt {
   font-family: "Bebas Neue", sans-serif;
-  letter-spacing: .05em;
+  letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
@@ -26,7 +26,7 @@
   font-family: "Inter", sans-serif;
   font-weight: 600;
   letter-spacing: -0.015em;
-  background: linear-gradient(90deg,#d9d9d9,#f3f3f3);
+  background: linear-gradient(90deg, #d9d9d9, #f3f3f3);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
@@ -34,10 +34,9 @@
   background: #111;
   color: #fff;
   border: 1px solid #000;
-  box-shadow: 0 4px 18px rgba(0,0,0,.3);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
 }
 [data-theme="pro"] #fc-hero .fc-hero-cta:hover {
   filter: brightness(1.1);
   text-decoration: underline;
 }
-

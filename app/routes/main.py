@@ -4,12 +4,13 @@ from __future__ import annotations
 """
 Main web blueprint: homepage, donor/sponsor flows, static pages, and stats API.
 
-Improvements in this refactor:
-- Guard all ORM reads with table-exists checks to avoid dev/offline crashes
-- Centralize sponsor query/pagination + goal lookup
-- Safer env lookups (publishable/public key fallbacks)
-- Tightened typing & small helpers (safe_url, cache headers, etag builder)
-- Async email sending with structured error logging
+Refactor highlights:
+- Schema-tolerant ORM reads (no dev/offline crashes if tables aren’t present)
+- Unified goal/raised aggregation; Python fallback when needed
+- Conditional ETag handling (304) for / and /stats to cut bandwidth
+- Safer env lookups; Stripe publishable key aliases supported
+- Structured logging + consistent error paths
+- Stronger typing + small utilities (safe_url, cache headers, JSON helpers)
 """
 
 import os
@@ -19,8 +20,18 @@ from hashlib import sha1
 from threading import Thread
 from typing import Any, Dict, List, Optional, Tuple
 
-from flask import (Blueprint, current_app, flash, jsonify, make_response,
-                   redirect, render_template, request, session, url_for)
+from flask import (
+    Blueprint,
+    current_app,
+    flash,
+    jsonify,
+    make_response,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_mail import Message
 from sqlalchemy import desc, func
 from sqlalchemy import inspect as sa_inspect
@@ -38,7 +49,7 @@ try:
 except Exception:  # pragma: no cover
     Sponsor = None  # type: ignore
 
-# ── Config & helpers ───────────────────────────────────────────────
+# ── Config & helpers (tolerant fallbacks) ──────────────────────────
 try:
     from app.config.team_config import TEAM_CONFIG  # type: ignore
 except Exception:  # pragma: no cover
@@ -49,39 +60,30 @@ except Exception:  # pragma: no cover
     }
 
 try:
-    from app.helpers import (_generate_about_section,  # type: ignore
-                             _generate_challenge_section,
-                             _generate_impact_stats, _generate_mission_section,
-                             _prepare_stats)
+    from app.helpers import (  # type: ignore
+        _generate_about_section,
+        _generate_challenge_section,
+        _generate_impact_stats,
+        _generate_mission_section,
+        _prepare_stats,
+    )
 except Exception:  # pragma: no cover
-    # Minimal fallbacks so template still renders
-    def _generate_about_section(cfg):
-        return {}
-
-    def _generate_impact_stats(cfg):
-        return {}
-
-    def _generate_challenge_section(cfg, *_):
-        return {}
-
-    def _generate_mission_section(cfg, *_):
-        return {}
-
-    def _prepare_stats(cfg, raised, goal, pct):
-        return {"raised": raised, "goal": goal, "percent": pct}
-
+    def _generate_about_section(cfg): return {}
+    def _generate_impact_stats(cfg): return {}
+    def _generate_challenge_section(cfg, *_): return {}
+    def _generate_mission_section(cfg, *_): return {}
+    def _prepare_stats(cfg, raised, goal, pct): return {"raised": raised, "goal": goal, "percent": pct}
 
 # ── Forms (fallback SponsorForm → DonationForm) ────────────────────
 try:
     from app.forms.sponsor_form import SponsorForm  # type: ignore
 except Exception:  # pragma: no cover
     try:
-        from app.forms.donation_form import \
-            DonationForm as SponsorForm  # type: ignore
+        from app.forms.donation_form import DonationForm as SponsorForm  # type: ignore
     except Exception:  # pragma: no cover
         SponsorForm = None  # type: ignore
 
-# ── Blueprint (keep backward compat alias) ─────────────────────────
+# ── Blueprint ──────────────────────────────────────────────────────
 bp = Blueprint("main", __name__)
 main_bp = bp
 __all__ = ["bp", "main_bp"]
@@ -109,7 +111,7 @@ def safe_url(endpoint: str, default: str) -> str:
         return default
 
 
-def _cache_bust(resp):
+def _nocache_html(resp):
     """Disable caching for HTML pages (stats JSON sets its own cache)."""
     resp.cache_control.no_cache = True
     resp.cache_control.no_store = True
@@ -117,13 +119,15 @@ def _cache_bust(resp):
     return resp
 
 
-def _make_etag_from_context(context: Dict[str, Any]) -> str:
-    """Generate a short ETag hash from homepage stats."""
-    seed = (
-        f"{int(context.get('raised', 0))}-"
-        f"{int((context.get('goal') or 0))}-"
-        f"{len(context.get('sponsors_sorted', []))}-"
-        f"{int(context.get('percent', 0))}"
+def _ctx_etag(seed_dict: Dict[str, Any]) -> str:
+    """Generate a short ETag hash from a dict of primitives."""
+    seed = "|".join(
+        [
+            str(int(seed_dict.get("raised", 0))),
+            str(int(seed_dict.get("goal", 0) or 0)),
+            str(int(seed_dict.get("percent", 0))),
+            str(len(seed_dict.get("sponsors_sorted", []))),
+        ]
     )
     return sha1(seed.encode("utf-8")).hexdigest()[:12]
 
@@ -138,14 +142,9 @@ def _send_async_email(msg: Message) -> None:
     with current_app.app_context():
         try:
             mail.send(msg)
-            current_app.logger.info(
-                "✉️ Email sent", extra={"recipients": msg.recipients}
-            )
+            current_app.logger.info("✉️ Email sent", extra={"recipients": msg.recipients})
         except Exception:
-            current_app.logger.exception(
-                "✉️ Email send failed",
-                extra={"recipients": getattr(msg, "recipients", None)},
-            )
+            current_app.logger.exception("✉️ Email send failed", extra={"recipients": getattr(msg, "recipients", None)})
 
 
 def _queue_email(msg: Message) -> None:
@@ -183,11 +182,13 @@ def _sponsor_query():
         return None
     if not _table_exists(getattr(Sponsor, "__tablename__", "sponsors")):
         return None
+
     q = db.session.query(Sponsor)
     if hasattr(Sponsor, "deleted"):
-        q = q.filter(Sponsor.deleted.is_(False))
+        q = q.filter(Sponsor.deleted_at.is_(None))
     if hasattr(Sponsor, "status"):
         q = q.filter(Sponsor.status == "approved")
+
     order_col = getattr(Sponsor, "amount", None) or getattr(Sponsor, "id", None)
     if order_col is not None:
         q = q.order_by(desc(order_col))
@@ -202,7 +203,6 @@ def _get_sponsors() -> Tuple[List[Any], float, Optional[Any]]:
             return [], 0.0, None
 
         sponsors: List[Any] = q.all()
-        # Prefer Python-side total to tolerate various column types
         total = float(sum((getattr(s, "amount", 0) or 0) for s in sponsors))
         top = sponsors[0] if sponsors else None
         return sponsors, total, top
@@ -214,14 +214,13 @@ def _get_sponsors() -> Tuple[List[Any], float, Optional[Any]]:
 def _active_goal_amount() -> float:
     """Pick an active goal or fallback to TEAM_CONFIG/DEFAULT."""
     try:
-        if CampaignGoal and _table_exists(
-            getattr(CampaignGoal, "__tablename__", "campaign_goals")
-        ):
+        if CampaignGoal and _table_exists(getattr(CampaignGoal, "__tablename__", "campaign_goals")):
             q = db.session.query(CampaignGoal)
             if hasattr(CampaignGoal, "active"):
                 q = q.filter(CampaignGoal.active.is_(True))
             elif hasattr(CampaignGoal, "is_active"):
                 q = q.filter(CampaignGoal.is_active.is_(True))
+
             order_col = (
                 getattr(CampaignGoal, "updated_at", None)
                 or getattr(CampaignGoal, "created_at", None)
@@ -229,6 +228,7 @@ def _active_goal_amount() -> float:
             )
             if order_col is not None:
                 q = q.order_by(desc(order_col))
+
             row = q.first()
             if row:
                 for col in ("goal_amount", "amount", "value"):
@@ -251,12 +251,11 @@ def _get_fundraising_stats() -> FundraisingStats:
             if hasattr(Sponsor, "amount"):
                 q = db.session.query(func.coalesce(func.sum(Sponsor.amount), 0.0))
                 if hasattr(Sponsor, "deleted"):
-                    q = q.filter(Sponsor.deleted.is_(False))
+                    q = q.filter(Sponsor.deleted_at.is_(None))
                 if hasattr(Sponsor, "status"):
                     q = q.filter(Sponsor.status == "approved")
                 raised = float(q.scalar() or 0.0)
             else:
-                # Fallback: sum in Python if no numeric column present
                 sponsors = (_sponsor_query() or db.session.query(Sponsor)).all()
                 raised = float(sum((getattr(s, "amount", 0) or 0) for s in sponsors))
     except Exception:
@@ -286,9 +285,7 @@ def _home_context() -> Dict[str, Any]:
         about=_generate_about_section(TEAM_CONFIG),
         challenge=_generate_challenge_section(TEAM_CONFIG, impact),
         mission=_generate_mission_section(TEAM_CONFIG, impact),
-        stats=_prepare_stats(
-            TEAM_CONFIG, stats.raised, stats.goal, stats.percent_raised
-        ),
+        stats=_prepare_stats(TEAM_CONFIG, stats.raised, stats.goal, stats.percent_raised),
         raised=stats.raised,
         goal=stats.goal,
         percent=stats.percent_raised,
@@ -304,12 +301,8 @@ def _home_context() -> Dict[str, Any]:
         sponsor_list_href=sponsor_list_href,
         become_sponsor_href=become_sponsor_href,
         donate_href=donate_href,
-        ai_post_url=os.getenv(
-            "AI_CONCIERGE_POST_URL", safe_url("ai.concierge", "/api/ai/concierge")
-        ),
-        ai_stream_url=os.getenv(
-            "AI_CONCIERGE_STREAM_URL", safe_url("ai.concierge_stream", "/api/ai/stream")
-        ),
+        ai_post_url=os.getenv("AI_CONCIERGE_POST_URL", safe_url("ai.concierge", "/api/ai/concierge")),
+        ai_stream_url=os.getenv("AI_CONCIERGE_STREAM_URL", safe_url("ai.concierge_stream", "/api/ai/stream")),
         ai_mode=os.getenv("AI_CONCIERGE_MODE", "auto"),  # 'auto' | 'sse' | 'post'
         stats_url=stats_api_href,
         personas=PERSONAS_DEFAULT,
@@ -323,50 +316,37 @@ def home():
     """Homepage with live stats and sponsor highlights."""
     try:
         faqs = [
-            {
-                "q": "Is my gift tax-deductible?",
-                "a": "Yes. We’ll email a receipt right away.",
-            },
-            {
-                "q": "Can I sponsor anonymously?",
-                "a": "Absolutely—toggle anonymous at checkout.",
-            },
-            {
-                "q": "Corporate matching?",
-                "a": "Yes. We’ll include the info HR portals need.",
-            },
-            {
-                "q": "Refunds/cancellations?",
-                "a": "Email team@connectatxelite.org and we’ll help.",
-            },
-            {
-                "q": "Where does it go?",
-                "a": "Gym time, travel, uniforms, tutoring—updated live.",
-            },
+            {"q": "Is my gift tax-deductible?", "a": "Yes. We’ll email a receipt right away."},
+            {"q": "Can I sponsor anonymously?", "a": "Absolutely—toggle anonymous at checkout."},
+            {"q": "Corporate matching?", "a": "Yes. We’ll include the info HR portals need."},
+            {"q": "Refunds/cancellations?", "a": "Email team@connectatxelite.org and we’ll help."},
+            {"q": "Where does it go?", "a": "Gym time, travel, uniforms, tutoring—updated live."},
         ]
 
         context = _home_context()
         context["faqs"] = faqs
 
-        resp = make_response(render_template("index.html", **context))
-        _cache_bust(resp)
-        resp.set_etag(
-            _make_etag_from_context(
-                {
-                    "raised": context.get("raised", 0),
-                    "goal": context.get("goal", 0),
-                    "percent": context.get("percent", 0),
-                    "sponsors_sorted": context.get("sponsors_sorted", []),
-                }
-            )
+        # Build ETag and honor If-None-Match (conditional GET)
+        etag = _ctx_etag(
+            {
+                "raised": context.get("raised", 0),
+                "goal": context.get("goal", 0),
+                "percent": context.get("percent", 0),
+                "sponsors_sorted": context.get("sponsors_sorted", []),
+            }
         )
+        if request.if_none_match and etag in request.if_none_match:
+            resp = make_response("", 304)
+            resp.set_etag(etag)
+            return resp
+
+        resp = make_response(render_template("index.html", **context))
+        resp.set_etag(etag)
+        _nocache_html(resp)
         return resp
     except Exception:
         current_app.logger.exception("🏠 Error rendering homepage")
-        return (
-            render_template("error.html", message="Homepage temporarily unavailable."),
-            500,
-        )
+        return render_template("error.html", message="Homepage temporarily unavailable."), 500
 
 
 @bp.route("/become-sponsor", methods=["GET", "POST"])
@@ -386,30 +366,23 @@ def become_sponsor():
             amt = Decimal("0")
 
         # Dev/offline: allow happy path even without model
-        if not Sponsor or not _table_exists(
-            getattr(Sponsor, "__tablename__", "sponsors")
-        ):
+        if not Sponsor or not _table_exists(getattr(Sponsor, "__tablename__", "sponsors")):
             if email:
                 _queue_email(_create_thank_you_msg(name or "Friend", email))
             flash("Thank you for your sponsorship!", "success")
             return redirect(url_for("main.home"))
 
         try:
-            sponsor = Sponsor(
-                name=name, email=email, amount=float(amt), status="pending"
-            )
+            sponsor = Sponsor(name=name, email=email, amount=float(amt), status="pending")
             with db.session.begin():
                 db.session.add(sponsor)
             if sponsor.email:
-                _queue_email(
-                    _create_thank_you_msg(sponsor.name or "Friend", sponsor.email)
-                )
+                _queue_email(_create_thank_you_msg(sponsor.name or "Friend", sponsor.email))
             flash("Thank you for your sponsorship!", "success")
             return redirect(url_for("main.home"))
         except Exception:
             current_app.logger.exception(
-                "🤝 Sponsor submission error",
-                extra={"name": name, "amount": float(amt)},
+                "🤝 Sponsor submission error", extra={"name": name, "amount": float(amt)}
             )
             flash("Unable to process sponsorship right now.", "danger")
             return render_template("become_sponsor.html", form=form), 500
@@ -429,36 +402,25 @@ def about():
         context: Dict[str, Any] = dict(
             team=TEAM_CONFIG,
             about=_generate_about_section(TEAM_CONFIG),
-            mission=_generate_mission_section(
-                TEAM_CONFIG, _generate_impact_stats(TEAM_CONFIG)
-            ),
+            mission=_generate_mission_section(TEAM_CONFIG, _generate_impact_stats(TEAM_CONFIG)),
             faqs=[
-                {
-                    "q": "What’s our mission?",
-                    "a": "To shape leaders, scholars, and athletes in our community.",
-                },
-                {
-                    "q": "How are funds used?",
-                    "a": "Gym time, travel, uniforms, tutoring — always updated live.",
-                },
+                {"q": "What’s our mission?", "a": "To shape leaders, scholars, and athletes in our community."},
+                {"q": "How are funds used?", "a": "Gym time, travel, uniforms, tutoring — always updated live."},
             ],
         )
         resp = make_response(render_template("about.html", **context))
-        _cache_bust(resp)
         resp.set_etag(sha1(str(context).encode("utf-8")).hexdigest()[:12])
+        _nocache_html(resp)
         return resp
     except Exception:
         current_app.logger.exception("ℹ️ Error rendering About page")
-        return (
-            render_template(
-                "error.html", message="About page temporarily unavailable."
-            ),
-            500,
-        )
+        return render_template("error.html", message="About page temporarily unavailable."), 500
+
 
 @bp.get("/dev/stripe-smoke")
 def stripe_smoke():
     return render_template("dev/stripe_smoke.html")
+
 
 @bp.get("/sponsors")
 def sponsor_list():
@@ -469,9 +431,7 @@ def sponsor_list():
 
     q = _sponsor_query()
     if q is None:
-        return render_template(
-            "sponsor_list.html", sponsors=sponsors, pagination=pagination
-        )
+        return render_template("sponsor_list.html", sponsors=sponsors, pagination=pagination)
 
     try:
         # Flask-SQLAlchemy v3+ has Query.paginate; fallback to manual pagination
@@ -479,17 +439,13 @@ def sponsor_list():
             pagination = q.paginate(page=page, per_page=SPONSORS_PER_PAGE, error_out=False)  # type: ignore[attr-defined]
             sponsors = list(pagination.items)  # type: ignore[assignment]
         except Exception:
-            sponsors = (
-                q.limit(SPONSORS_PER_PAGE).offset((page - 1) * SPONSORS_PER_PAGE).all()
-            )
+            sponsors = q.limit(SPONSORS_PER_PAGE).offset((page - 1) * SPONSORS_PER_PAGE).all()
             pagination = None
     except Exception:
         current_app.logger.exception("📋 Error fetching sponsors list")
         sponsors, pagination = [], None
 
-    return render_template(
-        "sponsor_list.html", sponsors=sponsors, pagination=pagination
-    )
+    return render_template("sponsor_list.html", sponsors=sponsors, pagination=pagination)
 
 
 @bp.get("/calendar")
@@ -543,10 +499,7 @@ def donate():
                 )
             flash("Thank you for your donation!", "success")
         except Exception:
-            current_app.logger.exception(
-                "💌 Donation email failed",
-                extra={"email": email, "amount": amount},
-            )
+            current_app.logger.exception("💌 Donation email failed", extra={"email": email, "amount": amount})
             flash("Donation received but email failed to send.", "info")
         return redirect(url_for("main.home"))
 
@@ -582,7 +535,8 @@ def stats_json():
             "sponsors_total": int(sponsors_total),
             "sponsors_count": len(sponsors_sorted),
         }
-        etag = _make_etag_from_context(
+
+        etag = _ctx_etag(
             {
                 "raised": payload["raised"],
                 "goal": payload["goal"],
@@ -590,26 +544,30 @@ def stats_json():
                 "sponsors_sorted": sponsors_sorted,
             }
         )
+        if request.if_none_match and etag in request.if_none_match:
+            resp = make_response("", 304)
+            resp.set_etag(etag)
+            # still allow shared caches to honor short TTL on 304 path
+            resp.cache_control.public = True
+            resp.cache_control.max_age = 30
+            return resp
+
         resp = make_response(jsonify(payload))
         resp.set_etag(etag)
-        # Allow short caching for widgets
         resp.cache_control.public = True
-        resp.cache_control.max_age = 30
+        resp.cache_control.max_age = 30  # short caching for widgets
         return resp
     except Exception:
         current_app.logger.exception("📈 Stats endpoint failed")
-        return (
-            jsonify(
-                {
-                    "team": TEAM_CONFIG.get("team_name", "Our Team"),
-                    "raised": 0,
-                    "goal": int(
-                        TEAM_CONFIG.get("fundraising_goal", DEFAULT_FUNDRAISING_GOAL)
-                    ),
-                    "percent": 0.0,
-                    "sponsors_total": 0,
-                    "sponsors_count": 0,
-                }
-            ),
-            200,
-        )
+        fallback = {
+            "team": TEAM_CONFIG.get("team_name", "Our Team"),
+            "raised": 0,
+            "goal": int(TEAM_CONFIG.get("fundraising_goal", DEFAULT_FUNDRAISING_GOAL)),
+            "percent": 0.0,
+            "sponsors_total": 0,
+            "sponsors_count": 0,
+        }
+        resp = make_response(jsonify(fallback), 200)
+        resp.cache_control.no_store = True
+        return resp
+

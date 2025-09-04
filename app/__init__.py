@@ -18,10 +18,10 @@ from flask import Flask, g, jsonify, request, url_for
 from werkzeug.exceptions import HTTPException, InternalServerError
 from werkzeug.routing import BuildError
 
-# Core extensions
+# Core extensions (provided by your app.extensions)
 from app.extensions import babel, cors, csrf, db, login_manager, mail, socketio
 
-# Optional extras
+# Optional extras (tolerant)
 try:
     from flask_compress import Compress
 except Exception:  # pragma: no cover
@@ -52,12 +52,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 ConfigLike = str | Type[Any]
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────── Helpers ───────────────────────────── #
 
 def _resolve_config(target: ConfigLike | None) -> ConfigLike:
-    """Resolve a config class path or object; allow legacy env value fixup."""
+    """Resolve a config class path or object; allow legacy env fixup."""
     if target is None:
         target = os.getenv("FLASK_CONFIG", "app.config.DevelopmentConfig")
     if isinstance(target, str) and target == "app.config.config.DevelopmentConfig":
@@ -137,7 +135,7 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
         app.logger.warning("⚠️  Import failed: %s → %s", dotted, e)
         return False
 
-    from flask import Blueprint as _BP  # local import to avoid cycles
+    from flask import Blueprint as _BP  # local to avoid cycles
     wanted = _iter_candidates(attr) + ["bp", "api_bp", "main_bp", "admin_bp"]
     bp = None
     for name in wanted:
@@ -157,7 +155,7 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
     try:
         app.register_blueprint(bp, url_prefix=url_prefix or getattr(bp, "url_prefix", None))
         app.logger.info("🧩 Registered: %-20s → %s", bp.name, url_prefix or "/")
-        # ensure shoutouts is available if not already plugged
+        # Ensure shoutouts is available if shipped but not yet registered
         try:
             from app.routes import shoutouts
             if "shoutouts" not in app.blueprints:
@@ -174,15 +172,38 @@ def _safe_register(app: Flask, dotted: str, attr: str | Iterable[str], url_prefi
 _SCRIPT_TAG = re.compile(r"(<script\b(?![^>]*\bnonce=)[^>]*>)", re.IGNORECASE)
 _STYLE_TAG  = re.compile(r"(<style\b(?![^>]*\bnonce=)[^>]*>)", re.IGNORECASE)
 
+# ───────────── Static URL helper (Jinja globals) ───────────── #
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Asset manifest loader (SRI + version) → exposed to Jinja as SRI / ASSET_VER
-# ─────────────────────────────────────────────────────────────────────────────
+try:
+    from flask import url_for as _url_for  # noqa: N812
+except Exception:  # pragma: no cover
+    _url_for = None  # type: ignore
+
+def static_url(path: str) -> str:
+    """Return a /static path; works with or without Flask's url_for."""
+    p = (path or "").strip()
+    if not p:
+        return "/static/"
+    if "://" in p or p.startswith("//"):
+        return p
+    try:
+        if _url_for is not None:
+            return _url_for("static", filename=p.lstrip("/"))
+    except Exception:
+        pass
+    return f"/static/{p.lstrip('/')}"
+
+# ───────────── Asset manifest (SRI + version) → Jinja globals ───────────── #
+
 def _load_asset_manifest(app: Flask) -> None:
     """
     Reads app/static/asset-manifest.json.
     Expected shape:
-      { "assets": { "js/bundle.min.js": {...}, "css/app.min.css": {...} }, "sri": { ... }, "version": {...} }
+      {
+        "assets": { "js/bundle.min.js": {"sri":{"sha384":"..."}}, ... },
+        "sri":    { "css/app.min.css": "sha384-..." },
+        "version": { "git":"abcd", "builtAt":"2025-02-09T..." }
+      }
     """
     try:
         p = Path(app.root_path) / "static" / "asset-manifest.json"
@@ -194,7 +215,6 @@ def _load_asset_manifest(app: Flask) -> None:
             for k, v in (data.get("assets") or {}).items()
             if v.get("sri", {}).get("sha384")
         }
-        # expose globals for Jinja
         app.jinja_env.globals["SRI"] = sri_map or {}
         app.jinja_env.globals["ASSET_VER"] = (
             data.get("version", {}).get("git")
@@ -205,15 +225,18 @@ def _load_asset_manifest(app: Flask) -> None:
         app.logger.warning("Asset manifest load failed: %s", e)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# App Factory
-# ─────────────────────────────────────────────────────────────────────────────
+# ───────────────────────────── App Factory ───────────────────────────── #
+
 def create_app(config_class: ConfigLike | None = None) -> Flask:
     app = Flask(
         __name__,
         static_folder=str(BASE_DIR / "app/static"),
         template_folder=str(BASE_DIR / "app/templates"),
     )
+
+    # Jinja helpers (keep simple + CSP-safe)
+    app.jinja_env.globals.setdefault("static_url", static_url)
+    app.jinja_env.globals.setdefault("asset_url", static_url)
 
     # Config
     cfg = _resolve_config(config_class)
@@ -227,6 +250,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
             raise RuntimeError(f"❌ Invalid FLASK_CONFIG '{cfg}': {exc}") from exc
 
     # Sensible defaults
+    app.url_map.strict_slashes = False
     app.config.setdefault("JSON_SORT_KEYS", False)
     app.config.setdefault("JSON_AS_ASCII", False)
     app.config.setdefault("PROPAGATE_EXCEPTIONS", False)
@@ -270,7 +294,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
             methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         )
 
-    # Security headers / CSP (Talisman optional)
+    # Security headers / CSP (Talisman optional; we also set headers manually below)
     if app.config.get("ENV") == "production" and Talisman:
         Talisman(app, content_security_policy=None)
 
@@ -278,9 +302,17 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     if csrf:
         csrf.init_app(app)
     db.init_app(app)
+    # DEV convenience: auto-create tables when using SQLite
+    if app.config.get("SQLALCHEMY_DATABASE_URI", "").startswith("sqlite"):
+        try:
+            with app.app_context():
+                from app.extensions import db as _db
+                _db.create_all()
+        except Exception:
+            pass  # non-fatal for prod
     Migrate(app, db, compare_type=True, render_as_batch=True)
 
-    # Socket.IO
+    # Socket.IO (exposed on app for convenience)
     app.socketio = socketio
     socketio.init_app(app, cors_allowed_origins=cors_origins if cors_origins else "*")
 
@@ -315,10 +347,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     # Jinja: nonce shortcut + manifest (SRI/ASSET_VER)
     @app.context_processor
     def inject_csp_and_manifest():
-        return {
-            "csp_nonce": lambda: getattr(g, "csp_nonce", ""),
-            "NONCE": getattr(g, "csp_nonce", ""),
-        }
+        return {"csp_nonce": lambda: getattr(g, "csp_nonce", ""), "NONCE": getattr(g, "csp_nonce", "")}
 
     _load_asset_manifest(app)
 
@@ -368,7 +397,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
 
         # Optional: auto-inject nonce into stray <script>/<style> in HTML bodies
         try:
-            if app.config.get("AUTO_NONCE_HTML", True) and nonce and resp.mimetype == "text/html" and resp.direct_passthrough is False:
+            if app.config.get("AUTO_NONCE_HTML", True) and nonce and resp.mimetype == "text/html" and not resp.direct_passthrough:
                 text = resp.get_data(as_text=True)
                 if "<script" in text or "<style" in text:
                     def _add_nonce(m):
@@ -431,7 +460,7 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
             "team": team_default,  # override in views as needed
         }
 
-    # JSON errors
+    # JSON errors (API-friendly)
     def _wants_json() -> bool:
         accept = (request.headers.get("Accept") or "").lower()
         return "application/json" in accept or request.path.startswith("/api") or request.is_json
@@ -445,14 +474,15 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         app.logger.exception("Unhandled error: %s", err)
         return (_json_error("Internal Server Error", 500, request_id=g.request_id) if _wants_json() else InternalServerError())
 
-    # Blueprints
+    # Blueprints (schema-safe auto-registration)
     blueprints = [
-        ("app.routes.main",         "main_bp|bp", "/"),
-        ("app.routes.api",          "bp|api_bp",  "/api"),
-        ("app.admin.routes",        "bp|admin_bp","/admin"),
-        ("app.blueprints.fc_payments","bp",       "/payments"),
-        ("app.blueprints.fc_metrics","bp",        "/metrics"),
-        ("app.routes.newsletter",   "bp",         "/newsletter"),
+        ("app.routes.main",           "main_bp|bp", "/"),
+        ("app.routes.api",            "bp|api_bp",  "/api"),
+        ("app.admin.routes",          "bp|admin_bp","/admin"),
+        ("app.blueprints.fc_payments","bp",         "/payments"),
+        ("app.blueprints.fc_metrics", "bp",         "/metrics"),
+        ("app.routes.newsletter",     "bp",         "/newsletter"),
+        ("app.routes.sms",            "sms_bp|bp",  "/sms"),   # ✅ keeps SMS
     ]
     for dotted, attr, prefix in blueprints:
         _safe_register(app, dotted, attr, prefix)

@@ -1,77 +1,94 @@
-{% extends "base.html" %}
-
-{# ---------- Head (scoped helpers) ---------- #}
-{% block head %}{{ super() }}
+{% extends "base.html" %} {# ---------- Head (scoped helpers) ---------- #} {%
+block head %}{{ super() }}
 <style {{ nonce_attr() }}>
-  :root{
-    --scene-dark:#0b0b0c; --scene-dim:#111113; --scene-line:#ffffff22;
+  :root {
+    --scene-dark: #0b0b0c;
+    --scene-dim: #111113;
+    --scene-line: #ffffff22;
     --fc-sticky-offset: var(--fc-sticky-offset, 76px);
     --fc-space-y: clamp(16px, 1.6vw, 28px);
     --fc-container-max: 1200px;
   }
-  #fc-home .scene{ padding-block: var(--fc-space-y) }
-  #fc-home .scene--flush{ padding-block:0 }
-  #fc-home .scene--dark{ background: var(--scene-dark) }
-  #fc-home .scene--dim{  background: var(--scene-dim) }
-  #fc-home .scene-break{ height:1px; background:linear-gradient(90deg,transparent,var(--scene-line),transparent) }
-  #fc-home .fc-container{ width:min(var(--fc-container-max),96vw); margin-inline:auto; padding-inline:clamp(.75rem,2vw,1.25rem) }
-  #fc-home .fc-section{ scroll-margin-top: var(--fc-sticky-offset) }
-  #fc-home #fundraiser-hero{ margin-top: calc(-1 * var(--fc-sticky-offset)); padding-top: var(--fc-sticky-offset) }
-  #fc-home .fc-container > *:first-child{ margin-top:0 }
-  #fc-home .fc-container > *:last-child{  margin-bottom:0 }
-  #fc-home .fc-soft{ box-shadow: inset 0 1px 0 rgba(255,255,255,.04), inset 0 -1px 0 rgba(255,255,255,.04) }
-  html,body{ overflow-x:hidden }
-  @media (forced-colors: active){ #fc-home .scene-break{ background: CanvasText } }
+  #fc-home .scene {
+    padding-block: var(--fc-space-y);
+  }
+  #fc-home .scene--flush {
+    padding-block: 0;
+  }
+  #fc-home .scene--dark {
+    background: var(--scene-dark);
+  }
+  #fc-home .scene--dim {
+    background: var(--scene-dim);
+  }
+  #fc-home .scene-break {
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--scene-line),
+      transparent
+    );
+  }
+  #fc-home .fc-container {
+    width: min(var(--fc-container-max), 96vw);
+    margin-inline: auto;
+    padding-inline: clamp(0.75rem, 2vw, 1.25rem);
+  }
+  #fc-home .fc-section {
+    scroll-margin-top: var(--fc-sticky-offset);
+  }
+  #fc-home #fundraiser-hero {
+    margin-top: calc(-1 * var(--fc-sticky-offset));
+    padding-top: var(--fc-sticky-offset);
+  }
+  #fc-home .fc-container > *:first-child {
+    margin-top: 0;
+  }
+  #fc-home .fc-container > *:last-child {
+    margin-bottom: 0;
+  }
+  #fc-home .fc-soft {
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.04),
+      inset 0 -1px 0 rgba(255, 255, 255, 0.04);
+  }
+  html,
+  body {
+    overflow-x: hidden;
+  }
+  @media (forced-colors: active) {
+    #fc-home .scene-break {
+      background: CanvasText;
+    }
+  }
 </style>
-{% endblock %}
-
-{# Hero owns the visible H1 #}
-{% block h1 %}{% endblock %}
-{% block section_ticker %}{% endblock %}
-
-{# ---------- Flags + Macros ---------- #}
-{% set _q   = request.args if request is defined else {} %}
-{% set _OFF = ['0','false','off','no','disable'] %}
-
-{% set flags = namespace(
-  pulse     = (show_pulse     if show_pulse     is defined else (_q.get('pulse','1')     |lower not in _OFF)),
-  impact    = (show_impact    if show_impact    is defined else (_q.get('impact','1')    |lower not in _OFF)),
-  tiers     = (show_tiers     if show_tiers     is defined else (_q.get('tiers','1')     |lower not in _OFF)),
-  about     = (show_about     if show_about     is defined else (_q.get('about','1')     |lower not in _OFF)),
-  concierge = (show_concierge if show_concierge is defined else (_q.get('concierge','1') |lower not in _OFF))
-) %}
-
-{# Import the SV-Prestige section macro pack #}
-{% import "macros/sections.html" as sec with context %}
-
-{# Render-once guards for each section #}
-{% set once = namespace(hero=false, pulse=false, impact=false, tiers=false, about=false, concierge=false) %}
-
-{# ---------- Fill the blocks base.html renders ---------- #}
-{% block section_hero %}<div id="fc-home">{{ sec.hero(once) }}{% endblock %}
-
-{% block section_pulse %}
-  {% if flags.pulse %}{{ sec.pulse(once) }}{% endif %}
-{% endblock %}
-
-{% block section_impact %}
-  {% if flags.impact %}{{ sec.impact(once) }}{% endif %}
-{% endblock %}
-
-{% block section_tiers %}
-  {% if flags.tiers %}{{ sec.tiers(once) }}{% endif %}
-{% endblock %}
-
-{% block section_about %}
-  {% if flags.about %}{{ sec.about(once) }}{% endif %}
-{% endblock %}
-
-{% block section_concierge %}
-  {% if flags.concierge %}{{ sec.concierge(once) }}{% endif %}
-</div>{% endblock %}
-
-{# ---------- Extras (perf & belt+suspenders) ---------- #}
-{% block extra_js %}
+{% endblock %} {# Hero owns the visible H1 #} {% block h1 %}{% endblock %} {%
+block section_ticker %}{% endblock %} {# ---------- Flags + Macros ---------- #}
+{% set _q = request.args if request is defined else {} %} {% set _OFF =
+['0','false','off','no','disable'] %} {% set flags = namespace( pulse =
+(show_pulse if show_pulse is defined else (_q.get('pulse','1') |lower not in
+_OFF)), impact = (show_impact if show_impact is defined else
+(_q.get('impact','1') |lower not in _OFF)), tiers = (show_tiers if show_tiers is
+defined else (_q.get('tiers','1') |lower not in _OFF)), about = (show_about if
+show_about is defined else (_q.get('about','1') |lower not in _OFF)), concierge
+= (show_concierge if show_concierge is defined else (_q.get('concierge','1')
+|lower not in _OFF)) ) %} {# Import the SV-Prestige section macro pack #} {%
+import "macros/sections.html" as sec with context %} {# Render-once guards for
+each section #} {% set once = namespace(hero=false, pulse=false, impact=false,
+tiers=false, about=false, concierge=false) %} {# ---------- Fill the blocks
+base.html renders ---------- #} {% block section_hero %}
+<div id="fc-home">
+  {{ sec.hero(once) }}{% endblock %} {% block section_pulse %} {% if flags.pulse
+  %}{{ sec.pulse(once) }}{% endif %} {% endblock %} {% block section_impact %}
+  {% if flags.impact %}{{ sec.impact(once) }}{% endif %} {% endblock %} {% block
+  section_tiers %} {% if flags.tiers %}{{ sec.tiers(once) }}{% endif %} {%
+  endblock %} {% block section_about %} {% if flags.about %}{{ sec.about(once)
+  }}{% endif %} {% endblock %} {% block section_concierge %} {% if
+  flags.concierge %}{{ sec.concierge(once) }}{% endif %}
+</div>
+{% endblock %} {# ---------- Extras (perf & belt+suspenders) ---------- #} {%
+block extra_js %}
 <script {{ nonce_attr() }}>
   (function(){
     try{
@@ -90,4 +107,3 @@
   });
 </script>
 {% endblock %}
-

@@ -1,5 +1,6 @@
-{# templates/partials/ui_bootstrap.html — Pro tokens & primitives #}
-{% set __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined else '')) %}
+{# templates/partials/ui_bootstrap.html — Pro tokens & primitives #} {% set
+__nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined
+else '')) %}
 
 <style nonce="{{ __nonce }}">
   :root{
@@ -80,4 +81,3 @@
 </style>
 
 <div class="sr-only" aria-live="polite">UI loaded</div>
-

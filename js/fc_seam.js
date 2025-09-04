@@ -1,1 +1,3 @@
-(function(){console.log('fc_seam loaded')})();
+(function () {
+  console.log("fc_seam loaded");
+})();

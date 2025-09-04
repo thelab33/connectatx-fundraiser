@@ -26,20 +26,24 @@ async function main() {
     const mustHave = [".container", ".grid", ".flex", ".rounded", ".text-"];
     const missing = mustHave.filter((t) => !css.includes(t));
     if (missing.length >= mustHave.length) {
-      console.error("❌ CSS appears empty or malformed (common tokens missing).");
+      console.error(
+        "❌ CSS appears empty or malformed (common tokens missing).",
+      );
       return exit(1);
     }
-    
+
     const minBytes = Number(process.env.CSS_MIN_BYTES || 1000);
-if (buf.length < minBytes) {
-  console.error(`❌ CSS looks too small (${buf.length} bytes < ${minBytes}): ${target}`);
-  return exit(1);
-}
+    if (buf.length < minBytes) {
+      console.error(
+        `❌ CSS looks too small (${buf.length} bytes < ${minBytes}): ${target}`,
+      );
+      return exit(1);
+    }
 
     const gz = gzipSync(buf).length;
     const br = brotliCompressSync(buf).length;
     console.log(
-      `✅ CSS OK: ${target}\n   size=${fmt(info.size)}  gzip=${fmt(gz)}  br=${fmt(br)}`
+      `✅ CSS OK: ${target}\n   size=${fmt(info.size)}  gzip=${fmt(gz)}  br=${fmt(br)}`,
     );
     exit(0);
   } catch (err) {

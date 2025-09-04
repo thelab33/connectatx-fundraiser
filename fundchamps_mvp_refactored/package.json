@@ -36,7 +36,7 @@
     "lint:js:check": "eslint \"app/static/js/**/*.js\"",
     "format": "prettier --write \"**/*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}\"",
     "format:check": "prettier --check \"**/*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}\"",
-    "audit:deps": "npm outdated || echo \"\u2705 All dependencies up to date!\"",
+    "audit:deps": "npm outdated || echo \"✅ All dependencies up to date!\"",
     "audit:css": "npm run lint:css:check || true",
     "audit:js": "npm run lint:js:check || true",
     "audit:html": "npm run lint:html || true",

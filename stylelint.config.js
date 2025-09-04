@@ -4,6 +4,6 @@ module.exports = {
   rules: {
     "tailwindcss/no-custom-classname": true,
     "color-no-invalid-hex": true,
-    "declaration-no-important": true
-  }
+    "declaration-no-important": true,
+  },
 };

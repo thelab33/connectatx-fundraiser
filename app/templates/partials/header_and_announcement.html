@@ -1,344 +1,595 @@
-{# ============================================================
-   Header • SV-Elite 6.0 (Starforge Polish • CSP-safe)
-   - Glass 3.0, brand glow, AA+ contrast
-   - Smart sticky (hide on down / show on up) + shadow
-   - Mobile focus-trap + inert + ESC + restore focus
-   - Section scroll-spy → aria-current
-   - Persistent announcement dismiss (team+message)
-   - Theme-color sync, anchor scroll padding to header height
-   - UTM + P2P propagation for Donate (and any [data-p2p-propagate])
-   - Keyboard hotkeys: D → Donate
-   - Stripe seal flip + keyboard parity + width-sync
-   - Optional Starforge brand spine hook
-   ============================================================ #}
-{% set NONCE        = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set HAS_ENDPOINT = has_endpoint is defined %}
-{% set _sf          = safe_url_for is defined and safe_url_for %}
-{% set href_home    = (_sf and HAS_ENDPOINT and has_endpoint('main.home')   and safe_url_for('main.home'))   or '/' %}
-{% set href_donate  = (_sf and HAS_ENDPOINT and has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate' %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{# ============================================================ Header •
+SV-Elite 6.2 · Calm (CSP-safe) - Glass 2.5 (softer), light shadow, reduced
+chrome - Smart sticky (hide on down / show on up) + subtle shadow - Mobile menu
+with focus-trap + ESC + inert + restore focus - Scroll-spy → aria-current -
+Persistent announcement dismiss (team+message) - Theme-color sync +
+scroll-padding token - Donate UTM + P2P propagation - Hotkey: D → Donate
+============================================================ #} {% set NONCE =
+NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set HAS_ENDPOINT = has_endpoint is defined %} {% set _sf = safe_url_for is
+defined and safe_url_for %} {% set href_home = (_sf and HAS_ENDPOINT and
+has_endpoint('main.home') and safe_url_for('main.home')) or '/' %} {% set
+href_donate = (_sf and HAS_ENDPOINT and has_endpoint('main.donate') and
+safe_url_for('main.donate')) or '/donate' %} {% set team_name = (team.team_name
+if team and team.team_name else 'Your Team') %} {% macro nonce_attr()
+-%}nonce="{{ NONCE }}"{%- endmacro %}
 
-<a href="#main" class="skip-link sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-black focus:text-white">
-  Skip to content
-</a>
+<a href="#main" class="skip-link sr-only">Skip to content</a>
 
-<header id="site-header"
-        class="hdr sf-sticky sf-ring transition-shadow duration-300"
-        role="banner"
-        aria-label="Site header"
-        data-sticky-shadow="1"
-        data-smart-sticky="1">
-  <div class="sf-container hdr-glass hdr-glow flex items-center justify-between gap-3 py-2 rounded-2xl">
-    <!-- Brand (links home) -->
-    <a href="{{ href_home }}"
-       class="group flex items-center gap-2 font-black text-[clamp(1rem,2vw,1.125rem)] tracking-tight"
-       aria-label="FundChamps Home"
-       data-analytics="nav:home">
+<header
+  id="site-header"
+  class="hdr sf-sticky transition-shadow duration-300"
+  role="banner"
+  aria-label="Site header"
+  data-sticky-shadow="1"
+  data-smart-sticky="1"
+>
+  <div
+    class="sf-container hdr-glass flex items-center justify-between gap-3 py-2 rounded-2xl"
+  >
+    <!-- Brand -->
+    <a
+      href="{{ href_home }}"
+      class="group flex items-center gap-2 font-black text-[clamp(1rem,2vw,1.125rem)] tracking-tight text-zinc-100"
+      aria-label="FundChamps Home"
+      data-analytics="nav:home"
+    >
       <span class="text-gold">FundChamps</span>
-      <span class="hidden sm:inline text-zinc-200">for {{ (team.team_name if team and team.team_name else 'Your Team') }}</span>
+      <span class="hidden sm:inline opacity-90">for {{ team_name }}</span>
     </a>
 
     <!-- Mobile toggle -->
-    <button id="menu-toggle" type="button"
-            class="md:hidden sf-btn sf-btn-lite sf-btn-sm"
-            aria-controls="site-nav" aria-expanded="false" aria-haspopup="true"
-            aria-label="Open menu" data-focus-trap="1">
+    <button
+      id="menu-toggle"
+      type="button"
+      class="md:hidden sf-btn sf-btn-lite sf-btn-sm"
+      aria-controls="site-nav"
+      aria-expanded="false"
+      aria-haspopup="true"
+      aria-label="Open menu"
+    >
       <span class="sr-only">Toggle navigation</span> ☰
     </button>
 
     <!-- Primary nav -->
-    <nav id="site-nav"
-         class="hdr-nav hidden md:flex items-center gap-6"
-         aria-label="Primary" role="navigation" aria-hidden="true">
-      <ul class="flex items-center gap-6">
-        <li><a href="#tiers"  class="nav-link" data-analytics="nav:tiers">Tiers</a></li>
-        <li><a href="#impact" class="nav-link" data-analytics="nav:impact">Impact</a></li>
-        <li><a href="#about"  class="nav-link" data-analytics="nav:about">About</a></li>
+    <nav
+      id="site-nav"
+      class="hdr-nav hidden md:flex items-center gap-5"
+      aria-label="Primary"
+      role="navigation"
+      aria-hidden="true"
+    >
+      <ul class="flex items-center gap-5">
+        <li><a href="#tiers" class="nav-link">Tiers</a></li>
+        <li><a href="#impact" class="nav-link">Impact</a></li>
+        <li><a href="#about" class="nav-link">About</a></li>
       </ul>
     </nav>
 
-    <!-- CTAs (desktop) -->
+    <!-- Actions (desktop) -->
     <div class="hidden md:flex items-center gap-2">
-      <a href="#tiers" class="sf-btn sf-btn-ghost sf-btn-sm" data-analytics="cta:header:tiers">Sponsor</a>
+      <a
+        href="#tiers"
+        class="sf-btn sf-btn-ghost sf-btn-sm"
+        data-analytics="cta:header:tiers"
+        >Sponsor</a
+      >
 
-      <a id="hdr-donate"
-         href="{{ href_donate }}"
-         class="sf-btn sf-btn-primary sf-btn-sm cta-pulse"
-         data-analytics="cta:header:donate"
-         data-p2p-propagate="1">
+      <a
+        id="hdr-donate"
+        href="{{ href_donate }}"
+        class="sf-btn sf-btn-primary sf-btn-sm"
+        data-analytics="cta:header:donate"
+        data-p2p-propagate="1"
+      >
         Donate
       </a>
 
-      <!-- Stripe security seal (flip + keyboard parity) -->
-      <a href="https://stripe.com/docs/security/stripe"
-         target="_blank" rel="noopener noreferrer"
-         class="stripe-seal seal flip group relative px-2 py-1 rounded-md border border-white/20 text-[12px] text-zinc-100"
-         aria-label="Stripe Security (PCI, TLS 1.2+)">
-        <span class="flex items-center gap-1 seal-front">
-          <svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-            <path fill="currentColor" d="M12 2L2 7v7c0 5 3.8 8.7 10 10c6.2-1.3 10-5 10-10V7zM7 12l3 3l7-7l1.4 1.4L10 17.8L5.6 13.4z"/>
-          </svg>
-          Stripe Secure
-        </span>
-        <span class="seal-back absolute inset-0 hidden items-center justify-center font-semibold text-gold">PCI • TLS 1.2+</span>
-      </a>
+      <!-- Minimal secure pill (replaces animated flip seal) -->
+      <span class="secure-pill" aria-label="Payments are secured by Stripe"
+        >Stripe Secure</span
+      >
 
-      <button id="hdr-share"
-              type="button"
-              class="sf-btn sf-btn-lite sf-btn-sm"
-              aria-label="Share this fundraiser"
-              data-analytics="cta:header:share"
-              data-share='{{ {
-                "title": "Support " ~ (team.team_name if team and team.team_name else "our team"),
+      <button
+        id="hdr-share"
+        type="button"
+        class="sf-btn sf-btn-lite sf-btn-sm"
+        aria-label="Share this fundraiser"
+        data-analytics="cta:header:share"
+        data-share='{{ {
+                "title": "Support " ~ team_name,
                 "text": "Every dollar moves a kid forward — join us!",
                 "url": (request.base_url if request is defined else "/")
-              } | tojson }}'>
+              } | tojson }}'
+      >
         Share
       </button>
     </div>
   </div>
 
   {% if announcement or launch_note %}
-  <div class="sf-container pb-2" id="announce-wrap" data-annc-key="{{ (team.team_id if team and team.team_id else 'global') }}">
-    <section class="sf-card sf-card-inner flex items-center justify-between gap-3"
-             role="region" aria-label="Announcement" id="announcement" aria-live="polite">
+  <div
+    class="sf-container pb-2"
+    id="announce-wrap"
+    data-annc-key="{{ (team.team_id if team and team.team_id else 'global') }}"
+  >
+    <section
+      class="sf-card sf-card-inner flex items-center justify-between gap-3"
+      role="region"
+      aria-label="Announcement"
+      id="announcement"
+      aria-live="polite"
+    >
       <div class="flex items-center gap-2">
-        <span class="sf-chip sf-chip-gold">{{ badge_text|default('🚀 Launch Week') }}</span>
+        <span class="sf-chip sf-chip-gold"
+          >{{ badge_text|default('🏆 Update') }}</span
+        >
         <p class="text-sm text-zinc-100" id="announcement-text">
-          {{ announcement|default('Every gift this week unlocks a matched $25 toward gym time.') }}
+          {{ announcement|default('Sponsor leaderboard is live — real-time
+          shoutouts!') }}
         </p>
       </div>
       <div class="flex items-center gap-2">
-        <a href="#impact" class="sf-btn sf-btn-lite sf-btn-sm" data-analytics="announcement:impact">See impact</a>
-        <button type="button" id="announcement-dismiss" class="sf-btn sf-btn-ghost sf-btn-sm" aria-label="Dismiss announcement">Dismiss</button>
+        <a
+          href="#impact"
+          class="sf-btn sf-btn-lite sf-btn-sm"
+          data-analytics="announcement:impact"
+          >See impact</a
+        >
+        <button
+          type="button"
+          id="announcement-dismiss"
+          class="sf-btn sf-btn-ghost sf-btn-sm"
+          aria-label="Dismiss announcement"
+        >
+          Dismiss
+        </button>
       </div>
     </section>
   </div>
-  {% endif %}
-
-  {# Optional Starforge brand spine slot (vertical brand rail) #}
-  {% include "starforge/_brand_spine.html.jinja" ignore missing with context %}
+  {% endif %} {# Optional: Starforge brand spine rail #} {% include
+  "starforge/_brand_spine.html.jinja" ignore missing with context %}
 </header>
 
 <style {{ nonce_attr() }}>
-  /* ---------- Glass 3.0 + ambient glow (hero-match) ---------- */
-  .hdr-glass{
-    background: linear-gradient(180deg, rgba(18,20,26,.78), rgba(10,12,16,.52));
-    border: 1px solid rgba(255,255,255,.12);
-    -webkit-backdrop-filter: saturate(140%) blur(10px);
-    backdrop-filter: saturate(140%) blur(10px);
+  /* A11y helpers */
+  .sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 1px, 1px) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
   }
-  .hdr-glow{ position:relative }
-  .hdr-glow:before{
-    content:""; position:absolute; inset:-1px; border-radius: inherit; pointer-events:none; z-index:-1;
-    background: radial-gradient(1100px 220px at 50% -80%,
-      color-mix(in srgb, var(--fc-gold, #facc15) 26%, transparent), transparent 70%);
-    opacity:.32;
+  .skip-link {
+    position: absolute;
+    left: -9999px;
   }
-
-  /* Sticky shadow / hide-on-down */
-  .hdr.sf-sticky.is-scrolled{ box-shadow: 0 10px 34px rgba(0,0,0,.40) }
-  .hdr.sf-sticky.is-hidden{ transform: translateY(-105%); transition: transform .28s ease; }
-  @media (prefers-reduced-motion: reduce){ .hdr.sf-sticky.is-hidden{ transform:none } }
-
-  /* Nav link polish */
-  #site-header .nav-link{ position:relative; transition:color .18s ease }
-  #site-header .nav-link:hover{ color:#fff }
-  #site-header .nav-link.active{
-    color: var(--fc-gold, #facc15); font-weight:800;
-    text-decoration: underline; text-underline-offset:6px;
-  }
-  @media (forced-colors: active){
-    #site-header .nav-link.active{ outline: 1px solid CanvasText; text-decoration:none }
+  .skip-link:focus {
+    left: 0.75rem;
+    top: 0.75rem;
+    z-index: 9999;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.5rem;
+    background: #000;
+    color: #fff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   }
 
-  /* CTA pulse (hero-match) */
-  .cta-pulse{ position:relative }
-  @media (prefers-reduced-motion: no-preference){
-    .cta-pulse:after{
-      content:""; position:absolute; inset:-3px; border-radius:12px;
-      border:2px solid color-mix(in srgb, var(--fc-gold, #facc15) 55%, transparent);
-      opacity:0; animation: hdrPulse 2.4s ease-out infinite;
+  /* Softer glass + subtle shadow */
+  .hdr-glass {
+    background: linear-gradient(
+      180deg,
+      rgba(16, 18, 24, 0.78),
+      rgba(10, 12, 16, 0.56)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    -webkit-backdrop-filter: saturate(120%) blur(8px);
+    backdrop-filter: saturate(120%) blur(8px);
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.28);
+  }
+  .hdr.sf-sticky.is-scrolled {
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.34);
+  }
+  .hdr.sf-sticky.is-hidden {
+    transform: translateY(-105%);
+    transition: transform 0.26s ease;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .hdr.sf-sticky.is-hidden {
+      transform: none;
     }
-    @keyframes hdrPulse{ 0%{transform:scale(.98);opacity:0} 40%{opacity:.55} 100%{transform:scale(1.08);opacity:0} }
   }
 
-  /* Stripe seal – flip with keyboard parity + width sync target */
-  .seal{ perspective:700px; position:relative; min-width:112px }
-  .seal .seal-front, .seal .seal-back{ display:flex; align-items:center; justify-content:center; backface-visibility:hidden; transform-style:preserve-3d; transition:transform .5s }
-  .seal .seal-back{ transform: rotateY(180deg) }
-  .seal.flip:hover .seal-front, .seal.flip:focus-within .seal-front{ transform: rotateY(180deg) }
-  .seal.flip:hover .seal-back,  .seal.flip:focus-within .seal-back { transform: rotateY(360deg) }
+  /* Nav links */
+  #site-header .nav-link {
+    position: relative;
+    color: #e5e7eb;
+    text-decoration: none;
+    font-weight: 700;
+    opacity: 0.95;
+    padding: 0.25rem 0.1rem;
+    border-radius: 0.35rem;
+    transition:
+      color 0.15s ease,
+      opacity 0.15s ease;
+  }
+  #site-header .nav-link:hover {
+    color: #fff;
+    opacity: 1;
+  }
+  #site-header .nav-link.active {
+    color: var(--fc-gold, #facc15);
+    text-underline-offset: 6px;
+    text-decoration: underline;
+  }
 
-  /* Anchor comfort vs header */
-  :root{ scroll-padding-top: var(--hdr-h, 64px) }
+  /* Minimal secure pill */
+  .secure-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.6rem;
+    border-radius: 999px;
+    font-weight: 800;
+    font-size: 0.78rem;
+    color: #e8ecf3;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  /* Scroll padding token */
+  :root {
+    scroll-padding-top: var(--hdr-h, 64px);
+  }
+
+  /* Mobile sheet */
+  #site-header .sheet {
+    position: fixed;
+    inset: auto 0.75rem 0.75rem 0.75rem;
+    z-index: 60;
+    display: grid;
+    gap: 0.6rem;
+    background: linear-gradient(
+      180deg,
+      rgba(16, 18, 24, 0.96),
+      rgba(10, 12, 16, 0.94)
+    );
+    -webkit-backdrop-filter: saturate(120%) blur(8px);
+    backdrop-filter: saturate(120%) blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 1rem;
+    padding: 0.8rem;
+    transform: translateY(8px);
+    opacity: 0;
+    pointer-events: none;
+    transition:
+      transform 0.18s ease,
+      opacity 0.18s ease;
+  }
+  #site-header .sheet.open {
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
 </style>
 
 <script {{ nonce_attr() }}>
-(function(){
-  'use strict';
-  const header     = document.getElementById('site-header');
-  const toggle     = document.getElementById('menu-toggle');
-  const nav        = document.getElementById('site-nav');
-  const donate     = document.getElementById('hdr-donate');
-  const shareBtn   = document.getElementById('hdr-share');
-  const annWrap    = document.getElementById('announce-wrap');
-  const annDismiss = document.getElementById('announcement-dismiss');
-  const annText    = document.getElementById('announcement-text');
+  (function () {
+    "use strict";
 
-  /* ---------- Scroll: sticky + smart hide ---------- */
-  try{
-    let lastY=0, hidden=false, ticking=false;
-    addEventListener('scroll', () => {
-      if (ticking) return; ticking = true;
-      requestAnimationFrame(() => {
-        const y = scrollY || 0;
-        header.classList.toggle('is-scrolled', y > 4);
-        if (y-lastY > 10 && y > 96 && !hidden){ header.classList.add('is-hidden'); hidden=true; }
-        else if (lastY-y > 10 || y <= 96){ header.classList.remove('is-hidden'); hidden=false; }
-        lastY = y; ticking = false;
+    /* Deduplicate skip-link if multiple partials emit it */
+    try {
+      document.querySelectorAll(".skip-link").forEach((el, i) => {
+        if (i > 0) el.remove();
       });
-    }, { passive:true });
-  }catch{}
+    } catch {}
 
-  /* ---------- Mobile menu: focus trap + inert + restore ---------- */
-  const focusables = (root) => Array.from(root.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])'))
-    .filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+    const header = document.getElementById("site-header");
+    const toggle = document.getElementById("menu-toggle");
+    const nav = document.getElementById("site-nav");
+    const donate = document.getElementById("hdr-donate");
+    const shareBtn = document.getElementById("hdr-share");
+    const annWrap = document.getElementById("announce-wrap");
+    const annDismiss = document.getElementById("announcement-dismiss");
+    const annText = document.getElementById("announcement-text");
 
-  let previousFocus = null, untrap = () => {};
-  const trapFocus = (container) => {
-    const nodes = focusables(container); if (!nodes.length) return () => {};
-    const first = nodes[0], last = nodes[nodes.length-1];
-    const onKey = (e) => {
-      if (e.key !== 'Tab') return;
-      if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
-    };
-    document.addEventListener('keydown', onKey);
-    try{ first.focus(); }catch{}
-    return () => document.removeEventListener('keydown', onKey);
-  };
+    /* Smart sticky */
+    try {
+      let lastY = 0,
+        hidden = false,
+        ticking = false;
+      addEventListener(
+        "scroll",
+        () => {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            const y = scrollY || 0;
+            header.classList.toggle("is-scrolled", y > 4);
+            if (y - lastY > 10 && y > 96 && !hidden) {
+              header.classList.add("is-hidden");
+              hidden = true;
+            } else if (lastY - y > 10 || y <= 96) {
+              header.classList.remove("is-hidden");
+              hidden = false;
+            }
+            lastY = y;
+            ticking = false;
+          });
+        },
+        { passive: true },
+      );
+    } catch {}
 
-  function setMenu(open){
-    if (!toggle || !nav) return;
-    toggle.setAttribute('aria-expanded', String(open));
-    nav.classList.toggle('hidden', !open);
-    nav.setAttribute('aria-hidden', String(!open));
-    try{ nav.inert = !open; }catch{}
-    document.documentElement.classList.toggle('overflow-hidden', open);
-    if (open){ previousFocus = document.activeElement; untrap = trapFocus(nav); }
-    else { try{ untrap(); }catch{} try{ previousFocus && previousFocus.focus(); }catch{} }
-  }
+    /* Mobile menu: build sheet on demand + focus trap */
+    const focusables = (root) =>
+      Array.from(
+        root.querySelectorAll('a,button,[tabindex]:not([tabindex="-1"])'),
+      ).filter(
+        (el) => !el.hasAttribute("disabled") && el.offsetParent !== null,
+      );
 
-  if (toggle && nav){
-    setMenu(false);
-    toggle.addEventListener('click', () => setMenu(toggle.getAttribute('aria-expanded') !== 'true'));
-    addEventListener('keydown', (e) => { if (e.key === 'Escape') setMenu(false); }, { passive:true });
-    document.addEventListener('click', (e) => {
-      if (!nav.contains(e.target) && !toggle.contains(e.target)) setMenu(false);
-    }, { passive:true });
-    nav.addEventListener('click', (e) => { const a=e.target.closest && e.target.closest('a[href^="#"]'); if (a) setMenu(false); });
-  }
+    let previousFocus = null,
+      untrap = () => {};
+    function trapFocus(container) {
+      const nodes = focusables(container);
+      if (!nodes.length) return () => {};
+      const first = nodes[0],
+        last = nodes[nodes.length - 1];
+      const onKey = (e) => {
+        if (e.key !== "Tab") return;
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      };
+      document.addEventListener("keydown", onKey);
+      try {
+        first.focus();
+      } catch {}
+      return () => document.removeEventListener("keydown", onKey);
+    }
 
-  /* ---------- Scroll-spy: aria-current ---------- */
-  try{
-    const links = Array.from((nav||document).querySelectorAll('.nav-link'));
-    const pairs = links.map(a => [a, document.querySelector(a.getAttribute('href'))]).filter(x => x[1]);
-    const io = new IntersectionObserver((ents) => {
-      ents.forEach(ent => {
-        if (!ent.isIntersecting) return;
-        const id = '#' + ent.target.id;
-        links.forEach(a => {
-          const on = a.getAttribute('href') === id;
-          a.classList.toggle('active', on);
-          if (on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current');
-        });
+    function ensureSheet() {
+      let sheet = header.querySelector("#site-menu");
+      if (sheet) return sheet;
+      sheet = document.createElement("nav");
+      sheet.id = "site-menu";
+      sheet.className = "sheet";
+      sheet.setAttribute("aria-label", "Mobile");
+      sheet.innerHTML = `
+      <a class="nav-link" href="#tiers">Tiers</a>
+      <a class="nav-link" href="#impact">Impact</a>
+      <a class="nav-link" href="#about">About</a>
+      <a class="sf-btn sf-btn-primary" href="{{ href_donate }}">Donate</a>
+    `;
+      header.appendChild(sheet);
+      return sheet;
+    }
+
+    function setMenu(open) {
+      if (!toggle) return;
+      const sheet = ensureSheet();
+      toggle.setAttribute("aria-expanded", String(open));
+      sheet.classList.toggle("open", open);
+      try {
+        sheet.inert = !open;
+      } catch {}
+      document.documentElement.classList.toggle("overflow-hidden", open);
+      if (open) {
+        previousFocus = document.activeElement;
+        untrap = trapFocus(sheet);
+      } else {
+        try {
+          untrap();
+        } catch {}
+        try {
+          previousFocus && previousFocus.focus();
+        } catch {}
+      }
+    }
+
+    if (toggle) {
+      setMenu(false);
+      toggle.addEventListener("click", () =>
+        setMenu(toggle.getAttribute("aria-expanded") !== "true"),
+      );
+      addEventListener(
+        "keydown",
+        (e) => {
+          if (e.key === "Escape") setMenu(false);
+        },
+        { passive: true },
+      );
+      document.addEventListener(
+        "click",
+        (e) => {
+          const sheet = header.querySelector("#site-menu");
+          if (!sheet) return;
+          if (!sheet.contains(e.target) && !toggle.contains(e.target))
+            setMenu(false);
+        },
+        { passive: true },
+      );
+    }
+
+    /* Scroll-spy */
+    try {
+      const links = Array.from(
+        document.querySelectorAll("#site-header .nav-link"),
+      );
+      const pairs = links
+        .map((a) => [a, document.querySelector(a.getAttribute("href"))])
+        .filter((x) => x[1]);
+      const io = new IntersectionObserver(
+        (ents) => {
+          ents.forEach((ent) => {
+            if (!ent.isIntersecting) return;
+            const id = "#" + ent.target.id;
+            links.forEach((a) => {
+              const on = a.getAttribute("href") === id;
+              a.classList.toggle("active", on);
+              if (on) a.setAttribute("aria-current", "page");
+              else a.removeAttribute("aria-current");
+            });
+          });
+        },
+        { rootMargin: "-20% 0px -70% 0px", threshold: 0.01 },
+      );
+      pairs.forEach(([, sec]) => io.observe(sec));
+    } catch {}
+
+    /* Announcement persistence */
+    (function persistAnnc() {
+      if (!annWrap || !annText) return;
+      try {
+        const teamKey = annWrap.getAttribute("data-annc-key") || "global";
+        const msg = (annText.textContent || "").trim().slice(0, 160);
+        const key = "fc_announce_dismissed:" + teamKey + ":" + msg;
+        if (localStorage.getItem(key) === "1") annWrap.style.display = "none";
+        annDismiss &&
+          annDismiss.addEventListener("click", () => {
+            try {
+              localStorage.setItem(key, "1");
+            } catch {}
+            annWrap.style.display = "none";
+          });
+      } catch {}
+    })();
+
+    /* Donate decoration (UTM + P2P) */
+    (function decorateDonate() {
+      const targets = [
+        donate,
+        ...Array.from(
+          document.querySelectorAll(
+            '[data-p2p-propagate="1"] a[href], a[data-p2p-propagate="1"]',
+          ),
+        ),
+      ].filter(Boolean);
+      if (!targets.length) return;
+      targets.forEach((a) => {
+        try {
+          let ctx = {};
+          try {
+            ctx = JSON.parse(localStorage.getItem("fc_ref_ctx") || "{}");
+          } catch {}
+          const u = new URL(a.getAttribute("href") || "", location.origin);
+          [
+            "ref",
+            "ref_id",
+            "r",
+            "invite",
+            "peer",
+            "peer_id",
+            "peer_slug",
+            "campaign",
+            "campaign_id",
+          ].forEach((k) => {
+            if (ctx[k]) u.searchParams.set(k, ctx[k]);
+          });
+          if (!u.searchParams.get("utm_source"))
+            u.searchParams.set("utm_source", "header");
+          if (!u.searchParams.get("utm_medium"))
+            u.searchParams.set("utm_medium", "cta");
+          if (!u.searchParams.get("utm_campaign"))
+            u.searchParams.set("utm_campaign", "fundraiser");
+          a.setAttribute("href", u.toString());
+        } catch {}
       });
-    }, { rootMargin:'-20% 0px -70% 0px', threshold:0.01 });
-    pairs.forEach(([,sec]) => io.observe(sec));
-  }catch{}
+    })();
 
-  /* ---------- Announcement: persist dismiss ---------- */
-  (function persistAnnc(){
-    if (!annWrap || !annText) return;
-    try{
-      const teamKey = annWrap.getAttribute('data-annc-key') || 'global';
-      const msg = (annText.textContent||'').trim().slice(0,160);
-      const key = 'fc_announce_dismissed:'+teamKey+':'+msg;
-      if (localStorage.getItem(key) === '1') annWrap.style.display='none';
-      annDismiss && annDismiss.addEventListener('click', () => { try{ localStorage.setItem(key,'1'); }catch{} annWrap.style.display='none'; });
-    }catch{}
-  })();
-
-  /* ---------- Donate: propagate P2P + UTM ---------- */
-  (function decorateDonate(){
-    const targets = [donate, ...Array.from(document.querySelectorAll('[data-p2p-propagate="1"] a[href], a[data-p2p-propagate="1"]'))].filter(Boolean);
-    if (!targets.length) return;
-    targets.forEach(a => {
-      try{
-        let ctx={}; try{ ctx = JSON.parse(localStorage.getItem('fc_ref_ctx') || '{}'); }catch{}
-        const u = new URL(a.getAttribute('href')||'', location.origin);
-        ['ref','ref_id','r','invite','peer','peer_id','peer_slug','campaign','campaign_id'].forEach(k => { if (ctx[k]) u.searchParams.set(k, ctx[k]); });
-        if (!u.searchParams.get('utm_source')) u.searchParams.set('utm_source','header');
-        if (!u.searchParams.get('utm_medium')) u.searchParams.set('utm_medium','cta');
-        if (!u.searchParams.get('utm_campaign')) u.searchParams.set('utm_campaign','fundraiser');
-        a.setAttribute('href', u.toString());
-      }catch{}
-    });
-  })();
-
-  /* ---------- Share ---------- */
-  if (shareBtn){
-    shareBtn.addEventListener('click', async () => {
-      let data = { title: document.title, text: 'Support our team!', url: location.href };
-      try{ data = Object.assign(data, JSON.parse(shareBtn.getAttribute('data-share') || '{}')); }catch{}
-      try{ if (navigator.share){ await navigator.share(data); return; } }catch{}
-      try{
-        await navigator.clipboard.writeText(data.url);
-        const t=shareBtn.textContent; shareBtn.textContent='Copied!'; setTimeout(()=>shareBtn.textContent=t, 1200);
-      }catch{}
-    }, { passive:true });
-  }
-
-  /* ---------- Hotkeys: D → Donate ---------- */
-  addEventListener('keydown', (e) => {
-    if ((e.key==='d'||e.key==='D') && !/input|textarea|select/i.test(e.target.tagName)){
-      try{ donate && donate.click(); }catch{}
+    /* Share */
+    if (shareBtn) {
+      shareBtn.addEventListener(
+        "click",
+        async () => {
+          let data = {
+            title: document.title,
+            text: "Support our team!",
+            url: location.href,
+          };
+          try {
+            data = Object.assign(
+              data,
+              JSON.parse(shareBtn.getAttribute("data-share") || "{}"),
+            );
+          } catch {}
+          try {
+            if (navigator.share) {
+              await navigator.share(data);
+              return;
+            }
+          } catch {}
+          try {
+            await navigator.clipboard.writeText(data.url);
+            const t = shareBtn.textContent;
+            shareBtn.textContent = "Copied!";
+            setTimeout(() => (shareBtn.textContent = t), 1200);
+          } catch {}
+        },
+        { passive: true },
+      );
     }
-  }, { passive:true });
 
-  /* ---------- Theme-color sync + scroll-padding token ---------- */
-  (function uiPolish(){
-    function setHdrVar(){
-      try{ const h = header.offsetHeight || 64; document.documentElement.style.setProperty('--hdr-h', h+'px'); }catch{}
-    }
-    setHdrVar();
-    try{ new ResizeObserver(setHdrVar).observe(header); }catch{ addEventListener('resize', setHdrVar, { passive:true }); }
+    /* D → Donate */
+    addEventListener(
+      "keydown",
+      (e) => {
+        if (
+          (e.key === "d" || e.key === "D") &&
+          !/input|textarea|select/i.test(e.target.tagName)
+        ) {
+          try {
+            donate && donate.click();
+          } catch {}
+        }
+      },
+      { passive: true },
+    );
 
-    function syncTheme(){
-      try{
-        const meta = document.querySelector('meta[name="theme-color"]'); if (!meta) return;
-        const dark = matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-        const scrolled = header.classList.contains('is-scrolled');
-        meta.setAttribute('content', (dark || scrolled) ? '#0b0b0c' : '#111318');
-      }catch{}
-    }
-    syncTheme(); addEventListener('scroll', syncTheme, { passive:true });
-    try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', syncTheme); }catch{}
+    /* Theme-color + scroll-padding token */
+    (function uiPolish() {
+      function setHdrVar() {
+        try {
+          const h = header.offsetHeight || 64;
+          document.documentElement.style.setProperty("--hdr-h", h + "px");
+        } catch {}
+      }
+      setHdrVar();
+      try {
+        new ResizeObserver(setHdrVar).observe(header);
+      } catch {
+        addEventListener("resize", setHdrVar, { passive: true });
+      }
+      function syncTheme() {
+        try {
+          const meta = document.querySelector('meta[name="theme-color"]');
+          if (!meta) return;
+          const dark =
+            matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
+          const scrolled = header.classList.contains("is-scrolled");
+          meta.setAttribute(
+            "content",
+            dark || scrolled ? "#0b0b0c" : "#111318",
+          );
+        } catch {}
+      }
+      syncTheme();
+      addEventListener("scroll", syncTheme, { passive: true });
+      try {
+        matchMedia("(prefers-color-scheme: dark)").addEventListener(
+          "change",
+          syncTheme,
+        );
+      } catch {}
+    })();
   })();
-
-  /* ---------- Stripe seal width-sync (prevents flip jump) ---------- */
-  (function sealSync(){
-    const seal = document.querySelector('.stripe-seal'); if (!seal) return;
-    const front = seal.querySelector('.seal-front'); const back = seal.querySelector('.seal-back');
-    if (front && back) back.classList.remove('hidden');
-    const sync = () => {
-      const w = Math.max(front?.offsetWidth||0, back?.offsetWidth||0);
-      seal.style.minWidth = (w + 12) + 'px';
-    };
-    requestAnimationFrame(sync);
-    addEventListener('resize', sync, { passive:true });
-  })();
-})();
 </script>
-

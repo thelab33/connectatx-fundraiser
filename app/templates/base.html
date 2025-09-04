@@ -1,13 +1,9 @@
 {# ============================================================================
-   base.html — FundChamps • SV-Elite 5.x (P2P • CSP-safe • Shopify-ready)
-   - Tight rhythm & seam math (no scattered gaps)
-   - Asset macros (SRI passthrough), absolute URL helpers, nonces
-   - P2P param persistence + safe link decoration
-   - SEO/OG/Twitter + JSON-LD (Organization, optional Person, DonateAction)
-   - A11y: skip link, polite live region, scroll-margin, focus styles
-   - Perf: forged-hero preloads, preconnects, reduced-motion/data guards
-   - Skin toggle: set <html data-skin="shopify"> for Apple/Nike vibe
-   - Starforge brand spine (optional include) for surprise brand placement
+   base.html — FundChamps • SV-Elite (P2P • CSP-safe • ESM-first)
+   - ESM-first loader (loads /static/js/main.js; falls back to bundle.min.js)
+   - CSP nonce-friendly; optional SRI passthrough
+   - Tight rhythm & seam math (unchanged behavior)
+   - SEO/OG/JSON-LD and P2P propagation (kept)
    ========================================================================== #}
 {% set _TEAM        = team|default(_team|default({})) %}
 {% set _brand_hex   = _TEAM.theme_color|default('#f2c94c') %}
@@ -83,25 +79,27 @@
       class="h-full antialiased selection:bg-white/20"
       data-theme="dark" data-brand="{{ _brand_slug }}" data-route="{{ _route|default('') }}" data-skin="{{ SKIN }}">
 <head>
-  <!-- Core meta -->
+  {# --- Core meta --- #}
   <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+  <meta name="theme-color" content="#0b0d13"/>
   <meta name="color-scheme" content="dark light"/>
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/>
   <meta name="format-detection" content="telephone=no,address=no,email=no"/>
   <meta name="csrf-token" content="{{ (csrf_token() if csrf_token is defined else '') }}"/>
 
-  <!-- PWA bars (auto-tuned below) -->
+  {# PWA theme bars (auto-tuned later) #}
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ _brand_hex }}"/>
   <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b0b0c" id="meta-theme-color"/>
 
+  {# --- Canonical + OG URL --- #}
   {% if request is defined %}
     <link rel="canonical" href="{{ request.base_url }}"/>
     <meta property="og:url" content="{{ request.base_url }}"/>
   {% endif %}
 
-  <!-- SEO / Social -->
+  {# --- SEO / Social --- #}
   <title>{% block title %}{{ _page_title }}{% endblock %}</title>
   <meta name="description" content="{{ _page_desc }}"/>
   <meta property="og:type" content="{{ _is_p2p and 'profile' or 'website' }}"/>
@@ -118,48 +116,46 @@
   <meta name="twitter:image:alt" content="{{ _brand_name }}"/>
   {% if _TEAM.twitter %}<meta name="twitter:site" content="{{ _TEAM.twitter }}"/>{% endif %}
 
-  <!-- Icons -->
+  {# --- Icons --- #}
   <link rel="icon" type="image/svg+xml" href="{{ asset(_favicon) }}"/>
   <link rel="alternate icon" type="image/png" href="{{ asset('images/favicon.png') }}"/>
   <link rel="apple-touch-icon" href="{{ asset(_apple_icon) }}"/>
   <meta name="apple-mobile-web-app-title" content="{{ _brand_name }}"/>
 
   {% if _manifest %}
-    <link rel="manifest" href="{{ asset(_manifest) }}">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="{{ asset(_manifest) }}"/>
+    <meta name="apple-mobile-web-app-capable" content="yes"/>
+    <meta name="mobile-web-app-capable" content="yes"/>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   {% endif %}
 
-  <!-- Hints -->
-  <link rel="preconnect" href="https://js.stripe.com" crossorigin>
-  <link rel="preconnect" href="https://checkout.stripe.com" crossorigin>
-  <link rel="dns-prefetch" href="https://js.stripe.com">
-  <link rel="dns-prefetch" href="https://checkout.stripe.com">
-  {% if POSTHOG_KEY %}<link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>{% endif %}
-  {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
-  {% if request is defined %}<link rel="preconnect" href="{{ request.url_root }}">{% endif %}
+  {# --- Perf hints --- #}
+  <link rel="dns-prefetch" href="https://js.stripe.com"/>
+  <link rel="dns-prefetch" href="https://checkout.stripe.com"/>
+  <link rel="preconnect" href="https://js.stripe.com" crossorigin/>
+  <link rel="preconnect" href="https://checkout.stripe.com" crossorigin/>
+  <link rel="preconnect" href="https://api.stripe.com" crossorigin/>
+  {% if POSTHOG_KEY %}<link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin/>{% endif %}
+  {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin/>{% endif %}
+  {% if request is defined %}<link rel="preconnect" href="{{ request.url_root }}"/>{% endif %}
 
-  {# LCP image hint:
-     - if a custom hero is provided, just preload that
-     - otherwise hint the forged hero set (AVIF) by convention at /static/images/hero/*
-  #}
+  {# LCP image hint #}
   {% if hero_image_url is defined and hero_image_url %}
-    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high" imagesrcset="{{ hero_image_url }}">
+    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high" imagesrcset="{{ hero_image_url }}"/>
   {% else %}
     <link rel="preload" as="image"
           href="{{ asset('images/hero/hero-1920.avif') }}"
           imagesizes="100vw"
           imagesrcset="{{ asset('images/hero/hero-1920.avif') }} 1920w, {{ asset('images/hero/hero-1280.avif') }} 1280w, {{ asset('images/hero/hero-960.avif') }} 960w"
-          fetchpriority="high">
+          fetchpriority="high"/>
   {% endif %}
 
-  <!-- CSS bundles -->
+  {# --- CSS bundles --- #}
   <link rel="stylesheet" href="{{ asset('css/app.min.css') }}"
         {% if sri('css/app.min.css') %}integrity="{{ sri('css/app.min.css') }}" crossorigin="anonymous"{% endif %}/>
   <link rel="stylesheet" href="{{ asset('css/starforge.min.css') }}"
         {% if sri('css/starforge.min.css') %}integrity="{{ sri('css/starforge.min.css') }}" crossorigin="anonymous"{% endif %}/>
-  <link rel="preload" href="{{ asset('css/fc_elite.css') }}" as="style">
+  <link rel="preload" href="{{ asset('css/fc_elite.css') }}" as="style"/>
   <link rel="stylesheet" href="{{ asset('css/fc_elite.css') }}"
         {% if sri('css/fc_elite.css') %}integrity="{{ sri('css/fc_elite.css') }}" crossorigin="anonymous"{% endif %}/>
 
@@ -168,55 +164,44 @@
     {% include "partials/_shopify_head_include.html" ignore missing %}
   {% endif %}
 
-  {# Starforge brand spine (optional assets; safe if 404) #}
-  <link rel="stylesheet" href="{{ asset('starforge/brand-spine.css') }}">
-  <link rel="modulepreload" href="{{ asset('starforge/enable-brand-spine.js') }}">
+  {# Starforge brand spine (optional; safe if 404) #}
+  <link rel="stylesheet" href="{{ asset('starforge/brand-spine.css') }}"/>
+  <link rel="modulepreload" href="{{ asset('starforge/enable-brand-spine.js') }}"/>
 
-  {# ---------------- Layout layer (tight rhythm + seam math tokens) ---------------- #}
+  {# ---------------- Layout tokens (unchanged) ---------------- #}
   <style {{ nonce_attr() }}>
     :root{
       --fc-brand: {{ _brand_hex }}; --fc-gold: var(--fc-brand);
       --fc-ink:#0B0B10; --fc-ash:#1B1E26; --fc-coal:#111318;
-
       --container-max: 1200px; --container-reading: 72ch;
       --radius-xl: 1.25rem;
       --gutter: clamp(16px, 3vw, 28px);
       --section-y: clamp(1.6rem, 3.6vw, 3.2rem);
       --section-y-tight: calc(var(--section-y) * .65);
-
-      /* sticky stack (header + ticker) – filled by seam script */
       --fc-header-h: 72px; --sticky-offset: var(--fc-header-h);
-
       --safe-top: env(safe-area-inset-top, 0px);
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-
     .container{ max-width:var(--container-max); margin-inline:auto; padding-inline:var(--gutter); }
     .container-wide{ max-width: calc(var(--container-max) + 180px); }
     .container-narrow{ max-width:min(var(--container-reading), var(--container-max)); }
-
     .section{ padding-block: var(--section-y); }
     .section--tight{ padding-block: var(--section-y-tight); }
     .section--loose{ padding-block: calc(var(--section-y) * 1.35); }
     .section--flush-top{ padding-top:0 !important; }
-
     .seam-header{ margin-top: calc(-1 * var(--sticky-offset)); padding-top: var(--sticky-offset); }
     .seam-after-hero{ padding-top: calc(var(--section-y-tight) * .5); }
     .section + .section{ padding-top: var(--section-y-tight); }
-
     html{ scroll-padding-top: var(--fc-header-h); }
     section[aria-labelledby], section[id]{ scroll-margin-top: var(--sticky-offset); }
-
     .bleed-x{ position:relative; left:50%; right:50%; margin-left:-50vw; margin-right:-50vw; width:100vw; }
     .stack > * + *{ margin-top: clamp(.6rem, .7vw, .9rem); }
     .tight > * + *{ margin-top: .55rem; }
-
     .bg-ash{ background: var(--fc-ash); }
     .bg-coal{ background: var(--fc-coal); }
     .bg-gold{ background: var(--fc-gold); }
     .text-ink{ color: var(--fc-ink); }
     .text-gold{ color: var(--fc-gold); }
-
     .card{
       background: linear-gradient(180deg,#161922 0%, #0F1117 100%);
       border:1px solid rgba(255,255,255,.07);
@@ -235,16 +220,12 @@
     }
     .divider{ height:1px; background:rgba(255,255,255,.06) }
     .shadow-soft{ box-shadow:0 10px 30px rgba(0,0,0,.35) }
-
     .section h2{ margin:0; line-height:1.04; font-weight:900; letter-spacing:.01em }
     .section h2 + p{ margin-top: clamp(.35rem, .5vw, .6rem) }
-
     html, body{ overflow-x:hidden; }
     .section[data-lazy]{ content-visibility:auto; contain-intrinsic-size:600px; }
-
     :focus-visible{ outline:2px solid color-mix(in srgb, var(--fc-gold) 65%, transparent); outline-offset:2px; }
     .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
-
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important; }
     }
@@ -309,7 +290,7 @@
     </script>
   {% endif %}
   {% if POSTHOG_KEY %}
-    <link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>
+    <link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin/>
     <script {{ nonce_attr() }}>
       !function(d,w){var p=w.posthog||(w.posthog=[]),s=d.createElement("script");s.async=true;
         s.src=("{{ POSTHOG_HOST }}".replace(/\/$/,"")||"https://app.posthog.com")+"/static/array.js";
@@ -369,19 +350,40 @@
   {% block below_main %}{% endblock %}
   {% block footer %}{% include "partials/footer.html" ignore missing with context %}{% endblock %}
 
-  <!-- Preload primary bundle -->
+  {# ---------- JS Loader: prefer ESM main.js; fallback to bundle.min.js ---------- #}
+
+  <!-- Preload preferred ESM -->
+  <link rel="modulepreload" href="{{ asset('js/main.js') }}"/>
+
+  <!-- Preload legacy/bundled fallback -->
   <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}"
-        {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}>
+        {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}/>
 
-  <!-- Preload stats/tiers to speed first CTA -->
-  <link rel="preload" as="fetch"
-        href="{% if safe_url_for is defined and has_endpoint('main.stats_json') %}{{ safe_url_for('main.stats_json') }}{% else %}/stats{% endif %}"
-        crossorigin="anonymous">
+  <!-- ESM-first, CSP-safe, with onerror fallback to bundle.min.js -->
+  <script {{ nonce_attr() }}>
+  (function(){
+    var head = document.head;
+    function addFallback(){
+      try{
+        var s = document.createElement('script');
+        s.defer = true;
+        {% if sri('js/bundle.min.js') %} s.integrity = "{{ sri('js/bundle.min.js') }}"; s.crossOrigin = "anonymous";{% endif %}
+        s.src = "{{ asset('js/bundle.min.js') }}";
+        head.appendChild(s);
+      }catch(_){}
+    }
+    try{
+      var esm = document.createElement('script');
+      esm.type = 'module';
+      esm.defer = true;
+      {% if NONCE %} esm.setAttribute('nonce','{{ NONCE }}');{% endif %}
+      esm.src = "{{ asset('js/main.js') }}";
+      esm.onerror = addFallback;
+      head.appendChild(esm);
+    }catch(_){ addFallback(); }
+  })();
+  </script>
 
-  <!-- JS bundles -->
-  <script id="fc-bundle" src="{{ asset('js/bundle.min.js') }}" defer
-          data-ver="{{ _ver or '' }}"
-          {% if sri('js/bundle.min.js') %}integrity="{{ sri('js/bundle.min.js') }}" crossorigin="anonymous"{% endif %}></script>
   {% if _is_donate %}
     <script id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
             {% if sri('js/donate.min.js') %}integrity="{{ sri('js/donate.min.js') }}" crossorigin="anonymous"{% endif %}></script>
@@ -444,7 +446,7 @@
   })();
   </script>
 
-  {# Boot + vitals #}
+  {# Boot + vitals (unchanged) #}
   <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcBoot2) return; window.__fcBoot2 = true;
@@ -493,7 +495,7 @@
   })();
   </script>
 
-  {# Sticky seam height calculator (header + sponsor ticker) #}
+  {# Sticky seam height calculator (unchanged) #}
   <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcSeam) return; window.__fcSeam = true;
@@ -508,20 +510,42 @@
       }
     };
     try {
-      calc();
-      const ro = new ResizeObserver(calc);
-      header && ro.observe(header);
-      ticker && ro.observe(ticker);
-      addEventListener('resize', calc, { passive:true });
-      addEventListener('load', calc, { once:true });
-      document.addEventListener?.('htmx:afterSettle', calc);
+      const raf = () => requestAnimationFrame(calc);
+      raf();
+      if ('ResizeObserver' in window){
+        const ro = new ResizeObserver(raf);
+        header && ro.observe(header);
+        ticker && ro.observe(ticker);
+      }
+      addEventListener('resize', raf, { passive:true });
+      addEventListener('load', raf, { once:true });
+      document.addEventListener?.('htmx:afterSettle', raf);
     } catch {}
   })();
   </script>
 
-  {# SV-Elite JS (counters, ticker, CTA pulse, micro-interactions) #}
+  {# SV-Elite JS (counters, ticker, micro-interactions) #}
   <script src="{{ asset('js/fc_elite.js') }}" defer
           {% if sri('js/fc_elite.js') %}integrity="{{ sri('js/fc_elite.js') }}" crossorigin="anonymous"{% endif %}></script>
+          <script src="{{ url_for('static', filename='js/ux.js') }}" nonce="{{ csp_nonce() }}"></script>
+
+  {# Lazy images (once) #}
+  <script src="{{ url_for('static', filename='js/lazy-img.js') }}" {{ nonce_attr() }} defer></script>
+
+  {# Reveal-on-view helper #}
+  <script {{ nonce_attr() }}>
+    (function(){
+      try{
+        const observer = new IntersectionObserver(
+          (entries)=>entries.forEach(x=>x.isIntersecting&&x.target.classList.add('is-visible')),
+          { rootMargin: "-10% 0px -5% 0px" }
+        );
+        document.querySelectorAll('.section').forEach(s=>observer.observe(s));
+      }catch{}
+    })();
+  </script>
+
+  <div class="mobile-cta"><a class="btn" href="#tiers" aria-label="Donate now">Donate&nbsp;Now</a></div>
 
   {# Starforge before-</body> include (honors render guard) #}
   {% block body_scripts %}
@@ -532,8 +556,7 @@
 
   {% block extra_js %}{% endblock %}
 
-  {# Optional: spin up brand spine JS if shipped (this lets you “relocate” the team
-     name into the vertical spine near hero; the include is in the hero page). #}
+  {# Optional: spin up brand spine JS if shipped #}
   <script {{ nonce_attr() }} type="module">
     try{ import('{{ asset("starforge/enable-brand-spine.js") }}').catch(()=>{}); }catch(_){}
   </script>

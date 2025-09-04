@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{# ---------------- Query flags (cached + tiny) ---------------- #}
-{% set _q   = request.args if request is defined else {} %}
+{# ---------------- Flags from query (unchanged) ---------------- #}
+{% set _q = request.args if request is defined else {} %}
 {% set _OFF = ['0','false','off','no','disable'] %}
 {% set SHOW_TIERS  = (show_tiers  if show_tiers  is defined else (_q.get('tiers','1')  |lower not in _OFF)) %}
 {% set SHOW_IMPACT = (show_impact if show_impact is defined else (_q.get('impact','1') |lower not in _OFF)) %}
 {% set SHOW_ABOUT  = (show_about  if show_about  is defined else (_q.get('about','1')  |lower not in _OFF)) %}
 
-{# ---------------- Nonce helpers ---------------- #}
+{# ---------------- Nonce helper passthrough ---------------- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% if nonce_attr is not defined %}
   {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
@@ -17,79 +17,38 @@
 {% block h1 %}{% endblock %}
 {% block title %}{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}{% endblock %}
 
+{# ---------------- HEAD: keep page-specific bits only ---------------- #}
 {% block extra_head %}
   {{ super() }}
 
-  {# ---------------- SEO / Social ---------------- #}
-  {% set _desc = meta_description if meta_description is defined and meta_description else
-                  (catch_phrase if catch_phrase is defined and catch_phrase else
-                   'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
-  <meta name="description" content="{{ _desc }}">
-  {% if request is defined %}
-    <link rel="canonical" href="{{ request.base_url }}">
-    <meta property="og:url" content="{{ request.base_url }}">
-  {% endif %}
+  {# Page-specific meta description for base.html to consume #}
+  {% set _desc = meta_description
+                 if meta_description is defined and meta_description
+                 else (catch_phrase if catch_phrase is defined and catch_phrase
+                       else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
+  <meta name="description" content="{{ _desc }}"/>
 
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}">
-  <meta property="og:description" content="{{ _desc }}">
+  {# Canonical/OG handled by base; we just ensure LCP image preload if custom #}
   {% if hero_image_url is defined and hero_image_url %}
-    <meta property="og:image" content="{{ hero_image_url }}">
-    <meta name="twitter:card" content="summary_large_image">
-  {% else %}
-    {# fall back to our forged hero set if present #}
-    <meta property="og:image" content="{{ url_for('static', filename='images/hero/hero-1280.webp') if url_for is defined else '/static/images/hero/hero-1280.webp' }}">
-    <meta name="twitter:card" content="summary_large_image">
+    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high"/>
   {% endif %}
 
-  {# Mobile browser chrome color (header script may update this) #}
-  <meta name="theme-color" content="#0c0e12">
-
-  {# ---------------- Perf niceties ---------------- #}
-  {% set stock_src = url_for('static', filename='images/connect-atx-team.jpg') if url_for is defined else '/static/images/connect-atx-team.jpg' %}
-  {% if hero_image_url is defined and hero_image_url %}
-    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high">
-  {% else %}
-    {# If the default team image is in play, use the forged responsive set #}
-    <link rel="preload" as="image"
-          href="{{ url_for('static', filename='images/hero/hero-1920.avif') if url_for is defined else '/static/images/hero/hero-1920.avif' }}"
-          imagesrcset="
-            {{ url_for('static', filename='images/hero/hero-1920.avif') if url_for is defined else '/static/images/hero/hero-1920.avif' }} 1920w,
-            {{ url_for('static', filename='images/hero/hero-1280.avif') if url_for is defined else '/static/images/hero/hero-1280.avif' }} 1280w,
-            {{ url_for('static', filename='images/hero/hero-960.avif')  if url_for is defined else '/static/images/hero/hero-960.avif'  }} 960w"
-          imagesizes="100vw"
-          fetchpriority="high">
-  {% endif %}
-
-  {# Stripe preconnect if we have either a payment link or a donate route #}
-  {% set donate_base = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
-  {% if stripe_payment_link or donate_base %}
-    <link rel="preconnect" href="https://checkout.stripe.com" crossorigin>
-    <link rel="preconnect" href="https://js.stripe.com" crossorigin>
-  {% endif %}
-
-  {# Preconnect to site origin #}
-  {% if request is defined %}
-    <link rel="preconnect" href="{{ request.url_root }}">
-  {% endif %}
-
-  {# Optional Starforge polish assets (safe to 404 if not deployed) #}
+  {# Optional Starforge polish (safe if 404) #}
   <link rel="stylesheet"
         href="{{ url_for('static', filename='starforge/brand-spine.css') if url_for is defined else '/static/starforge/brand-spine.css' }}"
-        referrerpolicy="no-referrer">
+        referrerpolicy="no-referrer"/>
   <link rel="modulepreload"
-        href="{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}">
+        href="{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}"/>
 {% endblock %}
 
 {% block content %}
-  {# ===== 0) SPONSOR LEADERBOARD (sticky, lives under header) ===== #}
+
+  {# ===== 0) SPONSOR LEADERBOARD (sticky, below header) ===== #}
   {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
 
-  {# ===== 1) HERO (LCP zone) — directly under sticky seam ===== #}
+  {# ===== 1) HERO (LCP zone) ===== #}
   <section id="fundraiser-hero" class="seam-header" aria-label="Hero">
     {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-
-    {# Surprise: vertical brand spine pinned alongside the hero card #}
     {% set _brand_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
     {% include "starforge/_brand_spine.html.jinja" ignore missing with context %}
   </section>
@@ -122,136 +81,136 @@
     </div>
   </section>
   {% endif %}
-{% endblock %}
 
-{# ---------------- SV-Elite • Polish Pack (scoped + idempotent) ---------------- #}
-<style {{ nonce_attr() }}>
-  :root{
-    --fc-radius: 16px;
-    --fc-pad-x: clamp(0.9rem, 0.6rem + 1.2vw, 1.25rem);
-    --fc-pad-y: clamp(0.8rem, 0.5rem + 1.0vw, 1.1rem);
-    --fc-chip-fs: .82rem;
-    --fc-chip-px: .55rem;
-    --fc-chip-py: .28rem;
-    --fc-btn-fs: .93rem;
-    --fc-btn-px: .9rem;
-    --fc-btn-py: .6rem;
-  }
+  {# ---------------- SV-Elite • Polish Pack (scoped + idempotent) ---------------- #}
+  <style {{ nonce_attr() }}>
+    :root {
+      --fc-radius: 16px;
+      --fc-pad-x: clamp(0.9rem, 0.6rem + 1.2vw, 1.25rem);
+      --fc-pad-y: clamp(0.8rem, 0.5rem + 1vw, 1.1rem);
+      --fc-chip-fs: 0.82rem;
+      --fc-chip-px: 0.55rem;
+      --fc-chip-py: 0.28rem;
+      --fc-btn-fs: 0.93rem;
+      --fc-btn-px: 0.9rem;
+      --fc-btn-py: 0.6rem;
+    }
+    .section { padding-block: clamp(1.1rem, 1.6vw, 1.6rem); }
+    .section.section--tight { padding-block: clamp(0.9rem, 1.2vw, 1.2rem); }
+    .section + .section { padding-top: clamp(0.9rem, 1.2vw, 1.2rem); }
 
-  .section{ padding-block: clamp(1.1rem, 1.6vw, 1.6rem) }
-  .section.section--tight{ padding-block: clamp(.9rem, 1.2vw, 1.2rem) }
-  .section + .section{ padding-top: clamp(.9rem, 1.2vw, 1.2rem) }
+    .container, .sf-container { max-width: 1120px; margin-inline: auto; }
 
-  .container, .sf-container{ max-width: 1120px; margin-inline: auto }
+    .sf-card, .hdr-glass, .fc-hero-card__frame,
+      border-radius: var(--fc-radius);
+      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+      background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.03));
+    }
+    .hdr-glow:before,
 
-  .sf-card,.hdr-glass,.fc-hero-card__frame,#tiers-partial .tier.card,#impact .glass,#fc-about .about-card{
-    border-radius: var(--fc-radius);
-    box-shadow: 0 16px 44px rgba(0,0,0,.30);
-    border-color: rgba(255,255,255,.10);
-    background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.03));
-  }
-  .hdr-glow:before, #site-footer .ftr-glow{ opacity:.22; filter:blur(20px) }
+    .text-fluid-h2,
 
-  .text-fluid-h2, #fc-about .title{ letter-spacing:.01em }
-  #fc-about .lede{ max-width: 62ch }
-  #fc-hero .fc-hero-copy{ max-width: 60ch }
+    .legacy-chip,
+      font-size: var(--fc-chip-fs);
+      padding: var(--fc-chip-py) var(--fc-chip-px);
+      border-radius: .7rem;
+    }
+    #fc-hero .fc-hero-chip--mini { font-size: .78rem; padding: .25rem .5rem; }
 
-  .legacy-chip, #fc-hero .chip, #fc-about .chip, #tiers-partial .chip{
-    font-size: var(--fc-chip-fs);
-    padding: var(--fc-chip-py) var(--fc-chip-px);
-    border-radius: .7rem;
-  }
-  #fc-hero .fc-hero-chip--mini{ font-size:.78rem; padding:.25rem .5rem }
+    .sf-btn,
+      font-size: var(--fc-btn-fs);
+      padding: var(--fc-btn-py) var(--fc-btn-px);
+      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    }
+    .sf-btn-sm { padding: .5rem .75rem; font-size: .9rem; }
+    #tiers-partial [data-tier-cta] { padding: .6rem .9rem; }
 
-  .sf-btn, #fc-hero .fc-hero-cta, #impact .fc-btn, #tiers-partial [data-tier-cta]{
-    font-size: var(--fc-btn-fs);
-    padding: var(--fc-btn-py) var(--fc-btn-px);
-    box-shadow: 0 8px 24px rgba(0,0,0,.22);
-  }
-  .sf-btn-sm{ padding:.5rem .75rem; font-size:.9rem }
-  #tiers-partial [data-tier-cta]{ padding:.6rem .9rem }
+    #fc-about .stats-grid { gap: .8rem; }
+    #tiers-partial .grid-auto { gap: .9rem; }
+    #tiers-partial .tier.card { padding: .9rem; }
+    #tiers-partial .heading { margin-bottom: .25rem; }
+    #impact [data-bucket] { padding: .85rem; }
+    #impact .meter { height: 9px; }
 
-  #fc-about .stats-grid{ gap:.8rem }
-  #tiers-partial .grid-auto{ gap:.9rem }
-  #tiers-partial .tier.card{ padding:.9rem }
-  #tiers-partial .heading{ margin-bottom:.25rem }
-  #impact [data-bucket]{ padding:.85rem }
-  #impact .meter{ height:9px }
+    #fc-hero .hm-track { height: 12px; }
+    #fc-hero .milestones li { font-size: .7rem; padding: .14rem .4rem; }
 
-  #fc-hero .hm-track{ height:12px }
-  #fc-hero .milestones li{ font-size:.7rem; padding:.14rem .4rem }
+    @media print {
+      .section { padding-block: .4rem; }
+      #fc-hero .fc-hero-badges,
+    }
+  </style>
 
-  @media print{
-    .section{ padding-block:.4rem }
-    #fc-hero .fc-hero-badges, #donor-ticker, .hdr-glow:before, #site-footer .ftr-glow{ display:none!important }
-  }
-</style>
-
-<script {{ nonce_attr() }}>
-(() => {
-  // Stripe seal width sync (prevents face-jump on flip)
-  const seal = document.querySelector('.stripe-seal');
-  if (seal){
-    const front = seal.querySelector('.seal-front');
-    const back  = seal.querySelector('.seal-back');
-    const sync = () => {
-      const w = Math.max(front?.offsetWidth||0, back?.offsetWidth||0);
-      seal.style.minWidth = (w + 12) + 'px';
-    };
-    requestAnimationFrame(sync);
-    addEventListener('resize', sync, { passive:true });
-  }
-
-  // Softer header scrolled-shadow at very top
-  const hdr = document.getElementById('site-header');
-  if (hdr){
-    const onScroll = () => hdr.classList.toggle('is-scrolled', (scrollY||0) > 6);
-    addEventListener('scroll', onScroll, { passive:true }); onScroll();
-  }
-})();
-</script>
-
-{# ---------------- Seam math: sticky-height → section offsets ---- #}
-{% block body_scripts %}
-  {{ super() }}
   <script {{ nonce_attr() }}>
-  (function(){
-    // 1) Sync donation meter with initial server values
-    try{
-      const raised = Math.max(0, {{ (funds_raised or 0)|round(0) }}),
-            goal   = Math.max(0, {{ (fundraising_goal or 0)|round(0) }});
-      if (goal > 0) window.dispatchEvent(new CustomEvent('fc:meter:update',{ detail:{ raised, goal } }));
-    }catch(e){}
+    (() => {
+      // Stripe seal width sync (prevents face-jump on flip)
+      const seal = document.querySelector(".stripe-seal");
+      if (seal) {
+        const front = seal.querySelector(".seal-front");
+        const back = seal.querySelector(".seal-back");
+        const sync = () => {
+          const w = Math.max(front?.offsetWidth || 0, back?.offsetWidth || 0);
+          seal.style.minWidth = (w + 12) + "px";
+        };
+        requestAnimationFrame(sync);
+        addEventListener("resize", sync, { passive: true });
+      }
 
-    // 2) Compute sticky stack height (header + ticker) → CSS vars
-    try{
-      const root = document.documentElement;
-      const header   = document.getElementById('site-header');
-      const ticker   = document.getElementById('sponsor-leaderboard');
-      const calc = () => {
-        const h = (header?.offsetHeight || 0) + (ticker?.offsetHeight || 0);
-        if (h) {
-          root.style.setProperty('--fc-header-h', h + 'px');
-          root.style.setProperty('--sticky-offset', h + 'px');
-        }
-      };
-      calc();
-      const ro = new ResizeObserver(calc);
-      header && ro.observe(header);
-      ticker && ro.observe(ticker);
-      addEventListener('resize', calc, { passive:true });
-      addEventListener('load', calc, { once:true });
-      document.addEventListener('htmx:afterSettle', calc);
-    }catch(e){}
-  })();
+      // Softer header scrolled-shadow at very top
+      const hdr = document.getElementById("site-header");
+      if (hdr) {
+        const onScroll = () => hdr.classList.toggle("is-scrolled", (scrollY || 0) > 6);
+        addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+      }
+    })();
   </script>
 
-  {# Optional: enable the brand spine JS if you shipped it #}
-  <script {{ nonce_attr() }} type="module">
-    try{
-      import("{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}")
-        .catch(()=>{});
-    }catch(e){}
-  </script>
+  {# Seam math: sync sticky height + donation meter bootstrap #}
+  {% block body_scripts %}
+    {{ super() }}
+    <script {{ nonce_attr() }}>
+      (function(){
+        // Sync donation meter with initial server values
+        try{
+          const raised = Math.max(0, {{ (funds_raised or 0)|round(0) }}),
+                goal   = Math.max(0, {{ (fundraising_goal or 0)|round(0) }});
+          if (goal > 0) window.dispatchEvent(new CustomEvent('fc:meter:update',{ detail:{ raised, goal } }));
+        }catch(e){}
+
+        // Compute sticky stack height (header + ticker) → CSS vars
+        try{
+          const root   = document.documentElement;
+          const header = document.getElementById('site-header');
+          const ticker = document.getElementById('sponsor-leaderboard');
+          const calc = () => {
+            const h = (header?.offsetHeight || 0) + (ticker?.offsetHeight || 0);
+            if (h) {
+              root.style.setProperty('--fc-header-h', h + 'px');
+              root.style.setProperty('--sticky-offset', h + 'px');
+            }
+          };
+          const rafCalc = () => requestAnimationFrame(calc);
+          rafCalc();
+          if ('ResizeObserver' in window){
+            const ro = new ResizeObserver(rafCalc);
+            header && ro.observe(header);
+            ticker && ro.observe(ticker);
+          }
+          addEventListener('resize', rafCalc, { passive:true });
+          addEventListener('load', rafCalc, { once:true });
+          document.addEventListener('htmx:afterSettle', rafCalc);
+        }catch(e){}
+      })();
+    </script>
+
+    {# Optional: enable the brand spine JS if you shipped it #}
+    <script {{ nonce_attr() }} type="module">
+      try {
+        import("{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}").catch(() => {});
+      } catch (e) {}
+    </script>
+  {% endblock %}
 {% endblock %}
 

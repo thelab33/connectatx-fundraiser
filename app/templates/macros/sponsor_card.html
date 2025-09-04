@@ -1,6 +1,7 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{# ============================== FUNDCHAMPS SPONSOR WALL WIDGET ============================== #}
-{% from "macros/sponsor_card.html"import sponsor_card %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+defined else '') %} {# ============================== FUNDCHAMPS SPONSOR WALL
+WIDGET ============================== #} {% from
+"macros/sponsor_card.html"import sponsor_card %}
 
 <section
   id="sponsor-wall-widget"
@@ -40,8 +41,8 @@
   >
     <span id="ticker-inner">
       {% for donation in recent_donations %} 💸
-      <strong>{{ donation.sponsor_name }}</strong> just donated ${{ donation.amount|int|comma }}!
-      &nbsp;&nbsp; {% endfor %}
+      <strong>{{ donation.sponsor_name }}</strong> just donated ${{
+      donation.amount|int|comma }}! &nbsp;&nbsp; {% endfor %}
     </span>
   </div>
 
@@ -91,8 +92,8 @@
   <div
     class="sticky top-0 z-10 mb-2 flex flex-row items-center justify-center gap-2 rounded-t-2xl bg-gradient-to-b from-zinc-900/95 to-transparent py-2 shadow-md"
   >
-    {% for sponsor in sponsors_sorted[:3] %} {{ sponsor_card(sponsor, loop.index, true) }} {% endfor
-    %}
+    {% for sponsor in sponsors_sorted[:3] %} {{ sponsor_card(sponsor,
+    loop.index, true) }} {% endfor %}
   </div>
 
   <!-- ===== 6. Sponsor Grid (Card Macro) ===== -->
@@ -103,9 +104,10 @@
     tabindex="0"
     aria-label="Sponsor List"
   >
-    {% for sponsor in sponsors_sorted[3:] %} {{ sponsor_card(sponsor, loop.index + 3, false) }} {%
-    endfor %} {# Fill empty slots (up to 12) — Upsell! #} {% set slots = (12 -
-    sponsors_sorted|length) if sponsors_sorted|length < 12 else 0 %} {% for _ in range(slots) %}
+    {% for sponsor in sponsors_sorted[3:] %} {{ sponsor_card(sponsor, loop.index
+    + 3, false) }} {% endfor %} {# Fill empty slots (up to 12) — Upsell! #} {%
+    set slots = (12 - sponsors_sorted|length) if sponsors_sorted|length < 12
+    else 0 %} {% for _ in range(slots) %}
     <div
       class="animate-pop group flex min-h-[180px] cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-yellow-400/30 bg-zinc-800/70 p-4 text-yellow-200/70 shadow-inner transition"
       role="listitem"
@@ -114,8 +116,12 @@
       onclick="openSponsorModal()"
       onkeydown="if(event.key==='Enter' || event.key===' ') { event.preventDefault(); openSponsorModal(); }"
     >
-      <span class="mb-1 animate-bounce select-none text-3xl" aria-hidden="true">✨</span>
-      <span class="mb-1 select-none text-center font-extrabold">Your Logo Here</span>
+      <span class="mb-1 animate-bounce select-none text-3xl" aria-hidden="true"
+        >✨</span
+      >
+      <span class="mb-1 select-none text-center font-extrabold"
+        >Your Logo Here</span
+      >
       <span class="mb-2 select-none text-xs text-zinc-400 transition"
         >Limited premium slots left!</span
       >
@@ -132,7 +138,9 @@
   </div>
 
   <!-- ===== 7. Footer CTA + Social Share ===== -->
-  <footer class="rounded-b-3xl border-t border-yellow-400/20 bg-zinc-900/80 px-6 py-4 text-center">
+  <footer
+    class="rounded-b-3xl border-t border-yellow-400/20 bg-zinc-900/80 px-6 py-4 text-center"
+  >
     <button
       type="button"
       onclick="openSponsorModal()"
@@ -214,21 +222,22 @@
 
 <script nonce="{{ NONCE }}">
   (() => {
-    const toggleBtn = document.getElementById('sponsor-wall-toggle');
-    const widget = document.getElementById('sponsor-wall-widget');
-    const closeBtn = document.getElementById('sponsor-wall-close');
-    const sponsorList = document.getElementById('sponsor-wall-list');
-    const ticker = document.getElementById('ticker-inner');
-    const nudgeDot = document.getElementById('sponsor-nudge-dot');
+    const toggleBtn = document.getElementById("sponsor-wall-toggle");
+    const widget = document.getElementById("sponsor-wall-widget");
+    const closeBtn = document.getElementById("sponsor-wall-close");
+    const sponsorList = document.getElementById("sponsor-wall-list");
+    const ticker = document.getElementById("ticker-inner");
+    const nudgeDot = document.getElementById("sponsor-nudge-dot");
     // Modal/Share placeholders
-    window.openSponsorModal = () => alert('🚀 Replace with your Sponsorship Modal logic!');
+    window.openSponsorModal = () =>
+      alert("🚀 Replace with your Sponsorship Modal logic!");
     window.shareSponsorWall = (network) => {
       const shareUrl = window.location.href;
       if (navigator.share) {
-        navigator.share({ title: 'Support Our Team!', url: shareUrl });
+        navigator.share({ title: "Support Our Team!", url: shareUrl });
       } else {
         // Fallback open window to network (implement as needed)
-        alert('Social sharing for ' + network + ' coming soon!');
+        alert("Social sharing for " + network + " coming soon!");
       }
     };
     // Confetti effect (implement your own or use a lib)
@@ -245,7 +254,7 @@
       if (!els.length) return;
       const first = els[0],
         last = els[els.length - 1];
-      if (e.key === 'Tab') {
+      if (e.key === "Tab") {
         if (e.shiftKey && document.activeElement === first) {
           e.preventDefault();
           last.focus();
@@ -256,47 +265,47 @@
       }
     }
     function openWidget() {
-      widget.setAttribute('aria-hidden', 'false');
+      widget.setAttribute("aria-hidden", "false");
       widget.focus();
-      toggleBtn.setAttribute('aria-expanded', 'true');
+      toggleBtn.setAttribute("aria-expanded", "true");
       checkScrollShadow();
-      document.body.style.overflow = 'hidden';
-      if (nudgeDot) nudgeDot.classList.add('hidden');
+      document.body.style.overflow = "hidden";
+      if (nudgeDot) nudgeDot.classList.add("hidden");
     }
     function closeWidget() {
-      widget.setAttribute('aria-hidden', 'true');
-      toggleBtn.setAttribute('aria-expanded', 'false');
+      widget.setAttribute("aria-hidden", "true");
+      toggleBtn.setAttribute("aria-expanded", "false");
       toggleBtn.focus();
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     }
-    toggleBtn.addEventListener('click', () => {
-      const isOpen = widget.getAttribute('aria-hidden') === 'false';
+    toggleBtn.addEventListener("click", () => {
+      const isOpen = widget.getAttribute("aria-hidden") === "false";
       isOpen ? closeWidget() : openWidget();
     });
-    closeBtn.addEventListener('click', closeWidget);
-    widget.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+    closeBtn.addEventListener("click", closeWidget);
+    widget.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
         e.preventDefault();
         closeWidget();
       }
       focusTrap(e);
     });
-    document.addEventListener('click', (e) => {
+    document.addEventListener("click", (e) => {
       if (!widget.contains(e.target) && e.target !== toggleBtn) closeWidget();
     });
     function checkScrollShadow() {
       sponsorList.scrollTop > 5
-        ? sponsorList.classList.add('scroll-shadow')
-        : sponsorList.classList.remove('scroll-shadow');
+        ? sponsorList.classList.add("scroll-shadow")
+        : sponsorList.classList.remove("scroll-shadow");
     }
-    sponsorList.addEventListener('scroll', checkScrollShadow);
+    sponsorList.addEventListener("scroll", checkScrollShadow);
     // Leaderboard toggle logic (plug in HTMX/Socket.IO here)
-    document.querySelectorAll('.leaderboard-toggle').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+    document.querySelectorAll(".leaderboard-toggle").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
         document
-          .querySelectorAll('.leaderboard-toggle')
-          .forEach((b) => b.classList.remove('bg-yellow-400/40'));
-        btn.classList.add('bg-yellow-400/40');
+          .querySelectorAll(".leaderboard-toggle")
+          .forEach((b) => b.classList.remove("bg-yellow-400/40"));
+        btn.classList.add("bg-yellow-400/40");
         // TODO: Fetch and update sponsor list by leaderboard type (all/month)
       });
     });
@@ -304,18 +313,18 @@
     // TODO: ticker.innerHTML = newDonationFeed;
     // Smart nudge — after 3min closed, pulse dot
     setTimeout(() => {
-      if (widget.getAttribute('aria-hidden') === 'true' && nudgeDot) {
-        nudgeDot.classList.remove('hidden');
+      if (widget.getAttribute("aria-hidden") === "true" && nudgeDot) {
+        nudgeDot.classList.remove("hidden");
       }
     }, 180_000);
     // Keyboard shortcut: 'S' toggles sponsor wall
-    document.addEventListener('keydown', (e) => {
+    document.addEventListener("keydown", (e) => {
       if (
-        e.key.toLowerCase() === 's' &&
-        !['INPUT', 'TEXTAREA'].includes(document.activeElement.tagName)
+        e.key.toLowerCase() === "s" &&
+        !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)
       ) {
         e.preventDefault();
-        const isOpen = widget.getAttribute('aria-hidden') === 'false';
+        const isOpen = widget.getAttribute("aria-hidden") === "false";
         isOpen ? closeWidget() : openWidget();
       }
     });

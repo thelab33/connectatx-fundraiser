@@ -1,11 +1,10 @@
 module.exports = {
   plugins: [
-    'stylelint-declaration-block-no-ignored-properties',
+    "stylelint-declaration-block-no-ignored-properties",
     // other plugins...
   ],
   rules: {
-    'plugin/declaration-block-no-ignored-properties': true,
+    "plugin/declaration-block-no-ignored-properties": true,
     // other rules...
   },
 };
-

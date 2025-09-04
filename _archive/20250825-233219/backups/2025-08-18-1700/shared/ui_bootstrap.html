@@ -1,176 +1,102 @@
 <h2 class="sr-only">Ui Bootstrap</h2>
 {# =====================================================================
-   ui_bootstrap.html  —  FundChamps Prestige UI Utilities
-   - CSP-safe macros (script/style), global event bus, stats poller
-   - Idempotent: safe to include from multiple partials
-   - HTMX-friendly: re-hydrates new content with FC.emit('fc:hydrate', {target})
-   ===================================================================== #}
+ui_bootstrap.html — FundChamps Prestige UI Utilities - CSP-safe macros
+(script/style), global event bus, stats poller - Idempotent: safe to include
+from multiple partials - HTMX-friendly: re-hydrates new content with
+FC.emit('fc:hydrate', {target})
+===================================================================== #} {#
+---------- Safe Vars ---------- #} {% set NONCE = NONCE if NONCE is defined else
+(csp_nonce() if csp_nonce is defined else '') %} {% set _stats_url =
+stats_url|default('/stats') %} {% set _poll_ms = (poll_ms|int if poll_ms is
+defined else 15000) %} {% set _autostats = (autostats if autostats is defined
+else true) %} {# ---------- Script & Style Macros ---------- #} {% macro
+script_open(async=false, defer=false) -%}
+<script
+  nonce="{{ NONCE }}"
+  {%
+  if
+  async
+  %}
+  async{%
+  endif
+  %}{%
+  if
+  defer
+  %}
+  defer{%
+  endif
+  %}
+>
+  {%- endmacro %}
 
-{# ---------- Safe Vars ---------- #}
-{% set NONCE      = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _stats_url = stats_url|default('/stats') %}
-{% set _poll_ms   = (poll_ms|int if poll_ms is defined else 15000) %}
-{% set _autostats = (autostats if autostats is defined else true) %}
+  {% macro script_close() -%}
+</script>
+{%- endmacro %} {% macro style_open() -%}
+<style nonce="{{ NONCE }}">
+  {%- endmacro %}
 
-{# ---------- Script & Style Macros ---------- #}
-{% macro script_open(async=false, defer=false) -%}
-  <script nonce="{{ NONCE }}"{% if async %} async{% endif %}{% if defer %} defer{% endif %}>
-{%- endmacro %}
-
-{% macro script_close() -%}
-  </script>
-{%- endmacro %}
-
-{% macro style_open() -%}
-  <style nonce="{{ NONCE }}">
-{%- endmacro %}
-
-{% macro style_close() -%}
-  </style>
-{%- endmacro %}
-
-{# ---------- Bootstrap core (idempotent) ---------- #}
-{{ script_open() }}
-(() => {
-  if (window.__uiBootstrap) return; window.__uiBootstrap = true;
-
-  // ---- Global namespace ----
-  window.FC = window.FC || {};
-
-  // ---- Minimal pub/sub (also exposed as window.fcBus for legacy) ----
-  const subs = {};
-  FC.on  = (t, fn) => (subs[t] = subs[t] || []).push(fn);
-  FC.off = (t, fn) => subs[t] = (subs[t] || []).filter(f => f !== fn);
-  FC.emit= (t, detail={}) => (subs[t] || []).forEach(fn => { try { fn(detail) } catch(e) { console.warn('FC handler err', e) } });
-
-  // Legacy aliases (back-compat)
-  window.fcBus = window.fcBus || {
-    emit: (evt, data) => FC.emit(evt, data),
-    on:   (evt, cb)   => FC.on(evt, cb),
-    once: (evt, cb)   => {
-      const fn = (d) => { try { cb(d) } finally { FC.off(evt, fn) } };
-      FC.on(evt, fn);
-    }
-  };
-
-  // ---- UX helpers ----
-  FC.confetti = FC.confetti || function(opts={}) {
-    // If you load canvas-confetti elsewhere, use it; otherwise no-op.
-    if (!window.confetti) return;
-    const def = { particleCount: 80, spread: 70, origin: { y: 0.6 } };
-    window.confetti(Object.assign(def, opts));
-  };
-
-  FC.scrollTo = FC.scrollTo || function(id) {
-    const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  };
-
-  FC.announce = FC.announce || function(msg, politeness='polite') {
-    let live = document.getElementById('fc-live');
-    if (!live) {
-      live = document.createElement('div');
-      live.id = 'fc-live';
-      live.className = 'sr-only';
-      live.setAttribute('aria-live', politeness);
-      document.body.appendChild(live);
-    }
-    live.textContent = msg;
-  };
-
-  // Optional confetti (fallback without external lib)
-  FC.burstConfetti = FC.burstConfetti || function(n=24){
-    try{
-      const c = document.createElement('canvas');
-      c.width = innerWidth; c.height = 220;
-      Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60});
-      document.body.appendChild(c);
-      const ctx = c.getContext('2d');
-      const parts = Array.from({length:n}).map(() => ({
-        x: Math.random()*c.width, y: -20 - Math.random()*60,
-        vx:(Math.random()-.5)*3, vy:2+Math.random()*3, r:2+Math.random()*4, a:1
-      }));
-      const colors = ['#ffffff','#22c55e','#60a5fa','#eab308','#f59e0b'];
-      (function tick(){
-        ctx.clearRect(0,0,c.width,c.height);
-        let alive=false;
-        for (const p of parts) {
-          p.x+=p.vx; p.y+=p.vy; p.a-=0.012;
-          if (p.a>0) {
-            alive=true; ctx.globalAlpha = p.a;
-            ctx.fillStyle = colors[(Math.random()*colors.length)|0];
-            ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
-          }
-        }
-        if (alive) requestAnimationFrame(tick); else c.remove();
-      })();
-    } catch {}
-  };
-
-  // Donation modal contract (partials can call without wiring)
-  window.openDonationModal = window.openDonationModal || function(){
-    try{ document.getElementById('donation-modal')?.showModal?.(); }catch{}
-  };
-
-  // ---- HTMX hydration hook (re-run enhancements on swapped fragments) ----
-  document.addEventListener('htmx:afterSettle', (e) => {
-    FC.emit('fc:hydrate', { target: e.target || document });
-  });
-
-  // Fire ready once (for components that wait on baseline tools to exist)
-  setTimeout(() => FC.emit('fc:ready', {}), 0);
-})();
-{{ script_close() }}
-
-{# ---------- Stats poller (guarded; won’t duplicate) ---------- #}
-{% if _autostats %}
-  {{ script_open() }}
-  (() => {
-    // Prevent duplicate pollers when included more than once
-    if (window.__fcStatsPoller) return;
-    window.__fcStatsPoller = true;
-
-    async function fetchStats(){
-      try {
-        const res = await fetch("{{ _stats_url }}", { headers: { "X-Requested-With": "fetch" } });
-        if (!res.ok) throw new Error("HTTP " + res.status);
-        const json = await res.json();
-        // Notify all widgets (hero meter, program pulse, AI concierge)
-        if (window.FC && typeof window.FC.emit === 'function') {
-          window.FC.emit("fc:funds:update", json);
-        } else if (window.fcBus) {
-          window.fcBus.emit("fc:funds:update", json);
-        }
-      } catch(e) {
-        console.warn("⚠️ Stats fetch failed:", e);
-      }
-    }
-
-    // Initial & interval (use Page Visibility to avoid useless polling)
-    const POLL_MS = {{ _poll_ms|int }};
-    let timer = null;
-    function start(){ if (!timer) { fetchStats(); timer = setInterval(fetchStats, POLL_MS); } }
-    function stop(){ if (timer) { clearInterval(timer); timer = null; } }
-
-    document.addEventListener('visibilitychange', () => {
-      if (document.hidden) stop(); else start();
-    });
-
-    start();
-  })();
-  {{ script_close() }}
-{% endif %}
-
-{# ---------- Minimal a11y SR container (idempotent) ---------- #}
-{{ script_open() }}
-(() => {
-  if (!document.getElementById('fc-live')) {
-    const live = document.createElement('div');
-    live.id = 'fc-live';
-    live.className = 'sr-only';
-    live.setAttribute('aria-live', 'polite');
-    document.body.appendChild(live);
-  }
-})();
-{{ script_close() }}
-
+  {% macro style_close() -%}
+</style>
+{%- endmacro %} {# ---------- Bootstrap core (idempotent) ---------- #} {{
+script_open() }} (() => { if (window.__uiBootstrap) return; window.__uiBootstrap
+= true; // ---- Global namespace ---- window.FC = window.FC || {}; // ----
+Minimal pub/sub (also exposed as window.fcBus for legacy) ---- const subs = {};
+FC.on = (t, fn) => (subs[t] = subs[t] || []).push(fn); FC.off = (t, fn) =>
+subs[t] = (subs[t] || []).filter(f => f !== fn); FC.emit= (t, detail={}) =>
+(subs[t] || []).forEach(fn => { try { fn(detail) } catch(e) { console.warn('FC
+handler err', e) } }); // Legacy aliases (back-compat) window.fcBus =
+window.fcBus || { emit: (evt, data) => FC.emit(evt, data), on: (evt, cb) =>
+FC.on(evt, cb), once: (evt, cb) => { const fn = (d) => { try { cb(d) } finally {
+FC.off(evt, fn) } }; FC.on(evt, fn); } }; // ---- UX helpers ---- FC.confetti =
+FC.confetti || function(opts={}) { // If you load canvas-confetti elsewhere, use
+it; otherwise no-op. if (!window.confetti) return; const def = { particleCount:
+80, spread: 70, origin: { y: 0.6 } }; window.confetti(Object.assign(def, opts));
+}; FC.scrollTo = FC.scrollTo || function(id) { const el =
+document.getElementById(id); if (el) el.scrollIntoView({ behavior: 'smooth',
+block: 'start' }); }; FC.announce = FC.announce || function(msg,
+politeness='polite') { let live = document.getElementById('fc-live'); if (!live)
+{ live = document.createElement('div'); live.id = 'fc-live'; live.className =
+'sr-only'; live.setAttribute('aria-live', politeness);
+document.body.appendChild(live); } live.textContent = msg; }; // Optional
+confetti (fallback without external lib) FC.burstConfetti = FC.burstConfetti ||
+function(n=24){ try{ const c = document.createElement('canvas'); c.width =
+innerWidth; c.height = 220;
+Object.assign(c.style,{position:'fixed',left:0,top:0,pointerEvents:'none',zIndex:60});
+document.body.appendChild(c); const ctx = c.getContext('2d'); const parts =
+Array.from({length:n}).map(() => ({ x: Math.random()*c.width, y: -20 -
+Math.random()*60, vx:(Math.random()-.5)*3, vy:2+Math.random()*3,
+r:2+Math.random()*4, a:1 })); const colors =
+['#ffffff','#22c55e','#60a5fa','#eab308','#f59e0b']; (function tick(){
+ctx.clearRect(0,0,c.width,c.height); let alive=false; for (const p of parts) {
+p.x+=p.vx; p.y+=p.vy; p.a-=0.012; if (p.a>0) { alive=true; ctx.globalAlpha =
+p.a; ctx.fillStyle = colors[(Math.random()*colors.length)|0]; ctx.beginPath();
+ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); } } if (alive)
+requestAnimationFrame(tick); else c.remove(); })(); } catch {} }; // Donation
+modal contract (partials can call without wiring) window.openDonationModal =
+window.openDonationModal || function(){ try{
+document.getElementById('donation-modal')?.showModal?.(); }catch{} }; // ----
+HTMX hydration hook (re-run enhancements on swapped fragments) ----
+document.addEventListener('htmx:afterSettle', (e) => { FC.emit('fc:hydrate', {
+target: e.target || document }); }); // Fire ready once (for components that
+wait on baseline tools to exist) setTimeout(() => FC.emit('fc:ready', {}), 0);
+})(); {{ script_close() }} {# ---------- Stats poller (guarded; won’t duplicate)
+---------- #} {% if _autostats %} {{ script_open() }} (() => { // Prevent
+duplicate pollers when included more than once if (window.__fcStatsPoller)
+return; window.__fcStatsPoller = true; async function fetchStats(){ try { const
+res = await fetch("{{ _stats_url }}", { headers: { "X-Requested-With": "fetch" }
+}); if (!res.ok) throw new Error("HTTP " + res.status); const json = await
+res.json(); // Notify all widgets (hero meter, program pulse, AI concierge) if
+(window.FC && typeof window.FC.emit === 'function') {
+window.FC.emit("fc:funds:update", json); } else if (window.fcBus) {
+window.fcBus.emit("fc:funds:update", json); } } catch(e) { console.warn("⚠️
+Stats fetch failed:", e); } } // Initial & interval (use Page Visibility to
+avoid useless polling) const POLL_MS = {{ _poll_ms|int }}; let timer = null;
+function start(){ if (!timer) { fetchStats(); timer = setInterval(fetchStats,
+POLL_MS); } } function stop(){ if (timer) { clearInterval(timer); timer = null;
+} } document.addEventListener('visibilitychange', () => { if (document.hidden)
+stop(); else start(); }); start(); })(); {{ script_close() }} {% endif %} {#
+---------- Minimal a11y SR container (idempotent) ---------- #} {{ script_open()
+}} (() => { if (!document.getElementById('fc-live')) { const live =
+document.createElement('div'); live.id = 'fc-live'; live.className = 'sr-only';
+live.setAttribute('aria-live', 'polite'); document.body.appendChild(live); }
+})(); {{ script_close() }}

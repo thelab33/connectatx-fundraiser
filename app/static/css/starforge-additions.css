@@ -1,40 +1,228 @@
 /* Starforge Elite Polish - drop-in layer */
 @layer base {
-  :root{
+  :root {
     --sf-max: 1240px;
-    --sf-ring: rgba(255,255,255,.12);
-    --sf-glow: 0 12px 40px rgba(0,0,0,.45);
+    --sf-ring: rgb(255 255 255 / 12%);
+    --sf-glow: 0 12px 40px rgb(0 0 0 / 45%);
     --sf-blur: blur(14px) saturate(1.05);
-    --sf-r: 18px; --sf-r2: 24px;
-    --sf-focus: 0 0 0 3px rgba(255,255,255,.25), 0 0 0 6px color-mix(in srgb,var(--fc-gold) 50%, transparent);
+    --sf-r: 18px;
+    --sf-r2: 24px;
+    --sf-focus:
+      0 0 0 3px rgb(255 255 255 / 25%),
+      0 0 0 6px color-mix(in srgb, var(--fc-gold) 50%, transparent);
   }
-  .sf-container{max-width:var(--sf-max); margin-inline:auto; padding-inline:clamp(16px,3.6vw,32px)}
-  .sf-reading{max-width:68ch}
-  .sf-shadow{box-shadow:var(--sf-glow)}
-  .sf-blur{@supports(backdrop-filter:blur(1px)){ -webkit-backdrop-filter:var(--sf-blur); backdrop-filter:var(--sf-blur);}}
-  .sf-h1{font-weight:900; letter-spacing:.005em; font-size:clamp(2rem,1.1rem + 3vw,3.2rem); line-height:1.05}
-  .sf-h2{font-weight:800; letter-spacing:.003em; font-size:clamp(1.4rem,1rem + 1.5vw,2rem); line-height:1.1}
-  .sf-eyebrow{font-weight:800; text-transform:uppercase; letter-spacing:.08em; font-size:.8rem; opacity:.9}
-  .sf-mono{font-variant-numeric:tabular-nums}
-  .sf-btn{display:inline-flex;align-items:center;justify-content:center;gap:.55rem;border-radius:999px;font-weight:900;padding:.85rem 1.15rem;transition:.18s transform, .18s filter, .2s box-shadow}
-  .sf-btn:focus-visible{outline:0; box-shadow:var(--sf-focus)}
-  .sf-btn:active{transform:translateY(1px) scale(.99)}
-  .sf-btn-primary{color:#0b0b0c;background:linear-gradient(180deg,#fff8cc,var(--fc-gold));border:1px solid rgba(0,0,0,.18);box-shadow:0 10px 24px rgba(250,204,21,.18)}
-  .sf-btn-ghost{color:#e5e7eb;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.15)}
-  .sf-btn-lite{color:#0b0c0f;background:#fff;border:1px solid rgba(0,0,0,.12)}
-  .sf-btn-sm{padding:.55rem .85rem;font-weight:800;font-size:.95rem}
-  .sf-chip{display:inline-flex;align-items:center;gap:.45rem;padding:.40rem .7rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);font-weight:800}
-  .sf-chip-gold{background:color-mix(in srgb,var(--fc-gold) 85%, #fff); color:#0a0b0d; border-color:rgba(0,0,0,.15)}
-  .sf-card{border-radius:var(--sf-r2); background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12)}
-  .sf-card-inner{padding:clamp(16px,.9vw + 12px,24px)}
-  .sf-ring{border:1px solid var(--sf-ring)}
-  .sf-grad{background:radial-gradient(100% 80% at 50% 0%,rgba(255,255,255,.10),rgba(255,255,255,.02))}
-  .sf-meter{position:relative;height:10px;border-radius:999px;background:rgba(255,255,255,.1);overflow:hidden;border:1px solid rgba(255,255,255,.14)}
-  .sf-meter > i{position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.18) 0 1px,transparent 1px 6%);opacity:.25;pointer-events:none}
-  .sf-bar{height:100%;background:linear-gradient(90deg,#eab308,#84cc16,#22c55e);box-shadow:inset 0 0 0 1px rgba(255,255,255,.18),0 6px 20px rgba(34,197,94,.32);transform-origin:left center;transform:scaleX(var(--p,0));transition:transform .6s cubic-bezier(.2,.8,.2,1)}
-  .sf-snap{display:grid;grid-auto-flow:column;grid-auto-columns:80%;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px}
-  .sf-snap > *{scroll-snap-align:center}
-  .sf-sticky{position:sticky;top:0;z-index:50;background:rgba(10,10,12,.65)}
-  @supports(backdrop-filter:blur(1px)){ .sf-sticky{ -webkit-backdrop-filter:blur(10px) saturate(160%); backdrop-filter:blur(10px) saturate(160%)} }
+
+  .sf-container {
+    max-width: var(--sf-max);
+    margin-inline: auto;
+    padding-inline: clamp(16px, 3.6vw, 32px);
+  }
+
+  .sf-reading {
+    max-width: 68ch;
+  }
+
+  .sf-shadow {
+    box-shadow: var(--sf-glow);
+  }
+
+  .sf-blur {
+    @supports (backdrop-filter: blur(1px)) {
+      backdrop-filter: var(--sf-blur);
+    }
+  }
+
+  .sf-h1 {
+    font-weight: 900;
+    letter-spacing: 0.005em;
+    font-size: clamp(2rem, 1.1rem + 3vw, 3.2rem);
+    line-height: 1.05;
+  }
+
+  .sf-h2 {
+    font-weight: 800;
+    letter-spacing: 0.003em;
+    font-size: clamp(1.4rem, 1rem + 1.5vw, 2rem);
+    line-height: 1.1;
+  }
+
+  .sf-eyebrow {
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.8rem;
+    opacity: 0.9;
+  }
+
+  .sf-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sf-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border-radius: 999px;
+    font-weight: 900;
+    padding: 0.85rem 1.15rem;
+    transition:
+      0.18s transform,
+      0.18s filter,
+      0.2s box-shadow;
+  }
+
+  .sf-btn:focus-visible {
+    outline: 0;
+    box-shadow: var(--sf-focus);
+  }
+
+  .sf-btn:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  .sf-btn-primary {
+    color: #0b0b0c;
+    background: linear-gradient(180deg, #fff8cc, var(--fc-gold));
+    border: 1px solid rgb(0 0 0 / 18%);
+    box-shadow: 0 10px 24px rgb(250 204 21 / 18%);
+  }
+
+  .sf-btn-ghost {
+    color: #e5e7eb;
+    background: rgb(255 255 255 / 6%);
+    border: 1px solid rgb(255 255 255 / 15%);
+  }
+
+  .sf-btn-lite {
+    color: #0b0c0f;
+    background: #fff;
+    border: 1px solid rgb(0 0 0 / 12%);
+  }
+
+  .sf-btn-sm {
+    padding: 0.55rem 0.85rem;
+    font-weight: 800;
+    font-size: 0.95rem;
+  }
+
+  .sf-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.4rem 0.7rem;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 8%);
+    border: 1px solid rgb(255 255 255 / 16%);
+    font-weight: 800;
+  }
+
+  .sf-chip-gold {
+    background: color-mix(in srgb, var(--fc-gold) 85%, #fff);
+    color: #0a0b0d;
+    border-color: rgb(0 0 0 / 15%);
+  }
+
+  .sf-card {
+    border-radius: var(--sf-r2);
+    background: linear-gradient(
+      180deg,
+      rgb(255 255 255 / 6%),
+      rgb(255 255 255 / 3%)
+    );
+    border: 1px solid rgb(255 255 255 / 12%);
+  }
+
+  .sf-card-inner {
+    padding: clamp(16px, 0.9vw + 12px, 24px);
+  }
+
+  .sf-ring {
+    border: 1px solid var(--sf-ring);
+  }
+
+  .sf-grad {
+    background: radial-gradient(
+      100% 80% at 50% 0%,
+      rgb(255 255 255 / 10%),
+      rgb(255 255 255 / 2%)
+    );
+  }
+
+  .sf-meter {
+    position: relative;
+    height: 10px;
+    border-radius: 999px;
+    background: rgb(255 255 255 / 10%);
+    overflow: hidden;
+    border: 1px solid rgb(255 255 255 / 14%);
+  }
+
+  .sf-meter > i {
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      90deg,
+      rgb(255 255 255 / 18%) 0 1px,
+      transparent 1px 6%
+    );
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  .sf-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #eab308, #84cc16, #22c55e);
+    box-shadow:
+      inset 0 0 0 1px rgb(255 255 255 / 18%),
+      0 6px 20px rgb(34 197 94 / 32%);
+    transform-origin: left center;
+    transform: scaleX(var(--p, 0));
+    transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  .sf-snap {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 80%;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+  }
+
+  .sf-snap > * {
+    scroll-snap-align: center;
+  }
+
+  .sf-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: rgb(10 10 12 / 65%);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .sf-sticky {
+      backdrop-filter: blur(10px) saturate(160%);
+    }
+  }
 }
-@layer utilities{ .sf-lift:hover{transform:translateY(-2px)} .sf-press:active{transform:translateY(1px) scale(.99)} .sf-vignette{background:radial-gradient(140% 90% at 50% -10%, rgba(255,255,255,.16), transparent 60%)} }
+
+@layer utilities {
+  .sf-lift:hover {
+    transform: translateY(-2px);
+  }
+
+  .sf-press:active {
+    transform: translateY(1px) scale(0.99);
+  }
+
+  .sf-vignette {
+    background: radial-gradient(
+      140% 90% at 50% -10%,
+      rgb(255 255 255 / 16%),
+      transparent 60%
+    );
+  }
+}

@@ -1,0 +1,121 @@
+{{% raw %}} {#
+============================================================================
+base.html — FundChamps • SV-Elite 5.x (P2P • CSP-safe • Shopify-ready) (Slightly
+compacted to fit bundle; content preserved) #} {% set _TEAM =
+team|default(_team|default({})) %} {% set _brand_hex =
+_TEAM.theme_color|default('#f2c94c') %} {% set _brand_name =
+_TEAM.team_name|default('Connect ATX Elite') %} {% set LOCALE =
+LOCALE|default('en_US') %} {% set _route = request.endpoint if request is
+defined else '' %} {% set _is_donate = (_route == 'main.donate') %} {% set _ver
+= ASSET_VER|default(ASSET_VERSION|default(VERSION|default(None))) %} {% set SRI
+= SRI|default({}) %} {% set NONCE = NONCE|default(csp_nonce() if csp_nonce is
+defined else '') %} {% set _favicon =
+_TEAM.favicon|default('images/favicon.svg') %} {% set _apple_icon =
+_TEAM.apple_icon|default('images/apple-touch-icon.png') %} {% set USE_SOCKETIO =
+USE_SOCKETIO|default(false) %} {% set _manifest = WEB_MANIFEST|default(None) %}
+{% set GA_ID = GA_ID|default(None) %} {% set POSTHOG_KEY =
+POSTHOG_KEY|default(None) %} {% set POSTHOG_HOST =
+POSTHOG_HOST|default('https://app.posthog.com') %} {% set SKIN =
+SKIN|default('default') %} {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%-
+endmacro %} {% macro sri(path) -%}{{ SRI.get(path) if SRI else None }}{%-
+endmacro %} {% macro asset(path) -%}{%- if path and path|length -%}{{
+url_for('static', filename=path, v=_ver if _ver else None) }}{%- endif -%}{%-
+endmacro %}
+
+<!doctype html>
+<html
+  lang="en"
+  class="h-full antialiased selection:bg-white/20"
+  data-theme="dark"
+  data-brand=""
+  data-route="{{ _route|default('') }}"
+  data-skin="{{ SKIN }}"
+>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="color-scheme" content="dark light" />
+    <meta name="referrer" content="strict-origin-when-cross-origin" />
+    <meta
+      name="robots"
+      content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"
+    />
+
+    <title>{% block title %}{{ _brand_name }} — Fundraiser{% endblock %}</title>
+    <meta
+      name="description"
+      content="{{ _TEAM.og_description or 'Fuel the season. Fund the future.' }}"
+    />
+
+    <!-- Hints -->
+    <link rel="preconnect" href="https://js.stripe.com" crossorigin />
+    <link rel="preconnect" href="https://checkout.stripe.com" crossorigin />
+    {% if request is defined %}
+    <link rel="preconnect" href="{{ request.url_root }}" />
+    {% endif %}
+
+    <!-- LCP hero hint (safe to 404) -->
+    <link
+      rel="preload"
+      as="image"
+      href="{{ asset('images/hero/hero-1920.avif') }}"
+      imagesizes="100vw"
+      imagesrcset="{{ asset('images/hero/hero-1920.avif') }} 1920w, {{ asset('images/hero/hero-1280.avif') }} 1280w, {{ asset('images/hero/hero-960.avif') }} 960w"
+      fetchpriority="high"
+    />
+
+    <!-- CSS bundles -->
+    <link rel="stylesheet" href="{{ asset('css/app.min.css') }}" />
+    <link rel="stylesheet" href="{{ asset('css/starforge.min.css') }}" />
+    <link rel="stylesheet" href="{{ asset('css/fc_elite.css') }}" />
+
+    <style {{ nonce_attr() }}>
+      :root{
+        --fc-brand: {{ _brand_hex }};
+        --container-max: 1200px; --radius-xl:1.25rem;
+        --section-y: clamp(1.6rem, 3.6vw, 3.2rem);
+        --fc-header-h: 72px; --sticky-offset: var(--fc-header-h);
+      }
+      .container{ max-width:var(--container-max); margin-inline:auto; padding-inline:clamp(16px, 3vw, 28px); }
+      .section{ padding-block: var(--section-y); }
+      .card{ background:linear-gradient(180deg,#161922 0%, #0F1117 100%); border:1px solid rgba(255,255,255,.07); border-radius:var(--radius-xl); padding:clamp(.9rem,1.2vw,1.25rem); box-shadow:0 14px 36px rgba(0,0,0,.28); }
+      .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
+    </style>
+
+    {% block extra_head %}{% endblock %}
+  </head>
+
+  <body class="min-h-full bg-[#0b0b0c] text-zinc-100">
+    {% block header %}
+    <header id="site-header" class="container section" role="banner">
+      <div class="flex items-center justify-between">
+        <strong>FundChamps</strong>
+        <nav aria-label="Primary">
+          <a href="#tiers" class="underline">Tiers</a>
+        </nav>
+      </div>
+    </header>
+    {% endblock %}
+
+    <main id="main" role="main" class="relative">
+      <h1 class="sr-only">{{ _brand_name }}</h1>
+
+      {% block content %}{% endblock %}
+    </main>
+
+    {% block footer %}
+    <footer id="site-footer" class="container section">
+      <p class="text-sm opacity-80">© {{ _brand_name }}</p>
+    </footer>
+    {% endblock %}
+
+    <!-- JS bundles -->
+    <script id="fc-bundle" src="{{ asset('js/bundle.min.js') }}" defer></script>
+    <script src="{{ asset('js/fc_elite.js') }}" defer></script>
+    {% block extra_js %}{% endblock %}
+  </body>
+</html>
+{{% endraw %}}

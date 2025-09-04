@@ -1,305 +1,651 @@
 {# ============================================================================
-   Sponsor Leaderboard — SV-Elite 6.1 (Starforge Polish • CSP-safe • A11y+)
-   + VIP spotlight (pin + glow) + assertive SR
-   + Team-scoped local persistence (TTL) bootstrap
-   + Smart de-dupe/merge with ×n counter + bump
-   + User speed control (Slow/Normal/Fast) + width-aware timing
-   + Offline queue & recovery banner
-   + PRM / Save-Data aware, forced-colors safe, print-hidden
-   ========================================================================== #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _seed = (shoutouts if shoutouts is defined and shoutouts else []) %}
-{% set _team_id = (team.team_id if team and team.team_id else 'global') %}
-{% set _brand = (team.theme_color if team and team.theme_color else '#facc15') %}
+Sponsor Leaderboard — SV-Elite 6.2 + VIP spotlight (pin + glow) + assertive SR +
+Team-scoped local persistence (TTL) bootstrap + Smart de-dupe/merge with ×n
+counter + bump + User speed control (Slow/Normal/Fast) + width-aware timing +
+Offline queue & recovery banner + PRM / Save-Data aware, forced-colors safe,
+print-hidden + NEW: Friendly, CSP-safe empty-state with share CTA
+========================================================================== #} {%
+set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined
+else '') %} {% set _seed = (shoutouts if shoutouts is defined and shoutouts else
+[]) %} {% set _team_id = (team.team_id if team and team.team_id else 'global')
+%} {% set _brand = (team.theme_color if team and team.theme_color else
+'#facc15') %}
 
-<section id="sponsor-leaderboard"
+<section
+  id="sponsor-leaderboard"
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 sticky w-full z-40 print:hidden"
-  aria-live="polite" aria-label="Live sponsor shoutouts"
+  aria-live="polite"
+  aria-label="Live sponsor shoutouts"
   style="top: var(--fc-header-h, 0px); --fc-brand: {{ _brand }};"
   data-team-key="{{ _team_id }}"
   data-vip-tiers="Platinum,Gold"
   data-ttl-seconds="86400"
   data-max-store="24"
   data-dedupe-window-seconds="600"
-  data-default-speed="normal">
-
+  data-default-speed="normal"
+>
   <style nonce="{{ NONCE }}">
-    #sponsor-leaderboard{
+    #sponsor-leaderboard {
       background:
-        linear-gradient(180deg, rgb(6 7 10 / .84), rgb(6 7 10 / .64)),
-        radial-gradient(140% 120% at 50% -20%, color-mix(in srgb, var(--fc-brand) 22%, transparent) 0%, transparent 60%);
-      -webkit-backdrop-filter: blur(10px) saturate(140%); backdrop-filter: blur(10px) saturate(140%);
-      border-bottom:1px solid rgb(255 255 255 / .10);
+        linear-gradient(180deg, rgb(6 7 10 / 0.84), rgb(6 7 10 / 0.64)),
+        radial-gradient(
+          140% 120% at 50% -20%,
+          color-mix(in srgb, var(--fc-brand) 22%, transparent) 0%,
+          transparent 60%
+        );
+      -webkit-backdrop-filter: blur(10px) saturate(140%);
+      backdrop-filter: blur(10px) saturate(140%);
+      border-bottom: 1px solid rgb(255 255 255 / 0.1);
       contain: content;
     }
-    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
 
     /* Viewport with soft edge masks */
-    #sponsor-leaderboard .fc-ticker__viewport{
-      overflow:hidden; position:relative;
-      --fade: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+    #sponsor-leaderboard .fc-ticker__viewport {
+      overflow: hidden;
+      position: relative;
+      --fade: linear-gradient(
+        90deg,
+        transparent,
+        #000 8%,
+        #000 92%,
+        transparent
+      );
     }
-    @supports (mask-image: linear-gradient(black, white)){
-      #sponsor-leaderboard .fc-ticker__viewport{ mask-image: var(--fade); -webkit-mask-image: var(--fade); }
+    @supports (mask-image: linear-gradient(black, white)) {
+      #sponsor-leaderboard .fc-ticker__viewport {
+        mask-image: var(--fade);
+        -webkit-mask-image: var(--fade);
+      }
     }
 
     /* Row + pill */
-    #sponsor-leaderboard .fc-row{ display:flex; align-items:center; gap:.6rem; padding:.55rem .75rem; font-weight:700; letter-spacing:-.01em; }
-    #sponsor-leaderboard .pill{
-      display:inline-flex; align-items:center; gap:.45rem;
-      padding:.35rem .6rem; border-radius:999px;
-      background:rgb(255 255 255 / .06); border:1px solid rgb(255 255 255 / .10);
-      white-space:nowrap; will-change:transform;
+    #sponsor-leaderboard .fc-row {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.55rem 0.75rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
     }
-    #sponsor-leaderboard .headline{ color:#fde68a; text-shadow:0 0 10px rgb(250 204 21 / .35) }
+    #sponsor-leaderboard .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
+      background: rgb(255 255 255 / 0.06);
+      border: 1px solid rgb(255 255 255 / 0.1);
+      white-space: nowrap;
+      will-change: transform;
+    }
+    #sponsor-leaderboard .headline {
+      color: #fde68a;
+      text-shadow: 0 0 10px rgb(250 204 21 / 0.35);
+    }
+
+    /* NEW — empty-state look */
+    #sponsor-leaderboard .pill.placeholder {
+      opacity: 0.9;
+      color: #e5e7eb;
+      border-style: dashed;
+      border-color: rgb(255 255 255 / 0.18);
+    }
+    #sponsor-leaderboard .placeholder .link-btn {
+      all: unset;
+      cursor: pointer;
+      text-decoration: underline;
+      font-weight: 800;
+    }
+    #sponsor-leaderboard .placeholder .link-btn:focus-visible {
+      outline: 2px solid #fde047;
+      outline-offset: 2px;
+      border-radius: 0.4rem;
+    }
 
     /* Rail + marquee */
-    #sponsor-leaderboard .fc-ticker__rail{ display:flex; gap:1.25rem; padding:.35rem .75rem; will-change:transform; }
-    @keyframes fc-marquee { from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
-    #sponsor-leaderboard .fc-marquee{ animation: fc-marquee var(--speed, 24s) linear infinite; }
-    #sponsor-leaderboard:hover .fc-marquee{ animation-play-state: paused; }
+    #sponsor-leaderboard .fc-ticker__rail {
+      display: flex;
+      gap: 1.25rem;
+      padding: 0.35rem 0.75rem;
+      will-change: transform;
+    }
+    @keyframes fc-marquee {
+      from {
+        transform: translateX(0);
+      }
+      to {
+        transform: translateX(-50%);
+      }
+    }
+    #sponsor-leaderboard .fc-marquee {
+      animation: fc-marquee var(--speed, 24s) linear infinite;
+    }
+    #sponsor-leaderboard:hover .fc-marquee {
+      animation-play-state: paused;
+    }
 
     /* Tier accents + VIP glow */
-    #sponsor-leaderboard [data-tier="Platinum"]{ color:#e0e7ff; font-weight:900; text-shadow:0 0 12px #a78bfa }
-    #sponsor-leaderboard [data-tier="Gold"]    { color:#fde68a; text-shadow:0 0 8px  #facc15 }
-    #sponsor-leaderboard [data-tier="Silver"]  { color:#d1d5db }
-    #sponsor-leaderboard [data-tier="Bronze"]  { color:#fbbf24 }
-    #sponsor-leaderboard .vip{ box-shadow: 0 0 0 0 rgba(250,204,21,.0); }
-    @media (prefers-reduced-motion: no-preference){
-      #sponsor-leaderboard .vip{ animation: vipPulse 1.2s ease-out 1; }
-      @keyframes vipPulse{ 0%{ box-shadow:0 0 0 0 rgba(250,204,21,.0); transform:scale(1) }
-                           50%{ box-shadow:0 0 22px 2px rgba(250,204,21,.35); transform:scale(1.03) }
-                           100%{ box-shadow:0 0 0 0 rgba(250,204,21,.0); transform:scale(1) } }
+    #sponsor-leaderboard [data-tier="Platinum"] {
+      color: #e0e7ff;
+      font-weight: 900;
+      text-shadow: 0 0 12px #a78bfa;
+    }
+    #sponsor-leaderboard [data-tier="Gold"] {
+      color: #fde68a;
+      text-shadow: 0 0 8px #facc15;
+    }
+    #sponsor-leaderboard [data-tier="Silver"] {
+      color: #d1d5db;
+    }
+    #sponsor-leaderboard [data-tier="Bronze"] {
+      color: #fbbf24;
+    }
+    #sponsor-leaderboard .vip {
+      box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+    }
+    @media (prefers-reduced-motion: no-preference) {
+      #sponsor-leaderboard .vip {
+        animation: vipPulse 1.2s ease-out 1;
+      }
+      @keyframes vipPulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+          transform: scale(1);
+        }
+        50% {
+          box-shadow: 0 0 22px 2px rgba(250, 204, 21, 0.35);
+          transform: scale(1.03);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+          transform: scale(1);
+        }
+      }
     }
 
     /* Controls */
-    #sponsor-leaderboard .ctrl{
-      display:inline-flex; align-items:center; gap:.4rem;
-      font-weight:800; font-size:.9rem;
-      background:rgb(255 255 255 / .06); border:1px solid rgb(255 255 255 / .10);
-      padding:.35rem .6rem; border-radius:999px;
+    #sponsor-leaderboard .ctrl {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-weight: 800;
+      font-size: 0.9rem;
+      background: rgb(255 255 255 / 0.06);
+      border: 1px solid rgb(255 255 255 / 0.1);
+      padding: 0.35rem 0.6rem;
+      border-radius: 999px;
     }
-    #sponsor-leaderboard .ctrl[aria-pressed="true"]{ background:rgb(255 255 255 / .14); }
-    #sponsor-leaderboard .ctrl-group{ margin-left:auto; display:flex; gap:.5rem; align-items:center }
+    #sponsor-leaderboard .ctrl[aria-pressed="true"] {
+      background: rgb(255 255 255 / 0.14);
+    }
+    #sponsor-leaderboard .ctrl-group {
+      margin-left: auto;
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
 
     /* Offline banner */
-    #sponsor-leaderboard .offline-pill{ background:#7f1d1d; border-color:#fecaca; color:#fff; display:none }
-    #sponsor-leaderboard .offline-pill.show{ display:inline-flex }
+    #sponsor-leaderboard .offline-pill {
+      background: #7f1d1d;
+      border-color: #fecaca;
+      color: #fff;
+      display: none;
+    }
+    #sponsor-leaderboard .offline-pill.show {
+      display: inline-flex;
+    }
 
     /* Motion/contrast guards */
-    @media (prefers-reduced-motion: reduce){ #sponsor-leaderboard .fc-marquee{ animation:none !important } }
-    @media (forced-colors: active){
-      #sponsor-leaderboard{ background:Canvas; border-bottom:1px solid CanvasText; }
-      #sponsor-leaderboard .pill{ background:Canvas; border:1px solid CanvasText; }
-      #sponsor-leaderboard .headline{ color:CanvasText; text-shadow:none; }
+    @media (prefers-reduced-motion: reduce) {
+      #sponsor-leaderboard .fc-marquee {
+        animation: none !important;
+      }
     }
-    @supports not (color: color-mix(in srgb, black, white)){
-      #sponsor-leaderboard{ background:linear-gradient(180deg, #0b0c10cc, #0b0c1099) }
+    @media (forced-colors: active) {
+      #sponsor-leaderboard {
+        border-bottom: 1px solid CanvasText;
+      }
+      #sponsor-leaderboard .pill {
+        border: 1px solid CanvasText;
+      }
+      #sponsor-leaderboard .headline {
+        color: CanvasText;
+        text-shadow: none;
+      }
+    }
+    @supports not (color: color-mix(in srgb, black, white)) {
+      #sponsor-leaderboard {
+        background: linear-gradient(180deg, #0b0c10cc, #0b0c1099);
+      }
     }
   </style>
 
   <!-- Screen-reader regions -->
-  <p class="sr-only" aria-live="polite" id="sr-shout">{{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else 'Shoutouts ready.' }}</p>
-  <p class="sr-only" aria-live="assertive" aria-atomic="true" id="sr-vip"> </p>
+  <p class="sr-only" aria-live="polite" id="sr-shout">
+    {{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else
+    'Shoutouts ready.' }}
+  </p>
+  <p class="sr-only" aria-live="assertive" aria-atomic="true" id="sr-vip"></p>
 
   <div class="fc-ticker__viewport">
-    <div class="fc-ticker__rail fc-marquee" role="list" id="ticker-rail" aria-busy="true">
-      {# Server seed (optional) #}
-      {% for s in _seed %}
-        {% set t = (s.tier or 'General')|string %}
-        {% set badge = '✨' if t|lower=='platinum' else '🏅' if t|lower=='gold' else '🎉' if t|lower=='silver' else '🥉' if t|lower=='bronze' else '🔥' %}
-        <span role="listitem" class="pill" data-tier="{{ t }}" data-sponsor="{{ s.sponsor|e }}" data-msg="{{ s.msg|e }}">
-          {{ badge }} <span class="text-white">{{ s.sponsor }}</span> {{ s.msg }}
-        </span>
+    <div
+      class="fc-ticker__rail fc-marquee"
+      role="list"
+      id="ticker-rail"
+      aria-busy="true"
+    >
+      {# Server seed (optional) #} {% for s in _seed %} {% set t = (s.tier or
+      'General')|string %} {% set badge = '✨' if t|lower=='platinum' else '🏅'
+      if t|lower=='gold' else '🎉' if t|lower=='silver' else '🥉' if
+      t|lower=='bronze' else '🔥' %}
+      <span
+        role="listitem"
+        class="pill"
+        data-tier="{{ t }}"
+        data-sponsor="{{ s.sponsor|e }}"
+        data-msg="{{ s.msg|e }}"
+      >
+        {{ badge }} <span class="text-white">{{ s.sponsor }}</span> {{ s.msg }}
+      </span>
       {% endfor %}
-      <span aria-hidden="true" class="pill headline">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+
+      <span aria-hidden="true" class="pill headline"
+        >🏆 Sponsor leaderboard is live — real-time shoutouts!</span
+      >
+
+      {# NEW — Empty-state placeholder (CSP-safe button; no inline JS) #} {% if
+      not _seed %}
+      <span id="shoutouts-empty" role="listitem" class="pill placeholder">
+        No shoutouts yet —
+        <button
+          type="button"
+          class="link-btn"
+          id="shoutouts-empty-cta"
+          aria-label="Be the first to cheer us on"
+        >
+          be the first 🎉
+        </button>
+      </span>
+      {% endif %}
 
       <!-- Controls -->
       <div class="ctrl-group" role="group" aria-label="Ticker controls">
-        <button type="button" class="ctrl" id="ticker-ctrl" aria-pressed="false" aria-label="Pause live ticker">⏸ Pause</button>
-        <button type="button" class="ctrl" id="speed-ctrl" aria-pressed="false" aria-label="Speed: Normal" data-speed="normal">⏩ Speed</button>
-        <span class="pill offline-pill" id="offline-pill">⚠ Offline — queued</span>
+        <button
+          type="button"
+          class="ctrl"
+          id="ticker-ctrl"
+          aria-pressed="false"
+          aria-label="Pause live ticker"
+        >
+          ⏸ Pause
+        </button>
+        <button
+          type="button"
+          class="ctrl"
+          id="speed-ctrl"
+          aria-pressed="false"
+          aria-label="Speed: Normal"
+          data-speed="normal"
+        >
+          ⏩ Speed
+        </button>
+        <span class="pill offline-pill" id="offline-pill"
+          >⚠ Offline — queued</span
+        >
       </div>
     </div>
   </div>
 
   <script nonce="{{ NONCE }}">
     (() => {
-      if (window.__fcTickerEliteV61) return; window.__fcTickerEliteV61 = true;
+      if (window.__fcTickerEliteV62) return;
+      window.__fcTickerEliteV62 = true;
 
-      const root = document.getElementById('sponsor-leaderboard');
-      const rail = document.getElementById('ticker-rail');
-      const ctrl = document.getElementById('ticker-ctrl');
-      const speedCtrl = document.getElementById('speed-ctrl');
-      const sr   = document.getElementById('sr-shout');
-      const srVIP= document.getElementById('sr-vip');
-      const offlinePill = document.getElementById('offline-pill');
+      const root = document.getElementById("sponsor-leaderboard");
+      const rail = document.getElementById("ticker-rail");
+      const ctrl = document.getElementById("ticker-ctrl");
+      const speedCtrl = document.getElementById("speed-ctrl");
+      const sr = document.getElementById("sr-shout");
+      const srVIP = document.getElementById("sr-vip");
+      const offlinePill = document.getElementById("offline-pill");
 
       if (!root || !rail) return;
 
-      const reduced = matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
-                      !!(navigator.connection && navigator.connection.saveData);
+      const reduced =
+        matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
+        !!(navigator.connection && navigator.connection.saveData);
 
       // Config
-      const vipTiers   = (root.getAttribute('data-vip-tiers') || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-      const TTL        = parseInt(root.getAttribute('data-ttl-seconds') || '86400', 10);
-      const MAX_STORE  = parseInt(root.getAttribute('data-max-store') || '24', 10);
-      const DEDUPE_WIN = parseInt(root.getAttribute('data-dedupe-window-seconds') || '600', 10) * 1000;
-      const defaultSpeed = (root.getAttribute('data-default-speed') || 'normal').toLowerCase();
-      const teamKey    = root.getAttribute('data-team-key') || 'global';
-      const storeKey   = `fc_sponsor_shoutouts_v1:${teamKey}`;
+      const vipTiers = (root.getAttribute("data-vip-tiers") || "")
+        .split(",")
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+      const TTL = parseInt(
+        root.getAttribute("data-ttl-seconds") || "86400",
+        10,
+      );
+      const MAX_STORE = parseInt(
+        root.getAttribute("data-max-store") || "24",
+        10,
+      );
+      const DEDUPE_WIN =
+        parseInt(root.getAttribute("data-dedupe-window-seconds") || "600", 10) *
+        1000;
+      const defaultSpeed = (
+        root.getAttribute("data-default-speed") || "normal"
+      ).toLowerCase();
+      const teamKey = root.getAttribute("data-team-key") || "global";
+      const storeKey = `fc_sponsor_shoutouts_v1:${teamKey}`;
 
       // ---------- Speed control ----------
       const speedMap = { slow: 32, normal: 24, fast: 16 };
-      function setSpeed(mode){
-        const m = (mode in speedMap) ? mode : 'normal';
-        rail.style.setProperty('--speed', speedMap[m] + 's');
+      function setSpeed(mode) {
+        const m = mode in speedMap ? mode : "normal";
+        rail.style.setProperty("--speed", speedMap[m] + "s");
         speedCtrl.dataset.speed = m;
-        speedCtrl.setAttribute('aria-label', `Speed: ${m[0].toUpperCase()+m.slice(1)}`);
+        speedCtrl.setAttribute(
+          "aria-label",
+          `Speed: ${m[0].toUpperCase() + m.slice(1)}`,
+        );
       }
-      setSpeed(reduced ? 'slow' : defaultSpeed);
-      speedCtrl?.addEventListener('click', () => {
-        const order = ['slow','normal','fast'];
-        const idx = order.indexOf(speedCtrl.dataset.speed || 'normal');
-        setSpeed(order[(idx+1)%order.length]);
+      setSpeed(reduced ? "slow" : defaultSpeed);
+      speedCtrl?.addEventListener("click", () => {
+        const order = ["slow", "normal", "fast"];
+        const idx = order.indexOf(speedCtrl.dataset.speed || "normal");
+        setSpeed(order[(idx + 1) % order.length]);
         tuneSpeed(); // re-tune after manual change
       });
 
       // Pause/Play
-      function setPaused(paused){
-        ctrl.setAttribute('aria-pressed', paused ? 'true' : 'false');
-        ctrl.textContent = paused ? '▶ Play' : '⏸ Pause';
-        rail.style.animationPlayState = paused ? 'paused' : 'running';
-        ctrl.setAttribute('aria-label', paused ? 'Play live ticker' : 'Pause live ticker');
+      function setPaused(paused) {
+        ctrl.setAttribute("aria-pressed", paused ? "true" : "false");
+        ctrl.textContent = paused ? "▶ Play" : "⏸ Pause";
+        rail.style.animationPlayState = paused ? "paused" : "running";
+        ctrl.setAttribute(
+          "aria-label",
+          paused ? "Play live ticker" : "Pause live ticker",
+        );
       }
-      ctrl?.addEventListener('click', () => setPaused(ctrl.getAttribute('aria-pressed') !== 'true'));
+      ctrl?.addEventListener("click", () =>
+        setPaused(ctrl.getAttribute("aria-pressed") !== "true"),
+      );
       if (reduced) setPaused(true);
 
-      // Clone once for seamless loop
-      function cloneOnce(){
+      // Clone once for seamless loop (skip placeholder)
+      function cloneOnce() {
         if (rail.__clonedOnce) return;
         rail.__clonedOnce = true;
-        const kids = [...rail.querySelectorAll('.pill, .headline')];
-        kids.forEach(k => rail.appendChild(k.cloneNode(true)));
+        const kids = [
+          ...rail.querySelectorAll(".pill:not(.placeholder), .headline"),
+        ];
+        kids.forEach((k) => rail.appendChild(k.cloneNode(true)));
       }
 
       // Width-aware timing
-      function tuneSpeed(){
-        const viewport = root.querySelector('.fc-ticker__viewport'); if (!viewport) return;
-        const w = rail.scrollWidth, v = viewport.clientWidth || 1;
-        const factor = Math.min(2, Math.max(.8, w / (v*2))); // 0.8x..2x based on content
-        const current = speedCtrl?.dataset.speed || 'normal';
+      function tuneSpeed() {
+        const viewport = root.querySelector(".fc-ticker__viewport");
+        if (!viewport) return;
+        const w = rail.scrollWidth,
+          v = viewport.clientWidth || 1;
+        const factor = Math.min(2, Math.max(0.8, w / (v * 2))); // 0.8x..2x based on content
+        const current = speedCtrl?.dataset.speed || "normal";
         const base = speedMap[current] || 24;
-        rail.style.setProperty('--speed', (base * factor) + 's');
+        rail.style.setProperty("--speed", base * factor + "s");
       }
 
       // ---------- Store ----------
-      function loadStore(){
-        try{
-          const raw = JSON.parse(localStorage.getItem(storeKey) || '[]');
-          const cutoff = Date.now() - TTL*1000;
-          return raw.filter(x => (x.ts||0) > cutoff).slice(0, MAX_STORE);
-        }catch{ return []; }
+      function loadStore() {
+        try {
+          const raw = JSON.parse(localStorage.getItem(storeKey) || "[]");
+          const cutoff = Date.now() - TTL * 1000;
+          return raw.filter((x) => (x.ts || 0) > cutoff).slice(0, MAX_STORE);
+        } catch {
+          return [];
+        }
       }
-      function saveStore(list){
-        try{ localStorage.setItem(storeKey, JSON.stringify(list.slice(0, MAX_STORE))); }catch{}
+      function saveStore(list) {
+        try {
+          localStorage.setItem(
+            storeKey,
+            JSON.stringify(list.slice(0, MAX_STORE)),
+          );
+        } catch {}
+      }
+
+      // ---------- Empty-state helpers (NEW) ----------
+      function wireEmptyCTA() {
+        const btn = document.getElementById("shoutouts-empty-cta");
+        if (!btn) return;
+        btn.addEventListener(
+          "click",
+          () => {
+            // Prefer native share if available; fallback to clicking hero share chip
+            const share = document.getElementById("hero-share");
+            if (navigator.share) {
+              const d = share?.dataset?.share
+                ? JSON.parse(share.dataset.share)
+                : {
+                    title: document.title,
+                    text: "Support our season!",
+                    url: location.href,
+                  };
+              navigator.share(d).catch(() => {
+                /* user canceled */
+              });
+            } else {
+              share?.click();
+            }
+          },
+          { passive: true },
+        );
+      }
+      function hideEmpty() {
+        const p = document.getElementById("shoutouts-empty");
+        if (p) p.remove();
+      }
+      function ensureEmptyState() {
+        const hasReal = !!rail.querySelector(
+          ".pill:not(.headline):not(.placeholder)",
+        );
+        const exists = !!document.getElementById("shoutouts-empty");
+        if (!hasReal && !exists) {
+          const span = document.createElement("span");
+          span.id = "shoutouts-empty";
+          span.className = "pill placeholder";
+          span.setAttribute("role", "listitem");
+          span.innerHTML =
+            'No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>';
+          const headline = rail.querySelector(".headline");
+          rail.insertBefore(
+            span,
+            headline ? headline.nextSibling : rail.firstChild,
+          );
+          wireEmptyCTA();
+        } else if (!hasReal && exists) {
+          wireEmptyCTA(); // make sure CTA is wired if SSR placed it
+        }
       }
 
       // ---------- Merge / de-dupe ----------
       const recentBySponsor = new Map(); // key -> { ts, el, count }
-      const sKey = (s)=>String(s||'').trim().toLowerCase();
-      const esc = (t)=>String(t).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+      const sKey = (s) =>
+        String(s || "")
+          .trim()
+          .toLowerCase();
+      const esc = (t) =>
+        String(t).replace(
+          /[&<>"']/g,
+          (m) =>
+            ({
+              "&": "&amp;",
+              "<": "&lt;",
+              ">": "&gt;",
+              '"': "&quot;",
+              "'": "&#39;",
+            })[m],
+        );
 
-      function renderPill(data,{vip=false,prepend=true}={}){
-        const tier = String(data?.tier || 'General');
-        const sponsor = esc(data?.sponsor ?? 'Anonymous');
-        const msg = esc(data?.msg ?? 'supported the team!');
-        const badge = (tier.toLowerCase()==='platinum') ? '✨'
-                   : (tier.toLowerCase()==='gold')     ? '🏅'
-                   : (tier.toLowerCase()==='silver')   ? '🎉'
-                   : (tier.toLowerCase()==='bronze')   ? '🥉' : '🔥';
-        const el = document.createElement('span');
-        el.className = 'pill' + (vip ? ' vip' : '');
-        el.setAttribute('role','listitem');
-        el.dataset.tier = tier; el.dataset.sponsor = sponsor; el.dataset.msg = msg;
+      function renderPill(data, { vip = false, prepend = true } = {}) {
+        const tier = String(data?.tier || "General");
+        const sponsor = esc(data?.sponsor ?? "Anonymous");
+        const msg = esc(data?.msg ?? "supported the team!");
+        const badge =
+          tier.toLowerCase() === "platinum"
+            ? "✨"
+            : tier.toLowerCase() === "gold"
+              ? "🏅"
+              : tier.toLowerCase() === "silver"
+                ? "🎉"
+                : tier.toLowerCase() === "bronze"
+                  ? "🥉"
+                  : "🔥";
+        const el = document.createElement("span");
+        el.className = "pill" + (vip ? " vip" : "");
+        el.setAttribute("role", "listitem");
+        el.dataset.tier = tier;
+        el.dataset.sponsor = sponsor;
+        el.dataset.msg = msg;
         el.innerHTML = `${badge} <span class="text-white">${sponsor}</span> ${msg}`;
-        if (prepend) rail.prepend(el); else rail.appendChild(el);
-        if (vip){
-          if (!reduced){ el.style.transform='scale(1.02)'; setTimeout(()=>{ el.style.transform=''; }, 1200); }
+        if (prepend) rail.prepend(el);
+        else rail.appendChild(el);
+        if (vip) {
+          if (!reduced) {
+            el.style.transform = "scale(1.02)";
+            setTimeout(() => {
+              el.style.transform = "";
+            }, 1200);
+          }
           srVIP && (srVIP.textContent = `VIP: ${data.sponsor} ${data.msg}`);
-        } else { sr && (sr.textContent = `${data.sponsor} ${data.msg}`); }
+        } else {
+          sr && (sr.textContent = `${data.sponsor} ${data.msg}`);
+        }
         return el;
       }
 
-      function addItemRaw(data){
+      function addItemRaw(data) {
         if (!data) return;
+        hideEmpty(); // NEW — remove placeholder once we have content
+
         const now = Date.now();
-        const tier = String(data.tier || 'General');
-        const key  = sKey(data.sponsor || 'Anonymous');
-        const isVIP= vipTiers.includes(tier.toLowerCase());
+        const tier = String(data.tier || "General");
+        const key = sKey(data.sponsor || "Anonymous");
+        const isVIP = vipTiers.includes(tier.toLowerCase());
 
         const existing = recentBySponsor.get(key);
-        if (existing && (now - existing.ts) <= DEDUPE_WIN){
-          existing.count = (existing.count||1) + 1;
+        if (existing && now - existing.ts <= DEDUPE_WIN) {
+          existing.count = (existing.count || 1) + 1;
           existing.ts = now;
-          const badge = existing.el.querySelector('.x-times') || document.createElement('b');
-          badge.className='x-times'; badge.textContent = ` ×${existing.count}`; badge.style.marginLeft='2px';
+          const badge =
+            existing.el.querySelector(".x-times") ||
+            document.createElement("b");
+          badge.className = "x-times";
+          badge.textContent = ` ×${existing.count}`;
+          badge.style.marginLeft = "2px";
           existing.el.appendChild(badge);
           rail.prepend(existing.el);
           return;
         }
 
-        const el = renderPill(data, { vip:isVIP, prepend:true });
+        const el = renderPill(data, { vip: isVIP, prepend: true });
         recentBySponsor.set(key, { ts: now, el, count: 1 });
 
         const stored = loadStore();
-        stored.unshift({ sponsor: data.sponsor || 'Anonymous', msg: data.msg || 'supported the team!', tier, ts: now });
+        stored.unshift({
+          sponsor: data.sponsor || "Anonymous",
+          msg: data.msg || "supported the team!",
+          tier,
+          ts: now,
+        });
         saveStore(stored);
         tuneSpeed();
       }
 
       // ---------- Offline queue ----------
       const offlineQueue = [];
-      function setOffline(on){ offlinePill?.classList.toggle('show', !!on); }
-      addEventListener('offline', () => setOffline(true), { passive:true });
-      addEventListener('online',  () => { setOffline(false); while (offlineQueue.length) addItemRaw(offlineQueue.shift()); }, { passive:true });
+      function setOffline(on) {
+        offlinePill?.classList.toggle("show", !!on);
+      }
+      addEventListener("offline", () => setOffline(true), { passive: true });
+      addEventListener(
+        "online",
+        () => {
+          setOffline(false);
+          while (offlineQueue.length) addItemRaw(offlineQueue.shift());
+        },
+        { passive: true },
+      );
 
       // ---------- Hydrate ----------
-      async function hydrate(){
-        try{
+      async function hydrate() {
+        ensureEmptyState(); // NEW — show placeholder while we load
+
+        try {
           const cached = loadStore();
-          if (Array.isArray(cached) && cached.length){ cached.slice().reverse().forEach(addItemRaw); }
-          const r = await fetch('/api/shoutouts', { headers:{'accept':'application/json'} });
-          if (r?.ok){
-            const list = await r.json();
-            if (Array.isArray(list) && list.length){ list.slice().reverse().forEach(addItemRaw); }
+          if (Array.isArray(cached) && cached.length) {
+            cached.slice().reverse().forEach(addItemRaw);
           }
-        }catch{}
-        finally{
-          rail.removeAttribute('aria-busy');
-          cloneOnce(); tuneSpeed();
+          const r = await fetch("/api/shoutouts", {
+            headers: { accept: "application/json" },
+          });
+          if (r?.ok) {
+            const list = await r.json();
+            if (Array.isArray(list) && list.length) {
+              list.slice().reverse().forEach(addItemRaw);
+            }
+          }
+        } catch {
+        } finally {
+          rail.removeAttribute("aria-busy");
+          ensureEmptyState(); // NEW — keep/clear placeholder accurately
+          cloneOnce();
+          tuneSpeed();
         }
       }
 
       // Live via Socket.IO (optional)
-      try{
-        if (window.io && !window.__fcTickerSocketBound){
+      try {
+        if (window.io && !window.__fcTickerSocketBound) {
           window.__fcTickerSocketBound = true;
           const socket = io();
-          socket.on('new_shoutout', (data) => {
-            if (navigator.onLine) addItemRaw(data); else offlineQueue.push(data);
+          socket.on("new_shoutout", (data) => {
+            if (navigator.onLine) addItemRaw(data);
+            else offlineQueue.push(data);
           });
         }
-      }catch{}
+      } catch {}
 
       // Custom event API
-      addEventListener('fc:shoutout', (e)=>{ const d=e.detail||{}; (navigator.onLine ? addItemRaw : offlineQueue.push.bind(offlineQueue))(d); }, { passive:true });
+      addEventListener(
+        "fc:shoutout",
+        (e) => {
+          const d = e.detail || {};
+          (navigator.onLine
+            ? addItemRaw
+            : offlineQueue.push.bind(offlineQueue))(d);
+        },
+        { passive: true },
+      );
 
       // Go!
-      if ('requestIdleCallback' in window) requestIdleCallback(hydrate, { timeout: 1200 });
+      if ("requestIdleCallback" in window)
+        requestIdleCallback(hydrate, { timeout: 1200 });
       else setTimeout(hydrate, 0);
       if (reduced) setPaused(true);
+
+      // Wire SSR placeholder CTA (if present)
+      wireEmptyCTA();
     })();
   </script>
 </section>
-

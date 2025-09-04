@@ -379,16 +379,7 @@
   }
 
   /* Title belt */
-  #fc-hero .fc-hero-card__belt{
-    position:absolute; inset-inline:6%; top:45%;
-    height: var(--belt-h, 5rem);
-    pointer-events:none; z-index:1;
-    background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,var(--belt, .42)) 18%, rgba(0,0,0,var(--belt, .52)) 50%, rgba(0,0,0,var(--belt, .42)) 82%, rgba(0,0,0,0) 100%);
-    filter: blur(1px); border-radius: 22px;
-  }
   @media (forced-colors: active){
-    #fc-hero .fc-hero-card__belt{ background: Canvas; filter:none; border: 1px solid CanvasText; }
-  }
 
   #fc-hero .fc-hero-card__glare{
     position:absolute; inset:-20%; mix-blend-mode:screen; pointer-events:none; transform:translateZ(60px);

@@ -13,11 +13,16 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
 
 // Resolve defaults
 const repoRoot = path.resolve(__dirname, "..", "..");
-const defaultSrcA = path.join(repoRoot, "app/static/images/connect-atx-team.jpg");
+const defaultSrcA = path.join(
+  repoRoot,
+  "app/static/images/connect-atx-team.jpg",
+);
 const defaultSrcB = path.join(repoRoot, "static/images/connect-atx-team.jpg");
 const SRC = process.env.SRC
   ? path.resolve(repoRoot, process.env.SRC)
-  : (fs.existsSync(defaultSrcA) ? defaultSrcA : defaultSrcB);
+  : fs.existsSync(defaultSrcA)
+    ? defaultSrcA
+    : defaultSrcB;
 
 const guessOut = SRC.includes(path.sep + "app" + path.sep)
   ? path.join(repoRoot, "app/static/images/hero")
@@ -28,11 +33,15 @@ fs.mkdirSync(OUTDIR, { recursive: true });
 
 const widths = [1920, 1280, 960];
 
-function log(...args){ console.log("⭐ Starforge:", ...args); }
-function warn(...args){ console.warn("⚠️  Starforge:", ...args); }
+function log(...args) {
+  console.log("⭐ Starforge:", ...args);
+}
+function warn(...args) {
+  console.warn("⚠️  Starforge:", ...args);
+}
 
-async function forgeImages(){
-  if (!fs.existsSync(SRC)){
+async function forgeImages() {
+  if (!fs.existsSync(SRC)) {
     warn("Source not found:", SRC);
     process.exitCode = 1;
     return;
@@ -42,12 +51,12 @@ async function forgeImages(){
   const base = "hero";
 
   // Ensure 16:9 cover crop, center by default
-  for (const w of widths){
+  for (const w of widths) {
     const pipeline = sharp(SRC).resize({
       width: w,
-      height: Math.round(w * 9 / 16),
+      height: Math.round((w * 9) / 16),
       fit: "cover",
-      position: "centre"
+      position: "centre",
     });
 
     // AVIF
@@ -60,15 +69,12 @@ async function forgeImages(){
 
     // WEBP
     const webpOut = path.join(OUTDIR, `${base}-${w}.webp`);
-    await pipeline
-      .clone()
-      .webp({ quality: 70, effort: 4 })
-      .toFile(webpOut);
+    await pipeline.clone().webp({ quality: 70, effort: 4 }).toFile(webpOut);
     log("✓", path.relative(repoRoot, webpOut));
   }
 }
 
-async function writeLQIP(){
+async function writeLQIP() {
   const lqipOut = path.join(OUTDIR, "hero-lqip.txt");
   const buf = await sharp(SRC)
     .resize({ width: 24, height: 24, fit: "cover", position: "centre" })
@@ -80,10 +86,18 @@ async function writeLQIP(){
 }
 
 const cmd = (process.argv[2] || "images").toLowerCase();
-if (cmd === "images"){
-  forgeImages().then(writeLQIP).catch(err => { console.error(err); process.exitCode = 1; });
-}else if (cmd === "lqip"){
-  writeLQIP().catch(err => { console.error(err); process.exitCode = 1; });
-}else{
+if (cmd === "images") {
+  forgeImages()
+    .then(writeLQIP)
+    .catch((err) => {
+      console.error(err);
+      process.exitCode = 1;
+    });
+} else if (cmd === "lqip") {
+  writeLQIP().catch((err) => {
+    console.error(err);
+    process.exitCode = 1;
+  });
+} else {
   warn("Unknown command:", cmd, "(use: images | lqip)");
 }

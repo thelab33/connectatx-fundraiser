@@ -1,0 +1,16 @@
+{{% raw %}} {% extends "base.html" %} {% block title %}{{ fundraiser_title or
+'Fuel the Season — Fund the Future' }}{% endblock %} {% block content %}
+<section class="seam-header" id="fundraiser-hero">
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+</section>
+
+<section
+  id="tiers"
+  class="section container"
+  aria-labelledby="tiers-title"
+  role="region"
+>
+  <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
+  {% include "partials/tiers.html" ignore missing with context %}
+</section>
+{% endblock %} {{% endraw %}}

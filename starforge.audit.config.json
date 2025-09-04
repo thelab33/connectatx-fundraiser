@@ -1,0 +1,37 @@
+{
+  "entry": "css/input.css",
+  "srcDir": "css",
+  "outDir": "css_out",
+  "contentGlobs": [
+    "**/*.{html,liquid,php,twig,astro,mdx,vue,jsx,tsx}",
+    "!node_modules/**",
+    "!dist/**",
+    "!build/**"
+  ],
+  "ignoreCss": [
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/*.min.css",
+    "**/tailwind*.css",
+    "**/generated*.css"
+  ],
+  "tailwind": {
+    "keepDirectives": ["@tailwind base;", "@tailwind components;", "@tailwind utilities;"],
+    "safeLayers": ["base", "components", "utilities"],
+    "purge": false,
+    "safeClassPatterns": [
+      "^tw-",
+      "^prose",
+      "^dark:",
+      "^(sm|md|lg|xl|2xl):",
+      "^container$",
+      "^sr-only$"
+    ]
+  },
+  "merge": {
+    "sortMediaQueries": true,
+    "sortSelectorsAlpha": false
+  },
+  "heroOverlaySafety": true
+}

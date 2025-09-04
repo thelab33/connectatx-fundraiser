@@ -13,11 +13,16 @@ jobs:
 
       - name: Setup Node
         uses: actions/setup-node@v4
-        with: { node-version: '20', cache: 'pnpm', cache-dependency-path: 'web/pnpm-lock.yaml' }
+        with:
+          {
+            node-version: "20",
+            cache: "pnpm",
+            cache-dependency-path: "web/pnpm-lock.yaml",
+          }
 
       - name: Setup Python (uv)
         uses: astral-sh/setup-uv@v3
-        with: { python-version: '3.12' }
+        with: { python-version: "3.12" }
 
       - name: Install Python deps
         run: uv venv && uv pip install -r requirements.txt
@@ -46,4 +51,3 @@ jobs:
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - name: Deploy
         run: flyctl deploy --remote-only
-

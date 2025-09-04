@@ -1,16 +1,51 @@
 /* Starforge tokens — tiny pack to standardize buttons/chips/badges */
-:root{
-  --sf-brand:#f2c94c;
-  --sf-text-hi:#eef2f8;
-  --sf-text-lo:#cbd2e1;
+:root {
+  --sf-brand: #f2c94c;
+  --sf-text-hi: #eef2f8;
+  --sf-text-lo: #cbd2e1;
 }
-.badge{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .5rem;border-radius:999px;
-  background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.05));
-  border:1px solid rgba(255,255,255,.18);color:var(--sf-text-hi);font-weight:800;font-size:.78rem}
-.fc-btn{display:inline-flex;align-items:center;justify-content:center;gap:.45rem;
-  font-weight:900;border-radius:.8rem;padding:.6rem .8rem;border:1px solid rgba(255,255,255,.2)}
-.fc-btn-primary{background:#0f1117;color:#fff;border-color:#000}
-.fc-btn-ghost{background:rgba(255,255,255,.08);color:var(--sf-text-hi)}
-.fc-btn:focus-visible{outline:2px solid color-mix(in srgb, var(--sf-brand) 70%, #fff);outline-offset:2px}
-.optical-tight{letter-spacing:-.01em}
-.text-gold{color:color-mix(in srgb, var(--sf-brand) 82%, #fff)}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.12),
+    rgba(255, 255, 255, 0.05)
+  );
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  color: var(--sf-text-hi);
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+.fc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-weight: 900;
+  border-radius: 0.8rem;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+.fc-btn-primary {
+  background: #0f1117;
+  color: #fff;
+  border-color: #000;
+}
+.fc-btn-ghost {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sf-text-hi);
+}
+.fc-btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--sf-brand) 70%, #fff);
+  outline-offset: 2px;
+}
+.optical-tight {
+  letter-spacing: -0.01em;
+}
+.text-gold {
+  color: color-mix(in srgb, var(--sf-brand) 82%, #fff);
+}
