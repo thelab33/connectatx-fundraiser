@@ -1,14 +1,5 @@
-{# ===================== FundChamps — Minimal FAQ (component) ===================== #}
-{# Usage:
-    {% from "components/faq.minimal.jinja" import render_faq %}
-    {{ render_faq(
-         id="donor-faq",
-         faqs=my_faqs,                         # list[{q,a}]
-         section_title="Questions? We’ve got answers.",
-         contact_email="team@connectatxelite.org",
-         persist="session"                     # "session" | "local" | "none"
-    )}}
-#}
+
+
 {% macro render_faq(id='faq', faqs=[], contact_email='hello@example.com', section_title="Questions? We’ve got answers.", persist='session') -%}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set faqs = faqs if faqs else [

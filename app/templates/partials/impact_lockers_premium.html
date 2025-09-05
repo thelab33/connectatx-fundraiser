@@ -1,5 +1,4 @@
-{# FC • IMPACT BUCKETS — SV-ELITE v4.1 (AA contrast + meter fallback + a11y
-polish) #} {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if
+ {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if
 csp_nonce is defined else '') %} {% set team_name = (team.name if team and
 team.name else 'FundChamps') %} {% set IMPACT = IMPACT if IMPACT is defined and
 IMPACT else [ {'key':'gym','title':'Gym Access

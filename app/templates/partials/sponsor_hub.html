@@ -1,38 +1,29 @@
-{# =============================================================================
-FundChamps — Sponsors Hub (Unified, Elite, Self-contained) Parts: Spotlight +
-Inline Wall + Floating Drawer - Single source of truth for sponsors data (no
-duplicates) - CSP-safe (nonce), A11Y, mobile-first - Socket.IO + Custom events
-(`fc:vip`) ready
-============================================================================= #}
-{% include "partials/ui_bootstrap.html" ignore missing with context %} {#
----------- Nonce + Config ---------- #} {% set NONCE = NONCE if NONCE is defined
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}  {% set NONCE = NONCE if NONCE is defined
 else (csp_nonce() if csp_nonce is defined else '') %} {% set sponsors_hub_id =
 sponsors_hub_id|default('sponsors-hub') %} {% set show_spotlight =
 show_spotlight|default(true) %} {% set show_inline_wall =
 show_inline_wall|default(true) %} {% set show_floating =
 show_floating|default(true) %} {% set spotlight_slots =
 spotlight_slots|default(4) %} {% set inline_rows_goal =
-inline_rows_goal|default(12) %} {# number of tiles to display (auto-fills CTAs)
-#} {# ---------- Safe context fallbacks ---------- #} {% set team_name =
+inline_rows_goal|default(12) %}   {% set team_name =
 team.team_name if team and team.team_name else 'Connect ATX Elite' %} {% set
 brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
 {% set asset_version = asset_version|default(None) %} {% set _logo_fallback =
 'images/logo.webp' %} {% set default_logo = (url_for('static',
 filename=_logo_fallback) if url_for is defined else '/static/' ~ _logo_fallback)
-%} {# Accept `sponsors` or `sponsors_sorted` (list of dicts: name, amount, tier,
-url, logo) #} {% set _src = (sponsors_sorted if sponsors_sorted is defined and
+%}  {% set _src = (sponsors_sorted if sponsors_sorted is defined and
 sponsors_sorted else (sponsors if sponsors is defined else [])) %} {% set
 sponsors_sorted = _src if _src else [] %} {% set sponsors_total = sponsors_total
 if sponsors_total is defined else (sponsors_sorted | sum(attribute='amount')) %}
 {% set sponsors_count = sponsors_count if sponsors_count is defined else
 (sponsors_sorted | length) %} {% set recent_donations = recent_donations if
-recent_donations is defined else [] %} {# Demo seed if empty #} {% if
+recent_donations is defined else [] %}  {% if
 sponsors_sorted|length == 0 %} {% set sponsors_sorted = [
 {"name":"ESPN","logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/ESPN_wordmark.svg","url":"https://espn.com","amount":5000,"tier":"Platinum"},
 {"name":"H-E-B","logo":"https://upload.wikimedia.org/wikipedia/commons/2/2f/HEB_logo.svg","url":"https://heb.com","amount":2500,"tier":"Gold"},
 {"name":"NIKE","logo":"https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg","url":"https://nike.com","amount":1500,"tier":"Silver"}
-] %} {% endif %} {# ---------- Tiers & Pre-compute Spotlight vs Wall ----------
-#} {% set tiers = ['Platinum','Gold','Silver','Bronze','Community'] %} {% set
+] %} {% endif %}  {% set tiers = ['Platinum','Gold','Silver','Bronze','Community'] %} {% set
 sorted_desc = sponsors_sorted | sort(attribute='amount', reverse=True) %} {% set
 spotlight_list = sorted_desc[:spotlight_slots] %} {% set top_names =
 spotlight_list | map(attribute='name') | list %} {% set wall_list = [] %} {% for
@@ -81,10 +72,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
       #{{ sponsors_hub_id }} .ticker-rail{overflow:hidden}
       #{{ sponsors_hub_id }} .ticker-track{display:inline-flex;gap:1.25rem;padding-right:1.25rem;white-space:nowrap;animation:hub-scroll 24s linear infinite}
       @keyframes hub-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-      @media (prefers-reduced-motion:reduce){#{{ sponsors_hub_id }} .ticker-track{animation:none!important}}
-    </style>
-
-    {# ===================== SPOTLIGHT ===================== #} {% if
+      @media (prefers-reduced-motion:reduce) {% if
     show_spotlight %}
     <aside id="{{ sponsors_hub_id }}-spotlight" class="mb-8">
       <header class="mb-4 text-center">
@@ -141,7 +129,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
           >
           {% if s.tier %}<span class="badge">{{ s.tier }}</span>{% endif %}
         </article>
-        {% endfor %} {# Empty slots -> CTA tiles #} {% set used =
+        {% endfor %}  {% set used =
         spotlight_list|length %} {% for _ in range(spotlight_slots - used) %}
         <div
           role="listitem"
@@ -195,7 +183,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
         >
       </div>
     </aside>
-    {% endif %} {# ===================== INLINE WALL ===================== #} {%
+    {% endif %}  {%
     if show_inline_wall %}
     <section
       class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6"
@@ -310,8 +298,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
         No sponsors match your filters. Try “All” or clear search.
       </div>
     </section>
-    {% endif %} {# ===================== FLOATING DRAWER =====================
-    #} {% if show_floating %}
+    {% endif %}  {% if show_floating %}
     <section
       class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 sw"
       id="{{ sponsors_hub_id }}-sw"

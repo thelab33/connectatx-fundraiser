@@ -1,13 +1,8 @@
-{# =======================================================================
-partials/fundraiser_panel.html — SV SaaS Elite (standalone card) - No
-absolute/overlay positioning; sits below the hero cleanly - IDs prefixed with
-`fp-` to avoid collisions with hero - CSP-safe styles/scripts; motion/contrast
-guards =======================================================================
-#} {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+ {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% set theme_hex = theme_hex|default('#facc15') %} {% set
 team_name = (team.team_name if team and team.team_name else 'Connect ATX Elite')
 %} {% set catch_line = catch_phrase if catch_phrase is defined and catch_phrase
-else 'Fuel the Season, Fund the Future' %} {# Numbers (self-contained) #} {% set
+else 'Fuel the Season, Fund the Future' %}  {% set
 _fr = (funds_raised|string)|replace('$','')|replace(',','')|float if
 funds_raised is defined else 0.0 %} {% set _fg =
 (fundraising_goal|string)|replace('$','')|replace(',','')|float if

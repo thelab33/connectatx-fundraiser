@@ -1,7 +1,4 @@
-{# ============================================================================
-sponsor_ticker.html — FundChamps Premium Ticker - Auto-scrolls donor feed -
-Conditional clone: second track only if there are real donations
-============================================================================ #}
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% set _items = items if items is defined else [] %}
 
@@ -37,8 +34,7 @@ defined else '') %} {% set _items = items if items is defined else [] %}
       </ul>
     </div>
 
-    {# Only render duplicate track if real items exist (prevents double
-    fallback) #} {% if _items and _items|length > 0 %}
+     {% if _items and _items|length > 0 %}
     <div class="track" aria-hidden="true"></div>
     {% endif %}
   </div>

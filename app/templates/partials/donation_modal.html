@@ -1,10 +1,5 @@
-{# =============================================================================
-donation_modal.html — FundChamps • Deluxe Donation Modal (SV-ELITE polished) -
-Stripe(Card/PaymentRequest) + PayPal (server endpoints, CSRF-safe) - True SR
-live region, labeled tabs, focus trap, scroll lock - Works with
-data-open-donate-modal triggers anywhere on the page
-============================================================================= #}
-{# ---------- Safe fallbacks & tokens ---------- #} {% set NONCE = NONCE if
+
+ {% set NONCE = NONCE if
 NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %} {% set
 team_name = team.team_name if team and team.team_name else 'FundChamps' %} {%
 set brand_color = team.theme_color if team and team.theme_color else '#facc15'
@@ -12,8 +7,7 @@ set brand_color = team.theme_color if team and team.theme_color else '#facc15'
 set vip_threshold = (team.vip_amount if team and team.vip_amount else 500) | int
 %} {% set min_amount = min_amount|default(5) | int %} {% set default_amount =
 default_amount|default(50) | int %} {% set csrf = (csrf_token() if csrf_token is
-defined else '') %} {# ---------- Endpoint discovery (prefer fc_payments, then
-api, else sane defaults) ---------- #} {% set _has = (has_endpoint is defined)
+defined else '') %}  {% set _has = (has_endpoint is defined)
 %} {% set _sf = (safe_url_for is defined) %} {% set stripe_intent_url = ( _sf
 and _has and has_endpoint('fc_payments.create_stripe_intent') and
 safe_url_for('fc_payments.create_stripe_intent') ) or ( _sf and _has and

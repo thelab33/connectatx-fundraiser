@@ -13,11 +13,9 @@
   {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 {% endif %}
 
-{# Keep hero as the only visible H1 #}
 {% block h1 %}{% endblock %}
 {% block title %}{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}{% endblock %}
 
-{# ---------------- HEAD: keep page-specific bits only ---------------- #}
 {% block extra_head %}
   {{ super() }}
 
@@ -26,19 +24,19 @@
                  if meta_description is defined and meta_description
                  else (catch_phrase if catch_phrase is defined and catch_phrase
                        else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
-  <meta name="description" content="{{ _desc }}"/>
+  <meta name="description" content="{{ _desc }}">
 
-  {# Canonical/OG handled by base; we just ensure LCP image preload if custom #}
+  {# LCP image preload if provided #}
   {% if hero_image_url is defined and hero_image_url %}
-    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high"/>
+    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high">
   {% endif %}
 
   {# Optional Starforge polish (safe if 404) #}
   <link rel="stylesheet"
         href="{{ url_for('static', filename='starforge/brand-spine.css') if url_for is defined else '/static/starforge/brand-spine.css' }}"
-        referrerpolicy="no-referrer"/>
+        referrerpolicy="no-referrer">
   <link rel="modulepreload"
-        href="{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}"/>
+        href="{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}">
 {% endblock %}
 
 {% block content %}
@@ -50,7 +48,6 @@
   <section id="fundraiser-hero" class="seam-header" aria-label="Hero">
     {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
     {% set _brand_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-    {% include "starforge/_brand_spine.html.jinja" ignore missing with context %}
   </section>
 
   {# ===== 2) SPONSORSHIP TIERS ===== #}
@@ -84,61 +81,65 @@
 
   {# ---------------- SV-Elite • Polish Pack (scoped + idempotent) ---------------- #}
   <style {{ nonce_attr() }}>
-    :root {
-      --fc-radius: 16px;
-      --fc-pad-x: clamp(0.9rem, 0.6rem + 1.2vw, 1.25rem);
-      --fc-pad-y: clamp(0.8rem, 0.5rem + 1vw, 1.1rem);
-      --fc-chip-fs: 0.82rem;
-      --fc-chip-px: 0.55rem;
-      --fc-chip-py: 0.28rem;
-      --fc-btn-fs: 0.93rem;
-      --fc-btn-px: 0.9rem;
-      --fc-btn-py: 0.6rem;
+    :root{
+      --fc-radius:16px;
+      --fc-pad-x:clamp(0.9rem,0.6rem + 1.2vw,1.25rem);
+      --fc-pad-y:clamp(0.8rem,0.5rem + 1vw,1.1rem);
+      --fc-chip-fs:.82rem;
+      --fc-chip-px:.55rem;
+      --fc-chip-py:.28rem;
+      --fc-btn-fs:.93rem;
+      --fc-btn-px:.9rem;
+      --fc-btn-py:.6rem;
     }
-    .section { padding-block: clamp(1.1rem, 1.6vw, 1.6rem); }
-    .section.section--tight { padding-block: clamp(0.9rem, 1.2vw, 1.2rem); }
-    .section + .section { padding-top: clamp(0.9rem, 1.2vw, 1.2rem); }
 
-    .container, .sf-container { max-width: 1120px; margin-inline: auto; }
+    .section{padding-block:clamp(1.1rem,1.6vw,1.6rem)}
+    .section.section--tight{padding-block:clamp(0.9rem,1.2vw,1.2rem)}
+    .section + .section{padding-top:clamp(0.9rem,1.2vw,1.2rem)}
+    .container,.sf-container{max-width:1120px;margin-inline:auto}
 
-    .sf-card, .hdr-glass, .fc-hero-card__frame,
-      border-radius: var(--fc-radius);
-      box-shadow: 0 16px 44px rgba(0, 0, 0, 0.3);
-      border-color: rgba(255, 255, 255, 0.1);
-      background: linear-gradient(180deg, rgba(255,255,255,.055), rgba(255,255,255,.03));
+    /* Glass cards */
+    .sf-card,.hdr-glass,.fc-hero-card__frame{
+      border-radius:var(--fc-radius);
+      box-shadow:0 16px 44px rgba(0,0,0,.3);
+      border:1px solid rgba(255,255,255,.1);
+      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
     }
-    .hdr-glow:before,
 
-    .text-fluid-h2,
+    /* Optional subtle glow carrier */
+    .hdr-glow:before{content:"";position:absolute;inset:0;filter:blur(6px);pointer-events:none}
 
-    .legacy-chip,
-      font-size: var(--fc-chip-fs);
-      padding: var(--fc-chip-py) var(--fc-chip-px);
-      border-radius: .7rem;
+    /* Fluid text helper (used in some partials) */
+    .text-fluid-h2{font-size:clamp(1.3rem,1rem + 2vw,2rem);line-height:1.15}
+
+    .legacy-chip{
+      font-size:var(--fc-chip-fs);
+      padding:var(--fc-chip-py) var(--fc-chip-px);
+      border-radius:.7rem;
     }
-    #fc-hero .fc-hero-chip--mini { font-size: .78rem; padding: .25rem .5rem; }
 
-    .sf-btn,
-      font-size: var(--fc-btn-fs);
-      padding: var(--fc-btn-py) var(--fc-btn-px);
-      box-shadow: 0 8px 24px rgba(0,0,0,.22);
+    .sf-btn{
+      font-size:var(--fc-btn-fs);
+      padding:var(--fc-btn-py) var(--fc-btn-px);
+      box-shadow:0 8px 24px rgba(0,0,0,.22);
     }
-    .sf-btn-sm { padding: .5rem .75rem; font-size: .9rem; }
-    #tiers-partial [data-tier-cta] { padding: .6rem .9rem; }
+    .sf-btn-sm{padding:.5rem .75rem;font-size:.9rem}
 
-    #fc-about .stats-grid { gap: .8rem; }
-    #tiers-partial .grid-auto { gap: .9rem; }
-    #tiers-partial .tier.card { padding: .9rem; }
-    #tiers-partial .heading { margin-bottom: .25rem; }
-    #impact [data-bucket] { padding: .85rem; }
-    #impact .meter { height: 9px; }
+    #tiers-partial [data-tier-cta]{padding:.6rem .9rem}
 
-    #fc-hero .hm-track { height: 12px; }
-    #fc-hero .milestones li { font-size: .7rem; padding: .14rem .4rem; }
+    #fc-about .stats-grid{gap:.8rem}
+    #tiers-partial .grid-auto{gap:.9rem}
+    #tiers-partial .tier.card{padding:.9rem}
+    #tiers-partial .heading{margin-bottom:.25rem}
+    #impact [data-bucket]{padding:.85rem}
+    #impact .meter{height:9px}
 
-    @media print {
-      .section { padding-block: .4rem; }
-      #fc-hero .fc-hero-badges,
+    #fc-hero .hm-track{height:12px}
+    #fc-hero .milestones li{font-size:.7rem;padding:.14rem .4rem}
+
+    @media print{
+      .section{padding-block:.4rem}
+      #fc-hero .fc-hero-badges{display:none!important}
     }
   </style>
 
@@ -148,7 +149,7 @@
       const seal = document.querySelector(".stripe-seal");
       if (seal) {
         const front = seal.querySelector(".seal-front");
-        const back = seal.querySelector(".seal-back");
+        const back  = seal.querySelector(".seal-back");
         const sync = () => {
           const w = Math.max(front?.offsetWidth || 0, back?.offsetWidth || 0);
           seal.style.minWidth = (w + 12) + "px";
@@ -167,7 +168,6 @@
     })();
   </script>
 
-  {# Seam math: sync sticky height + donation meter bootstrap #}
   {% block body_scripts %}
     {{ super() }}
     <script {{ nonce_attr() }}>
@@ -205,7 +205,6 @@
       })();
     </script>
 
-    {# Optional: enable the brand spine JS if you shipped it #}
     <script {{ nonce_attr() }} type="module">
       try {
         import("{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}").catch(() => {});

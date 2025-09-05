@@ -1,10 +1,4 @@
-{# ============================================================================
-Sponsor Leaderboard — SV-Elite 6.2 + VIP spotlight (pin + glow) + assertive SR +
-Team-scoped local persistence (TTL) bootstrap + Smart de-dupe/merge with ×n
-counter + bump + User speed control (Slow/Normal/Fast) + width-aware timing +
-Offline queue & recovery banner + PRM / Save-Data aware, forced-colors safe,
-print-hidden + NEW: Friendly, CSP-safe empty-state with share CTA
-========================================================================== #} {%
+ {%
 set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined
 else '') %} {% set _seed = (shoutouts if shoutouts is defined and shoutouts else
 []) %} {% set _team_id = (team.team_id if team and team.team_id else 'global')
@@ -246,7 +240,7 @@ else '') %} {% set _seed = (shoutouts if shoutouts is defined and shoutouts else
       id="ticker-rail"
       aria-busy="true"
     >
-      {# Server seed (optional) #} {% for s in _seed %} {% set t = (s.tier or
+       {% for s in _seed %} {% set t = (s.tier or
       'General')|string %} {% set badge = '✨' if t|lower=='platinum' else '🏅'
       if t|lower=='gold' else '🎉' if t|lower=='silver' else '🥉' if
       t|lower=='bronze' else '🔥' %}
@@ -265,7 +259,7 @@ else '') %} {% set _seed = (shoutouts if shoutouts is defined and shoutouts else
         >🏆 Sponsor leaderboard is live — real-time shoutouts!</span
       >
 
-      {# NEW — Empty-state placeholder (CSP-safe button; no inline JS) #} {% if
+       {% if
       not _seed %}
       <span id="shoutouts-empty" role="listitem" class="pill placeholder">
         No shoutouts yet —
@@ -466,7 +460,7 @@ else '') %} {% set _seed = (shoutouts if shoutouts is defined and shoutouts else
           span.className = "pill placeholder";
           span.setAttribute("role", "listitem");
           span.innerHTML =
-            'No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>';
+            'No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta-2" aria-label="Be the first to cheer us on">be the first 🎉</button>';
           const headline = rail.querySelector(".headline");
           rail.insertBefore(
             span,

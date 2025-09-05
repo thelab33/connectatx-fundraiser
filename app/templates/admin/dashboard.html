@@ -1,5 +1,4 @@
-{# ==================== FundChamps • Admin Dashboard (Elite Edition)
-==================== #} {% extends "admin/base.html" %} {% set NONCE = NONCE if
+ {% extends "admin/base.html" %} {% set NONCE = NONCE if
 NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %} {% block
 title %}Dashboard – Sponsor Admin | {{ super() }}{% endblock %} {% block content
 %}
@@ -8,7 +7,7 @@ title %}Dashboard – Sponsor Admin | {{ super() }}{% endblock %} {% block conte
   Admin Dashboard
 </h2>
 
-{# ---------- Summary Cards ---------- #}
+
 <div class="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
   {% set tr = stats.total_raised or 0 %} {% set sc = stats.sponsor_count or 0 %}
   {% set ga = stats.goal_amount or 0 %} {% set ps = stats.pending_sponsors or 0
@@ -43,7 +42,7 @@ title %}Dashboard – Sponsor Admin | {{ super() }}{% endblock %} {% block conte
   </div>
 </div>
 
-{# ---------- Progress Bar ---------- #} {% set pct = ((tr / (ga or 1)) * 100) |
+ {% set pct = ((tr / (ga or 1)) * 100) |
 round(1) %}
 <div class="mb-10">
   <div class="mb-1 flex items-center justify-between">
@@ -65,7 +64,7 @@ round(1) %}
   </div>
 </div>
 
-{# ---------- Latest Sponsors ---------- #}
+
 <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 mb-10">
   <h3 class="mb-3 font-semibold">Latest Sponsors</h3>
   <div class="overflow-x-auto">
@@ -129,7 +128,7 @@ round(1) %}
   </div>
 </section>
 
-{# ---------- Latest Transactions ---------- #}
+
 <section>
   <h3 class="mb-3 font-semibold">Latest Transactions</h3>
   <div class="overflow-x-auto">
@@ -167,7 +166,7 @@ round(1) %}
   </div>
 </section>
 
-{# ---------- Export Payouts Button ---------- #}
+
 <div class="mt-8 flex justify-end">
   <a
     href="{{ url_for('admin.export_payouts') }}"
@@ -177,7 +176,7 @@ round(1) %}
   </a>
 </div>
 
-{# ---------- Admin Pro Tip ---------- #}
+
 <div class="mt-10 text-center text-xs text-zinc-500">
   ⭐️ Pro tip: Get real-time sponsor alerts in Slack — ask your dev to enable
   <code>send_slack_new_sponsor()</code> in admin routes!

@@ -1,15 +1,9 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-======================================================================
-FundChamps • Impact + Challenge & Coaches (Premium / SaaS-ready) - Matches
-premium card/glow aesthetic (brand-aware) - Pure Jinja2, CSP-safe vanilla JS
-(nonce or macros) - Reduced-motion aware, accessible counters + semantics
-====================================================================== #} {% set
+defined else '') %}  {% set
 __nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined
 else '')) %} {% set asset_version = asset_version|default(None) %} {% set
 brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set donate_href = donate_href|default('/donate') %} {# --------- Safe
-fallbacks (only used if not provided by the view/context) --------- #} {% set
+{% set donate_href = donate_href|default('/donate') %}  {% set
 impact = impact if impact is defined and impact else [ {'label': 'Players
 Enrolled', 'value': 16}, {'label': 'Honor Roll Scholars', 'value': 11},
 {'label': 'Tournaments Played', 'value': 12}, {'label': 'Years Running',
@@ -143,7 +137,7 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
       Program Impact, Challenge, and Coaches
     </h2>
 
-    {# ---------- Impact stats row ---------- #}
+    
     <ul
       class="grid grid-cols-2 gap-4 md:grid-cols-4"
       role="list"
@@ -164,9 +158,9 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
       {% endfor %}
     </ul>
 
-    {# ---------- Challenge + Coaches ---------- #}
+    
     <div class="mt-12 grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
-      {# Challenge card #}
+      
       <section
         class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 fc-card p-7 md:p-8"
         aria-labelledby="challenge-heading"
@@ -212,7 +206,7 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
         </div>
       </section>
 
-      {# Coaches card #}
+      
       <section
         class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 fc-card p-7 md:p-8"
         aria-labelledby="coaches-heading"

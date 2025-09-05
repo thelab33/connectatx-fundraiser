@@ -1,11 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-=========================================================================================
-testimonial_scrollbar.html — Subtle Testimonial Scroller - Thin horizontal strip
-with sliding testimonials - Appears when scrolling, hides after idle or further
-scroll - CSP-safe + a11y friendly
-=========================================================================================
-#} {% set testimonials = testimonials if testimonials is defined and
+defined else '') %}  {% set testimonials = testimonials if testimonials is defined and
 testimonials else [ "⭐️ \"This team changed my son’s life — discipline &
 brotherhood.\"", "🙌 \"Community-driven and family-focused. Love it!\"", "🏀
 \"Best program we’ve been part of. Truly elite.\"", "💡 \"Sponsors here really

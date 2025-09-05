@@ -1,4 +1,4 @@
-{# ================== Sponsorship Tiers — FundChamps SV-Elite v4.0 (with Pulse-in-Grid) ================== #}
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set brand_color            = (team.theme_color if team and team.theme_color else '#facc15') %}
 {% set donate_init_url        = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint('main.donate')) else '/donate') %}
@@ -135,7 +135,7 @@
        data-currency="{{ currency }}"
        data-team="{{ team_name|e }}">
 
-    {# 1–5: tier cards #}
+    
     {% for tier in tiers %}
       {% set is_premium = tier.title in ['Gold','Platinum','VIP'] %}
       {% set amt_clean  = 'custom' if tier.amount|string|lower == 'custom' else (tier.amount|string|replace('+','')|replace(',','')) %}
@@ -236,7 +236,7 @@
       </article>
     {% endfor %}
 
-    {# 6th tile: Program Pulse Mini (perfectly fills the row) #}
+    
     <div class="tiers-pulse-cell" role="listitem" aria-roledescription="program pulse">
       {% include "partials/program_pulse_mini.html" ignore missing with context %}
     </div>

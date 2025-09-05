@@ -1,10 +1,10 @@
 <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block" data-ui=""${name//_/ -}"" >
-{# === Floating AI Concierge — FundChamps Elite (SV Premium+, CSP/A11y/Streaming/Offline/Voice) === #}
-{# ---------- Vars & Fallbacks ---------- #}
+
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set ai_post_url     = (safe_url_for('ai.concierge')        if (safe_url_for is defined and has_endpoint('ai.concierge'))        else '/api/ai/concierge') %}
 {% set ai_stream_url   = (safe_url_for('ai.concierge_stream') if (safe_url_for is defined and has_endpoint('ai.concierge_stream')) else '/api/ai/stream') %}
-{% set ai_mode         = ai_mode if ai_mode is defined else 'auto' %} {# 'auto' | 'post' | 'sse' #}
+{% set ai_mode         = ai_mode if ai_mode is defined else 'auto' %} 
 {% set team_id         = team.id if team and team.id is defined else 'global' %}
 {% set team_name       = team.team_name if team and team.team_name else 'FundChamps' %}
 {% set brand_color     = (team.theme_color if team and team.theme_color else '#facc15') %}
@@ -13,7 +13,7 @@
 {% set contact_email   = contact_email if contact_email is defined and contact_email else 'hello@example.com' %}
 {% set include_faq_jsonld = include_faq_jsonld if include_faq_jsonld is defined else true %}
 
-{# --- Embedded FAQ KB (used for instant client-side answers) --- #}
+
 {% set faqs = faqs if faqs is defined and faqs else [
   {"q":"Is my gift tax-deductible?",
    "a":"**Yes.** Your contribution is made to our program and may be tax-deductible to the extent allowed by law. You’ll automatically receive an emailed receipt for your records.",
@@ -134,7 +134,7 @@
   </div>
 </dialog>
 
-{# Optional hidden SEO payload for “People Also Ask” without on-page FAQ block #}
+
 {% if include_faq_jsonld and faqs and faqs|length > 0 %}
   <script type="application/ld+json" nonce="{{ NONCE }}">
   {

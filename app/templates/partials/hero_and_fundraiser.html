@@ -1,18 +1,9 @@
-{# ============================================================
-   FC HERO — SV‑Elite 7.1 (Premier, CSP‑safe)
-   - Prebuilt AVIF/WEBP LCP with robust fallback
-   - Inside overlay hero bar, neon spine, mobile brand chip
-   - Luminance tint + holo headline; AA/AAA aware
-   - IO autofocus, D hotkey, match‑window chip, confetti hits
-   - P2P UTM propagation + Stripe‑first CTA routing
-   - Font/resize‑aware belt placement; idle hydration; PRM/contrast guards
-   ============================================================ #}
-
-{# --- CSP nonce helpers --- #}
+{# hero_and_fundraiser.html #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% if nonce_attr is not defined %}
+  {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% endif %}
 
-{# --- Utilities --- #}
 {% macro asset_url(path) -%}
   {%- set p = (path|string)|trim -%}
   {%- if '://' in p -%}{{ p }}
@@ -20,81 +11,72 @@
   {%- else -%}/static/{{ p.lstrip('/') }}{%- endif -%}
 {%- endmacro %}
 
-{# --- Theme & copy --- #}
-{% set theme_hex  = theme_hex|default('#facc15') %}
-{% set team_name  = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set hero_title = hero_title|default('Fuel the Season. Fund the Future.') %}
-{% set catch_line = (catch_phrase if catch_phrase is defined and catch_phrase else
-                     'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
+{% set theme_hex   = theme_hex|default('#facc15') %}
+{% set team_name   = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set hero_title  = hero_title|default('Fuel the Season. Fund the Future.') %}
+{% set catch_line  = (catch_phrase if catch_phrase is defined and catch_phrase else
+                      'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
 
-{# --- Images (robust fallbacks) --- #}
 {% set _hero_src =
   (hero_image_url if hero_image_url is defined and hero_image_url) or
-  (team.hero_bg if team and team.hero_bg) or
+  (team.hero_bg   if team and team.hero_bg) or
   (team.hero_image if team and team.hero_image) or
   (team.team_photo if team and team.team_photo) or
-  (team.photo_url if team and team.photo_url) or
+  (team.photo_url  if team and team.photo_url) or
   'images/connect-atx-team.jpg'
 %}
-{% set _hero_mobile = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
-{% set hero_src        = asset_url(_hero_src) %}
-{% set hero_src_mobile = asset_url(_hero_mobile) %}
-{% set hero_alt        = (hero_alt if hero_alt is defined and hero_alt) or (team_name ~ ' team photo') %}
-{% set use_prebuilt    = 'connect-atx-team.jpg' in hero_src %}
+{% set _hero_mobile     = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
+{% set hero_src         = asset_url(_hero_src) %}
+{% set hero_src_mobile  = asset_url(_hero_mobile) %}
+{% set hero_alt         = (hero_alt if hero_alt is defined and hero_alt) or (team_name ~ ' team photo') %}
+{% set use_prebuilt     = false %}
 
-{# --- Logo (mobile chip) --- #}
 {% set _logo   = (team.logo if team and team.logo else 'images/logo.webp') %}
 {% set logoSrc = asset_url(_logo) %}
 
-{# --- Fundraising math --- #}
-{% set funds_raised      = (funds_raised if funds_raised is defined else 0)|float %}
-{% set fundraising_goal  = (fundraising_goal if fundraising_goal is defined and fundraising_goal is not none and fundraising_goal != 0 else 10000)|float %}
-{% set _raw_pct          = (funds_raised / fundraising_goal * 100) if fundraising_goal else 0 %}
-{% set pct               = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
+{% set funds_raised     = (funds_raised if funds_raised is defined else 0)|float %}
+{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal is not none and fundraising_goal != 0 else 10000)|float %}
+{% set _raw_pct         = (funds_raised / fundraising_goal * 100) if fundraising_goal else 0 %}
+{% set pct              = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
 {% set fundraising_deadline = (fundraising_deadline if fundraising_deadline is defined else (deadline_dt if deadline_dt is defined else None)) %}
-{% set deadline_iso      = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
+{% set deadline_iso     = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
 
-{# --- Visual tuning --- #}
 {% set img_pos_x = img_pos_x|default('50%') %}
-{% set img_pos_y = img_pos_y|default('32%') %}
+{% set img_pos_y = img_pos_y|default('42%') %}
 
-{# --- Locale/Currency --- #}
 {% set currency_code = currency_code|default('USD') %}
 {% set locale_str    = locale_str|default('en-US') %}
 
-{# --- Match window --- #}
 {% set match_start_iso = (match_start if match_start is defined and match_start else None) and match_start.isoformat() or '' %}
 {% set match_end_iso   = (match_end   if match_end   is defined and match_end   else None) and match_end.isoformat()   or '' %}
 
-{# --- CTA href + UTM (server-side base; JS enriches w/ P2P) --- #}
 {% set _raw_cta    = (stripe_payment_link if stripe_payment_link else (cta_href if cta_href is defined else '#tiers')) %}
 {% set _sep        = '&' if '?' in _raw_cta else '?' %}
 {% set cta_href    = _raw_cta ~ _sep ~ 'utm_source=hero&utm_medium=cta&utm_campaign=' ~ (team_name|urlencode) %}
 {% set cta_label   = (cta_label if cta_label else 'Donate') %}
 {% set _cta_external  = ('://' in cta_href) %}
 
-{# --- LCP Preload (only for stock set) --- #}
 {% if use_prebuilt %}
-<link rel="preload" as="image"
-      href="/static/images/hero/hero-1920.avif"
-      imagesrcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w"
-      imagesizes="100vw" fetchpriority="high">
+  <link rel="preload" as="image"
+        href="/static/images/hero/hero-1920.avif"
+        imagesrcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w"
+        imagesizes="100vw" fetchpriority="high">
 {% endif %}
 
-<section id="fc-hero"
+<section id="fc-hero" data-hero-scope="cinema" data-holo-animate="1" data-kenburns="1" data-tilt="1" data-hero-scope="cinema"
          class="fc-hero-tilt grid place-items-center px-4 sm:px-6 w-full -translate-y-[6px] md:-translate-y-[10px]"
          data-theme="athletic"
          data-team="{{ team_name }}"
          data-name-style="gradient"
          aria-labelledby="hero-heading"
          itemscope itemtype="https://schema.org/SportsTeam"
-         style="--accent: {{ theme_hex }}; --img-x: {{ img_pos_x }}; --img-y: {{ img_pos_y }};"
+         style="--accent: {{ theme_hex }}; --img-x: {{ img_pos_x }}; --img-y: {{ img_pos_y }}; --meter-pct: 0%;"
          data-locale="{{ locale_str }}" data-currency="{{ currency_code }}"
          data-urgency-deadline="{{ deadline_iso }}">
-  <meta itemprop="name" content="{{ team_name }}"/>
-  <meta itemprop="sport" content="Basketball"/>
-  {% if logoSrc %}<meta itemprop="logo" content="{{ logoSrc }}"/>{% endif %}
-  <meta itemprop="image" content="{{ hero_src }}"/>
+  <meta itemprop="name" content="{{ team_name }}">
+  <meta itemprop="sport" content="Basketball">
+  {% if logoSrc %}<meta itemprop="logo" content="{{ logoSrc }}">{% endif %}
+  <meta itemprop="image" content="{{ hero_src }}">
 
   <!-- Ambient background -->
   <div class="absolute inset-0 -z-10" aria-hidden="true">
@@ -107,27 +89,27 @@
     <figure class="fc-hero-card" role="group" aria-label="Team hero">
       <div class="fc-hero-card__ring" aria-hidden="true"></div>
 
-      <!-- Vertical neon spine -->
+      <!-- Vertical neon spine (hidden on desktop via CSS below) -->
       <aside class="fc-hero-spine" aria-hidden="true"><span class="spine-text">{{ team_name }}</span></aside>
 
       <div class="fc-hero-card__frame">
         <picture>
           {% if use_prebuilt %}
-            <source type="image/avif" srcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w" sizes="100vw"/>
-            <source type="image/webp" srcset="/static/images/hero/hero-1920.webp 1920w, /static/images/hero/hero-1280.webp 1280w, /static/images/hero/hero-960.webp 960w" sizes="100vw"/>
-            <img id="fc-hero-img" src="/static/images/hero/hero-1280.webp" alt="{{ hero_alt }}" class="fc-hero-card__img"
+            <source type="image/avif" srcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w" sizes="100vw">
+            <source type="image/webp" srcset="/static/images/hero/hero-1920.webp 1920w, /static/images/hero/hero-1280.webp 1280w, /static/images/hero/hero-960.webp 960w" sizes="100vw">
+            <img src="/static/images/hero/hero-1280.webp" alt="{{ hero_alt }}" class="fc-hero-card__img"
                  loading="eager" decoding="async" fetchpriority="high" width="1920" height="1080"
-                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous"/>
+                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous">
           {% else %}
-            <source type="image/avif" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw"/>
-            <source type="image/webp" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw"/>
-            <source type="image/avif" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw"/>
-            <source type="image/webp" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw"/>
-            <img id="fc-hero-img" src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img"
+            <source type="image/avif" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw">
+            <source type="image/webp" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw">
+            <source type="image/avif" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw">
+            <source type="image/webp" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw">
+            <img src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img"
                  loading="eager" decoding="async" fetchpriority="high" width="1920" height="1080"
-                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous"/>
+                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous">
           {% endif %}
-          <noscript><img src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img" width="1920" height="1080"/></noscript>
+          <noscript><img src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img" width="1920" height="1080"></noscript>
         </picture>
 
         <!-- Dynamic tint + belt + FX (decorative) -->
@@ -138,107 +120,118 @@
 
         <!-- Overlay -->
         <figcaption class="fc-hero-overlay flex flex-col items-center text-center gap-4">
-          <!-- Mobile brand chip -->
+          <!-- Mobile brand chip (mobile only) -->
           <div class="fc-hero-brand mobile-only flex items-center gap-2">
-            <img src="{{ logoSrc }}" alt="" loading="eager" decoding="async" class="h-9 w-9 rounded-xl ring-1 ring-white/10 bg-white/95" width="36" height="36"/>
+            <img src="{{ logoSrc }}" alt="" loading="eager" decoding="async" class="h-9 w-9 rounded-xl ring-1 ring-white/10 bg-white/95" width="36" height="36">
             <span class="legacy-chip font-semibold tracking-wide">{{ team_name }}</span>
           </div>
 
           <!-- Hologram headline -->
-          <h1 id="hero-heading" class="fc-hero-type holo holo3d text-balance text-white drop-shadow"
+          <h1 id="hero-heading" class="fc-hero-type holo holo3d text-balance drop-shadow"
               data-text="{{ hero_title }}">{{ hero_title }}</h1>
 
-          {# Hero bar INSIDE overlay (inlined) #}
-<div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary">
-  <!-- Top stats + countdown -->
-  <p class="hm-stats tabular" aria-live="polite">
-    <strong id="fc-hero-raised" data-raw="{{ funds_raised|round(0) }}" data-count="{{ funds_raised|round(0) }}">{{ '${:,.0f}'.format(funds_raised) }}</strong>
-    <span class="muted">of</span>
-    <strong id="fc-hero-goal" data-raw="{{ fundraising_goal|round(0) }}">{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
-    <span class="muted">•</span>
-    <strong id="fc-hero-pct" class="tabular" data-count="{{ pct|round(0) }}">{{ pct|round(0) }}%</strong>
-  </p>
-  <p id="fc-hero-countdown" role="timer" aria-live="polite" aria-atomic="true">⏳ —</p>
+          <!-- Fundraiser summary -->
+          <div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary">
+            <p class="hm-stats tabular" aria-live="polite">
+              <strong id="fc-hero-raised" data-raw="{{ funds_raised|round(0) }}" data-count="{{ funds_raised|round(0) }}">{{ '${:,.0f}'.format(funds_raised) }}</strong>
+              <span class="muted">of</span>
+              <strong id="fc-hero-goal" data-raw="{{ fundraising_goal|round(0) }}">{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
+              <span class="muted">•</span>
+              <strong id="fc-hero-pct" class="tabular" data-count="{{ pct|round(0) }}">{{ pct|round(0) }}%</strong>
+            </p>
+            <p id="fc-hero-countdown" role="timer" aria-live="polite" aria-atomic="true">⏳ —</p>
 
-  <!-- CTA + chips -->
-  <div class="fc-hero-actions" role="group" aria-label="Hero actions">
-    <a href="{{ cta_href }}"
-       class="fc-hero-cta cta-pulse"
-       data-label-full="{{ cta_label }}"
-       data-label-compact="{{ 'Donate' if (cta_label|lower)[:6]=='donate' else 'Join Now' }}"
-       data-urgency-deadline="{{ deadline_iso }}"
-       {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
-      <span class="cta-text">{{ cta_label }}</span> <span aria-hidden="true">→</span>
-    </a>
+            <!-- CTA + chips -->
+            <div class="fc-hero-actions" role="group" aria-label="Hero actions">
+              <a href="{{ cta_href }}"
+                 class="fc-hero-cta cta-pulse"
+                 data-label-full="{{ cta_label }}"
+                 data-label-compact="{{ 'Donate' if (cta_label|lower)[:6]=='donate' else 'Join Now' }}"
+                 data-urgency-deadline="{{ deadline_iso }}"
+                 {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
+                <span class="cta-text">{{ cta_label }}</span> <span aria-hidden="true">→</span>
+              </a>
 
-    <button id="fc-hero-share" type="button" class="chip" data-share-text="Support our season!" aria-label="Share this fundraiser">↗︎ Share</button>
-    <a href="#tiers" class="chip" data-check-target="#tiers">💎 View Tiers</a>
-    <span id="match-chip" class="chip hidden"
-          data-match-start="{{ match_start_iso }}"
-          data-match-end="{{ match_end_iso }}"
-          data-match-label="{{ match_label|default('Match ×2 Active') }}">
-      🎯 Match ×2 Active
-    </span>
-  </div>
+              <button id="fc-hero-share" type="button" class="chip" data-share="{"title":"Support our season!","text":"Fuel the Season. Fund the Future."}" data-share-text="Support our season!" aria-label="Share this fundraiser">↗︎ Share</button>
+              <a href="#tiers" class="chip" data-check-target="#tiers">💎 View Tiers</a>
+              <span id="match-chip" class="chip hidden"
+                    data-match-start="{{ match_start_iso }}"
+                    data-match-end="{{ match_end_iso }}"
+                    data-match-label="{{ match_label|default('Match ×2 Active') }}">
+                🎯 Match ×2 Active
+              </span>
+            </div>
 
-  <!-- Mini progress meter + milestones -->
-  <div class="hero-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-       aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress"
-       data-milestones="{{ hero_milestones|default('25,50,75,100') }}">
-    <div class="hm-track" aria-hidden="true">
-      <div id="fc-hero-fill" class="hm-fill" style="width: {{ pct|round(1) }}%" data-pct="{{ pct|round(1) }}"></div>
-      <div class="hm-ticks" aria-hidden="true"></div>
-    </div>
-    <ul id="fc-hero-milestones" class="milestones" aria-hidden="true"></ul>
-    <p class="hm-stats sr-only" aria-live="polite">
-      <span id="fc-hero-sr">Raised {{ '${:,.0f}'.format(funds_raised) }} of goal {{ '${:,.0f}'.format(fundraising_goal) }}.</span>
-    </p>
-  </div>
-</div>
+            <!-- Mini progress meter + milestones -->
+            <div class="hero-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                 aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress"
+                 data-milestones="{{ hero_milestones|default('25,50,75,100') }}">
+              <div class="hm-track" aria-hidden="true">
+                <div id="fc-hero-fill" class="hm-fill" style="width: {{ pct|round(1) }}%" data-pct="{{ pct|round(1) }}"></div>
+                <div class="hm-ticks" aria-hidden="true"></div>
+              </div>
+              <ul id="fc-hero-milestones" class="milestones" aria-hidden="true"></ul>
+              <p class="hm-stats sr-only" aria-live="polite">
+                <span id="fc-hero-sr">Raised {{ '${:,.0f}'.format(funds_raised) }} of goal {{ '${:,.0f}'.format(fundraising_goal) }}.</span>
+              </p>
+            </div>
+          </div>
 
-<noscript>
-  <div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary (noscript)">
-    <p class="hm-stats tabular">
-      <strong>{{ '${:,.0f}'.format(funds_raised) }}</strong>
-      <span class="muted">of</span>
-      <strong>{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
-      <span class="muted">•</span>
-      <strong>{{ pct|round(0) }}%</strong>
-    </p>
-    {% if deadline_iso %}<p class="tabular">⏳ Deadline: {{ fundraising_deadline.strftime('%b %d, %Y') if fundraising_deadline else '' }}</p>{% endif %}
-    <a href="{{ cta_href }}" class="fc-hero-cta" {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}><span class="cta-text">{{ cta_label }}</span> →</a>
-    <div class="hero-meter" aria-hidden="true">
-      <div class="hm-track"><div class="hm-fill" style="width: {{ pct|round(1) }}%"></div></div>
-    </div>
-  </div>
-</noscript>
+          <noscript>
+            <div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary (noscript)">
+              <p class="hm-stats tabular">
+                <strong>{{ '${:,.0f}'.format(funds_raised) }}</strong>
+                <span class="muted">of</span>
+                <strong>{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
+                <span class="muted">•</span>
+                <strong>{{ pct|round(0) }}%</strong>
+              </p>
+              {% if deadline_iso %}<p class="tabular">⏳ Deadline: {{ fundraising_deadline.strftime('%b %d, %Y') if fundraising_deadline else '' }}</p>{% endif %}
+              <a href="{{ cta_href }}" class="fc-hero-cta" {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}><span class="cta-text">{{ cta_label }}</span> →</a>
+              <div class="hero-meter" aria-hidden="true">
+                <div class="hm-track"><div class="hm-fill" style="width: {{ pct|round(1) }}%"></div></div>
+              </div>
+            </div>
+          </noscript>
         </figcaption>
       </div>
     </figure>
   </div>
+<script type="module" nonce="{{ NONCE }}">{% raw %}(()=>{const hero=document.getElementById("fc-hero");if(!hero)return;/* --- tilt parallax --- */if(hero.dataset.tilt==="1"){const frame=hero.querySelector(".fc-hero-card__frame");if(frame){let rect={left:0,top:0,width:0,height:0};const upRect=()=>{rect=frame.getBoundingClientRect()};const move=e=>{const p=e.touches?e.touches[0]:e;const x=(p.clientX-rect.left)/rect.width,y=(p.clientY-rect.top)/rect.height;hero.style.setProperty("--rx",((.5-y)*6).toFixed(2)+"deg");hero.style.setProperty("--ry",((x-.5)*8).toFixed(2)+"deg");hero.style.setProperty("--mx",(x*100).toFixed(1)+"%");hero.style.setProperty("--my",(y*100).toFixed(1)+"%")};frame.addEventListener("pointerenter",upRect,{passive:true});frame.addEventListener("pointermove",move,{passive:true});frame.addEventListener("pointerleave",()=>{hero.style.setProperty("--rx","0deg");hero.style.setProperty("--ry","0deg")},{passive:true});window.addEventListener("resize",upRect,{passive:true})}}/* --- count-up when visible --- */const ids=["#fc-hero-raised","#fc-hero-pct"];const fmtMoney=(n)=>{try{return new Intl.NumberFormat(hero.dataset.locale||"en-US",{style:"currency",currency:hero.dataset.currency||"USD",maximumFractionDigits:0}).format(n)}catch{return"$"+Math.round(n).toLocaleString()}};const runCount=el=>{const target=+el.dataset.count||+el.dataset.raw||0;let cur=0;const steps=28;const inc=Math.max(1,Math.round(target/steps));const tick=()=>{cur=Math.min(target,cur+inc);el.textContent=el.id==="fc-hero-raised"?fmtMoney(cur):cur.toLocaleString()+"%";if(cur<target)requestAnimationFrame(tick)};tick()};const io=new IntersectionObserver(es=>{es.forEach(e=>{if(!e.isIntersecting)return;ids.forEach(sel=>{const el=hero.querySelector(sel);el&&!el.__animated&&(el.__animated=1,runCount(el))});io.disconnect()})},{rootMargin:"-40% 0px -40% 0px"});io.observe(hero)})();{% endraw %}</script>
 </section>
 
-<style {{ nonce_attr() }}>
-/* ===== Scope: #fc-hero (Premier) ===== */
+<style {{ nonce_attr() }}>{% raw %}
+/* ===== Scope: #fc-hero (Premier, self-contained) ===== */
 #fc-hero{
   --shadow: 0 25px 80px rgba(0,0,0,.55);
-  --overlay-dark: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.60) 46%, rgba(0,0,0,.94) 100%);
+  --overlay-dark: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.42) 46%, rgba(0,0,0,.88) 100%);
   --overlay-light: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.78) 60%, rgba(255,255,255,.92) 100%);
-  /* Tilt defaults (JS updates via CSS vars) */
+  /* Tilt defaults (JS may update via CSS vars) */
   --rx: 0deg; --ry: 0deg; --tx: 0px; --mx: 50%; --my: 40%;
-  /* Hologram */
-  --holo-depth: 40px; --holo-plate: .72; --holo-stroke: .95; --holo-glow: .85; --holo-rgb-shift: 1.6px; --holo-shimmer-s: 4.6s;
-  /* Belt */
-  --belt-h: 68px; --belt-left: clamp(16px, 2vw, 28px); --belt-right: clamp(16px, 2vw, 28px);
-  /* Meter */
-  --meter-pct: {{ pct|round(1) }}%;
+  /* Holo tuning */
+  --holo-x: .02em; --holo-y: -.02em;
+  /* Readability belt */
+  --belt-h: 60px; --belt-left: clamp(16px, 2vw, 28px); --belt-right: clamp(16px, 2vw, 28px);
+  /* Meter (hero-local) */
+  --meter-pct: 0%;
 }
+
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .tabular{font-variant-numeric:tabular-nums}
 
-/* Rail mode selector (optional) */
-#fc-hero[data-rail="spine"]::before{ content:none !important; }
-#fc-hero[data-rail="pseudo"] .fc-hero-spine{ display:none !important; }
+/* Hide any Starforge brand marks within hero */
+#fc-hero .sf-brand,
+#fc-hero .sf-brand-mark,
+#fc-hero [data-brand-sigil]{display:none!important}
+
+/* Brand chip desktop-only off; spine off on desktop */
+#fc-hero .fc-hero-brand{display:none!important}
+#fc-hero .fc-hero-spine{display:none!important}
+@media (max-width:640px){
+  #fc-hero .fc-hero-brand{display:flex!important}
+  /* enable the spine on mobile by removing the next line */
+  /* #fc-hero .fc-hero-spine{display:block!important} */
+}
 
 /* Typography */
 #fc-hero .fc-hero-type{
@@ -257,495 +250,131 @@
 
 /* Tilted Photo Card + Glass */
 #fc-hero .fc-hero-tilt{perspective:1400px}
-#fc-hero .fc-hero-card{ --r: clamp(20px,1.6vw,28px); position:relative; width:min(1080px,92vw); aspect-ratio:16/9; transform-style:preserve-3d; contain:layout paint size; will-change:transform; }
-#fc-hero .fc-hero-card__ring{ position:absolute; inset:-2px; border-radius:calc(var(--r) + 2px); background:
-  linear-gradient(#0000,#0000) padding-box,
-  conic-gradient(from 180deg at 50% 50%, color-mix(in srgb, var(--accent) 55%, #fff 45%), #e5e7eb, color-mix(in srgb, var(--accent) 55%, #fff 45%)) border-box;
-  border:1.5px solid transparent; filter:drop-shadow(0 18px 50px rgba(0,0,0,.45)); z-index:0; }
-#fc-hero .fc-hero-card__frame{ position:absolute; inset:0; z-index:1; border-radius:var(--r);
-  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12);
+#fc-hero .fc-hero-card{
+  --r: clamp(20px,1.6vw,28px);
+  position:relative; width:min(1080px,92vw); aspect-ratio:16/9;
+  transform-style:preserve-3d; contain:layout paint size; will-change:transform;
+}
+#fc-hero .fc-hero-card__ring{
+  position:absolute; inset:-2px; border-radius:calc(var(--r) + 2px); z-index:0;
+  background:
+    linear-gradient(#0000,#0000) padding-box,
+    conic-gradient(from 180deg at 50% 50%, color-mix(in srgb, var(--accent) 55%, #fff 45%), #e5e7eb, color-mix(in srgb, var(--accent) 55%, #fff 45%)) border-box;
+  border:1.5px solid transparent; filter:drop-shadow(0 18px 50px rgba(0,0,0,.45));
+}
+#fc-hero .fc-hero-card__frame{
+  position:absolute; inset:0; z-index:1; border-radius:var(--r); overflow:hidden;
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+  border:1px solid rgba(255,255,255,.12);
   box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
-  overflow:hidden; transform-style:preserve-3d; backface-visibility:hidden;
-  transform: translateZ(40px) rotateX(var(--rx)) rotateY(var(--ry)); }
-#fc-hero .fc-hero-card__img{ width:100%; height:100%; object-fit:cover; object-position: var(--img-x) var(--img-y);
+  transform-style:preserve-3d; backface-visibility:hidden;
+  transform: translateZ(40px) rotateX(var(--rx)) rotateY(var(--ry));
+}
+#fc-hero .fc-hero-card__img{
+  width:100%; height:100%; object-fit:cover; object-position: var(--img-x) var(--img-y);
   transform: translateZ(20px) translateX(var(--tx)) scale(1.02);
   filter:saturate(1.04) contrast(1.04) brightness(.88);
-  user-select:none; -webkit-user-drag:none; will-change:transform; }
+  user-select:none; -webkit-user-drag:none; will-change:transform;
+}
 
-/* Tint / Belt / Glare / Noise */
-#fc-hero .fc-hero-card__tint{ position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:multiply; opacity:var(--tint,.22);
-  background: linear-gradient(180deg, rgba(0,0,0,.00), rgba(0,0,0,.18) 60%, rgba(0,0,0,.32)), color-mix(in srgb, var(--accent) 10%, transparent); }
-#fc-hero .fc-hero-card__belt{ position:absolute; z-index:3; pointer-events:none; left:var(--belt-left); right:var(--belt-right);
+/* FX layers */
+#fc-hero .fc-hero-card__tint{
+  position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:multiply; opacity:var(--tint,.22);
+  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.18) 60%, rgba(0,0,0,.32)), color-mix(in srgb, var(--accent) 10%, transparent);
+}
+#fc-hero .fc-hero-card__belt{
+  position:absolute; z-index:3; pointer-events:none; left:var(--belt-left); right:var(--belt-right);
   top:var(--belt-top, auto); height:var(--belt-h); border-radius:999px;
-  background:linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.16);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08); }
-#fc-hero .fc-hero-card__glare{ position:absolute; inset:-20%; z-index:4; pointer-events:none; mix-blend-mode:screen; transform:translateZ(60px);
-  background: radial-gradient(40% 60% at var(--mx) var(--my), rgba(255,255,255,.16), transparent 60%); }
-#fc-hero .fc-hero-card__noise{ position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.08; transform:translateZ(80px);
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>"); background-size:160px 160px; }
+  background:linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.16);
+  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+  box-shadow: 0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
+}
+#fc-hero .fc-hero-card__glare{
+  position:absolute; inset:-20%; z-index:4; pointer-events:none; mix-blend-mode:screen; transform:translateZ(60px);
+  background: radial-gradient(40% 60% at var(--mx) var(--my), rgba(255,255,255,.16), transparent 60%);
+}
+#fc-hero .fc-hero-card__noise{
+  position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.08; transform:translateZ(80px);
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>");
+  background-size:160px 160px;
+}
 
-/* Vertical neon spine */
-#fc-hero .fc-hero-spine{ position:absolute; left:10px; top:10%; bottom:10%; width:4px; z-index:1; pointer-events:none;
+/* Vertical spine visuals (kept off on desktop above) */
+#fc-hero .fc-hero-spine{
+  position:absolute; left:10px; top:10%; bottom:10%; width:4px; z-index:1; pointer-events:none;
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 70%, #fff), transparent);
-  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent); }
-#fc-hero .spine-text{ position:absolute; left:-.55rem; bottom:0; writing-mode:vertical-rl; transform:rotate(180deg);
-  font-weight:800; letter-spacing:.18em; font-size:.72rem; color:rgba(255,255,255,.65); text-shadow:0 1px 0 rgba(0,0,0,.6); }
+  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+#fc-hero .spine-text{
+  position:absolute; left:-.55rem; bottom:0; writing-mode:vertical-rl; transform:rotate(180deg);
+  font-weight:800; letter-spacing:.18em; font-size:.72rem; color:rgba(255,255,255,.65); text-shadow:0 1px 0 rgba(0,0,0,.6);
+}
 
-/* Overlay */
-#fc-hero .fc-hero-overlay{ position:absolute; inset-inline:0; bottom:0; display:flex; flex-direction:column; gap:.75rem; align-items:center; text-align:center; padding:1rem clamp(1rem, 2vw, 1.6rem);
-  background:var(--overlay-dark); color:#fff; }
+/* Bottom overlay (clickable content lives here) */
+#fc-hero .fc-hero-overlay{
+  position:absolute; inset-inline:0; bottom:0; top:auto;
+  z-index:6; display:flex; flex-direction:column; gap:.75rem;
+  align-items:center; text-align:center;
+  padding:1rem clamp(1rem, 2vw, 1.6rem);
+  background:var(--overlay-dark); color:#fff; pointer-events:auto;
+}
 .light #fc-hero .fc-hero-overlay{ background:var(--overlay-light); color:#111 }
 
-/* Mobile brand chip */
-#fc-hero .legacy-chip{ color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.45) }
-#fc-hero[data-name-style="gradient"] .legacy-chip{ background:linear-gradient(90deg,var(--accent,#facc15),#fff); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none }
-#fc-hero[data-name-style="outline"]  .legacy-chip{ color:transparent; -webkit-text-stroke:1px #fff; text-shadow:0 1px 0 rgba(0,0,0,.7) }
-#fc-hero[data-name-style="accent"]   .legacy-chip{ color:var(--accent,#facc15); text-shadow:0 1px 1px rgba(0,0,0,.45) }
+/* Holo “3-cinema” — standalone, no belt/overlay conflicts */
+#fc-hero .holo3d{
+  position:relative;
+  color:#fff;
+  font-weight:900; letter-spacing:.01em;
+  text-shadow:0 2px 0 rgba(0,0,0,.35), 0 18px 40px rgba(0,0,0,.35);
+  filter:drop-shadow(0 12px 28px rgba(0,0,0,.28));
+}
+#fc-hero .holo3d::after{
+  content:attr(data-text); position:absolute; inset:0;
+  transform:translate(var(--holo-x), var(--holo-y));
+  color:color-mix(in srgb, var(--accent,#facc15) 20%, #0ff);
+  mix-blend-mode:screen; opacity:.35; pointer-events:none;
+}
+#fc-hero .holo3d::before{
+  content:attr(data-text); position:absolute; inset:0;
+  transform:translate(calc(var(--holo-x) * -1), calc(var(--holo-y) * -1));
+  color:#f0f; mix-blend-mode:screen; opacity:.22; pointer-events:none;
+}
+#fc-hero[data-holo-boost="1"] .holo3d::before,
+#fc-hero[data-holo-boost="1"] .holo3d::after{ opacity:.5; filter:blur(.4px); }
 
-/* Hologram headline */
-#fc-hero .holo{ position:relative; will-change: transform, text-shadow, filter; }
-#fc-hero .holo::before{ content:attr(data-text); position:absolute; inset:0; pointer-events:none; mix-blend-mode:overlay; opacity:var(--holo-glow); filter: drop-shadow(0 6px 18px rgba(0,0,0,.45)); }
-#fc-hero .holo3d{ transform: translateZ(var(--holo-depth)); }
-#fc-hero[data-holo-boost="1"] .holo::after{ content:attr(data-text); position:absolute; inset:0; pointer-events:none; opacity:.35; color:transparent;
-  text-shadow: var(--holo-rgb-shift) 0 0 #ff5a5a, calc(-1*var(--holo-rgb-shift)) 0 0 #5acaff; }
+@media (forced-colors:active){
+  #fc-hero .holo3d, #fc-hero .holo3d::before, #fc-hero .holo3d::after{
+    color:CanvasText; text-shadow:none; filter:none;
+  }
+}
 
-/* Actions */
-#fc-hero .fc-hero-actions{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem .65rem }
-#fc-hero .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .7rem; border-radius:.8rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-weight:800; font-size:.86rem; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px) }
-#fc-hero .fc-hero-chip--mini{ font-size:.8rem; padding:.3rem .6rem }
-
-/* CTA */
-#fc-hero .fc-hero-cta{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:800; font-size:clamp(.95rem,.9rem + .2vw,1.1rem);
-  padding:.85rem 1.3rem; text-decoration:none; background:#111; color:#fff; border:1px solid #000; box-shadow:0 8px 28px rgba(0,0,0,.25); transition:transform .2s, filter .2s, box-shadow .2s; }
-.light #fc-hero .fc-hero-cta{ background:#0f1117; color:#fff }
-#fc-hero .fc-hero-cta:hover{ transform:translateY(-1px); filter:brightness(1.08); box-shadow:0 10px 34px rgba(0,0,0,.32) }
-#fc-hero .fc-hero-cta:focus-visible{ outline:2px solid color-mix(in srgb, var(--accent) 60%, #ffffff 40%); outline-offset:3px }
-@media (prefers-reduced-motion:no-preference){ .cta-pulse{ position:relative } .cta-pulse:after{ content:""; position:absolute; inset:-3px; border-radius:999px; border:2px solid color-mix(in srgb, var(--accent) 55%, transparent); opacity:0; animation: heroPulse 2.6s ease-out infinite; }
-  @keyframes heroPulse{ 0%{transform:scale(.98);opacity:0} 40%{opacity:.55} 100%{transform:scale(1.08);opacity:0} } }
-
-/* Mini meter */
-#fc-hero .hero-meter{ width:100%; max-width:min(720px,92%) }
-#fc-hero .hm-track{ position:relative; height:14px; border-radius:9999px; overflow:hidden; background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08) }
-#fc-hero .hm-ticks{ position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0, rgba(255,255,255,.22) 1px, transparent 1px, transparent 5%); opacity:.28 }
-#fc-hero .hm-fill{ position:absolute; inset-block:0; left:0; width:var(--meter-pct, 0%); background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent) 45%, #d1d5db 55%)); box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); transition:width .6s cubic-bezier(.2,.8,.2,1) }
-#fc-hero .hm-stats{ margin-top:.35rem; color:#e5e7eb; font-size:.9rem }
-#fc-hero .hm-stats .muted{ opacity:.7; margin:0 .35rem }
-.light #fc-hero .hm-track{ background:rgba(17,17,17,.08) }
-.light #fc-hero .hm-stats{ color:#111 }
-
-/* Milestones */
+/* Hero meter (scoped here so removing external files doesn't break it) */
+#fc-hero .hero-meter{ width:100%; max-width:min(720px,92%); }
+#fc-hero .hm-track{
+  position:relative; height:12px; border-radius:9999px; overflow:hidden;
+  background:rgba(255,255,255,.16);
+}
+#fc-hero .hm-ticks{
+  position:absolute; inset:0; pointer-events:none; opacity:.22;
+  background:repeating-linear-gradient(90deg, rgba(255,255,255,.24) 0, rgba(255,255,255,.24) 1px, transparent 1px, transparent 5%);
+}
+#fc-hero .hm-fill{
+  position:absolute; inset-block:0; left:0;
+  background:var(--accent);
+  box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent);
+  width:var(--meter-pct); transition:width .6s cubic-bezier(.2,.8,.2,1);
+}
 #fc-hero .milestones{ display:flex; gap:.35rem; justify-content:center; margin-top:.4rem; flex-wrap:wrap }
-#fc-hero .milestones li{ list-style:none; font-size:.72rem; font-weight:800; letter-spacing:.02em; padding:.18rem .45rem; border-radius:.6rem; border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04)); color:#e5e7eb }
-#fc-hero .milestones .hit{ filter:saturate(1.2) }
-
-/* Donor ticker (optional) */
-#donor-ticker{ width:100%; max-width:48rem; overflow:hidden; display:none }
-#donor-ticker .dt-track{ display:flex; gap:10px; white-space:nowrap; will-change:transform }
-#donor-ticker .pill{ display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-weight:700; font-size:.8rem }
-@media (prefers-reduced-motion:no-preference){ #donor-ticker[data-run="1"] .dt-track{ animation: ticker 20s linear infinite } @keyframes ticker{ from{ transform:translateX(0) } to{ transform:translateX(-50%) } } }
-
-/* Guards */
-@media (max-width:640px){ #fc-hero .fc-hero-overlay{ padding:1rem } }
-@media (prefers-reduced-motion:reduce){ #fc-hero .fc-hero-card, #fc-hero .fc-hero-card__img{ transform:none!important } #fc-hero .hm-fill{ transition:none } #donor-ticker .dt-track{ animation:none!important } }
-@media (prefers-contrast:more){ #fc-hero .fc-hero-card__frame{ -webkit-backdrop-filter:none; backdrop-filter:none; background:#000!important } }
-@media (forced-colors:active){ #fc-hero .fc-hero-card__frame{ border:1px solid CanvasText; box-shadow:none } #fc-hero .fc-hero-badges .badge{ background:Canvas; color:CanvasText; border:1px solid CanvasText } #fc-hero .legacy-chip{ color:CanvasText!important; -webkit-text-stroke:0; text-shadow:none } }
-@media print{ #fc-hero .fc-hero-card{ box-shadow:none } #fc-hero .fc-hero-card__glare, #fc-hero .fc-hero-card__noise, #donor-ticker{ display:none!important } #fc-hero .fc-hero-cta{ background:#000; color:#fff; box-shadow:none } }
-</style>
-
-<script {{ nonce_attr() }} type="module">
-(() => {
-  const $ = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const saveData = !!(conn && conn.saveData);
-  const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const on = (el, ev, fn, opts)=> el && el.addEventListener(ev, fn, opts||{ passive:true });
-  const emit = (name, detail)=>{ try{ window.dispatchEvent(new CustomEvent(name,{ detail })); }catch{} };
-
-  /* --- P2P ctx helpers (read + append) --- */
-  const getRefCtx = () => { try{ const raw=localStorage.getItem('fc_ref_ctx'); if(!raw) return {}; const obj=JSON.parse(raw); if(!obj||!obj.ts) return {}; const age=Date.now()-Number(obj.ts); if(age>30*24*3600*1000) return {}; return obj||{}; }catch{ return {}; } };
-  const appendParams = (url, params) => { try{ const u=new URL(url, location.href); Object.entries(params||{}).forEach(([k,v])=>{ if(v!==undefined && v!==null && v!=='') u.searchParams.set(k, String(v)); }); return u.toString(); }catch{ return url; } };
-  const buildUtm = (source, medium, campaign, content) => ({ utm_source:source, utm_medium:medium, utm_campaign:campaign, utm_content:content });
-
-  /* --- LCP metric (with details) --- */
-  try{ const lcpTarget=$('[data-lcp-target="1"]'); if(lcpTarget && 'PerformanceObserver' in window){ const po=new PerformanceObserver((list)=>{ list.getEntries().forEach((e)=>{ (window.dataLayer=window.dataLayer||[]).push({ event:'hero_lcp_seen', lcp_ms:Math.round((e.renderTime||e.loadTime||0)), lcp_size:e.size||0, lcp_id:e.id||'' }); }); po.disconnect(); }); po.observe({ type:'largest-contentful-paint', buffered:true }); } }catch{}
-
-  /* Autofocus CTA when visible */
-  const autoFocus = () => { const cta = $('#fc-hero .fc-hero-cta'); if(!cta) return; const obs=new IntersectionObserver((entries)=>{ entries.forEach((e)=>{ if(e.isIntersecting){ cta.setAttribute('tabindex','0'); setTimeout(()=>{ try{ cta.focus({ preventScroll:true }); }catch{} },250); obs.disconnect(); } }); }, { rootMargin:'0px 0px -60% 0px', threshold:0.4 }); obs.observe(cta); };
-
-  /* CTA label swap for tiny screens */
-  const tuneCtaLabel = () => { const cta = $('#fc-hero .fc-hero-cta'); if(!cta) return; const full=cta.getAttribute('data-label-full')||cta.textContent.trim(); const compact=cta.getAttribute('data-label-compact')||full; const set=()=>{ const small=innerWidth<360; const span=cta.querySelector('.cta-text')||cta; span.textContent=small?compact:full; }; set(); on(window,'resize',set); };
-
-  /* Milestones UI */
-  const initMilestones = () => { const wrap=$('#fc-hero .hero-meter'); const list=$('#fc-hero-milestones'); const fill=$('#fc-hero-fill'); if(!wrap||!list||!fill) return; const nowPct=parseFloat(fill.style.width)||parseFloat(fill.dataset.pct||'0')||0; const marks=(wrap.getAttribute('data-milestones')||'25,50,75,100').split(',').map((n)=>parseInt(n,10)).filter((n)=>!Number.isNaN(n)); list.innerHTML=''; marks.forEach((m)=>{ const li=document.createElement('li'); li.className='ms'; li.dataset.ms=String(m); li.textContent=`${m}%`; if(nowPct>=m) li.classList.add('hit'); list.appendChild(li); }); };
-
-  const moneyFmt = (val, opts={}) => { const root=$('#fc-hero'); const currency=root?.dataset.currency||'USD'; const locale=root?.dataset.locale||navigator.language||'en-US'; const style=new Intl.NumberFormat(locale,{ style:'currency', currency, maximumFractionDigits:0, notation: opts.notation||'standard' }); return style.format(val); };
-
-  /* Counters + a11y SR line */
-  const initCounters = () => { if(prefersReducedMotion||saveData) return; const raisedEl=$('#fc-hero-raised'); const pctEl=$('#fc-hero-pct'); const goalEl=$('#fc-hero-goal'); const sr=$('#fc-hero-sr'); if(!raisedEl||!pctEl) return; const finalMoney=parseFloat(raisedEl.getAttribute('data-count')||raisedEl.getAttribute('data-raw')||'0'); const finalPct=parseFloat(pctEl.getAttribute('data-count')||pctEl.getAttribute('data-raw')||'0'); const dur=900, easeOut=p=>1-Math.pow(1-p,3); const anim=(el,s,e,fmt)=>{ const t0=performance.now(); const step=t=>{ const p=Math.min(1,(t-t0)/dur); const v=Math.round(s+(e-s)*easeOut(p)); el.textContent=fmt(v); if(p<1) requestAnimationFrame(step); }; requestAnimationFrame(step); }; anim(raisedEl, Math.floor(finalMoney*.2), finalMoney, v=>moneyFmt(v)); anim(pctEl, Math.floor(finalPct*.2), finalPct, v=>`${v}%`); if(sr&&goalEl){ try{ sr.textContent=`Raised ${moneyFmt(finalMoney)} of goal ${goalEl.textContent}.`; }catch{} } };
-
-  /* Countdown */
-  const initCountdown = () => { const el=$('#fc-hero-countdown'); if(!el) return; const root=$('#fc-hero'); const deadlineISO=root?.getAttribute('data-urgency-deadline')||$('[data-urgency-deadline]')?.getAttribute('data-urgency-deadline')||''; if(!deadlineISO){ el.style.display='none'; el.setAttribute?.('aria-hidden','true'); return; } const deadline=new Date(deadlineISO); if(isNaN(+deadline)){ el.style.display='none'; el.setAttribute?.('aria-hidden','true'); return; } const fmt2=n=>String(n).padStart(2,'0'); const tick=()=>{ const diff=deadline-new Date(); if(diff<=0){ el.textContent='⏳ 00d : 00h : 00m'; return; } const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), m=Math.floor((diff%3600000)/60000); el.textContent=`⏳ ${fmt2(d)}d : ${fmt2(h)}h : ${fmt2(m)}m`; }; tick(); const id=setInterval(tick,30000); on(window,'pagehide',()=>clearInterval(id),{ once:true }); };
-
-  /* Share (adds UTM + P2P) */
-  const initShare = () => { const btn=$('#fc-hero-share'); if(!btn) return; const ref=getRefCtx(); const base=new URL(location.href); base.searchParams.set('utm_source','share'); base.searchParams.set('utm_medium','hero'); base.searchParams.set('utm_campaign','fan_share'); Object.entries(ref).forEach(([k,v])=>{ if(k!=='ts') base.searchParams.set(k,v); }); const payload={ title:document.title||'Support the team!', text:btn.getAttribute('data-share-text')||'Join me in supporting this team!', url:base.toString(), }; btn.setAttribute('data-share', JSON.stringify(payload)); on(btn,'click', async ()=>{ try{ (window.dataLayer=window.dataLayer||[]).push({ event:'share_click', where:'hero', peer_slug:ref.peer_slug||'', campaign:ref.campaign||ref.campaign_id||'', }); if(navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(payload.url); const t=btn.textContent; btn.textContent='Link copied!'; setTimeout(()=>btn.textContent=t, 900); } }catch{} }); };
-
-  /* Donor ticker (optional + SSE) */
-  const initDonorTicker = () => { const wrap=$('#donor-ticker'); const track=$('#donor-ticker .dt-track'); if(!wrap||!track) return; const render=(donors=[])=>{ track.innerHTML=''; if(!donors.length){ wrap.style.display='none'; return; } wrap.style.display='block'; donors.slice(0,20).forEach((d)=>{ const item=document.createElement('span'); item.className='dt-item'; const name=document.createElement('strong'); name.textContent=d.name||'Anonymous'; const amt=document.createElement('i'); amt.textContent=d.amount?` — $${Math.round(d.amount).toLocaleString()}`:''; item.append(name, amt); track.appendChild(item); }); wrap.dataset.run='1'; }; if(Array.isArray(window.fcRecentDonations)) render(window.fcRecentDonations); try{ if('EventSource' in window){ const es=new EventSource('/sse/donations'); es.addEventListener('donation',(e)=>{ const data=JSON.parse(e.data); const list=Array.isArray(window.fcRecentDonations)?window.fcRecentDonations:[]; list.unshift(data); window.fcRecentDonations=list.slice(0,20); render(window.fcRecentDonations); }); } }catch{} };
-
-  /* Tilt + parallax */
-  const initTilt = () => { if(prefersReducedMotion||saveData) return; const frame=$('#fc-hero .fc-hero-card__frame'); const img=$('#fc-hero-img'); if(!frame||!img) return; const lerp=(a,b,t)=>a+(b-a)*t; let rx=0, ry=0, trX=0, raf=0; const onMove=(e)=>{ const r=frame.getBoundingClientRect(); const cx=(e.clientX||(e.touches?.[0]?.clientX??r.left+r.width/2))-r.left; const cy=(e.clientY||(e.touches?.[0]?.clientY??r.top+r.height/2))-r.top; const nx=(cx/r.width)*2-1, ny=(cy/r.height)*2-1; rx=lerp(rx, ny*6, .5); ry=lerp(ry, -nx*6, .5); trX=lerp(trX, nx*parseFloat(img.dataset.parallaxY||'8'), .5); cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ frame.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`; img.style.transform=`translateX(${trX}px)`; }); const root=$('#fc-hero'); root?.style.setProperty('--mx', (nx*50+50).toFixed(2)+'%'); root?.style.setProperty('--my', (ny*50+40).toFixed(2)+'%'); }; const reset=()=>{ frame.style.transform=''; img.style.transform=''; }; on(frame,'mousemove',onMove); on(frame,'mouseleave',reset); on(frame,'touchmove',onMove); on(frame,'touchend',reset); };
-
-  /* Hologram headline tilt */
-  const initHologram = () => { if(prefersReducedMotion||saveData) return; const root=$('#fc-hero'); const holo=root?.querySelector('.holo3d'); const frame=root?.querySelector('.fc-hero-card__frame'); if(!root||!holo||!frame) return; let raf=0; const onMove=(e)=>{ const r=frame.getBoundingClientRect(); const cx=(e.touches?.[0]?.clientX??e.clientX??r.left+r.width/2)-r.left; const cy=(e.touches?.[0]?.clientY??e.clientY??r.top+r.height/2)-r.top; const nx=Math.max(0, Math.min(1, cx/r.width)); const ny=Math.max(0, Math.min(1, cy/r.height)); const tilt=parseFloat(getComputedStyle(holo).getPropertyValue('--holo-tilt'))||6.5; const tx=(ny-0.5)*tilt; const ty=-(nx-0.5)*tilt; cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ holo.style.transform=`translateZ(var(--holo-depth)) rotateX(${tx}deg) rotateY(${ty}deg)`; }); }; on(frame,'mousemove',onMove); on(frame,'touchmove',onMove); const reset=()=>{ holo.style.transform='translateZ(var(--holo-depth))'; }; on(frame,'mouseleave',reset); on(frame,'touchend',reset); };
-
-  /* Luminance-aware tint + holo auto-tune */
-  const luminanceTint = async () => { try{ const root=$('#fc-hero'), imgEl=$('#fc-hero-img'), tintEl=$('.fc-hero-card__tint'); const holo=root?.querySelector('.holo3d'); if(!root||!imgEl||!tintEl||!holo) return; const src=imgEl.currentSrc||imgEl.src; const probe=new Image(); probe.crossOrigin='anonymous'; probe.decoding='async'; probe.src=src; await probe.decode().catch(()=>{}); const c=document.createElement('canvas'); const ctx=c.getContext('2d',{ willReadFrequently:true }); if(!ctx) return; c.width=64; c.height=64; ctx.drawImage(probe,0,0,c.width,c.height); const pick=(x0,y0,w,h)=>{ const d=ctx.getImageData(x0,y0,w,h).data; let Lum=0,N=0,Rbias=0; for(let i=0;i<d.length;i+=4){ const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255; Lum += 0.2126*r + 0.7152*g + 0.0722*b; Rbias += Math.max(0, r - Math.max(g,b)); N++; } return {L:Lum/Math.max(1,N), R:Rbias/Math.max(1,N)}; }; const B=pick(0, Math.floor(c.height*.55), c.width, Math.floor(c.height*.45)); const Cn=pick(Math.floor(c.width*.2), Math.floor(c.height*.2), Math.floor(c.width*.6), Math.floor(c.height*.6)); const L=Math.max(B.L, Cn.L); const Rscore=Math.max(B.R, Cn.R); let tint=Math.max(0, Math.min(.5, (L-0.42)*1.15)); const redDominant=Rscore>0.12; if(redDominant) tint=Math.max(tint, .35); tintEl.style.setProperty('--tint', String(tint)); root.setAttribute('data-holo-boost', redDominant ? '1' : '0'); const clamp=(v,a,b)=>Math.min(b, Math.max(a,v)); const plate=clamp(0.55+tint*.9, 0.45, 0.9); const stroke=clamp(0.6+tint*1.2, 0.6, 1.4); const glow=clamp(0.7+tint*.6+(redDominant?0.25:0), 0.6, 1.1); const shift=redDominant?2.4:1.4; const speedS=redDominant?3.2:4.8; holo.style.setProperty('--holo-plate', plate.toFixed(2)); holo.style.setProperty('--holo-stroke', stroke.toFixed(2)); holo.style.setProperty('--holo-glow', glow.toFixed(2)); holo.style.setProperty('--holo-rgb-shift', `${shift}px`); holo.style.setProperty('--holo-shimmer-s', `${speedS}s`); }catch{} };
-
-  /* Belt placement (font/resize) */
-  const placeTitleBelt = () => { const belt=$('.fc-hero-card__belt'); const frame=$('#fc-hero .fc-hero-card__frame'); const h1=$('#hero-heading'); if(!belt||!frame||!h1) return; const fr=frame.getBoundingClientRect(); const hr=h1.getBoundingClientRect(); const pad=Math.max(16, Math.min(28, fr.width*0.02)); const beltH=Math.max(56, Math.min(96, hr.height*1.25)); belt.style.setProperty('--belt-h', `${beltH}px`); belt.style.left=`${pad}px`; belt.style.right=`${pad}px`; belt.style.top=`${Math.max(0, hr.top - fr.top + hr.height/2 - beltH/2)}px`; };
-
-  /* Confetti + milestones */
-  const confettiBurst = (ms) => { if(prefersReducedMotion||saveData) return; const outlet=$('#confetti'); if(!outlet) return; for(let i=0;i<16;i++){ const p=document.createElement('i'); p.className='confetti-piece'; p.style.left=`${10+Math.random()*80}%`; p.style.top=`${8+Math.random()*6}%`; const hue=Math.floor(45+Math.random()*60); p.style.background=`hsl(${hue} 90% 60%)`; p.style.animationDelay=`${Math.random()*.2}s`; outlet.appendChild(p); setTimeout(()=>p.remove(), 1000); } emit('fc:milestone', { milestone: ms }); };
-  const watchMilestones = () => { const fill=$('#fc-hero-fill'); const list=$$('#fc-hero-milestones .ms'); if(!fill||!list.length) return; const now=parseFloat(fill.style.width)||parseFloat(fill.dataset.pct||'0')||0; list.forEach((li)=>{ const m=parseInt(li.dataset.ms||'0',10); if(now>=m && !li.classList.contains('hit')){ li.classList.add('hit'); confettiBurst(m); } }); };
-
-  /* Currency format (compact on tiny screens) */
-  const applyFormats = () => { const small=innerWidth<380; const notation=small?'compact':'standard'; const raisedEl=$('#fc-hero-raised'); const goalEl=$('#fc-hero-goal'); const rawRaised=parseFloat(raisedEl?.getAttribute('data-raw')||'0'); const rawGoal=parseFloat(goalEl?.getAttribute('data-raw')||'0'); if(raisedEl) raisedEl.textContent=moneyFmt(rawRaised,{ notation }); if(goalEl) goalEl.textContent=moneyFmt(rawGoal,{ notation }); };
-
-  /* Match chip */
-  const initMatchChip = () => { const chip=$('#match-chip'); if(!chip) return; const s=new Date(chip.getAttribute('data-match-start')||''); const e=new Date(chip.getAttribute('data-match-end')||''); if(isNaN(+s)||isNaN(+e)) return; const update=()=>{ const now=new Date(); const active=now>=s && now<=e; chip.classList.toggle('hidden', !active); if(active) chip.textContent=`🎯 ${chip.getAttribute('data-match-label')||'Match ×2 Active'}`; }; update(); setInterval(update, 60000); };
-
-  /* <24h urgency ping */
-  const initUrgencyPing = () => { const root=$('#fc-hero'); const cta=$('#fc-hero .fc-hero-cta'); const baseTitle=document.title; const deadlineAttr=root?.getAttribute('data-urgency-deadline')||cta?.getAttribute('data-urgency-deadline')||''; const deadline=new Date(deadlineAttr); if(!cta||isNaN(+deadline)) return; const tick=()=>{ const hrs=(deadline - new Date())/36e5; const urgent=hrs>0 && hrs<=24; if(urgent){ document.title=`⏳ ${Math.max(0, Math.ceil(hrs))}h · ${baseTitle}`; const span=cta.querySelector('.cta-text')||cta; if((span.textContent||'').toLowerCase().includes('donate')) span.textContent='Donate Now'; } else document.title=baseTitle; }; tick(); setInterval(tick, 300000); };
-
-  /* CTA click analytics + P2P URL append (Stripe-ready) */
-  const wireCtaClick = () => { const cta=$('#fc-hero .fc-hero-cta'); if(!cta) return; const ref=getRefCtx(); const team=$('#fc-hero')?.dataset.team||''; on(cta,'click',()=>{ try{ const href=cta.getAttribute('href')||'#'; const utm=buildUtm('hero','cta',team,'hero_cta'); const withCtx=appendParams(href, { ...utm, ...ref }); if(withCtx!==href) cta.setAttribute('href', withCtx); (window.dataLayer=window.dataLayer||[]).push({ event:'cta_click', where:'hero', tier:cta.getAttribute('data-tier')||'', amount:cta.getAttribute('data-amount')||'', peer_slug:ref.peer_slug||'', campaign:ref.campaign||ref.campaign_id||'', }); }catch{} }, { passive:true }); };
-
-  /* React to metric updates from elsewhere */
-  const hookMeterUpdate = () => { on(window,'fc:meter:update',(ev)=>{ try{ const { raised=null, goal=null, pct=null } = ev.detail||{}; const raisedEl=$('#fc-hero-raised'); const pctEl=$('#fc-hero-pct'); const goalEl=$('#fc-hero-goal'); const fill=$('#fc-hero-fill'); if(raised!=null && raisedEl){ raisedEl.setAttribute('data-raw', String(raised)); raisedEl.textContent=moneyFmt(raised); } if(goal!=null && goalEl){ goalEl.setAttribute('data-raw', String(goal)); goalEl.textContent=moneyFmt(goal); } if(pct!=null && pctEl){ pctEl.setAttribute('data-raw', String(pct)); pctEl.textContent=`${Math.round(pct)}%`; } if(pct!=null && fill){ fill.style.width=`${Math.max(0, Math.min(100, pct))}%`; fill.dataset.pct=String(pct); } initMilestones(); watchMilestones(); }catch{} }); };
-
-  /* Hotkey (D for donate) */
-  const hotkeys = () => { on(window,'keydown',(e)=>{ if((e.key==='d'||e.key==='D') && !/input|textarea|select/i.test(e.target.tagName)){ const a=$('#fc-hero .fc-hero-cta'); if(a) a.click(); } }); };
-
-  /* Init (idle-aware) */
-  const init = () => {
-    autoFocus(); tuneCtaLabel(); initMilestones(); initCounters(); initCountdown(); initShare(); initDonorTicker();
-    initTilt(); initHologram(); luminanceTint(); placeTitleBelt(); watchMilestones(); applyFormats();
-    initMatchChip(); initUrgencyPing(); wireCtaClick(); hookMeterUpdate(); hotkeys();
-
-    on(window,'resize',()=>{ applyFormats(); placeTitleBelt(); });
-    try{ document.fonts?.ready?.then(placeTitleBelt); }catch{}
-    try{ const h1=$('#hero-heading'); if(h1 && 'ResizeObserver' in window){ const ro=new ResizeObserver(()=>placeTitleBelt()); ro.observe(h1); on(window,'pagehide',()=>ro.disconnect(),{ once:true }); } }catch{}
-  };
-  if('requestIdleCallback' in window) requestIdleCallback(init,{ timeout:1200 }); else setTimeout(init,0);
-})();
-</script>
-{# ============================================================
-   FC HERO — SV‑Elite 7.1 (Premier, CSP‑safe)
-   - Prebuilt AVIF/WEBP LCP with robust fallback
-   - Inside overlay hero bar, neon spine, mobile brand chip
-   - Luminance tint + holo headline; AA/AAA aware
-   - IO autofocus, D hotkey, match‑window chip, confetti hits
-   - P2P UTM propagation + Stripe‑first CTA routing
-   - Font/resize‑aware belt placement; idle hydration; PRM/contrast guards
-   ============================================================ #}
-
-{# --- CSP nonce helpers --- #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
-
-{# --- Utilities --- #}
-{% macro asset_url(path) -%}
-  {%- set p = (path|string)|trim -%}
-  {%- if '://' in p -%}{{ p }}
-  {%- elif url_for is defined -%}{{ url_for('static', filename=p.lstrip('/')) }}
-  {%- else -%}/static/{{ p.lstrip('/') }}{%- endif -%}
-{%- endmacro %}
-
-{# --- Theme & copy --- #}
-{% set theme_hex  = theme_hex|default('#facc15') %}
-{% set team_name  = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set hero_title = hero_title|default('Fuel the Season. Fund the Future.') %}
-{% set catch_line = (catch_phrase if catch_phrase is defined and catch_phrase else
-                     'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
-
-{# --- Images (robust fallbacks) --- #}
-{% set _hero_src =
-  (hero_image_url if hero_image_url is defined and hero_image_url) or
-  (team.hero_bg if team and team.hero_bg) or
-  (team.hero_image if team and team.hero_image) or
-  (team.team_photo if team and team.team_photo) or
-  (team.photo_url if team and team.photo_url) or
-  'images/connect-atx-team.jpg'
-%}
-{% set _hero_mobile = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
-{% set hero_src        = asset_url(_hero_src) %}
-{% set hero_src_mobile = asset_url(_hero_mobile) %}
-{% set hero_alt        = (hero_alt if hero_alt is defined and hero_alt) or (team_name ~ ' team photo') %}
-{% set use_prebuilt    = 'connect-atx-team.jpg' in hero_src %}
-
-{# --- Logo (mobile chip) --- #}
-{% set _logo   = (team.logo if team and team.logo else 'images/logo.webp') %}
-{% set logoSrc = asset_url(_logo) %}
-
-{# --- Fundraising math --- #}
-{% set funds_raised      = (funds_raised if funds_raised is defined else 0)|float %}
-{% set fundraising_goal  = (fundraising_goal if fundraising_goal is defined and fundraising_goal is not none and fundraising_goal != 0 else 10000)|float %}
-{% set _raw_pct          = (funds_raised / fundraising_goal * 100) if fundraising_goal else 0 %}
-{% set pct               = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
-{% set fundraising_deadline = (fundraising_deadline if fundraising_deadline is defined else (deadline_dt if deadline_dt is defined else None)) %}
-{% set deadline_iso      = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
-
-{# --- Visual tuning --- #}
-{% set img_pos_x = img_pos_x|default('50%') %}
-{% set img_pos_y = img_pos_y|default('32%') %}
-
-{# --- Locale/Currency --- #}
-{% set currency_code = currency_code|default('USD') %}
-{% set locale_str    = locale_str|default('en-US') %}
-
-{# --- Match window --- #}
-{% set match_start_iso = (match_start if match_start is defined and match_start else None) and match_start.isoformat() or '' %}
-{% set match_end_iso   = (match_end   if match_end   is defined and match_end   else None) and match_end.isoformat()   or '' %}
-
-{# --- CTA href + UTM (server-side base; JS enriches w/ P2P) --- #}
-{% set _raw_cta    = (stripe_payment_link if stripe_payment_link else (cta_href if cta_href is defined else '#tiers')) %}
-{% set _sep        = '&' if '?' in _raw_cta else '?' %}
-{% set cta_href    = _raw_cta ~ _sep ~ 'utm_source=hero&utm_medium=cta&utm_campaign=' ~ (team_name|urlencode) %}
-{% set cta_label   = (cta_label if cta_label else 'Donate') %}
-{% set _cta_external  = ('://' in cta_href) %}
-
-{# --- LCP Preload (only for stock set) --- #}
-{% if use_prebuilt %}
-<link rel="preload" as="image"
-      href="/static/images/hero/hero-1920.avif"
-      imagesrcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w"
-      imagesizes="100vw" fetchpriority="high">
-{% endif %}
-
-
-<style {{ nonce_attr() }}>
-/* ===== Scope: #fc-hero (Premier) ===== */
-#fc-hero{
-  --shadow: 0 25px 80px rgba(0,0,0,.55);
-  --overlay-dark: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.60) 46%, rgba(0,0,0,.94) 100%);
-  --overlay-light: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.78) 60%, rgba(255,255,255,.92) 100%);
-  /* Tilt defaults (JS updates via CSS vars) */
-  --rx: 0deg; --ry: 0deg; --tx: 0px; --mx: 50%; --my: 40%;
-  /* Hologram */
-  --holo-depth: 40px; --holo-plate: .72; --holo-stroke: .95; --holo-glow: .85; --holo-rgb-shift: 1.6px; --holo-shimmer-s: 4.6s;
-  /* Belt */
-  --belt-h: 68px; --belt-left: clamp(16px, 2vw, 28px); --belt-right: clamp(16px, 2vw, 28px);
-  /* Meter */
-  --meter-pct: {{ pct|round(1) }}%;
+#fc-hero .milestones .ms{
+  list-style:none; font-size:.72rem; font-weight:800; padding:.18rem .45rem; border-radius:.6rem;
+  border:1px solid rgba(255,255,255,.2);
+  background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
+  color:#e5e7eb;
 }
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.tabular{font-variant-numeric:tabular-nums}
-
-/* Rail mode selector (optional) */
-#fc-hero[data-rail="spine"]::before{ content:none !important; }
-#fc-hero[data-rail="pseudo"] .fc-hero-spine{ display:none !important; }
-
-/* Typography */
-#fc-hero .fc-hero-type{
-  font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;
-  text-transform:uppercase; letter-spacing:.02em; line-height:.98; font-weight:900; margin:0; text-wrap:balance;
-  font-size:clamp(2rem,1.2rem + 4vw,3.6rem);
-  color:transparent; background:linear-gradient(180deg,#f8fafc 0%, #fff6bf 55%, var(--accent) 100%);
-  -webkit-background-clip:text; background-clip:text;
-  text-shadow:0 2px 0 rgba(0,0,0,.35), 0 22px 40px rgba(0,0,0,.35);
-}
-#fc-hero .fc-hero-copy{
-  font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;
-  font-weight:600; letter-spacing:.005em; color:#eaeaea; opacity:.98; max-width:64ch;
-  font-size:clamp(.98rem,.8rem + .6vw,1.2rem); margin:.45rem 0 0;
-}
-
-/* Tilted Photo Card + Glass */
-#fc-hero .fc-hero-tilt{perspective:1400px}
-#fc-hero .fc-hero-card{ --r: clamp(20px,1.6vw,28px); position:relative; width:min(1080px,92vw); aspect-ratio:16/9; transform-style:preserve-3d; contain:layout paint size; will-change:transform; }
-#fc-hero .fc-hero-card__ring{ position:absolute; inset:-2px; border-radius:calc(var(--r) + 2px); background:
-  linear-gradient(#0000,#0000) padding-box,
-  conic-gradient(from 180deg at 50% 50%, color-mix(in srgb, var(--accent) 55%, #fff 45%), #e5e7eb, color-mix(in srgb, var(--accent) 55%, #fff 45%)) border-box;
-  border:1.5px solid transparent; filter:drop-shadow(0 18px 50px rgba(0,0,0,.45)); z-index:0; }
-#fc-hero .fc-hero-card__frame{ position:absolute; inset:0; z-index:1; border-radius:var(--r);
-  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12);
-  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
-  overflow:hidden; transform-style:preserve-3d; backface-visibility:hidden;
-  transform: translateZ(40px) rotateX(var(--rx)) rotateY(var(--ry)); }
-#fc-hero .fc-hero-card__img{ width:100%; height:100%; object-fit:cover; object-position: var(--img-x) var(--img-y);
-  transform: translateZ(20px) translateX(var(--tx)) scale(1.02);
-  filter:saturate(1.04) contrast(1.04) brightness(.88);
-  user-select:none; -webkit-user-drag:none; will-change:transform; }
-
-/* Tint / Belt / Glare / Noise */
-#fc-hero .fc-hero-card__tint{ position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:multiply; opacity:var(--tint,.22);
-  background: linear-gradient(180deg, rgba(0,0,0,.00), rgba(0,0,0,.18) 60%, rgba(0,0,0,.32)), color-mix(in srgb, var(--accent) 10%, transparent); }
-#fc-hero .fc-hero-card__belt{ position:absolute; z-index:3; pointer-events:none; left:var(--belt-left); right:var(--belt-right);
-  top:var(--belt-top, auto); height:var(--belt-h); border-radius:999px;
-  background:linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.16);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); box-shadow: 0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08); }
-#fc-hero .fc-hero-card__glare{ position:absolute; inset:-20%; z-index:4; pointer-events:none; mix-blend-mode:screen; transform:translateZ(60px);
-  background: radial-gradient(40% 60% at var(--mx) var(--my), rgba(255,255,255,.16), transparent 60%); }
-#fc-hero .fc-hero-card__noise{ position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.08; transform:translateZ(80px);
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>"); background-size:160px 160px; }
-
-/* Vertical neon spine */
-#fc-hero .fc-hero-spine{ position:absolute; left:10px; top:10%; bottom:10%; width:4px; z-index:1; pointer-events:none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 70%, #fff), transparent);
-  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent); }
-#fc-hero .spine-text{ position:absolute; left:-.55rem; bottom:0; writing-mode:vertical-rl; transform:rotate(180deg);
-  font-weight:800; letter-spacing:.18em; font-size:.72rem; color:rgba(255,255,255,.65); text-shadow:0 1px 0 rgba(0,0,0,.6); }
-
-/* Overlay */
-#fc-hero .fc-hero-overlay{ position:absolute; inset-inline:0; bottom:0; display:flex; flex-direction:column; gap:.75rem; align-items:center; text-align:center; padding:1rem clamp(1rem, 2vw, 1.6rem);
-  background:var(--overlay-dark); color:#fff; }
-.light #fc-hero .fc-hero-overlay{ background:var(--overlay-light); color:#111 }
-
-/* Mobile brand chip */
-#fc-hero .legacy-chip{ color:#fff; text-shadow:0 1px 1px rgba(0,0,0,.45) }
-#fc-hero[data-name-style="gradient"] .legacy-chip{ background:linear-gradient(90deg,var(--accent,#facc15),#fff); -webkit-background-clip:text; background-clip:text; color:transparent; text-shadow:none }
-#fc-hero[data-name-style="outline"]  .legacy-chip{ color:transparent; -webkit-text-stroke:1px #fff; text-shadow:0 1px 0 rgba(0,0,0,.7) }
-#fc-hero[data-name-style="accent"]   .legacy-chip{ color:var(--accent,#facc15); text-shadow:0 1px 1px rgba(0,0,0,.45) }
-
-/* Hologram headline */
-#fc-hero .holo{ position:relative; will-change: transform, text-shadow, filter; }
-#fc-hero .holo::before{ content:attr(data-text); position:absolute; inset:0; pointer-events:none; mix-blend-mode:overlay; opacity:var(--holo-glow); filter: drop-shadow(0 6px 18px rgba(0,0,0,.45)); }
-#fc-hero .holo3d{ transform: translateZ(var(--holo-depth)); }
-#fc-hero[data-holo-boost="1"] .holo::after{ content:attr(data-text); position:absolute; inset:0; pointer-events:none; opacity:.35; color:transparent;
-  text-shadow: var(--holo-rgb-shift) 0 0 #ff5a5a, calc(-1*var(--holo-rgb-shift)) 0 0 #5acaff; }
-
-/* Actions */
-#fc-hero .fc-hero-actions{ display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:.5rem .65rem }
-#fc-hero .chip{ display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .7rem; border-radius:.8rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-weight:800; font-size:.86rem; -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px) }
-#fc-hero .fc-hero-chip--mini{ font-size:.8rem; padding:.3rem .6rem }
-
-/* CTA */
-#fc-hero .fc-hero-cta{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:800; font-size:clamp(.95rem,.9rem + .2vw,1.1rem);
-  padding:.85rem 1.3rem; text-decoration:none; background:#111; color:#fff; border:1px solid #000; box-shadow:0 8px 28px rgba(0,0,0,.25); transition:transform .2s, filter .2s, box-shadow .2s; }
-.light #fc-hero .fc-hero-cta{ background:#0f1117; color:#fff }
-#fc-hero .fc-hero-cta:hover{ transform:translateY(-1px); filter:brightness(1.08); box-shadow:0 10px 34px rgba(0,0,0,.32) }
-#fc-hero .fc-hero-cta:focus-visible{ outline:2px solid color-mix(in srgb, var(--accent) 60%, #ffffff 40%); outline-offset:3px }
-@media (prefers-reduced-motion:no-preference){ .cta-pulse{ position:relative } .cta-pulse:after{ content:""; position:absolute; inset:-3px; border-radius:999px; border:2px solid color-mix(in srgb, var(--accent) 55%, transparent); opacity:0; animation: heroPulse 2.6s ease-out infinite; }
-  @keyframes heroPulse{ 0%{transform:scale(.98);opacity:0} 40%{opacity:.55} 100%{transform:scale(1.08);opacity:0} } }
-
-/* Mini meter */
-#fc-hero .hero-meter{ width:100%; max-width:min(720px,92%) }
-#fc-hero .hm-track{ position:relative; height:14px; border-radius:9999px; overflow:hidden; background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.08) }
-#fc-hero .hm-ticks{ position:absolute; inset:0; pointer-events:none; background:repeating-linear-gradient(90deg,rgba(255,255,255,.22) 0, rgba(255,255,255,.22) 1px, transparent 1px, transparent 5%); opacity:.28 }
-#fc-hero .hm-fill{ position:absolute; inset-block:0; left:0; width:var(--meter-pct, 0%); background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent) 45%, #d1d5db 55%)); box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent); transition:width .6s cubic-bezier(.2,.8,.2,1) }
-#fc-hero .hm-stats{ margin-top:.35rem; color:#e5e7eb; font-size:.9rem }
-#fc-hero .hm-stats .muted{ opacity:.7; margin:0 .35rem }
-.light #fc-hero .hm-track{ background:rgba(17,17,17,.08) }
-.light #fc-hero .hm-stats{ color:#111 }
-
-/* Milestones */
-#fc-hero .milestones{ display:flex; gap:.35rem; justify-content:center; margin-top:.4rem; flex-wrap:wrap }
-#fc-hero .milestones li{ list-style:none; font-size:.72rem; font-weight:800; letter-spacing:.02em; padding:.18rem .45rem; border-radius:.6rem; border:1px solid rgba(255,255,255,.18); background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.04)); color:#e5e7eb }
-#fc-hero .milestones .hit{ filter:saturate(1.2) }
-
-/* Donor ticker (optional) */
-#donor-ticker{ width:100%; max-width:48rem; overflow:hidden; display:none }
-#donor-ticker .dt-track{ display:flex; gap:10px; white-space:nowrap; will-change:transform }
-#donor-ticker .pill{ display:inline-flex; align-items:center; gap:.4rem; padding:.3rem .6rem; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; font-weight:700; font-size:.8rem }
-@media (prefers-reduced-motion:no-preference){ #donor-ticker[data-run="1"] .dt-track{ animation: ticker 20s linear infinite } @keyframes ticker{ from{ transform:translateX(0) } to{ transform:translateX(-50%) } } }
-
-/* Guards */
-@media (max-width:640px){ #fc-hero .fc-hero-overlay{ padding:1rem } }
-@media (prefers-reduced-motion:reduce){ #fc-hero .fc-hero-card, #fc-hero .fc-hero-card__img{ transform:none!important } #fc-hero .hm-fill{ transition:none } #donor-ticker .dt-track{ animation:none!important } }
-@media (prefers-contrast:more){ #fc-hero .fc-hero-card__frame{ -webkit-backdrop-filter:none; backdrop-filter:none; background:#000!important } }
-@media (forced-colors:active){ #fc-hero .fc-hero-card__frame{ border:1px solid CanvasText; box-shadow:none } #fc-hero .fc-hero-badges .badge{ background:Canvas; color:CanvasText; border:1px solid CanvasText } #fc-hero .legacy-chip{ color:CanvasText!important; -webkit-text-stroke:0; text-shadow:none } }
-@media print{ #fc-hero .fc-hero-card{ box-shadow:none } #fc-hero .fc-hero-card__glare, #fc-hero .fc-hero-card__noise, #donor-ticker{ display:none!important } #fc-hero .fc-hero-cta{ background:#000; color:#fff; box-shadow:none } }
-</style>
-
-<script {{ nonce_attr() }} type="module">
-(() => {
-  const $ = (s, r=document)=>r.querySelector(s);
-  const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  const saveData = !!(conn && conn.saveData);
-  const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const on = (el, ev, fn, opts)=> el && el.addEventListener(ev, fn, opts||{ passive:true });
-  const emit = (name, detail)=>{ try{ window.dispatchEvent(new CustomEvent(name,{ detail })); }catch{} };
-
-  /* --- P2P ctx helpers (read + append) --- */
-  const getRefCtx = () => { try{ const raw=localStorage.getItem('fc_ref_ctx'); if(!raw) return {}; const obj=JSON.parse(raw); if(!obj||!obj.ts) return {}; const age=Date.now()-Number(obj.ts); if(age>30*24*3600*1000) return {}; return obj||{}; }catch{ return {}; } };
-  const appendParams = (url, params) => { try{ const u=new URL(url, location.href); Object.entries(params||{}).forEach(([k,v])=>{ if(v!==undefined && v!==null && v!=='') u.searchParams.set(k, String(v)); }); return u.toString(); }catch{ return url; } };
-  const buildUtm = (source, medium, campaign, content) => ({ utm_source:source, utm_medium:medium, utm_campaign:campaign, utm_content:content });
-
-  /* --- LCP metric (with details) --- */
-  try{ const lcpTarget=$('[data-lcp-target="1"]'); if(lcpTarget && 'PerformanceObserver' in window){ const po=new PerformanceObserver((list)=>{ list.getEntries().forEach((e)=>{ (window.dataLayer=window.dataLayer||[]).push({ event:'hero_lcp_seen', lcp_ms:Math.round((e.renderTime||e.loadTime||0)), lcp_size:e.size||0, lcp_id:e.id||'' }); }); po.disconnect(); }); po.observe({ type:'largest-contentful-paint', buffered:true }); } }catch{}
-
-  /* Autofocus CTA when visible */
-  const autoFocus = () => { const cta = $('#fc-hero .fc-hero-cta'); if(!cta) return; const obs=new IntersectionObserver((entries)=>{ entries.forEach((e)=>{ if(e.isIntersecting){ cta.setAttribute('tabindex','0'); setTimeout(()=>{ try{ cta.focus({ preventScroll:true }); }catch{} },250); obs.disconnect(); } }); }, { rootMargin:'0px 0px -60% 0px', threshold:0.4 }); obs.observe(cta); };
-
-  /* CTA label swap for tiny screens */
-  const tuneCtaLabel = () => { const cta = $('#fc-hero .fc-hero-cta'); if(!cta) return; const full=cta.getAttribute('data-label-full')||cta.textContent.trim(); const compact=cta.getAttribute('data-label-compact')||full; const set=()=>{ const small=innerWidth<360; const span=cta.querySelector('.cta-text')||cta; span.textContent=small?compact:full; }; set(); on(window,'resize',set); };
-
-  /* Milestones UI */
-  const initMilestones = () => { const wrap=$('#fc-hero .hero-meter'); const list=$('#fc-hero-milestones'); const fill=$('#fc-hero-fill'); if(!wrap||!list||!fill) return; const nowPct=parseFloat(fill.style.width)||parseFloat(fill.dataset.pct||'0')||0; const marks=(wrap.getAttribute('data-milestones')||'25,50,75,100').split(',').map((n)=>parseInt(n,10)).filter((n)=>!Number.isNaN(n)); list.innerHTML=''; marks.forEach((m)=>{ const li=document.createElement('li'); li.className='ms'; li.dataset.ms=String(m); li.textContent=`${m}%`; if(nowPct>=m) li.classList.add('hit'); list.appendChild(li); }); };
-
-  const moneyFmt = (val, opts={}) => { const root=$('#fc-hero'); const currency=root?.dataset.currency||'USD'; const locale=root?.dataset.locale||navigator.language||'en-US'; const style=new Intl.NumberFormat(locale,{ style:'currency', currency, maximumFractionDigits:0, notation: opts.notation||'standard' }); return style.format(val); };
-
-  /* Counters + a11y SR line */
-  const initCounters = () => { if(prefersReducedMotion||saveData) return; const raisedEl=$('#fc-hero-raised'); const pctEl=$('#fc-hero-pct'); const goalEl=$('#fc-hero-goal'); const sr=$('#fc-hero-sr'); if(!raisedEl||!pctEl) return; const finalMoney=parseFloat(raisedEl.getAttribute('data-count')||raisedEl.getAttribute('data-raw')||'0'); const finalPct=parseFloat(pctEl.getAttribute('data-count')||pctEl.getAttribute('data-raw')||'0'); const dur=900, easeOut=p=>1-Math.pow(1-p,3); const anim=(el,s,e,fmt)=>{ const t0=performance.now(); const step=t=>{ const p=Math.min(1,(t-t0)/dur); const v=Math.round(s+(e-s)*easeOut(p)); el.textContent=fmt(v); if(p<1) requestAnimationFrame(step); }; requestAnimationFrame(step); }; anim(raisedEl, Math.floor(finalMoney*.2), finalMoney, v=>moneyFmt(v)); anim(pctEl, Math.floor(finalPct*.2), finalPct, v=>`${v}%`); if(sr&&goalEl){ try{ sr.textContent=`Raised ${moneyFmt(finalMoney)} of goal ${goalEl.textContent}.`; }catch{} } };
-
-  /* Countdown */
-  const initCountdown = () => { const el=$('#fc-hero-countdown'); if(!el) return; const root=$('#fc-hero'); const deadlineISO=root?.getAttribute('data-urgency-deadline')||$('[data-urgency-deadline]')?.getAttribute('data-urgency-deadline')||''; if(!deadlineISO){ el.style.display='none'; el.setAttribute?.('aria-hidden','true'); return; } const deadline=new Date(deadlineISO); if(isNaN(+deadline)){ el.style.display='none'; el.setAttribute?.('aria-hidden','true'); return; } const fmt2=n=>String(n).padStart(2,'0'); const tick=()=>{ const diff=deadline-new Date(); if(diff<=0){ el.textContent='⏳ 00d : 00h : 00m'; return; } const d=Math.floor(diff/86400000), h=Math.floor((diff%86400000)/3600000), m=Math.floor((diff%3600000)/60000); el.textContent=`⏳ ${fmt2(d)}d : ${fmt2(h)}h : ${fmt2(m)}m`; }; tick(); const id=setInterval(tick,30000); on(window,'pagehide',()=>clearInterval(id),{ once:true }); };
-
-  /* Share (adds UTM + P2P) */
-  const initShare = () => { const btn=$('#fc-hero-share'); if(!btn) return; const ref=getRefCtx(); const base=new URL(location.href); base.searchParams.set('utm_source','share'); base.searchParams.set('utm_medium','hero'); base.searchParams.set('utm_campaign','fan_share'); Object.entries(ref).forEach(([k,v])=>{ if(k!=='ts') base.searchParams.set(k,v); }); const payload={ title:document.title||'Support the team!', text:btn.getAttribute('data-share-text')||'Join me in supporting this team!', url:base.toString(), }; btn.setAttribute('data-share', JSON.stringify(payload)); on(btn,'click', async ()=>{ try{ (window.dataLayer=window.dataLayer||[]).push({ event:'share_click', where:'hero', peer_slug:ref.peer_slug||'', campaign:ref.campaign||ref.campaign_id||'', }); if(navigator.share) await navigator.share(payload); else { await navigator.clipboard.writeText(payload.url); const t=btn.textContent; btn.textContent='Link copied!'; setTimeout(()=>btn.textContent=t, 900); } }catch{} }); };
-
-  /* Donor ticker (optional + SSE) */
-  const initDonorTicker = () => { const wrap=$('#donor-ticker'); const track=$('#donor-ticker .dt-track'); if(!wrap||!track) return; const render=(donors=[])=>{ track.innerHTML=''; if(!donors.length){ wrap.style.display='none'; return; } wrap.style.display='block'; donors.slice(0,20).forEach((d)=>{ const item=document.createElement('span'); item.className='dt-item'; const name=document.createElement('strong'); name.textContent=d.name||'Anonymous'; const amt=document.createElement('i'); amt.textContent=d.amount?` — $${Math.round(d.amount).toLocaleString()}`:''; item.append(name, amt); track.appendChild(item); }); wrap.dataset.run='1'; }; if(Array.isArray(window.fcRecentDonations)) render(window.fcRecentDonations); try{ if('EventSource' in window){ const es=new EventSource('/sse/donations'); es.addEventListener('donation',(e)=>{ const data=JSON.parse(e.data); const list=Array.isArray(window.fcRecentDonations)?window.fcRecentDonations:[]; list.unshift(data); window.fcRecentDonations=list.slice(0,20); render(window.fcRecentDonations); }); } }catch{} };
-
-  /* Tilt + parallax */
-  const initTilt = () => { if(prefersReducedMotion||saveData) return; const frame=$('#fc-hero .fc-hero-card__frame'); const img=$('#fc-hero-img'); if(!frame||!img) return; const lerp=(a,b,t)=>a+(b-a)*t; let rx=0, ry=0, trX=0, raf=0; const onMove=(e)=>{ const r=frame.getBoundingClientRect(); const cx=(e.clientX||(e.touches?.[0]?.clientX??r.left+r.width/2))-r.left; const cy=(e.clientY||(e.touches?.[0]?.clientY??r.top+r.height/2))-r.top; const nx=(cx/r.width)*2-1, ny=(cy/r.height)*2-1; rx=lerp(rx, ny*6, .5); ry=lerp(ry, -nx*6, .5); trX=lerp(trX, nx*parseFloat(img.dataset.parallaxY||'8'), .5); cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ frame.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`; img.style.transform=`translateX(${trX}px)`; }); const root=$('#fc-hero'); root?.style.setProperty('--mx', (nx*50+50).toFixed(2)+'%'); root?.style.setProperty('--my', (ny*50+40).toFixed(2)+'%'); }; const reset=()=>{ frame.style.transform=''; img.style.transform=''; }; on(frame,'mousemove',onMove); on(frame,'mouseleave',reset); on(frame,'touchmove',onMove); on(frame,'touchend',reset); };
-
-  /* Hologram headline tilt */
-  const initHologram = () => { if(prefersReducedMotion||saveData) return; const root=$('#fc-hero'); const holo=root?.querySelector('.holo3d'); const frame=root?.querySelector('.fc-hero-card__frame'); if(!root||!holo||!frame) return; let raf=0; const onMove=(e)=>{ const r=frame.getBoundingClientRect(); const cx=(e.touches?.[0]?.clientX??e.clientX??r.left+r.width/2)-r.left; const cy=(e.touches?.[0]?.clientY??e.clientY??r.top+r.height/2)-r.top; const nx=Math.max(0, Math.min(1, cx/r.width)); const ny=Math.max(0, Math.min(1, cy/r.height)); const tilt=parseFloat(getComputedStyle(holo).getPropertyValue('--holo-tilt'))||6.5; const tx=(ny-0.5)*tilt; const ty=-(nx-0.5)*tilt; cancelAnimationFrame(raf); raf=requestAnimationFrame(()=>{ holo.style.transform=`translateZ(var(--holo-depth)) rotateX(${tx}deg) rotateY(${ty}deg)`; }); }; on(frame,'mousemove',onMove); on(frame,'touchmove',onMove); const reset=()=>{ holo.style.transform='translateZ(var(--holo-depth))'; }; on(frame,'mouseleave',reset); on(frame,'touchend',reset); };
-
-  /* Luminance-aware tint + holo auto-tune */
-  const luminanceTint = async () => { try{ const root=$('#fc-hero'), imgEl=$('#fc-hero-img'), tintEl=$('.fc-hero-card__tint'); const holo=root?.querySelector('.holo3d'); if(!root||!imgEl||!tintEl||!holo) return; const src=imgEl.currentSrc||imgEl.src; const probe=new Image(); probe.crossOrigin='anonymous'; probe.decoding='async'; probe.src=src; await probe.decode().catch(()=>{}); const c=document.createElement('canvas'); const ctx=c.getContext('2d',{ willReadFrequently:true }); if(!ctx) return; c.width=64; c.height=64; ctx.drawImage(probe,0,0,c.width,c.height); const pick=(x0,y0,w,h)=>{ const d=ctx.getImageData(x0,y0,w,h).data; let Lum=0,N=0,Rbias=0; for(let i=0;i<d.length;i+=4){ const r=d[i]/255,g=d[i+1]/255,b=d[i+2]/255; Lum += 0.2126*r + 0.7152*g + 0.0722*b; Rbias += Math.max(0, r - Math.max(g,b)); N++; } return {L:Lum/Math.max(1,N), R:Rbias/Math.max(1,N)}; }; const B=pick(0, Math.floor(c.height*.55), c.width, Math.floor(c.height*.45)); const Cn=pick(Math.floor(c.width*.2), Math.floor(c.height*.2), Math.floor(c.width*.6), Math.floor(c.height*.6)); const L=Math.max(B.L, Cn.L); const Rscore=Math.max(B.R, Cn.R); let tint=Math.max(0, Math.min(.5, (L-0.42)*1.15)); const redDominant=Rscore>0.12; if(redDominant) tint=Math.max(tint, .35); tintEl.style.setProperty('--tint', String(tint)); root.setAttribute('data-holo-boost', redDominant ? '1' : '0'); const clamp=(v,a,b)=>Math.min(b, Math.max(a,v)); const plate=clamp(0.55+tint*.9, 0.45, 0.9); const stroke=clamp(0.6+tint*1.2, 0.6, 1.4); const glow=clamp(0.7+tint*.6+(redDominant?0.25:0), 0.6, 1.1); const shift=redDominant?2.4:1.4; const speedS=redDominant?3.2:4.8; holo.style.setProperty('--holo-plate', plate.toFixed(2)); holo.style.setProperty('--holo-stroke', stroke.toFixed(2)); holo.style.setProperty('--holo-glow', glow.toFixed(2)); holo.style.setProperty('--holo-rgb-shift', `${shift}px`); holo.style.setProperty('--holo-shimmer-s', `${speedS}s`); }catch{} };
-
-  /* Belt placement (font/resize) */
-  const placeTitleBelt = () => { const belt=$('.fc-hero-card__belt'); const frame=$('#fc-hero .fc-hero-card__frame'); const h1=$('#hero-heading'); if(!belt||!frame||!h1) return; const fr=frame.getBoundingClientRect(); const hr=h1.getBoundingClientRect(); const pad=Math.max(16, Math.min(28, fr.width*0.02)); const beltH=Math.max(56, Math.min(96, hr.height*1.25)); belt.style.setProperty('--belt-h', `${beltH}px`); belt.style.left=`${pad}px`; belt.style.right=`${pad}px`; belt.style.top=`${Math.max(0, hr.top - fr.top + hr.height/2 - beltH/2)}px`; };
-
-  /* Confetti + milestones */
-  const confettiBurst = (ms) => { if(prefersReducedMotion||saveData) return; const outlet=$('#confetti'); if(!outlet) return; for(let i=0;i<16;i++){ const p=document.createElement('i'); p.className='confetti-piece'; p.style.left=`${10+Math.random()*80}%`; p.style.top=`${8+Math.random()*6}%`; const hue=Math.floor(45+Math.random()*60); p.style.background=`hsl(${hue} 90% 60%)`; p.style.animationDelay=`${Math.random()*.2}s`; outlet.appendChild(p); setTimeout(()=>p.remove(), 1000); } emit('fc:milestone', { milestone: ms }); };
-  const watchMilestones = () => { const fill=$('#fc-hero-fill'); const list=$$('#fc-hero-milestones .ms'); if(!fill||!list.length) return; const now=parseFloat(fill.style.width)||parseFloat(fill.dataset.pct||'0')||0; list.forEach((li)=>{ const m=parseInt(li.dataset.ms||'0',10); if(now>=m && !li.classList.contains('hit')){ li.classList.add('hit'); confettiBurst(m); } }); };
-
-  /* Currency format (compact on tiny screens) */
-  const applyFormats = () => { const small=innerWidth<380; const notation=small?'compact':'standard'; const raisedEl=$('#fc-hero-raised'); const goalEl=$('#fc-hero-goal'); const rawRaised=parseFloat(raisedEl?.getAttribute('data-raw')||'0'); const rawGoal=parseFloat(goalEl?.getAttribute('data-raw')||'0'); if(raisedEl) raisedEl.textContent=moneyFmt(rawRaised,{ notation }); if(goalEl) goalEl.textContent=moneyFmt(rawGoal,{ notation }); };
-
-  /* Match chip */
-  const initMatchChip = () => { const chip=$('#match-chip'); if(!chip) return; const s=new Date(chip.getAttribute('data-match-start')||''); const e=new Date(chip.getAttribute('data-match-end')||''); if(isNaN(+s)||isNaN(+e)) return; const update=()=>{ const now=new Date(); const active=now>=s && now<=e; chip.classList.toggle('hidden', !active); if(active) chip.textContent=`🎯 ${chip.getAttribute('data-match-label')||'Match ×2 Active'}`; }; update(); setInterval(update, 60000); };
-
-  /* <24h urgency ping */
-  const initUrgencyPing = () => { const root=$('#fc-hero'); const cta=$('#fc-hero .fc-hero-cta'); const baseTitle=document.title; const deadlineAttr=root?.getAttribute('data-urgency-deadline')||cta?.getAttribute('data-urgency-deadline')||''; const deadline=new Date(deadlineAttr); if(!cta||isNaN(+deadline)) return; const tick=()=>{ const hrs=(deadline - new Date())/36e5; const urgent=hrs>0 && hrs<=24; if(urgent){ document.title=`⏳ ${Math.max(0, Math.ceil(hrs))}h · ${baseTitle}`; const span=cta.querySelector('.cta-text')||cta; if((span.textContent||'').toLowerCase().includes('donate')) span.textContent='Donate Now'; } else document.title=baseTitle; }; tick(); setInterval(tick, 300000); };
-
-  /* CTA click analytics + P2P URL append (Stripe-ready) */
-  const wireCtaClick = () => { const cta=$('#fc-hero .fc-hero-cta'); if(!cta) return; const ref=getRefCtx(); const team=$('#fc-hero')?.dataset.team||''; on(cta,'click',()=>{ try{ const href=cta.getAttribute('href')||'#'; const utm=buildUtm('hero','cta',team,'hero_cta'); const withCtx=appendParams(href, { ...utm, ...ref }); if(withCtx!==href) cta.setAttribute('href', withCtx); (window.dataLayer=window.dataLayer||[]).push({ event:'cta_click', where:'hero', tier:cta.getAttribute('data-tier')||'', amount:cta.getAttribute('data-amount')||'', peer_slug:ref.peer_slug||'', campaign:ref.campaign||ref.campaign_id||'', }); }catch{} }, { passive:true }); };
-
-  /* React to metric updates from elsewhere */
-  const hookMeterUpdate = () => { on(window,'fc:meter:update',(ev)=>{ try{ const { raised=null, goal=null, pct=null } = ev.detail||{}; const raisedEl=$('#fc-hero-raised'); const pctEl=$('#fc-hero-pct'); const goalEl=$('#fc-hero-goal'); const fill=$('#fc-hero-fill'); if(raised!=null && raisedEl){ raisedEl.setAttribute('data-raw', String(raised)); raisedEl.textContent=moneyFmt(raised); } if(goal!=null && goalEl){ goalEl.setAttribute('data-raw', String(goal)); goalEl.textContent=moneyFmt(goal); } if(pct!=null && pctEl){ pctEl.setAttribute('data-raw', String(pct)); pctEl.textContent=`${Math.round(pct)}%`; } if(pct!=null && fill){ fill.style.width=`${Math.max(0, Math.min(100, pct))}%`; fill.dataset.pct=String(pct); } initMilestones(); watchMilestones(); }catch{} }); };
-
-  /* Hotkey (D for donate) */
-  const hotkeys = () => { on(window,'keydown',(e)=>{ if((e.key==='d'||e.key==='D') && !/input|textarea|select/i.test(e.target.tagName)){ const a=$('#fc-hero .fc-hero-cta'); if(a) a.click(); } }); };
-
-  /* Init (idle-aware) */
-  const init = () => {
-    autoFocus(); tuneCtaLabel(); initMilestones(); initCounters(); initCountdown(); initShare(); initDonorTicker();
-    initTilt(); initHologram(); luminanceTint(); placeTitleBelt(); watchMilestones(); applyFormats();
-    initMatchChip(); initUrgencyPing(); wireCtaClick(); hookMeterUpdate(); hotkeys();
-
-    on(window,'resize',()=>{ applyFormats(); placeTitleBelt(); });
-    try{ document.fonts?.ready?.then(placeTitleBelt); }catch{}
-    try{ const h1=$('#hero-heading'); if(h1 && 'ResizeObserver' in window){ const ro=new ResizeObserver(()=>placeTitleBelt()); ro.observe(h1); on(window,'pagehide',()=>ro.disconnect(),{ once:true }); } }catch{}
-  };
-  if('requestIdleCallback' in window) requestIdleCallback(init,{ timeout:1200 }); else setTimeout(init,0);
-})();
-</script>
+#fc-hero .milestones .ms.hit{ transform:scale(1.02) }
+{% endraw %}</style>
+<style nonce="{{ NONCE }}">{% raw %}#fc-hero[data-kenburns="1"] .fc-hero-card__img{transform-origin:var(--img-x) var(--img-y);animation:fcKen 22s ease-in-out both}@keyframes fcKen{0%{transform:translateZ(20px) scale(1.02)}100%{transform:translateZ(20px) scale(1.08)}}#fc-hero[data-holo-animate="1"] .holo3d::before{animation:fcMag 5s linear infinite}#fc-hero[data-holo-animate="1"] .holo3d::after{animation:fcCyan 5s linear infinite}@keyframes fcMag{0%,100%{transform:translate(-.02em,.02em)}50%{transform:translate(-.04em,.01em)}}@keyframes fcCyan{0%,100%{transform:translate(.02em,-.02em)}50%{transform:translate(.03em,-.01em)}}@media (prefers-reduced-motion:reduce){#fc-hero .holo3d::before,#fc-hero .holo3d::after,#fc-hero .fc-hero-card__img{animation:none}}#fc-hero .fc-hero-cta{position:relative;overflow:hidden}#fc-hero .fc-hero-cta::after{content:"";position:absolute;inset:auto -40% 0 -40%;height:2px;background:linear-gradient(90deg,#0000,#fff8,#0000);transform:translateY(200%);transition:transform .6s cubic-bezier(.2,.8,.2,1)}#fc-hero .fc-hero-cta:hover::after{transform:translateY(0)}{% endraw %}</style>
+<style nonce="{{ NONCE }}">{% raw %}#fc-hero[data-hero-scope="cinema"] h1.fc-hero-type.holo,#fc-hero[data-hero-scope="cinema"] h1.fc-hero-type.holo3d{color:transparent!important;-webkit-text-fill-color:transparent!important;background:linear-gradient(180deg,#f8fafc 0%,#fff6bf 55%,var(--accent) 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;text-shadow:0 2px 0 rgba(0,0,0,.35),0 22px 40px rgba(0,0,0,.35)!important}#fc-hero[data-hero-scope="cinema"] .holo3d::before,#fc-hero[data-hero-scope="cinema"] .holo3d::after{opacity:.35!important;mix-blend-mode:screen!important}#fc-hero[data-hero-scope="cinema"] .fc-hero-card__belt{display:none!important}#fc-hero[data-hero-scope="cinema"] .fc-hero-spine{display:none!important}{% endraw %}</style>
+<style nonce="{{ NONCE }}">{% raw %}#fc-hero[data-kenburns="1"] .fc-hero-card__img{transform-origin:var(--img-x) var(--img-y);animation:fcKen 22s ease-in-out both}@keyframes fcKen{0%{transform:translateZ(20px) scale(1.02)}100%{transform:translateZ(20px) scale(1.08)}}#fc-hero[data-holo-animate="1"] .holo3d::before{animation:fcMag 5s linear infinite}#fc-hero[data-holo-animate="1"] .holo3d::after{animation:fcCyan 5s linear infinite}@keyframes fcMag{0%,100%{transform:translate(-.02em,.02em)}50%{transform:translate(-.04em,.01em)}}@keyframes fcCyan{0%,100%{transform:translate(.02em,-.02em)}50%{transform:translate(.03em,-.01em)}}@media (prefers-reduced-motion:reduce){#fc-hero .holo3d::before,#fc-hero .holo3d::after,#fc-hero .fc-hero-card__img{animation:none}}#fc-hero .fc-hero-cta{position:relative;overflow:hidden}#fc-hero .fc-hero-cta::after{content:"";position:absolute;inset:auto -40% 0 -40%;height:2px;background:linear-gradient(90deg,#0000,#fff8,#0000);transform:translateY(200%);transition:transform .6s cubic-bezier(.2,.8,.2,1)}#fc-hero .fc-hero-cta:hover::after{transform:translateY(0)}{% endraw %}</style>
 

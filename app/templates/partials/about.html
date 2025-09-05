@@ -1,6 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {# templates/partials/about.html — uses the reusable
-component with slots #} {% set TEAM_NAME = team.team_name if team and
+defined else '') %}  {% set TEAM_NAME = team.team_name if team and
 team.team_name else 'Connect ATX Elite' %} {% set BRAND = team.theme_color if
 team and team.theme_color else '#facc15' %} {% set PLAYERS = (about.players if
 about and about.players else None) %} {% from
@@ -9,8 +8,7 @@ about_section( team_name=TEAM_NAME, brand=BRAND, players=PLAYERS,
 cta_href='#fundraiser', cta_label='Become a Champion for Austin Youth →',
 tagline='Your support today creates opportunities for a lifetime.',
 founding_date='2023', area_served=('Austin, TX','Texas'), show_decors=True,
-show_schema=True, section_id='about' ) %} {# ── Named slots (all optional)
-──────────────────────────────────────────── #} {% if slot == 'lede' %}
+show_schema=True, section_id='about' ) %}  {% if slot == 'lede' %}
 <p class="text-xl font-semibold text-white/90 sm:text-2xl leading-relaxed">
   <span class="text-yellow-400">{{ TEAM_NAME }}</span> is more than a team—it’s
   a movement built by families, for families.
@@ -39,7 +37,7 @@ show_schema=True, section_id='about' ) %} {# ── Named slots (all optional)
   <footer class="mt-2 text-amber-300">&mdash; Coach Angel Rodriguez</footer>
 </blockquote>
 
-{% elif slot == 'after-cta' %} {# Example: small trust badges #}
+{% elif slot == 'after-cta' %} 
 <div
   class="flex flex-wrap items-center justify-center gap-3 text-sm text-white/70"
 >

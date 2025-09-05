@@ -1,9 +1,4 @@
-{# ================================ Newsletter Modal — SV-ELITE (v3.4 • lean) -
-CSP-safe (nonce), A11y-first, motion/forced-colors safe - Triggers: button/hash
-+ optional timed delay - Cooldown: per-session + N-day cooldown - Bot guards:
-honeypot + min dwell - Optional POST endpoint (newsletter_action) -
-Offline-friendly (enqueue + retry if action exists) - Tiny API:
-window.fcNewsletter.open()/close() ================================ #} {% set
+ {% set
 NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else
 '') %} {% set TEAM_NAME = (team.team_name if team and team.team_name else
 'Connect ATX Elite') %} {% set BRAND = (team.theme_color if team and
@@ -20,31 +15,11 @@ if newsletter_action is defined and newsletter_action else None %}
   tabindex="-1"
   data-action="{{ NEWSLETTER_ACTION or '' }}"
   data-delay="10"
-  {#
-  seconds
-  before
-  timed
-  open
-  (0
-  to
-  disable)
-  #}
+  
   data-cooldown-days="7"
-  {#
-  days
-  between
-  prompts
-  #}
+  
   data-min-dwell-ms="2500"
-  {#
-  min
-  time
-  on
-  page
-  before
-  submit
-  valid
-  #}
+  
   style="--fc-brand: {{ BRAND }};"
 >
   <div
@@ -95,7 +70,7 @@ if newsletter_action is defined and newsletter_action else None %}
       aria-live="polite"
       aria-atomic="true"
     >
-      {# Honeypot (bot trap) #}
+      
       <div class="sr-only" aria-hidden="true">
         <label for="newsletter-company">Company</label>
         <input

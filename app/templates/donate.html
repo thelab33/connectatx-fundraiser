@@ -1,8 +1,4 @@
-{# ========================================================================
-donate.html — FundChamps Full Donation Page (hosts the unified modal) - Route:
-/donate - Includes the modal partial and auto-opens it - CSP-safe (script uses
-NONCE) ========================================================================
-#} {% extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
+ {% extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
 (csp_nonce() if csp_nonce is defined else '') %} {% set team_name =
 team.team_name if team and team.team_name else "Connect ATX Elite" %} {% block
 content %}
@@ -70,12 +66,11 @@ content %}
     </div>
   </div>
 
-  {# Screen-reader live region (used by the modal script) #}
+  
   <span id="sr-live" class="sr-only" aria-live="polite"></span>
 </section>
 
-{# Unified Donation Modal #} {# Auto-open the modal on page load; still works if
-user clicks the CTA above #}
+ 
 <script nonce="{{ NONCE }}">
   window.requestAnimationFrame(() => {
     if (typeof window.openDonationModal === "function")

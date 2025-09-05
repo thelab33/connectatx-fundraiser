@@ -1,13 +1,6 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-=============================================================================
-macros/ui.html — FundChamps Premium UI Macros (2025+) - Pure Jinja2 + Tailwind
-v3+, Unicode (UTF-8, no BOM) - Macros accept **attrs for true SaaS flexibility -
-A11y-first, scalable, drop-in partials
-============================================================================= #}
-{# ---------------------------------------------------------------------------
-SECTION: UI Macro Library (screen-reader only heading)
---------------------------------------------------------------------------- #}
+defined else '') %} 
+
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 sr-only"
   aria-label="UI Macros"
@@ -15,9 +8,7 @@ SECTION: UI Macro Library (screen-reader only heading)
   <h2>UI Components</h2>
 </section>
 
-{# ---------------------------------------------------------------------------
-PROGRESS METER — Responsive, animated, glassy, accessible
---------------------------------------------------------------------------- #}
+
 {% macro progress_meter(raised, goal, size="md", extra_classes="", attrs=None)
 -%} {%- set _goal = goal|float if goal else 0.0 -%} {%- set _raised =
 raised|float if raised else 0.0 -%} {%- set _pct = (0.0 if _goal == 0.0 else
@@ -79,10 +70,7 @@ text-xs py-2" } -%}
     </span>
   </div>
 </div>
-{%- endmacro %} {#
----------------------------------------------------------------------------
-BUTTON — Ultra-flexible, accessible, HTMX/Alpine-ready
---------------------------------------------------------------------------- #}
+{%- endmacro %} 
 {% macro render_button( label, href="#", color="primary", size="md", icon=None,
 loading=False, external=False, aria_label=None, extra_classes="", type="button",
 attrs=None ) -%} {%- set COLORS = { "primary": {"bg":"bg-yellow-400
@@ -142,10 +130,7 @@ href == "#" -%} {%- set href = "javascript:void(0);" -%} {%- endif -%}
   {% endif %}
   <span class="align-middle">{{ label | safe }}</span>
 </a>
-{%- endmacro %} {#
----------------------------------------------------------------------------
-GLASSY CARD — Optional helper for translucent panels
---------------------------------------------------------------------------- #}
+{%- endmacro %} 
 {% macro glassy_card(content, extra_classes="") -%}
 <div
   class="glassy-card rounded-3xl p-8 shadow-xl-gold ring-1 ring-yellow-400/20 {{ extra_classes }}"

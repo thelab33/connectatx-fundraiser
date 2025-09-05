@@ -1,10 +1,7 @@
-{# ===================== FundChamps — Minimal FAQ (SV-Polish)
-===================== #} {# Props (optional): - faqs: list of {q, a} items -
-contact_email: string (used in default copy) - section_title: string (defaults
-to “Questions? We’ve got answers.”) #} {% set NONCE = NONCE if NONCE is defined
+  {% set NONCE = NONCE if NONCE is defined
 else (csp_nonce() if csp_nonce is defined else '') %} {% set contact_email =
 contact_email or 'hello@example.com' %} {% set section_title = section_title or
-'Questions? We’ve got answers.' %} {# sensible defaults if nothing passed in #}
+'Questions? We’ve got answers.' %} 
 {% set faqs = faqs if faqs is defined and faqs else [ {"q":"Is my gift
 tax-deductible?", "a":"Yes. Your contribution is made to our program and may be
 tax-deductible to the extent allowed by law. We’ll email a receipt for your
@@ -178,7 +175,7 @@ us at {{ contact_email }} and we’ll make it right."} ] %}
     })();
   </script>
 
-  {# SEO: FAQPage — generated from items #}
+  
   <script type="application/ld+json" nonce="{{ NONCE }}">
     {
       "@context": "https://schema.org",

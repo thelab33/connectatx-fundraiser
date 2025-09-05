@@ -1,4 +1,4 @@
-{# Hero Billboard — full-bleed with gradient overlay and glass card #} {% set
+ {% set
 NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else
 '') %} {% set _hero_url = url_for('static', filename=_hero_img, v=_ver) if _ver
 else url_for('static', filename=_hero_img) %} {% set funds_raised =
@@ -141,7 +141,7 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
         <a href="#impact" class="fc-btn" data-cta="hero-learn">Learn more</a>
       </div>
 
-      {# Milestones chips #} {% set _milestones = [25,50,75,100] %}
+       {% set _milestones = [25,50,75,100] %}
       <div class="milestones" aria-hidden="true">
         {% for m in _milestones %}
         <span class="chip {{ 'hit' if pct >= m else '' }}">{{ m }}%</span>

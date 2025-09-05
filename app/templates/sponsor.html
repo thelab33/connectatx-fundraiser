@@ -1,12 +1,9 @@
-{# =====================================================================
-FundChamps — Sponsor One-Pager (SV-Premium) - Clean, mobile-first, CTA-driven -
-Highlights Tiers, QR donate, and contact info
-===================================================================== #} {%
+ {%
 extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
 (csp_nonce() if csp_nonce is defined else '') %} {% set _brand_name =
 team.team_name if team and team.team_name else 'Connect ATX Elite' %} {% block
 h1 %}{{ _brand_name }} — Sponsorship Opportunities{% endblock %} {% block
-content %} {# Header for branding consistency #}
+content %} 
 
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12"
@@ -21,7 +18,7 @@ content %} {# Header for branding consistency #}
   </p>
 </section>
 
-{# Sponsorship tiers (reuses your partial) #}
+
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-12"
   id="tiers"
@@ -29,7 +26,7 @@ content %} {# Header for branding consistency #}
   {% include "partials/tiers.html" ignore missing with context %}
 </section>
 
-{# --- QR Donate / Payment Link --- #}
+
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12"
 >
@@ -55,7 +52,7 @@ content %} {# Header for branding consistency #}
     >
   </p>
 
-  {# --- Sponsors strip for social proof --- #} {% if sponsors and
+   {% if sponsors and
   sponsors|length > 0 %}
   <div class="mt-8 border-t border-white/10 pt-6">
     <h3 class="text-lg font-semibold text-yellow-300 mb-4">
@@ -74,9 +71,9 @@ content %} {# Header for branding consistency #}
   {% endif %}
 </section>
 
-{# Newsletter (optional trust-builder) #}
+
 <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-12">
   {% include "partials/newsletter.html" ignore missing with context %}
 </section>
 
-{# Footer #} {% endblock %}
+ {% endblock %}

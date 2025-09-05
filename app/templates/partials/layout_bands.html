@@ -1,9 +1,4 @@
-{# =============================================================================
-app/templates/partials/layout_bands.html FundChamps • Elite Section Bands
-(Prestige, overlay-safe) - Idempotent & CSP-safe (NONCE or script_open macro) -
-Auto anchor-offset for sticky headers / CTAs - Accessible in-page anchors +
-optional region labeling - Motion-safe smooth scroll
-============================================================================= #}
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% set brand_color = (team.theme_color if team and
 team.theme_color else '#facc15') %}

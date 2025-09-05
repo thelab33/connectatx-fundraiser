@@ -1,12 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-============================================================================
-templates/shared/ui_bootstrap.html — FundChamps Elite UI Bootstrap Provides
-design tokens & primitives (no visible output). Safe to include in
-<head>
-  for every page.
-  ============================================================================
-  #} {% set __nonce = ( csp_nonce() if csp_nonce is defined else (NONCE if NONCE
+defined else '') %}  {% set __nonce = ( csp_nonce() if csp_nonce is defined else (NONCE if NONCE
   is defined else '') ) %}
 
   <style nonce="{{ __nonce }}">

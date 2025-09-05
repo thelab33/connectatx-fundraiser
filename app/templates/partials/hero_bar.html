@@ -1,8 +1,4 @@
-{# ========================= HERO BAR — Prime • Production - Compact statline,
-WCAG 2.2 AA, single primary CTA + Share - IDs preserved: fc-hero-raised,
-fc-hero-goal, fc-hero-pct, fc-hero-countdown - Adds sr-only #fc-hero-sr for live
-updates; strict-undefined & CSP-safe - Small-screen polish ≤360px; Save-Data &
-reduced-motion aware ========================= #} {% set _fz = fundraiser if
+ {% set _fz = fundraiser if
 fundraiser is defined and fundraiser else {} %} {% set _map = (_fz if _fz is
 mapping else (_fz.to_dict() if _fz.to_dict is defined else (_fz.__dict__ if
 _fz.__dict__ is defined else {}))) %} {% set _raised = (funds_raised if
@@ -13,8 +9,7 @@ _map.get('fundraising_goal')) | default(10000, true) | float %} {% set _pct =
 (100.0 * _raised / _goal) if _goal else 0 %} {% set _pct_i = (_pct | round(0,
 'floor')) | int %} {% set _pct_clamped = 0 if _pct_i < 0 else (100 if _pct_i >
 100 else _pct_i) %} {% set _deadline_iso = (deadline_iso if deadline_iso is
-defined and deadline_iso) | default('', true) %} {# Optional match window (safe
-fallbacks) #} {% set match_start_iso = (match_start if match_start is defined
+defined and deadline_iso) | default('', true) %}  {% set match_start_iso = (match_start if match_start is defined
 and match_start else None) and match_start.isoformat() or '' %} {% set
 match_end_iso = (match_end if match_end is defined and match_end else None) and
 match_end.isoformat() or '' %} {% if nonce_attr is not defined %} {% set NONCE =
@@ -74,7 +69,7 @@ NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
       class="hb-countdown"
       aria-label="Countdown"
     ></span>
-    {% endif %} {# Optional match chip; JS toggles visibility when active #}
+    {% endif %} 
     <span
       id="match-chip"
       class="hb-match hidden"

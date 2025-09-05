@@ -1,6 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {# ============================== FUNDCHAMPS SPONSOR WALL
-WIDGET ============================== #} {% from
+defined else '') %}  {% from
 "macros/sponsor_card.html"import sponsor_card %}
 
 <section
@@ -105,7 +104,7 @@ WIDGET ============================== #} {% from
     aria-label="Sponsor List"
   >
     {% for sponsor in sponsors_sorted[3:] %} {{ sponsor_card(sponsor, loop.index
-    + 3, false) }} {% endfor %} {# Fill empty slots (up to 12) — Upsell! #} {%
+    + 3, false) }} {% endfor %}  {%
     set slots = (12 - sponsors_sorted|length) if sponsors_sorted|length < 12
     else 0 %} {% for _ in range(slots) %}
     <div

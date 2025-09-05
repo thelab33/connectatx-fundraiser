@@ -1,21 +1,15 @@
-{# ============================================================ Starforge Footer
-• SV-Elite v3.6 (Intent-aware + Seal Flip) - Payment Link → direct; else open
-Intent modal (meta passed) - UTM + P2P enrichment (header-consistent) - Ambient
-glow, compact layout, motion/contrast/print safe - Route-safe (works without
-Flask endpoints) ============================================================ #}
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% set _brand = (team.team_name if team and team.team_name
 else 'Connect ATX Elite') %} {% set _year = (now().year if now is defined else
 2025) %} {% set is_501c3 = team.is_501c3 if team is defined and team is not none
 and team.is_501c3 is defined else false %} {% set contact_email =
-team.contact_email if team and team.contact_email else None %} {# Safe routes +
-Payment Link preference #} {% set _sf = (safe_url_for is defined) and
+team.contact_email if team and team.contact_email else None %}  {% set _sf = (safe_url_for is defined) and
 safe_url_for %} {% set _has = (has_endpoint is defined) and has_endpoint %} {%
 set donate_href = (_sf and _has and has_endpoint('main.donate') and
 safe_url_for('main.donate')) or '/donate' %} {% set tiers_href = '#tiers' %} {%
 set payment_link =
-footer_payment_link|default(stripe_payment_link|default(None)) %} {# P2P/Intent
-metadata for modal #} {% set PEER = peer|default(_peer|default({})) %} {% set
+footer_payment_link|default(stripe_payment_link|default(None)) %}  {% set PEER = peer|default(_peer|default({})) %} {% set
 CAM = campaign|default(_campaign|default({})) %} {% set _peer_slug = (PEER.slug
 or PEER.display_name or PEER.name)|default('')|lower|replace('
 ','-')|replace('--','-') %} {% set _camp_key = (CAM.slug or CAM.id)|default('')

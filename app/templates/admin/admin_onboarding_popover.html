@@ -1,10 +1,4 @@
-{# =============================================================================
-app/templates/partials/admin_onboarding_popover.html Admin Onboarding Popover —
-Elite (CSP/HTMX/Alpine-optional, Single-file) - Brand-aware styling; safe route
-resolution - Idempotent JS; BroadcastChannel for cross-tab sync - Proper ARIA
-(progressbar), reduced-motion aware - Avoids HTMX double-POST by detecting
-hx-post at runtime
-============================================================================= #}
+
 {% include "partials/ui_bootstrap.html" ignore missing with context %} {% set
 NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else
 '') %} {% set HAS = has_endpoint is defined %} {% set brand_color =
@@ -13,7 +7,7 @@ team_key = (team.id if team and team.id is defined else 'global') %} {% set
 storage_key = 'adminOnboardSteps:' ~ team_key %} {% set step_labels =
 step_labels if step_labels is defined else ['Visit Dashboard','Invite
 Sponsors','Import Contacts'] %} {% set csrf_val = (csrf_token() if csrf_token is
-defined else '') %} {# ---- Safe routes (no lambdas) ---- #} {% set
+defined else '') %}  {% set
 href_dashboard = (safe_url_for('admin.dashboard') if (safe_url_for is defined
 and HAS and has_endpoint('admin.dashboard')) else '/admin/') %} {% set
 href_invite = (safe_url_for('admin.invite') if (safe_url_for is defined and HAS
@@ -148,7 +142,7 @@ session.get('onboarded') %}
     </button>
   </div>
 </div>
-{% endif %} {# — AI Concierge tip (shows even if popover dismissed) — #}
+{% endif %} 
 <div
   id="ai-concierge-tip"
   class="fixed bottom-24 right-6 z-[1049] translate-y-2 rounded-lg border border-yellow-400/20 bg-black/80 px-3 py-2 text-xs text-yellow-200 opacity-0 shadow-lg transition"

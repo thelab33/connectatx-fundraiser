@@ -88,7 +88,7 @@
       #{{ sponsors_hub_id }} .ticker-rail{overflow:hidden}
       #{{ sponsors_hub_id }} .ticker-track{display:inline-flex;gap:1.25rem;padding-right:1.25rem;white-space:nowrap;animation:hub-scroll 24s linear infinite}
       @keyframes hub-scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-      @media (prefers-reduced-motion:reduce){#{{ sponsors_hub_id }} .ticker-track{animation:none!important}}
+      @media (prefers-reduced-motion:reduce) #{{ sponsors_hub_id }} .ticker-track{animation:none!important}}
     </style>
 
     {# ===================== SPOTLIGHT ===================== #}

@@ -1,4 +1,4 @@
-{# Mid-page CTA Ribbon — SV Elite (live KPI) #} {% set _brand =
+ {% set _brand =
 (team.theme_color if team and team.theme_color else '#facc15') %} {% set _cid =
 (campaign.id if campaign and campaign.id else (campaign_id if campaign_id is
 defined else None)) %}
@@ -21,7 +21,7 @@ defined else None)) %}
         changes lives.
       </p>
 
-      {# --- KPI strip (ARIA live, HTMX + Socket.IO) --- #}
+      
       <div
         id="kpi-fragment-{{ _cid or 'default' }}"
         class="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/80"
@@ -38,7 +38,7 @@ defined else None)) %}
         endif
         %}
       >
-        {# Fallback skeleton if no campaign or while loading #}
+        
         <span class="opacity-80" id="kpi-raised">—</span>
         <span aria-hidden="true">•</span>
         <span class="opacity-80" id="kpi-donors">—</span>

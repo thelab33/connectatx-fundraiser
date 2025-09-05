@@ -1,9 +1,3 @@
-{# ============================================================================
-   base.html — FundChamps • SV-Elite (P2P • CSP-safe • ESM-first)
-   - Clean render flow: sections are block-scoped; base does NOT auto-render hero
-   - No duplicate hero: child templates own {% block section_hero %} explicitly
-   - Keeps your assets/SEO/metrics as-is; adds light de-dupe guard
-   ========================================================================== #}
 {% set _TEAM        = team|default(_team|default({})) %}
 {% set _brand_hex   = _TEAM.theme_color|default('#f2c94c') %}
 {% set _brand_name  = _TEAM.team_name|default('Connect ATX Elite') %}
@@ -22,7 +16,7 @@
 {% set POSTHOG_HOST = POSTHOG_HOST|default('https://app.posthog.com') %}
 {% set SKIN         = SKIN|default('default') %}
 
-{# ---------- helpers ---------- #}
+{# ---------------- Macros ---------------- #}
 {% macro _slugify(s) -%}
   {%- if s -%}{{ s|string|lower|replace(' ', '-')|replace('_', '-')|replace('--','-')|trim('-') }}{%- endif -%}
 {%- endmacro %}
@@ -46,7 +40,7 @@
   {%- else -%}{{ u }}{%- endif -%}
 {%- endmacro %}
 
-{# ---------- P2P (peer/campaign) ---------- #}
+{# ---------------- P2P / OG ---------------- #}
 {% set PEER          = peer|default(_peer|default({})) %}
 {% set P2P_CAMPAIGN  = campaign|default(_campaign|default({})) %}
 {% set _peer_name    = PEER.display_name|default(PEER.name|default(None)) %}
@@ -57,7 +51,6 @@
 {% set _og_brand_img = _TEAM.og_image|default('images/og_default.jpg') %}
 {% set _is_p2p       = (_peer_name or _camp_title) and true or false %}
 
-{# ---------- SEO strings ---------- #}
 {% set _desc_default = 'Fuel the season. Fund the future.' %}
 {% set _base_title = (
       _is_donate and _TEAM.og_title_donate
@@ -78,94 +71,85 @@
       class="h-full antialiased selection:bg-white/20"
       data-theme="dark" data-brand="{{ _brand_slug }}" data-route="{{ _route|default('') }}" data-skin="{{ SKIN }}">
 <head>
-  {# --- Core meta --- #}
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
-  <meta name="theme-color" content="#0b0d13"/>
-  <meta name="color-scheme" content="dark light"/>
-  <meta name="referrer" content="strict-origin-when-cross-origin"/>
-  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/>
-  <meta name="format-detection" content="telephone=no,address=no,email=no"/>
-  <meta name="csrf-token" content="{{ (csrf_token() if csrf_token is defined else '') }}"/>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#0b0d13">
+  <meta name="color-scheme" content="dark light">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <meta name="format-detection" content="telephone=no,address=no,email=no">
+  <meta name="csrf-token" content="{{ (csrf_token() if csrf_token is defined else '') }}">
 
-  {# PWA theme bars (auto-tuned later) #}
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ _brand_hex }}"/>
-  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b0b0c" id="meta-theme-color"/>
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ _brand_hex }}">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)"  content="#0b0b0c" id="meta-theme-color">
 
   {% if request is defined %}
-    <link rel="canonical" href="{{ request.base_url }}"/>
-    <meta property="og:url" content="{{ request.base_url }}"/>
+    <link rel="canonical" href="{{ request.base_url }}">
+    <meta property="og:url" content="{{ request.base_url }}">
   {% endif %}
 
   <title>{% block title %}{{ _page_title }}{% endblock %}</title>
-  <meta name="description" content="{{ _page_desc }}"/>
-  <meta property="og:type" content="{{ _is_p2p and 'profile' or 'website' }}"/>
-  <meta property="og:site_name" content="{{ _brand_name }}"/>
-  <meta property="og:title" content="{{ _page_title }}"/>
-  <meta property="og:description" content="{{ _page_desc }}"/>
-  <meta property="og:image" content="{{ _og_img_abs }}"/>
-  <meta property="og:image:alt" content="{{ _brand_name }}"/>
-  <meta property="og:locale" content="{{ LOCALE }}"/>
-  <meta name="twitter:card" content="summary_large_image"/>
-  <meta name="twitter:title" content="{{ _page_title }}"/>
-  <meta name="twitter:description" content="{{ _page_desc }}"/>
-  <meta name="twitter:image" content="{{ _og_img_abs }}"/>
-  <meta name="twitter:image:alt" content="{{ _brand_name }}"/>
-  {% if _TEAM.twitter %}<meta name="twitter:site" content="{{ _TEAM.twitter }}"/>{% endif %}
+  <meta name="description" content="{{ _page_desc }}">
+  <meta property="og:type" content="{{ _is_p2p and 'profile' or 'website' }}">
+  <meta property="og:site_name" content="{{ _brand_name }}">
+  <meta property="og:title" content="{{ _page_title }}">
+  <meta property="og:description" content="{{ _page_desc }}">
+  <meta property="og:image" content="{{ _og_img_abs }}">
+  <meta property="og:image:alt" content="{{ _brand_name }}">
+  <meta property="og:locale" content="{{ LOCALE }}">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="{{ _page_title }}">
+  <meta name="twitter:description" content="{{ _page_desc }}">
+  <meta name="twitter:image" content="{{ _og_img_abs }}">
+  <meta name="twitter:image:alt" content="{{ _brand_name }}">
+  {% if _TEAM.twitter %}<meta name="twitter:site" content="{{ _TEAM.twitter }}">{% endif %}
 
-  {# --- Icons --- #}
-  <link rel="icon" type="image/svg+xml" href="{{ asset(_favicon) }}"/>
-  <link rel="alternate icon" type="image/png" href="{{ asset('images/favicon.png') }}"/>
-  <link rel="apple-touch-icon" href="{{ asset(_apple_icon) }}"/>
-  <meta name="apple-mobile-web-app-title" content="{{ _brand_name }}"/>
+  <link rel="icon" type="image/svg+xml" href="{{ asset(_favicon) }}">
+  <link rel="alternate icon" type="image/png" href="{{ asset('images/favicon.png') }}">
+  <link rel="apple-touch-icon" href="{{ asset(_apple_icon) }}">
+  <meta name="apple-mobile-web-app-title" content="{{ _brand_name }}">
 
   {% if _manifest %}
-    <link rel="manifest" href="{{ asset(_manifest) }}"/>
-    <meta name="apple-mobile-web-app-capable" content="yes"/>
-    <meta name="mobile-web-app-capable" content="yes"/>
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+    <link rel="manifest" href="{{ asset(_manifest) }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   {% endif %}
 
-  {# --- Perf hints --- #}
-  <link rel="dns-prefetch" href="https://js.stripe.com"/>
-  <link rel="dns-prefetch" href="https://checkout.stripe.com"/>
-  <link rel="preconnect" href="https://js.stripe.com" crossorigin/>
-  <link rel="preconnect" href="https://checkout.stripe.com" crossorigin/>
-  <link rel="preconnect" href="https://api.stripe.com" crossorigin/>
-  {% if POSTHOG_KEY %}<link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin/>{% endif %}
-  {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin/>{% endif %}
-  {% if request is defined %}<link rel="preconnect" href="{{ request.url_root }}"/>{% endif %}
+  <link rel="dns-prefetch" href="https://js.stripe.com">
+  <link rel="dns-prefetch" href="https://checkout.stripe.com">
+  <link rel="preconnect" href="https://js.stripe.com" crossorigin>
+  <link rel="preconnect" href="https://checkout.stripe.com" crossorigin>
+  <link rel="preconnect" href="https://api.stripe.com" crossorigin>
+  {% if POSTHOG_KEY %}<link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>{% endif %}
+  {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
+  {% if request is defined %}<link rel="preconnect" href="{{ request.url_root }}">{% endif %}
 
-  {# LCP image hint #}
   {% if hero_image_url is defined and hero_image_url %}
-    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high" imagesrcset="{{ hero_image_url }}"/>
+    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high" imagesrcset="{{ hero_image_url }}">
   {% else %}
     <link rel="preload" as="image"
           href="{{ asset('images/hero/hero-1920.avif') }}"
           imagesizes="100vw"
           imagesrcset="{{ asset('images/hero/hero-1920.avif') }} 1920w, {{ asset('images/hero/hero-1280.avif') }} 1280w, {{ asset('images/hero/hero-960.avif') }} 960w"
-          fetchpriority="high"/>
+          fetchpriority="high">
   {% endif %}
 
-  {# --- CSS bundles --- #}
   <link rel="stylesheet" href="{{ asset('css/app.min.css') }}"
-        {% if sri('css/app.min.css') %}integrity="{{ sri('css/app.min.css') }}" crossorigin="anonymous"{% endif %}/>
+        {% if sri('css/app.min.css') %}integrity="{{ sri('css/app.min.css') }}" crossorigin="anonymous"{% endif %}>
   <link rel="stylesheet" href="{{ asset('css/starforge.min.css') }}"
-        {% if sri('css/starforge.min.css') %}integrity="{{ sri('css/starforge.min.css') }}" crossorigin="anonymous"{% endif %}/>
-  <link rel="preload" href="{{ asset('css/fc_elite.css') }}" as="style"/>
+        {% if sri('css/starforge.min.css') %}integrity="{{ sri('css/starforge.min.css') }}" crossorigin="anonymous"{% endif %}>
+  <link rel="preload" href="{{ asset('css/fc_elite.css') }}" as="style">
   <link rel="stylesheet" href="{{ asset('css/fc_elite.css') }}"
-        {% if sri('css/fc_elite.css') %}integrity="{{ sri('css/fc_elite.css') }}" crossorigin="anonymous"{% endif %}/>
+        {% if sri('css/fc_elite.css') %}integrity="{{ sri('css/fc_elite.css') }}" crossorigin="anonymous"{% endif %}>
 
-  {# Shopify skin (optional) #}
   {% if SKIN == 'shopify' %}
     {% include "partials/_shopify_head_include.html" ignore missing %}
   {% endif %}
 
-  {# Starforge brand spine (optional; safe if 404) #}
-  <link rel="stylesheet" href="{{ asset('starforge/brand-spine.css') }}"/>
-  <link rel="modulepreload" href="{{ asset('starforge/enable-brand-spine.js') }}"/>
+  <link rel="stylesheet" href="{{ asset('starforge/brand-spine.css') }}">
+  <link rel="modulepreload" href="{{ asset('starforge/enable-brand-spine.js') }}">
 
-  {# ---------------- Layout tokens (unchanged) ---------------- #}
   <style {{ nonce_attr() }}>
     :root{
       --fc-brand: {{ _brand_hex }}; --fc-gold: var(--fc-brand);
@@ -240,8 +224,7 @@
     }
   </style>
 
-  {# ---------------- JSON-LD ---------------- #}
-  <script type="application/ld+json" {{ nonce_attr() }}>
+  <script {{ nonce_attr() }} type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@graph": [
@@ -276,9 +259,8 @@
   }
   </script>
 
-  {# ---------------- Analytics (optional) ---------------- #}
   {% if GA_ID %}
-    <script async src="https://www.googletagmanager.com/gtag/js?id={{ GA_ID }}"></script>
+    <script {{ nonce_attr() }} async src="https://www.googletagmanager.com/gtag/js?id={{ GA_ID }}"></script>
     <script {{ nonce_attr() }}>
       window.dataLayer = window.dataLayer || [];
       function gtag(){ dataLayer.push(arguments); }
@@ -287,7 +269,7 @@
     </script>
   {% endif %}
   {% if POSTHOG_KEY %}
-    <link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin/>
+    <link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>
     <script {{ nonce_attr() }}>
       !function(d,w){var p=w.posthog||(w.posthog=[]),s=d.createElement("script");s.async=true;
         s.src=("{{ POSTHOG_HOST }}".replace(/\/$/,"")||"https://app.posthog.com")+"/static/array.js";
@@ -304,7 +286,7 @@
     };
   </script>
 
-  {# NOTE: removed bundle auto-include that injected the hero and caused duplicates #}
+  {# Child templates can add more head content #}
   {% block extra_head %}{% endblock %}
 </head>
 
@@ -318,29 +300,24 @@
     <h1 class="sr-only">{% block h1 %}{{ _brand_name }}{% endblock %}</h1>
     <p id="sr-live" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 
-    {# SECTION BLOCKS — child pages override; base does NOT render hero by default #}
     {% block section_ticker %}{% endblock %}
-
-    {# IMPORTANT: leave empty to avoid duplicates. Home page should define this block. #}
     {% block section_hero %}{% endblock %}
-
     {% block section_pulse %}{% endblock %}
     {% block section_impact %}{% endblock %}
     {% block section_tiers %}{% endblock %}
     {% block section_about %}{% endblock %}
     {% block section_concierge %}{% endblock %}
     {% block sections_extra %}{% endblock %}
-
     {% block content %}{% endblock %}
   </main>
 
   {% block below_main %}{% endblock %}
   {% block footer %}{% include "partials/footer.html" ignore missing with context %}{% endblock %}
 
-  {# ---------- JS Loader ---------- #}
-  <link rel="modulepreload" href="{{ asset('js/main.js') }}"/>
+  <link rel="modulepreload" href="{{ asset('js/main.js') }}">
   <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}"
-        {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}/>
+        {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}>
+
   <script {{ nonce_attr() }}>
   (function(){
     var head = document.head;
@@ -366,11 +343,11 @@
   </script>
 
   {% if _is_donate %}
-    <script id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
+    <script {{ nonce_attr() }} id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
             {% if sri('js/donate.min.js') %}integrity="{{ sri('js/donate.min.js') }}" crossorigin="anonymous"{% endif %}></script>
   {% endif %}
   {% if USE_SOCKETIO %}
-    <script src="/socket.io/socket.io.js" defer></script>
+    <script {{ nonce_attr() }} src="/socket.io/socket.io.js" defer></script>
   {% endif %}
 
   <script {{ nonce_attr() }}>
@@ -388,7 +365,6 @@
     {% include "partials/_shopify_body_include.html" ignore missing %}
   {% endif %}
 
-  {# P2P referral propagation #}
   <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcP2P) return; window.__fcP2P = true;
@@ -425,7 +401,6 @@
   })();
   </script>
 
-  {# Boot + vitals (unchanged) #}
   <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcBoot2) return; window.__fcBoot2 = true;
@@ -474,7 +449,6 @@
   })();
   </script>
 
-  {# Sticky seam height calculator (unchanged) #}
   <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcSeam) return; window.__fcSeam = true;
@@ -503,12 +477,10 @@
   })();
   </script>
 
-  {# SV-Elite JS (counters, ticker, micro-interactions) #}
-  <script src="{{ asset('js/fc_elite.js') }}" defer
+  <script {{ nonce_attr() }} src="{{ asset('js/fc_elite.js') }}" defer
           {% if sri('js/fc_elite.js') %}integrity="{{ sri('js/fc_elite.js') }}" crossorigin="anonymous"{% endif %}></script>
-  <script src="{{ url_for('static', filename='js/ux.js') }}" {{ nonce_attr() }}></script>
-
-  <script src="{{ url_for('static', filename='js/lazy-img.js') }}" {{ nonce_attr() }} defer></script>
+  <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/ux.js') }}" defer></script>
+  <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/lazy-img.js') }}" defer></script>
 
   <script {{ nonce_attr() }}>
     (function(){
@@ -527,14 +499,12 @@
   {% block body_scripts %}
     {% include "partials/starforge_patch_include.html" ignore missing with context %}
   {% endblock %}
-
   {% block extra_js %}{% endblock %}
 
   <script {{ nonce_attr() }} type="module">
     try{ import('{{ asset("starforge/enable-brand-spine.js") }}').catch(()=>{}); }catch(_){}
   </script>
 
-  {# ---- tiny duplicate guard (safe) ---- #}
   <script {{ nonce_attr() }} type="module">
     const nodes = document.querySelectorAll('#fc-hero');
     if (nodes.length > 1) { [...nodes].slice(1).forEach(n => n.remove()); console.warn('[fc-hero] duplicate removed'); }

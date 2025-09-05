@@ -330,7 +330,7 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
 }
 
 /* if the heading uses .holo / .holo3d, force legible white */
-#fc-hero h1.fc-hero-type.holo, #fc-hero h1.fc-hero-type.holo3d{
+#fc-hero:not([data-hero-scope="cinema"]) h1.fc-hero-type.holo, #fc-hero:not([data-hero-scope="cinema"]) h1.fc-hero-type.holo3d{
   background:none!important; -webkit-text-fill-color:#fff!important; color:#fff!important;
   mix-blend-mode:normal!important;
   text-shadow:0 3px 22px rgb(0 0 0 / 65%), 0 2px 10px rgb(0 0 0 / 55%), 0 1px 2px rgb(0 0 0 / 90%);

@@ -1,11 +1,6 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-============================================================================
-macros/progress.html — FundChamps Prestige Progress Meter - CSP-safe, a11y-first
-- Emits fc:funds:update event on init/update
-============================================================================ #}
-{% macro progress_meter(raised, goal, size="md") -%} {# ── Safe float conversion
-and clamping ── #} {%- set _goal = (goal|float if goal else 0.0) -%} {%- set
+defined else '') %} 
+{% macro progress_meter(raised, goal, size="md") -%}  {%- set _goal = (goal|float if goal else 0.0) -%} {%- set
 _raised = (raised|float if raised else 0.0) -%} {%- set _pct = (0.0 if _goal ==
 0.0 else (_raised / _goal * 100.0)) -%} {%- set _pct = (0.0 if _pct < 0.0 else
 (100.0 if _pct > 100.0 else _pct)) -%} {%- set pct_f = '%.1f' % _pct -%} {%- set

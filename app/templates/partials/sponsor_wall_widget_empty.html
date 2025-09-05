@@ -1,6 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {# Zero-state for Sponsor Wall (renders when no sponsors
-yet) #}
+defined else '') %} 
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 max-w-6xl mx-auto px-6 my-8"
   id="sponsor-wall-empty"

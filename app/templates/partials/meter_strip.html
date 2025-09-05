@@ -4,14 +4,7 @@
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block"
   data-ui="${name//_/ -}"
 >
-  {#
-  =============================================================================
-  app/templates/partials/meter_strip.html FundChamps • Mini Meter Strip
-  (Prestige) - Idempotent + CSP-safe (uses NONCE or your script_open macro) -
-  Real-time: listens to 'fc:funds:update' - Exposes window.updateMeterStrip(id,
-  raised, goal)
-  =============================================================================
-  #} {% include "partials/ui_bootstrap.html" ignore missing with context %} {%
+   {% include "partials/ui_bootstrap.html" ignore missing with context %} {%
   set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
   defined else '') %} {% set strip_id = strip_id|default('fc-meter-strip') %} {%
   set theme_hex = (team.theme_color if team and team.theme_color is defined else

@@ -1,10 +1,4 @@
-{# =============================================================================
-Admin Onboarding Popover — SV Elite+ (CSP/HTMX/Alpine-optional, Single-file) -
-Brand-aware design, forced-colors safe, reduced-motion aware - Per-admin storage
-key (team + user) + snooze (24h) - Vanilla JS + BroadcastChannel + storage event
-(cross-tab sync) - A11y: dialog semantics, live regions, keyboard, focus trap -
-Telemetry hooks (fcTrack) + idempotent init guard
-============================================================================= #}
+
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% set HAS_ENDPOINT = has_endpoint is defined %} {% set
 brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
@@ -14,7 +8,7 @@ current_user.is_authenticated else 'anon') %} {% set storage_ns =
 'adminOnboard:' ~ team_key ~ ':' ~ admin_key %} {% set step_labels = step_labels
 if step_labels is defined else ['Visit Dashboard','Invite Sponsors','Import
 Contacts'] %} {% set csrf_val = (csrf_token() if csrf_token is defined else '')
-%} {# ---- Safe routes (no lambdas) ---- #} {% set _sf = safe_url_for is defined
+%}  {% set _sf = safe_url_for is defined
 and safe_url_for %} {% set href_dashboard = (_sf and HAS_ENDPOINT and
 has_endpoint('admin.dashboard') and safe_url_for('admin.dashboard')) or
 '/admin/' %} {% set href_invite = (_sf and HAS_ENDPOINT and
@@ -25,8 +19,7 @@ or '/admin/import' %} {% set href_dismiss = (_sf and HAS_ENDPOINT and
 has_endpoint('admin.dismiss_onboarding') and
 safe_url_for('admin.dismiss_onboarding')) or '/admin/dismiss-onboarding' %} {%
 set href_sync = (_sf and HAS_ENDPOINT and has_endpoint('admin.onboarding_sync')
-and safe_url_for('admin.onboarding_sync')) or '/admin/onboarding/sync' %} {#
-Only render if authenticated admin/staff and not marked onboarded in session #}
+and safe_url_for('admin.onboarding_sync')) or '/admin/onboarding/sync' %} 
 {% if (current_user is defined) and current_user and
 current_user.is_authenticated and (current_user.is_admin or
 current_user.is_staff) and not session.get('onboarded') %}
@@ -170,7 +163,7 @@ current_user.is_staff) and not session.get('onboarded') %}
 
   <p id="admin-ob-sr" class="sr-only" aria-live="polite" aria-atomic="true"></p>
 </div>
-{% endif %} {# — AI Concierge tip (shows even if popover dismissed) — #}
+{% endif %} 
 <div
   id="ai-concierge-tip"
   class="fixed bottom-24 right-6 z-[1049] translate-y-2 rounded-lg border border-yellow-400/20 bg-black/80 px-3 py-2 text-xs text-yellow-200 opacity-0 shadow-lg transition"

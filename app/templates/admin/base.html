@@ -1,13 +1,12 @@
 <h2 class="sr-only">Base</h2>
-{# ============================ FundChamps • Admin Base Layout Pro-Polished,
-Accessible, and Themed ============================ #} {% extends "base.html" %}
+ {% extends "base.html" %}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% block title %}Admin | {{ super() }}{% endblock %} {%
 block hero %}
 <!-- Optional Admin Hero -->
 {% endblock %} {% block content %}
 <div class="mx-auto w-full max-w-7xl flex-1 p-6">
-  {# ─── Flash Messages ─────────────────────────── #} {% with messages =
+   {% with messages =
   get_flashed_messages(with_categories=true) %} {% if messages %}
   <ul class="mb-6 space-y-2" role="alert" aria-live="polite">
     {% for category, msg in messages %}
@@ -18,8 +17,7 @@ block hero %}
     </li>
     {% endfor %}
   </ul>
-  {% endif %} {% endwith %} {# ─── Admin Content Block (child templates fill
-  this) ────────────── #} {% block admin_content %}{% endblock %}
+  {% endif %} {% endwith %}  {% block admin_content %}{% endblock %}
 </div>
 {% endblock %} {% block footer %}
 <footer

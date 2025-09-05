@@ -1,6 +1,5 @@
 <h2 class="sr-only">Back To Top</h2>
-{# =================== Back to Top — Basketball Edition (CSP/A11y/Progress Ring)
-=================== #} {% set NONCE = NONCE if NONCE is defined else
+ {% set NONCE = NONCE if NONCE is defined else
 (csp_nonce() if csp_nonce is defined else '') %} {% set brand_color =
 (team.theme_color if team and team.theme_color else '#fde047') %}
 

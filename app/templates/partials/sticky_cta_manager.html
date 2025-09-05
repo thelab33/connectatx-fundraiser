@@ -1,5 +1,4 @@
-{# ================= Sticky CTA Manager — reserves space + prevents overlap
-(Elite) ================= #} {% include "partials/ui_bootstrap.html" ignore
+ {% include "partials/ui_bootstrap.html" ignore
 missing with context %} {% set NONCE = NONCE if NONCE is defined else
 (csp_nonce() if csp_nonce is defined else '') %}
 

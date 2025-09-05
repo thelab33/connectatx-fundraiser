@@ -1,25 +1,16 @@
-{# =============================================================================
-FundChamps • Funds Allocation Bar — SV Prestige Elite - Listens:
-'fc:funds:update' / 'fc:meter:update' -> { raised, goal } - Emits:
-'fc:alloc:highlight' -> { key, label, amount, percent } - Optional polling
-(Save-Data aware): stats_url / allocations_url (JSON) - APIs (global +
-instance): window.fcAlloc.{setTotals,setAllocations,setFromRatios,rerender}
-window.fcAllocById[id].{setTotals,setAllocations,setFromRatios,rerender} -
-Hardened parsing, deterministic palette per key, a11y upgrades, CSP-safe
-============================================================================= #}
+
 {% include "partials/ui_bootstrap.html" ignore missing with context %} {% if
 show_allocation_bar is not defined or show_allocation_bar %} {% set NONCE =
 NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _alloc_id = alloc_id|default('funds-allocation') %} {# Robust numeric
-parsing (#,$,commas) #} {% set _r =
+{% set _alloc_id = alloc_id|default('funds-allocation') %}  {% set _r =
 (funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is
 defined else 0.0 %} {% set _g =
 (fundraising_goal|string)|replace('$','')|replace(',','')|float if
 fundraising_goal is defined else 10000.0 %} {% set raised = _r %} {% set goal =
-(_g if _g>0 else 1.0) %} {# Data inputs #} {% set stats_url =
+(_g if _g>0 else 1.0) %}  {% set stats_url =
 stats_url|default(None) %} {% set alloc_url = allocations_url|default(None) %}
 {% set brand_color = team.theme_color if team and team.theme_color else
-'#facc15' %} {# Safe defaults if no server allocations provided #} {% set
+'#facc15' %}  {% set
 default_alloc = allocations if allocations is defined and allocations else [
 {"key":"gym","label":"Gym Rental","ratio":0.40},
 {"key":"travel","label":"Travel","ratio":0.35},

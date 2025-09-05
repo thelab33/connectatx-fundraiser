@@ -1,10 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-=============================================================================
-macros/confetti.html — FundChamps Confetti & Celebration Macro - Encapsulates
-canvas-confetti + optional cheer audio - CSP-safe: nonce is injected -
-Accessible: screen-reader hidden heading landmark
-============================================================================= #}
+defined else '') %} 
 
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 sr-only"

@@ -1,16 +1,10 @@
-{# =============================================================================
-flash_and_onboarding.html — SV-Premium Toaster + Onboarding (Hardened) - Toaster
-always mounted (even with no server flashes) → window.fcFlash API - CSP-safe
-(NONCE / csp_nonce), a11y-first, reduced-motion friendly - Cross-tab sync via
-BroadcastChannel('fc_ui') - HTMX-aware actions (optional hx-post on toast
-button)
-============================================================================= #}
+
 
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 block"
   data-ui="flash-and-onboarding"
 >
-  {# ---------- Safe helpers & routes ---------- #} {% set NONCE = NONCE if
+   {% set NONCE = NONCE if
   NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %} {% set
   _csrf = (csrf_token() if csrf_token is defined else '') %} {% set _team_id =
   (team.id if team and team.id is defined else 'global') %} {% set brand_color =
@@ -21,8 +15,7 @@ button)
   has_endpoint('main.become_sponsor') %} {% set dismiss_url = (_sf and
   _has_dismiss and safe_url_for('main.dismiss_onboarding')) or
   '/dismiss-onboarding' %} {% set sponsor_href = (_sf and _has_sponsor and
-  safe_url_for('main.become_sponsor')) or '/sponsor' %} {# ---------- Controls
-  (override from view if needed) ---------- #} {% set show_onboarding =
+  safe_url_for('main.become_sponsor')) or '/sponsor' %}  {% set show_onboarding =
   (show_onboarding is not defined) or show_onboarding %} {% set
   onboarding_delay_ms = onboarding_delay_ms|default(1200) %} {% set
   onboarding_cooldown_days = onboarding_cooldown_days|default(14) %} {% set
@@ -30,9 +23,7 @@ button)
   onboarding_exclude =
   onboarding_exclude|default(['/donate','/checkout','/privacy']) %} {% set
   onboarding_utm_allow =
-  onboarding_utm_allow|default(['newsletter','welcome','sponsor']) %} {#
-  =================================== FLASH MESSAGES
-  =================================== #} {% set _messages =
+  onboarding_utm_allow|default(['newsletter','welcome','sponsor']) %}  {% set _messages =
   (get_flashed_messages(with_categories=True) if get_flashed_messages is defined
   else []) %}
 
@@ -117,7 +108,7 @@ button)
       }
     </style>
 
-    {# Server-provided flashes (optional) #} {% if _messages and
+     {% if _messages and
     _messages|length %} {% set styles = { 'success': 'ring-emerald-400/50
     text-emerald-50', 'danger' : 'ring-red-400/60 text-red-50', 'error' :
     'ring-red-400/60 text-red-50', 'warning': 'ring-amber-400/60 text-amber-50',
@@ -426,8 +417,7 @@ button)
     })();
   </script>
 
-  {# =================================== ONBOARDING POPOVER
-  =================================== #} {% if show_onboarding and not
+   {% if show_onboarding and not
   session.get('onboarded') %}
   <div
     id="fc-onboarding"

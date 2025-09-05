@@ -1,10 +1,4 @@
-{# ============================================================ Header •
-SV-Elite 6.2 · Calm (CSP-safe) - Glass 2.5 (softer), light shadow, reduced
-chrome - Smart sticky (hide on down / show on up) + subtle shadow - Mobile menu
-with focus-trap + ESC + inert + restore focus - Scroll-spy → aria-current -
-Persistent announcement dismiss (team+message) - Theme-color sync +
-scroll-padding token - Donate UTM + P2P propagation - Hotkey: D → Donate
-============================================================ #} {% set NONCE =
+ {% set NONCE =
 NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set HAS_ENDPOINT = has_endpoint is defined %} {% set _sf = safe_url_for is
 defined and safe_url_for %} {% set href_home = (_sf and HAS_ENDPOINT and
@@ -147,7 +141,7 @@ if team and team.team_name else 'Your Team') %} {% macro nonce_attr()
       </div>
     </section>
   </div>
-  {% endif %} {# Optional: Starforge brand spine rail #} {% include
+  {% endif %}  {% include
   "starforge/_brand_spine.html.jinja" ignore missing with context %}
 </header>
 
@@ -277,7 +271,7 @@ if team and team.team_name else 'Your Team') %} {% macro nonce_attr()
   }
 </style>
 
-<script {{ nonce_attr() }}>
+<script {{ nonce_attr() }} {{ nonce_attr() }}>
   (function () {
     "use strict";
 

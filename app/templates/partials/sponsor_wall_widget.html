@@ -1,12 +1,5 @@
-{# =============================================================================
-app/templates/partials/sponsor_wall_widget.html — v2 (compact, CSP-safe) -
-Density-aware via html[data-density="compact"] - Event harmony: fc:vip:hit |
-fc:sponsor:vip | fc:vip | fc:funds:update - SSR-safe defaults + data-key for
-incremental updates - Minimal inline CSS; leans on Tailwind design tokens -
-Deep-link open (#sponsors or ?open=sponsors)
-============================================================================= #}
-{% include "partials/ui_bootstrap.html" ignore missing with context %} {#
----------- Safe fallbacks ---------- #} {% set NONCE = NONCE if NONCE is defined
+
+{% include "partials/ui_bootstrap.html" ignore missing with context %}  {% set NONCE = NONCE if NONCE is defined
 else (csp_nonce() if csp_nonce is defined else '') %} {% set brand_color =
 (team.theme_color if team and team.theme_color else '#facc15') %} {% set
 team_slug = (team.slug if team and team.slug is defined else 'default') %} {%
@@ -19,7 +12,7 @@ has_ticker = donation_ticker_url is not none %} {% set default_logo =
 (url_for('static', filename='images/logo.webp') if url_for is defined else
 '/static/images/logo.webp') %} {% set data_ui_name =
 (name|default('sponsor_wall_widget'))|replace('_','-') %} {% set MAX_SLOTS = 12
-%} {# Helper to make SSR card keys reliable in the DOM #} {% macro
+%}  {% macro
 sponsor_key(s) -%} {{- (s.id|string if s.id is defined and s.id is not none else
 (s.name|lower|trim)) -}} {%- endmacro %}
 
@@ -253,7 +246,7 @@ sponsor_key(s) -%} {{- (s.id|string if s.id is defined and s.id is not none else
         </div>
       </div>
     </article>
-    {% endfor %} {# Fill to MAX_SLOTS with CTAs #} {% set slots = MAX_SLOTS -
+    {% endfor %}  {% set slots = MAX_SLOTS -
     (sponsors_sorted|length) if sponsors_sorted|length < MAX_SLOTS else 0 %} {%
     for _ in range(slots) %}
     <div

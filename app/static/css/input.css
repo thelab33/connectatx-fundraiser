@@ -10,13 +10,10 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Project CSS PARTIALS (not compiled bundles) */
 @import url("./starforge-tokens.css");
-@import url("./_fc-rhythm.css");        /* spacing/rhythm helpers */
-@import url("./fc_elite.css");          /* shared components */
-@import url("./fc-hero.v6.1.css");      /* hero styles (or move to fc_elite.css) */
-@import url("./themes.css");            /* optional theme overrides */
-
+@import url("./_fc-rhythm.css");
+@import url("./fc_elite.css");
+@import url("./themes.css");
 
 @reference "tailwindcss";
 
@@ -554,7 +551,6 @@
   }
 }
 
-/* ===== HERO harmonization (keep consistent with fc-hero.v6.1.css) =====
    - Overlay sits above image/FX, no hard color forcing
    - Keep readability belt (no global hide)
    - Respect dynamic --tint from hero script
@@ -583,7 +579,6 @@
   }
 }
 
-/* === HERO OVERLAY RESCUE — place LAST in the build === */
 #fc-hero,
 #fc-hero .fc-hero-card { position: relative; isolation: isolate; }
 

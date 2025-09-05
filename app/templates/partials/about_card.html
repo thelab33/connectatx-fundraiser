@@ -1,9 +1,5 @@
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-=============================================================================
-about_card.html — FundChamps Prestige Mini - Lightweight homepage summary + CTA
-to /about - CSP-safe, a11y, responsive, brand-token aware
-============================================================================= #}
+defined else '') %} 
 {% set _team = team if team is defined and team else none %} {% set TEAM_NAME =
 _team.team_name if _team and _team.team_name else "Connect ATX Elite" %} {% set
 REGION = _team.region if _team and _team.region else "Austin, TX" %} {% set

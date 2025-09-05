@@ -1,9 +1,4 @@
-{# =============================================================================
-   FundChamps • Sponsors Management (Elite Edition + Filters)
-   - Admin-only sponsors table with approval & delete actions
-   - Quick search (name/email/status) with JS filter fallback
-   - CSP-safe, responsive, premium admin UX
-   ============================================================================= #}
+
 
 {% extends "admin/base.html" %}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
@@ -15,7 +10,7 @@
     Sponsors Management
   </h1>
 
-  {# ---- Search + Filters ---- #}
+  
   <div class="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <form action="{{ url_for('admin.sponsors') }}" method="GET" class="flex flex-wrap gap-3">
       <input type="text" name="q" value="{{ request.args.get('q','') }}"
@@ -36,7 +31,7 @@
       </button>
     </form>
 
-    {# Optional: Client-side instant search (CSP-safe w/nonce) #}
+    
     <script nonce="{{ NONCE }}">
       document.addEventListener("DOMContentLoaded", function(){
         const searchInput = document.querySelector('input[name="q"]');
@@ -64,7 +59,7 @@
     </script>
   </div>
 
-  {# ---- Sponsors Table ---- #}
+  
   <div class="overflow-x-auto rounded-xl bg-zinc-800/80 shadow-lg ring-1 ring-zinc-700/50">
     <table class="min-w-full table-auto rounded-xl bg-white/5 text-sm" role="table">
       <thead>

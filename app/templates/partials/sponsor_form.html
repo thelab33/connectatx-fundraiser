@@ -1,22 +1,12 @@
 <!-- Starforge: duplicate id(s) detected:  | donor-name ×2 | donor-email ×2 | donation-amount ×2 -->
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %} {#
-=============================================================================
-app/templates/partials/sponsor_form.html FundChamps — Sponsor Form (SV-Premium •
-CSP-safe • WTForms-friendly) - Works with WTForms when `form` is provided;
-otherwise falls back to vanilla inputs - Quick-pick amounts, monthly vs one-time
-toggle, impact helper - Payment method choice (Stripe/PayPal) with containers to
-mount elements/buttons - Honeypot anti-spam, URL param capture (utm/ref), basic
-client-side validation
-============================================================================= #}
-{% include "partials/ui_bootstrap.html" ignore missing with context %} {# ----
-Nonce + safe fallbacks ---- #} {% set __nonce = (csp_nonce() if csp_nonce is
+defined else '') %} 
+{% include "partials/ui_bootstrap.html" ignore missing with context %}  {% set __nonce = (csp_nonce() if csp_nonce is
 defined else (NONCE if NONCE is defined else '')) %} {% set __name =
-(name|replace('_','-') if name is defined else 'sponsor-form') %} {# ---- Action
-+ CSRF ---- #} {% if safe_url_for is defined %} {% set action_url =
+(name|replace('_','-') if name is defined else 'sponsor-form') %}  {% if safe_url_for is defined %} {% set action_url =
 safe_url_for('main.become_sponsor', default='/become-sponsor') %} {% else %} {%
 set action_url = '/become-sponsor' %} {% endif %} {% set csrf_val =
-(csrf_token() if csrf_token is defined else '') %} {# ---- UX options ---- #} {%
+(csrf_token() if csrf_token is defined else '') %}  {%
 set quick_amts = quick_amts if quick_amts is defined else [25, 50, 100, 150,
 250, 500] %}
 
@@ -371,7 +361,7 @@ set quick_amts = quick_amts if quick_amts is defined else [25, 50, 100, 150,
     </div>
   </form>
 
-  {# ---------- Inline JS (CSP nonce) ---------- #} {% if script_open is defined
+   {% if script_open is defined
   %}{{ script_open() }}{% else %}
   <script nonce="{{ NONCE }}">
     {% endif %}
