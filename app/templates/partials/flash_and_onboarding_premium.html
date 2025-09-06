@@ -37,7 +37,7 @@
     data-max-visible="4"
     style="--fc-brand: {{ brand_color }};"
   >
-    <style nonce="{{ NONCE }}">
+    <style {{ nonce_attr() }}nonce="{{ NONCE }}">
       #fc-flash .card {
         position: relative;
         background: linear-gradient(
@@ -172,7 +172,7 @@
     {% endfor %} {% endif %}
   </div>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const host = document.getElementById("fc-flash");
       if (!host) return;
@@ -469,7 +469,7 @@
     </div>
   </div>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const pop = document.getElementById("fc-onboarding");
       if (!pop) return;

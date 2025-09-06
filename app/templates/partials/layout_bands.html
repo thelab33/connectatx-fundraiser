@@ -15,7 +15,7 @@ team.theme_color else '#facc15') %}
     hidden
   ></section>
 
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     :root{
       --fc-brand: {{ brand_color }};
       --fc-surface-0: #0b0b0c;
@@ -117,7 +117,7 @@ team.theme_color else '#facc15') %}
   </style>
 
   {% if script_open is defined %}{{ script_open() }}{% else %}
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     {% endif %}
       (() => {
         if (window.__fcBandsBound) return; window.__fcBandsBound = true;

@@ -12,7 +12,7 @@ make an impact.\"" ] %}
   role="region"
   aria-label="Testimonials"
 >
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     #fc-testimonial-scrollbar .wrap {
       background: rgba(15, 15, 15, 0.86);
       backdrop-filter: blur(6px) saturate(120%);
@@ -50,7 +50,7 @@ make an impact.\"" ] %}
   </div>
 </div>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const bar = document.getElementById("fc-testimonial-scrollbar");
     if (!bar || bar.__init) return;

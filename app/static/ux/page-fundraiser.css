@@ -1,0 +1,40 @@
+:root{
+  --fc-radius:16px;
+  --fc-pad-x:clamp(0.9rem,0.6rem + 1.2vw,1.25rem);
+  --fc-pad-y:clamp(0.8rem,0.5rem + 1vw,1.1rem);
+  --fc-chip-fs:.82rem; --fc-chip-px:.55rem; --fc-chip-py:.28rem;
+  --fc-btn-fs:.93rem;  --fc-btn-px:.9rem;  --fc-btn-py:.6rem;
+}
+.section{padding-block:clamp(1.1rem,1.6vw,1.6rem)}
+.section.section--tight{padding-block:clamp(0.9rem,1.2vw,1.2rem)}
+.section + .section{padding-top:clamp(0.9rem,1.2vw,1.2rem)}
+.container,.sf-container{max-width:1120px;margin-inline:auto}
+
+/* Cohesive glass tokens (cards, header, hero frame) */
+.sf-card,.hdr-glass,.fc-hero-card__frame{
+  border-radius:var(--fc-radius);
+  box-shadow:0 16px 44px rgba(0,0,0,.3);
+  border:1px solid rgba(255,255,255,.1);
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
+}
+
+/* Micro tightening for partials without editing source files */
+.text-fluid-h2{font-size:clamp(1.3rem,1rem + 2vw,2rem);line-height:1.15}
+.legacy-chip{font-size:var(--fc-chip-fs);padding:var(--fc-chip-py) var(--fc-chip-px);border-radius:.7rem}
+.sf-btn{font-size:var(--fc-btn-fs);padding:var(--fc-btn-py) var(--fc-btn-px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
+.sf-btn-sm{padding:.5rem .75rem;font-size:.9rem}
+#tiers-partial .grid-auto{gap:.9rem}
+#tiers-partial .heading{margin-bottom:.25rem}
+#tiers-partial [data-tier-cta]{padding:.6rem .9rem}
+#impact [data-bucket]{padding:.85rem}
+#impact .meter{height:9px}
+#fc-hero .hm-track{height:12px}
+#fc-hero .milestones li{font-size:.7rem;padding:.14rem .4rem}
+
+/* Guard against CLS near announcement/leaderboard */
+#sponsor-leaderboard{min-height:0.001px}
+
+@media print{
+  .section{padding-block:.4rem}
+  #fc-hero .fc-hero-badges{display:none!important}
+}

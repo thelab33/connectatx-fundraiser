@@ -30,7 +30,7 @@ default_alloc = allocations if allocations is defined and allocations else [
   aria-labelledby="{{ _alloc_id }}-title"
   aria-live="polite"
 >
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     /* ===== Scoped to #{{ _alloc_id }} ===== */
     #{{ _alloc_id }} .wrap{max-width:72rem;margin:0 auto;padding:.75rem 1rem;display:grid;gap:.5rem}
     #{{ _alloc_id }} .top{display:flex;flex-wrap:wrap;align-items:baseline;gap:.5rem}
@@ -119,7 +119,7 @@ default_alloc = allocations if allocations is defined and allocations else [
   </div>
 </section>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const id = {{ _alloc_id|tojson }};
     const root = document.getElementById(id); if (!root || root.__init) return;

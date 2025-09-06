@@ -19,7 +19,7 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
   aria-labelledby="hero-title"
   style="isolation: isolate"
 >
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     #hero-bg {
       position: absolute;
       inset: 0;
@@ -150,7 +150,7 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
     </div>
   </div>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     // Highlight next milestone when meter updates
     (function () {
       const root = document.currentScript.closest("section");

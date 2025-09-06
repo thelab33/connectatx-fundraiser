@@ -1,0 +1,327 @@
+#!/usr/bin/env python3
+"""
+Auto-patch: Move inline hero CSS into Tailwind, de-inline variables, and fix CSP.
+
+- Finds the hero partial (contains id="fc-hero")
+- Extracts the inline <style nonce>…</style> block and folds it into Tailwind @layer components
+- Removes the inline <style> block from the partial
+- Replaces the <section style="--accent:…; --img-x:…; --img-y:…"> with data-* attrs
+  and inserts a tiny nonce’d <style> rule that scopes the CSS vars to #fc-hero
+- Attempts to update CSP config (Flask-Talisman or Helmet.js) to include style-src with nonce
+  and img-src data: for SVG noise backgrounds
+- Makes timestamped .bak backups
+- Idempotent: no duplicate inserts on reruns
+
+Run:
+  python3 tools/patch_hero_csp.py --dry-run
+  python3 tools/patch_hero_csp.py --apply
+"""
+
+import argparse
+import datetime
+import difflib
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1] if Path(__file__).resolve().parent.name == "tools" else Path.cwd()
+
+# ---------- heuristics / constants ----------
+HERO_PARTIAL_GLOB = ["app/templates/**/*.html", "app/templates/**/*.jinja"]
+TAILWIND_ENTRY_HINT = "Tailwind entry (v3/4 compatible) — input.css"
+TAILWIND_CANDIDATES = [
+    "app/static/css/input.css",
+    "static/css/input.css",
+    "assets/css/input.css",
+    "frontend/styles/input.css",
+]
+
+# HTML/CSS patterns
+HERO_STYLE_BEGIN_RE = re.compile(r'<style[^>]*\bnonce\s*=\s*["\']\{\{\s*NONCE\s*\}\}["\'][^>]*>', re.I)
+HERO_STYLE_END_RE = re.compile(r'</style>', re.I)
+FC_HERO_SECTION_RE = re.compile(r'<section\b[^>]*\bid\s*=\s*["\']fc-hero["\'][^>]*>', re.I)
+STYLE_ATTR_ON_SECTION_RE = re.compile(r'(<section\b[^>]*\bid\s*=\s*["\']fc-hero["\'][^>]*?)\s+style\s*=\s*"[^"]*"([^>]*>)', re.I)
+
+# Tailwind layer envelope
+LAYER_MARKER = "/* === FC HERO — SV-ELITE 6.4 (moved from inline, CSP-safe) =================== */"
+LAYER_HEADER = f"{LAYER_MARKER}\n@layer components {{\n"
+LAYER_FOOTER = "}\n/* === /FC HERO ============================================================= */\n"
+
+# Tiny CSS-var injector we add near preload image link or right after #fc-hero tag
+VAR_INJECTOR_TMPL = (
+    '<style nonce="{{ NONCE }}">#fc-hero{'
+    ' --accent: {{ theme_hex }};'
+    ' --img-x: {{ img_pos_x }};'
+    ' --img-y: {{ img_pos_y }};'
+    '}</style>'
+)
+
+# CSP patch patterns
+TALISMAN_CSP_RE = re.compile(r'(Talisman\([\s\S]*?content_security_policy\s*=\s*\{)([\s\S]*?)(\}\s*\))', re.M)
+HELMET_CSP_RE = re.compile(r'(helmet\.contentSecurityPolicy\(\s*\{\s*[\s\S]*?directives\s*:\s*\{)([\s\S]*?)(\}\s*\}\s*\))', re.M)
+
+# ---------------- util ----------------
+def backup(path: Path) -> Path:
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    bak = path.with_suffix(path.suffix + f".bak-{stamp}")
+    bak.write_bytes(path.read_bytes())
+    return bak
+
+def unified_diff_str(before: str, after: str, path: Path) -> str:
+    a = before.splitlines(keepends=True)
+    b = after.splitlines(keepends=True)
+    diff = difflib.unified_diff(a, b, fromfile=str(path), tofile=str(path), lineterm="")
+    return "".join(diff)
+
+# ---------------- discovery ----------------
+def find_hero_partial() -> Path | None:
+    matches = []
+    for pat in HERO_PARTIAL_GLOB:
+        for p in ROOT.glob(pat):
+            try:
+                txt = p.read_text(encoding="utf-8", errors="ignore")
+            except Exception:
+                continue
+            if 'id="fc-hero"' in txt or "id='fc-hero'" in txt:
+                matches.append(p)
+    matches.sort(key=lambda p: (0 if "hero" in p.name.lower() else 1, len(str(p))))
+    return matches[0] if matches else None
+
+def find_tailwind_entry() -> Path | None:
+    for rel in TAILWIND_CANDIDATES:
+        p = ROOT / rel
+        if p.exists():
+            return p
+    for p in ROOT.rglob("input.css"):
+        try:
+            txt = p.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+        if TAILWIND_ENTRY_HINT in txt or "@tailwind base;" in txt:
+            return p
+    return None
+
+# ---------------- transforms ----------------
+def extract_inline_hero_css(html: str) -> tuple[str, str | None]:
+    m_section = FC_HERO_SECTION_RE.search(html)
+    if not m_section:
+        return html, None
+    m_style_open = HERO_STYLE_BEGIN_RE.search(html, pos=m_section.end())
+    if not m_style_open:
+        return html, None
+    m_style_close = HERO_STYLE_END_RE.search(html, pos=m_style_open.end())
+    if not m_style_close:
+        return html, None
+    css_inner = html[m_style_open.end():m_style_close.start()]
+    new_html = html[:m_style_open.start()] + html[m_style_close.end():]
+    return new_html, css_inner.strip()
+
+def strip_global_dupes_from_css(css: str) -> str:
+    css = re.sub(r'\.sr-only\s*\{[^}]*\}', '', css, flags=re.I)
+    css = re.sub(r'\.tabular\s*\{[^}]*\}', '', css, flags=re.I)
+    css = re.sub(r'\n{3,}', '\n\n', css, flags=re.M)
+    return css.strip()
+
+def ensure_layer_wrapped(tw_css: str, moved_css: str) -> tuple[str, bool]:
+    if LAYER_MARKER in tw_css:
+        return tw_css, False
+    block = LAYER_HEADER + moved_css.rstrip() + "\n" + LAYER_FOOTER
+    return (tw_css.rstrip() + "\n\n" + block + "\n"), True
+
+def insert_var_injector(html: str) -> tuple[str, bool]:
+    # Skip if already present
+    if re.search(r'#fc-hero\{[^}]*--accent:\s*\{\{\s*theme_hex\s*\}\}', html):
+        return html, False
+    preload_re = re.compile(r'(<link[^>]+as=["\']image["\'][^>]*>\s*)', re.I)
+    if preload_re.search(html):
+        return preload_re.sub(r"\1" + VAR_INJECTOR_TMPL + "\n", html, count=1), True
+    m_section = FC_HERO_SECTION_RE.search(html)
+    if not m_section:
+        return html, False
+    insert_at = m_section.end()
+    return html[:insert_at] + "\n  " + VAR_INJECTOR_TMPL + html[insert_at:], True
+
+def remove_style_attr_on_fc_hero(html: str) -> tuple[str, bool]:
+    def _repl(m: re.Match) -> str:
+        open_before, open_after = m.group(1), m.group(2)
+        tag = open_before + open_after
+        if 'data-accent=' not in tag:
+            tag = open_before + (
+                ' data-accent="{{ theme_hex }}" data-img-x="{{ img_pos_x }}" data-img-y="{{ img_pos_y }}"'
+            ) + open_after
+        return tag
+    new_html, count = STYLE_ATTR_ON_SECTION_RE.subn(_repl, html, count=1)
+    return new_html, bool(count)
+
+# ---------------- CSP patching ----------------
+def patch_csp_files() -> tuple[list[Path], list[Path]]:
+    changed: list[Path] = []
+    scanned: list[Path] = []
+
+    for p in list(ROOT.rglob("*.py")) + list(ROOT.rglob("*.js")):
+        try:
+            txt = p.read_text(encoding="utf-8", errors="ignore")
+        except Exception:
+            continue
+
+        orig = txt
+        if p.suffix == ".py":
+            m = TALISMAN_CSP_RE.search(txt)
+            if m:
+                head, body, tail = m.groups()
+                if "style-src" not in body:
+                    nonce_piece = "'self'"
+                    scr = re.search(r"'script-src'\s*:\s*\[([^\]]+)\]", body)
+                    if scr:
+                        if "nonce-" in scr.group(1):
+                            if "g.csp_nonce" in body:
+                                nonce_piece = "'self', f\"'nonce-{g.csp_nonce}'\""
+                            elif "csp_nonce" in body:
+                                nonce_piece = "'self', f\"'nonce-{csp_nonce}'\""
+                            else:
+                                nonce_piece = "'self', 'unsafe-inline'"
+                        else:
+                            nonce_piece = "'self', 'unsafe-inline'"
+                    body = body.rstrip().rstrip(",") + f",\n            'style-src': [{nonce_piece}],\n"
+                if "img-src" in body and "data:" not in body:
+                    body = re.sub(r"('img-src'\s*:\s*\[)([^\]]+)\]", r"\1\2, 'data:' ]", body)
+                elif "img-src" not in body:
+                    body = body.rstrip().rstrip(",") + ",\n            'img-src': ['self', 'data:'],\n"
+                txt = txt[:m.start()] + head + body + tail + txt[m.end():]
+
+        if p.suffix == ".js":
+            m = HELMET_CSP_RE.search(txt)
+            if m:
+                head, body, tail = m.groups()
+                body_changed = False
+                if '"style-src"' not in body and "'style-src'" not in body:
+                    # Prefer nonce function if file already uses res.locals.nonce somewhere
+                    if "res.locals.nonce" in body or "nonce" in body:
+                        style_val = "(req, res) => `'nonce-${res.locals.nonce}'`"
+                        insert = "\n        'style-src': ['\\'self\\'', " + style_val + "],"
+                    else:
+                        insert = "\n        'style-src': ['\\'self\\'', '\\'unsafe-inline\\''],"
+                    body = body.rstrip().rstrip(",") + insert + "\n"
+                    body_changed = True
+                if ("'img-src'" in body or '"img-src"' in body) and "data:" not in body:
+                    body = re.sub(r"(['\"]img-src['\"]\s*:\s*\[)([^\]]+)\]", r"\1\2, 'data:' ]", body)
+                    body_changed = True
+                elif "'img-src'" not in body and '"img-src"' not in body:
+                    body = body.rstrip().rstrip(",") + "\n        'img-src': ['\\'self\\'', 'data:'],\n"
+                    body_changed = True
+                if body_changed:
+                    txt = txt[:m.start()] + head + body + tail + txt[m.end():]
+
+        if txt != orig:
+            try:
+                backup(p)
+                p.write_text(txt, encoding="utf-8")
+                changed.append(p)
+            except Exception:
+                pass
+        scanned.append(p)
+
+    return scanned, changed
+
+# ---------------- main ----------------
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--apply", action="store_true", help="write changes (default: dry run)")
+    ap.add_argument("--dry-run", action="store_true", help="preview only (no writes)")
+    args = ap.parse_args()
+    write = args.apply and not args.dry_run
+
+    print(f"→ repo: {ROOT}")
+
+    hero_path = find_hero_partial()
+    if not hero_path:
+        print('✗ Could not find a template containing id="fc-hero".')
+        sys.exit(1)
+
+    tw_path = find_tailwind_entry()
+    if not tw_path:
+        print("✗ Could not locate Tailwind input.css. Add the moved block manually.")
+        sys.exit(2)
+
+    print(f"✓ Hero partial: {hero_path.relative_to(ROOT)}")
+    print(f"✓ Tailwind entry: {tw_path.relative_to(ROOT)}")
+
+    html = hero_path.read_text(encoding="utf-8")
+    tw_css = tw_path.read_text(encoding="utf-8")
+
+    # 1) Extract inline hero CSS
+    new_html, moved_css = extract_inline_hero_css(html)
+    if not moved_css:
+        print("• No inline <style nonce> block found (maybe already moved).")
+        moved_css = ""
+
+    # 2) Remove inline style= on the #fc-hero open tag
+    html_after_style, removed_style = remove_style_attr_on_fc_hero(new_html)
+    new_html = html_after_style
+    print("✓ Removed inline style= from #fc-hero" if removed_style else "• No inline style= on #fc-hero (ok).")
+
+    # 3) Insert tiny nonce’d var injector if needed
+    if "{{ theme_hex }}" in new_html and "--accent" not in new_html:
+        new_html2, injected = insert_var_injector(new_html)
+        new_html = new_html2
+        print("✓ Inserted tiny nonce’d CSS var injector" if injected else "• Var injector already present / not needed.")
+
+    # 4) Prepare Tailwind @layer components append
+    appended = False
+    if moved_css.strip():
+        moved_css = strip_global_dupes_from_css(moved_css)
+        tw_new, appended = ensure_layer_wrapped(tw_css, moved_css)
+    else:
+        tw_new, appended = tw_css, False
+
+    # 5) CSP patches (best-effort)
+    try:
+        scanned, csp_changed = patch_csp_files()
+    except Exception as e:
+        scanned, csp_changed = [], []
+        print(f"• CSP auto-patch skipped (error: {e})")
+
+    if csp_changed:
+        print(f"✓ CSP updated in {len(csp_changed)} file(s):")
+        for p in csp_changed:
+            print("   •", p.relative_to(ROOT))
+    else:
+        print("• CSP auto-patch not applied (not detected). Ensure your CSP allows:")
+        print("    - style-src 'self' 'nonce-<your-nonce-here>'")
+        print("    - img-src   'self' data:")
+
+    # 6) Write or preview
+    if write:
+        wrote_any = False
+        if tw_new != tw_css:
+            backup(tw_path)
+            tw_path.write_text(tw_new, encoding="utf-8")
+            wrote_any = True
+        if new_html != html:
+            backup(hero_path)
+            hero_path.write_text(new_html, encoding="utf-8")
+            wrote_any = True
+        print("\n✅ Done." if wrote_any else "\n✓ No changes were necessary (already patched).")
+        if appended:
+            print("→ Tailwind updated; rebuild your CSS (e.g., `npm run build` or `pnpm build`).")
+        print("→ Backups written alongside originals with .bak-YYYYMMDD-HHMMSS suffix.")
+    else:
+        any_diff = False
+        if tw_new != tw_css:
+            print("\n— preview — Tailwind change (unified diff):")
+            print(unified_diff_str(tw_css, tw_new, tw_path))
+            any_diff = True
+        if new_html != html:
+            print("\n— preview — Template change (unified diff):")
+            print(unified_diff_str(html, new_html, hero_path))
+            any_diff = True
+        if not any_diff:
+            print("\n👀 Dry-run complete — no changes required.")
+        else:
+            print("\n👀 Dry-run complete — review diffs above.")
+        if appended:
+            print("→ Tailwind would be updated; remember to rebuild (`npm run build`).")
+
+if __name__ == "__main__":
+    main()
+

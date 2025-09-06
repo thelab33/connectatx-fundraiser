@@ -23,7 +23,7 @@ defined else '') %}
     Facebook
   </a>
 </div>
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const btn =
       document.currentScript?.previousElementSibling?.querySelector?.(

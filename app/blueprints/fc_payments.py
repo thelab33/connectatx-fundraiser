@@ -232,7 +232,7 @@ def create_stripe_intent():
         current_app.logger.exception("Stripe intent error")
         msg = getattr(e, "user_message", None) or str(e)
         return jsonify({"error": {"message": msg}}), 400
-    except Exception as e:
+    except Exception:
         current_app.logger.exception("Stripe intent error (unexpected)")
         return jsonify({"error": {"message": "Internal error creating intent"}}), 500
 

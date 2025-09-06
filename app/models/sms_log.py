@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from sqlalchemy import CheckConstraint, Index
+from sqlalchemy import CheckConstraint
 
 from app.extensions import db
 
@@ -22,11 +22,11 @@ class SMSLog(db.Model, TimestampMixin, SoftDeleteMixin):
     __table_args__ = (
         CheckConstraint("length(from_number) <= 32", name="ck_sms_from_len"),
         CheckConstraint("length(to_number)   <= 32", name="ck_sms_to_len"),
-        Index("ix_sms_logs_created", "created_at"),
-        Index("ix_sms_logs_direction", "direction"),
-        Index("ix_sms_logs_status", "status"),
-        Index("ix_sms_logs_to", "to_number"),
-        Index("ix_sms_logs_from", "from_number"),
+# REMOVED duplicate:         Index("ix_sms_logs_created", "created_at"),
+# REMOVED duplicate:         Index("ix_sms_logs_direction", "direction"),
+# REMOVED duplicate:         Index("ix_sms_logs_status", "status"),
+# REMOVED duplicate:         Index("ix_sms_logs_to", "to_number"),
+# REMOVED duplicate:         Index("ix_sms_logs_from", "from_number"),
     )
 
     id = db.Column(db.Integer, primary_key=True)

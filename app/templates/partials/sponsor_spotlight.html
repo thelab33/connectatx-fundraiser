@@ -43,7 +43,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
     data-initial-donations="{{ recent_donations|tojson }}"
     style="--fc-brand: {{ brand_color }};"
   >
-    <style nonce="{{ NONCE }}">
+    <style {{ nonce_attr() }}nonce="{{ NONCE }}">
       /* ============ Scoped to #{{ sponsors_hub_id }} ============ */
       #{{ sponsors_hub_id }} .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
       #{{ sponsors_hub_id }} .badge{border:1px solid color-mix(in srgb, var(--fc-brand) 35%, transparent);
@@ -472,7 +472,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
     {% endif %}
   </section>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const id = {{ sponsors_hub_id|tojson }};
       const root = document.getElementById(id); if (!root || root.__boot) return; root.__boot = true;

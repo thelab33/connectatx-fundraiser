@@ -1,380 +1,283 @@
-{# hero_and_fundraiser.html #}
+{# ============================================================
+   HERO — SV-Elite 4.2 (lower-third, readable, 3D holo tilt)
+   Drop this file at: app/templates/partials/hero.html
+   ============================================================ #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% if nonce_attr is not defined %}
-  {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
-{% endif %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 
-{% macro asset_url(path) -%}
-  {%- set p = (path|string)|trim -%}
-  {%- if '://' in p -%}{{ p }}
-  {%- elif url_for is defined -%}{{ url_for('static', filename=p.lstrip('/')) }}
-  {%- else -%}/static/{{ p.lstrip('/') }}{%- endif -%}
-{%- endmacro %}
+{# ---------- Theme + Content ---------- #}
+{% set theme_hex     = theme_hex|default('#facc15') %}
+{% set TEAM_NAME     = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set TITLE         = fundraiser_title if fundraiser_title is defined and fundraiser_title else 'Fuel the Season. Fund the Future.' %}
+{% set SUBTITLE      = meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set CTA_LABEL     = cta_label if cta_label is defined and cta_label else 'Donate' %}
+{% set RAISED        = (funds_raised or 0) | round(0) %}
+{% set GOAL          = (fundraising_goal or 10000) | round(0) %}
+{% set PCT           = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
+{% set HREF_DONATE   = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
 
-{% set theme_hex   = theme_hex|default('#facc15') %}
-{% set team_name   = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set hero_title  = hero_title|default('Fuel the Season. Fund the Future.') %}
-{% set catch_line  = (catch_phrase if catch_phrase is defined and catch_phrase else
-                      'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
-
-{% set _hero_src =
+{# ---------- Image fallbacks (robust) ---------- #}
+{% set _hero_src = (
   (hero_image_url if hero_image_url is defined and hero_image_url) or
-  (team.hero_bg   if team and team.hero_bg) or
+  (team.hero_bg if team and team.hero_bg) or
   (team.hero_image if team and team.hero_image) or
   (team.team_photo if team and team.team_photo) or
-  (team.photo_url  if team and team.photo_url) or
+  (team.photo_url if team and team.photo_url) or
   'images/connect-atx-team.jpg'
-%}
+) %}
 {% set _hero_mobile     = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
-{% set hero_src         = asset_url(_hero_src) %}
-{% set hero_src_mobile  = asset_url(_hero_mobile) %}
-{% set hero_alt         = (hero_alt if hero_alt is defined and hero_alt) or (team_name ~ ' team photo') %}
-{% set use_prebuilt     = false %}
+{% set hero_src         = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{% set hero_src_mobile  = (_hero_mobile if '://' in _hero_mobile else (url_for('static', filename=_hero_mobile.lstrip('/')) if url_for is defined else '/static/' ~ _hero_mobile.lstrip('/'))) %}
+{% set hero_alt         = (hero_alt if hero_alt is defined and hero_alt) or (TEAM_NAME ~ ' team photo') %}
 
-{% set _logo   = (team.logo if team and team.logo else 'images/logo.webp') %}
-{% set logoSrc = asset_url(_logo) %}
+{# ---------- Preload LCP image ---------- #}
+<section id="fc-hero" class="fc-hero" aria-label="Hero" data-where="hero" style="--accent: {{ theme_hex }};">
+  <div class="sf-container">
+    <div class="fc-hero-card">
+      <div class="fc-hero-card__frame tilt-3d"
+           data-tilt-max="12"
+           data-tilt-perspective="900"
+           data-tilt-glare="1"
+           data-tilt-parallax="1">
 
-{% set funds_raised     = (funds_raised if funds_raised is defined else 0)|float %}
-{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal is not none and fundraising_goal != 0 else 10000)|float %}
-{% set _raw_pct         = (funds_raised / fundraising_goal * 100) if fundraising_goal else 0 %}
-{% set pct              = 0 if _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %}
-{% set fundraising_deadline = (fundraising_deadline if fundraising_deadline is defined else (deadline_dt if deadline_dt is defined else None)) %}
-{% set deadline_iso     = fundraising_deadline.isoformat() if fundraising_deadline else '' %}
-
-{% set img_pos_x = img_pos_x|default('50%') %}
-{% set img_pos_y = img_pos_y|default('42%') %}
-
-{% set currency_code = currency_code|default('USD') %}
-{% set locale_str    = locale_str|default('en-US') %}
-
-{% set match_start_iso = (match_start if match_start is defined and match_start else None) and match_start.isoformat() or '' %}
-{% set match_end_iso   = (match_end   if match_end   is defined and match_end   else None) and match_end.isoformat()   or '' %}
-
-{% set _raw_cta    = (stripe_payment_link if stripe_payment_link else (cta_href if cta_href is defined else '#tiers')) %}
-{% set _sep        = '&' if '?' in _raw_cta else '?' %}
-{% set cta_href    = _raw_cta ~ _sep ~ 'utm_source=hero&utm_medium=cta&utm_campaign=' ~ (team_name|urlencode) %}
-{% set cta_label   = (cta_label if cta_label else 'Donate') %}
-{% set _cta_external  = ('://' in cta_href) %}
-
-{% if use_prebuilt %}
-  <link rel="preload" as="image"
-        href="/static/images/hero/hero-1920.avif"
-        imagesrcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w"
-        imagesizes="100vw" fetchpriority="high">
-{% endif %}
-
-<section id="fc-hero" data-hero-scope="cinema" data-holo-animate="1" data-kenburns="1" data-tilt="1" data-hero-scope="cinema"
-         class="fc-hero-tilt grid place-items-center px-4 sm:px-6 w-full -translate-y-[6px] md:-translate-y-[10px]"
-         data-theme="athletic"
-         data-team="{{ team_name }}"
-         data-name-style="gradient"
-         aria-labelledby="hero-heading"
-         itemscope itemtype="https://schema.org/SportsTeam"
-         style="--accent: {{ theme_hex }}; --img-x: {{ img_pos_x }}; --img-y: {{ img_pos_y }}; --meter-pct: 0%;"
-         data-locale="{{ locale_str }}" data-currency="{{ currency_code }}"
-         data-urgency-deadline="{{ deadline_iso }}">
-  <meta itemprop="name" content="{{ team_name }}">
-  <meta itemprop="sport" content="Basketball">
-  {% if logoSrc %}<meta itemprop="logo" content="{{ logoSrc }}">{% endif %}
-  <meta itemprop="image" content="{{ hero_src }}">
-
-  <!-- Ambient background -->
-  <div class="absolute inset-0 -z-10" aria-hidden="true">
-    <div class="absolute inset-0 bg-[radial-gradient(80%_60%_at_50%_0%,#0b0b0c_0%,#050609_70%)] light:bg-[radial-gradient(80%_60%_at_50%_0%,#f9fafb_0%,#e5e7eb_70%)]"></div>
-    <div class="absolute inset-0 bg-[radial-gradient(120%_70%_at_50%_20%,rgba(0,0,0,.28),transparent_60%)] light:bg-[radial-gradient(120%_70%_at_50%_20%,rgba(0,0,0,.06),transparent_60%)] pointer-events-none"></div>
-  </div>
-
-  <!-- Hero Card -->
-  <div class="fc-hero-tilt grid place-items-center w-full">
-    <figure class="fc-hero-card" role="group" aria-label="Team hero">
-      <div class="fc-hero-card__ring" aria-hidden="true"></div>
-
-      <!-- Vertical neon spine (hidden on desktop via CSS below) -->
-      <aside class="fc-hero-spine" aria-hidden="true"><span class="spine-text">{{ team_name }}</span></aside>
-
-      <div class="fc-hero-card__frame">
-        <picture>
-          {% if use_prebuilt %}
-            <source type="image/avif" srcset="/static/images/hero/hero-1920.avif 1920w, /static/images/hero/hero-1280.avif 1280w, /static/images/hero/hero-960.avif 960w" sizes="100vw">
-            <source type="image/webp" srcset="/static/images/hero/hero-1920.webp 1920w, /static/images/hero/hero-1280.webp 1280w, /static/images/hero/hero-960.webp 960w" sizes="100vw">
-            <img src="/static/images/hero/hero-1280.webp" alt="{{ hero_alt }}" class="fc-hero-card__img"
-                 loading="eager" decoding="async" fetchpriority="high" width="1920" height="1080"
-                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous">
-          {% else %}
-            <source type="image/avif" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw">
-            <source type="image/webp" srcset="{{ hero_src }} 1920w" media="(min-width:768px)" sizes="100vw">
-            <source type="image/avif" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw">
-            <source type="image/webp" srcset="{{ hero_src_mobile }} 1280w" media="(max-width:767px)" sizes="100vw">
-            <img src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img"
-                 loading="eager" decoding="async" fetchpriority="high" width="1920" height="1080"
-                 draggable="false" data-parallax-y="8" data-lcp-target="1" crossorigin="anonymous">
-          {% endif %}
-          <noscript><img src="{{ hero_src }}" alt="{{ hero_alt }}" class="fc-hero-card__img" width="1920" height="1080"></noscript>
+        <!-- Team photo -->
+        <picture class="tilt-layer" style="--z: 10px">
+          <img id="fc-hero-img"
+               src="{{ hero_src }}"
+               alt="{{ hero_alt }}"
+               class="fc-hero__img"
+               loading="eager"
+               decoding="async"
+               fetchpriority="high"
+               width="1920" height="1080"
+               draggable="false" />
         </picture>
 
-        <!-- Dynamic tint + belt + FX (decorative) -->
-        <i class="fc-hero-card__tint" aria-hidden="true"></i>
-        <i class="fc-hero-card__belt" aria-hidden="true"></i>
-        <i class="fc-hero-card__glare" aria-hidden="true"></i>
-        <i class="fc-hero-card__noise" aria-hidden="true"></i>
+        <!-- Gradient overlay -->
+        <div class="fc-hero__tint"></div>
 
-        <!-- Overlay -->
-        <figcaption class="fc-hero-overlay flex flex-col items-center text-center gap-4">
-          <!-- Mobile brand chip (mobile only) -->
-          <div class="fc-hero-brand mobile-only flex items-center gap-2">
-            <img src="{{ logoSrc }}" alt="" loading="eager" decoding="async" class="h-9 w-9 rounded-xl ring-1 ring-white/10 bg-white/95" width="36" height="36">
-            <span class="legacy-chip font-semibold tracking-wide">{{ team_name }}</span>
+        <!-- Content -->
+        <div class="fc-hero__overlay tilt-layer" style="--z: 30px">
+          <div class="fc-hero__badge">
+            <span class="dot"></span>
+            <span class="badge-text">{{ TEAM_NAME }}</span>
           </div>
 
-          <!-- Hologram headline -->
-          <h1 id="hero-heading" class="fc-hero-type holo holo3d text-balance drop-shadow"
-              data-text="{{ hero_title }}">{{ hero_title }}</h1>
+          <!-- Headline -->
+          <h1 class="fc-hero__title holo holo3d">
+            <span class="block">Fuel the Season.</span>
+            <span class="block text-accent">Fund the Future.</span>
+          </h1>
 
-          <!-- Fundraiser summary -->
-          <div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary">
-            <p class="hm-stats tabular" aria-live="polite">
-              <strong id="fc-hero-raised" data-raw="{{ funds_raised|round(0) }}" data-count="{{ funds_raised|round(0) }}">{{ '${:,.0f}'.format(funds_raised) }}</strong>
-              <span class="muted">of</span>
-              <strong id="fc-hero-goal" data-raw="{{ fundraising_goal|round(0) }}">{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
-              <span class="muted">•</span>
-              <strong id="fc-hero-pct" class="tabular" data-count="{{ pct|round(0) }}">{{ pct|round(0) }}%</strong>
-            </p>
-            <p id="fc-hero-countdown" role="timer" aria-live="polite" aria-atomic="true">⏳ —</p>
+          <p class="fc-hero__sub">{{ SUBTITLE }}</p>
 
-            <!-- CTA + chips -->
-            <div class="fc-hero-actions" role="group" aria-label="Hero actions">
-              <a href="{{ cta_href }}"
-                 class="fc-hero-cta cta-pulse"
-                 data-label-full="{{ cta_label }}"
-                 data-label-compact="{{ 'Donate' if (cta_label|lower)[:6]=='donate' else 'Join Now' }}"
-                 data-urgency-deadline="{{ deadline_iso }}"
-                 {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}>
-                <span class="cta-text">{{ cta_label }}</span> <span aria-hidden="true">→</span>
-              </a>
+          <!-- Chips -->
+          <div class="fc-hero__chips">
+            <span class="chip">🎒 Gear</span>
+            <span class="chip">🚌 Travel</span>
+            <span class="chip">📚 Tutoring</span>
+          </div>
 
-              <button id="fc-hero-share" type="button" class="chip" data-share="{"title":"Support our season!","text":"Fuel the Season. Fund the Future."}" data-share-text="Support our season!" aria-label="Share this fundraiser">↗︎ Share</button>
-              <a href="#tiers" class="chip" data-check-target="#tiers">💎 View Tiers</a>
-              <span id="match-chip" class="chip hidden"
-                    data-match-start="{{ match_start_iso }}"
-                    data-match-end="{{ match_end_iso }}"
-                    data-match-label="{{ match_label|default('Match ×2 Active') }}">
-                🎯 Match ×2 Active
-              </span>
+          <!-- CTA -->
+          <div class="fc-hero__cta">
+            <a href="{{ HREF_DONATE }}" class="btn btn-gold cta cta-pulse">
+              {{ CTA_LABEL }} <span aria-hidden="true">→</span>
+            </a>
+            <button type="button" id="hero-share" class="btn btn-ghost"
+                    aria-label="Share this fundraiser"
+                    data-share='{{ {"title": "Support " ~ TEAM_NAME,"text": "Every dollar moves a kid forward — join us!","url": (request.base_url if request is defined else "/")} | tojson }}'>
+              ◴ Share
+            </button>
+          </div>
+
+          <!-- Meter -->
+          <div class="meter">
+            <div class="hm-track" aria-hidden="true">
+              <div class="hm-fill" style="--p: {{ PCT }}%"></div>
             </div>
-
-            <!-- Mini progress meter + milestones -->
-            <div class="hero-meter" role="progressbar" aria-valuemin="0" aria-valuemax="100"
-                 aria-valuenow="{{ pct|round(1) }}" aria-label="Fundraising progress"
-                 data-milestones="{{ hero_milestones|default('25,50,75,100') }}">
-              <div class="hm-track" aria-hidden="true">
-                <div id="fc-hero-fill" class="hm-fill" style="width: {{ pct|round(1) }}%" data-pct="{{ pct|round(1) }}"></div>
-                <div class="hm-ticks" aria-hidden="true"></div>
-              </div>
-              <ul id="fc-hero-milestones" class="milestones" aria-hidden="true"></ul>
-              <p class="hm-stats sr-only" aria-live="polite">
-                <span id="fc-hero-sr">Raised {{ '${:,.0f}'.format(funds_raised) }} of goal {{ '${:,.0f}'.format(fundraising_goal) }}.</span>
-              </p>
+            <div class="hm-stats">
+              <span class="hm-raised">${{ RAISED | int }}</span>
+              <span class="hm-sep">/</span>
+              <span class="hm-goal">${{ GOAL | int }}</span>
+              <span class="hm-pct">{{ PCT }}%</span>
             </div>
           </div>
 
-          <noscript>
-            <div class="fc-hero-bar w-full max-w-[900px] flex flex-col items-center gap-3" role="group" aria-label="Fundraiser summary (noscript)">
-              <p class="hm-stats tabular">
-                <strong>{{ '${:,.0f}'.format(funds_raised) }}</strong>
-                <span class="muted">of</span>
-                <strong>{{ '${:,.0f}'.format(fundraising_goal) }}</strong>
-                <span class="muted">•</span>
-                <strong>{{ pct|round(0) }}%</strong>
-              </p>
-              {% if deadline_iso %}<p class="tabular">⏳ Deadline: {{ fundraising_deadline.strftime('%b %d, %Y') if fundraising_deadline else '' }}</p>{% endif %}
-              <a href="{{ cta_href }}" class="fc-hero-cta" {% if _cta_external %}target="_blank" rel="noopener noreferrer"{% endif %}><span class="cta-text">{{ cta_label }}</span> →</a>
-              <div class="hero-meter" aria-hidden="true">
-                <div class="hm-track"><div class="hm-fill" style="width: {{ pct|round(1) }}%"></div></div>
-              </div>
-            </div>
-          </noscript>
-        </figcaption>
+          <!-- Badges -->
+          <ul class="fc-hero-badges">
+            <li><span class="pill">🏅 500+ Families</span></li>
+            <li><span class="pill">📚 3.5 Team GPA</span></li>
+            <li><span class="pill">🏀 AAU Gold Certified</span></li>
+          </ul>
+        </div>
+
+        <!-- Effects -->
+        <div class="holo-glare" aria-hidden="true"></div>
+        <div class="holo-scan" aria-hidden="true"></div>
       </div>
-    </figure>
+    </div>
   </div>
-<script type="module" nonce="{{ NONCE }}">{% raw %}(()=>{const hero=document.getElementById("fc-hero");if(!hero)return;/* --- tilt parallax --- */if(hero.dataset.tilt==="1"){const frame=hero.querySelector(".fc-hero-card__frame");if(frame){let rect={left:0,top:0,width:0,height:0};const upRect=()=>{rect=frame.getBoundingClientRect()};const move=e=>{const p=e.touches?e.touches[0]:e;const x=(p.clientX-rect.left)/rect.width,y=(p.clientY-rect.top)/rect.height;hero.style.setProperty("--rx",((.5-y)*6).toFixed(2)+"deg");hero.style.setProperty("--ry",((x-.5)*8).toFixed(2)+"deg");hero.style.setProperty("--mx",(x*100).toFixed(1)+"%");hero.style.setProperty("--my",(y*100).toFixed(1)+"%")};frame.addEventListener("pointerenter",upRect,{passive:true});frame.addEventListener("pointermove",move,{passive:true});frame.addEventListener("pointerleave",()=>{hero.style.setProperty("--rx","0deg");hero.style.setProperty("--ry","0deg")},{passive:true});window.addEventListener("resize",upRect,{passive:true})}}/* --- count-up when visible --- */const ids=["#fc-hero-raised","#fc-hero-pct"];const fmtMoney=(n)=>{try{return new Intl.NumberFormat(hero.dataset.locale||"en-US",{style:"currency",currency:hero.dataset.currency||"USD",maximumFractionDigits:0}).format(n)}catch{return"$"+Math.round(n).toLocaleString()}};const runCount=el=>{const target=+el.dataset.count||+el.dataset.raw||0;let cur=0;const steps=28;const inc=Math.max(1,Math.round(target/steps));const tick=()=>{cur=Math.min(target,cur+inc);el.textContent=el.id==="fc-hero-raised"?fmtMoney(cur):cur.toLocaleString()+"%";if(cur<target)requestAnimationFrame(tick)};tick()};const io=new IntersectionObserver(es=>{es.forEach(e=>{if(!e.isIntersecting)return;ids.forEach(sel=>{const el=hero.querySelector(sel);el&&!el.__animated&&(el.__animated=1,runCount(el))});io.disconnect()})},{rootMargin:"-40% 0px -40% 0px"});io.observe(hero)})();{% endraw %}</script>
 </section>
 
-<style {{ nonce_attr() }}>{% raw %}
-/* ===== Scope: #fc-hero (Premier, self-contained) ===== */
-#fc-hero{
-  --shadow: 0 25px 80px rgba(0,0,0,.55);
-  --overlay-dark: linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.42) 46%, rgba(0,0,0,.88) 100%);
-  --overlay-light: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.78) 60%, rgba(255,255,255,.92) 100%);
-  /* Tilt defaults (JS may update via CSS vars) */
-  --rx: 0deg; --ry: 0deg; --tx: 0px; --mx: 50%; --my: 40%;
-  /* Holo tuning */
-  --holo-x: .02em; --holo-y: -.02em;
-  /* Readability belt */
-  --belt-h: 60px; --belt-left: clamp(16px, 2vw, 28px); --belt-right: clamp(16px, 2vw, 28px);
-  /* Meter (hero-local) */
-  --meter-pct: 0%;
-}
+<style>
 
-.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
-.tabular{font-variant-numeric:tabular-nums}
+<style {{ nonce_attr() }}>
+/* ---- Composition knobs (no HTML changes) ---- */
+#fc-hero .fc-hero-card__frame{ --img-x:50%; --img-y:28%; --overlay-bottom:2.4rem; --belt-top:54% }
 
-/* Hide any Starforge brand marks within hero */
-#fc-hero .sf-brand,
-#fc-hero .sf-brand-mark,
-#fc-hero [data-brand-sigil]{display:none!important}
-
-/* Brand chip desktop-only off; spine off on desktop */
-#fc-hero .fc-hero-brand{display:none!important}
-#fc-hero .fc-hero-spine{display:none!important}
-@media (max-width:640px){
-  #fc-hero .fc-hero-brand{display:flex!important}
-  /* enable the spine on mobile by removing the next line */
-  /* #fc-hero .fc-hero-spine{display:block!important} */
-}
-
-/* Typography */
-#fc-hero .fc-hero-type{
-  font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;
-  text-transform:uppercase; letter-spacing:.02em; line-height:.98; font-weight:900; margin:0; text-wrap:balance;
-  font-size:clamp(2rem,1.2rem + 4vw,3.6rem);
-  color:transparent; background:linear-gradient(180deg,#f8fafc 0%, #fff6bf 55%, var(--accent) 100%);
-  -webkit-background-clip:text; background-clip:text;
-  text-shadow:0 2px 0 rgba(0,0,0,.35), 0 22px 40px rgba(0,0,0,.35);
-}
-#fc-hero .fc-hero-copy{
-  font-family:"Plus Jakarta Sans","Inter",system-ui,sans-serif;
-  font-weight:600; letter-spacing:.005em; color:#eaeaea; opacity:.98; max-width:64ch;
-  font-size:clamp(.98rem,.8rem + .6vw,1.2rem); margin:.45rem 0 0;
-}
-
-/* Tilted Photo Card + Glass */
-#fc-hero .fc-hero-tilt{perspective:1400px}
-#fc-hero .fc-hero-card{
-  --r: clamp(20px,1.6vw,28px);
-  position:relative; width:min(1080px,92vw); aspect-ratio:16/9;
-  transform-style:preserve-3d; contain:layout paint size; will-change:transform;
-}
-#fc-hero .fc-hero-card__ring{
-  position:absolute; inset:-2px; border-radius:calc(var(--r) + 2px); z-index:0;
-  background:
-    linear-gradient(#0000,#0000) padding-box,
-    conic-gradient(from 180deg at 50% 50%, color-mix(in srgb, var(--accent) 55%, #fff 45%), #e5e7eb, color-mix(in srgb, var(--accent) 55%, #fff 45%)) border-box;
-  border:1.5px solid transparent; filter:drop-shadow(0 18px 50px rgba(0,0,0,.45));
-}
-#fc-hero .fc-hero-card__frame{
-  position:absolute; inset:0; z-index:1; border-radius:var(--r); overflow:hidden;
-  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+/* ---- Card + image ---- */
+.fc-hero-card__frame{ position:relative; overflow:hidden; border-radius:1.25rem;
   border:1px solid rgba(255,255,255,.12);
-  box-shadow:var(--shadow), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
-  transform-style:preserve-3d; backface-visibility:hidden;
-  transform: translateZ(40px) rotateX(var(--rx)) rotateY(var(--ry));
-}
-#fc-hero .fc-hero-card__img{
-  width:100%; height:100%; object-fit:cover; object-position: var(--img-x) var(--img-y);
-  transform: translateZ(20px) translateX(var(--tx)) scale(1.02);
-  filter:saturate(1.04) contrast(1.04) brightness(.88);
-  user-select:none; -webkit-user-drag:none; will-change:transform;
+  background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
+  box-shadow:0 16px 44px rgba(0,0,0,.3) }
+.fc-hero__img{ width:100%; height:100%; object-fit:cover; object-position:var(--img-x) var(--img-y);
+  filter:saturate(1.02) contrast(1.02) brightness(.9) }
+
+/* ---- Overlay (lower third) ---- */
+.fc-hero__overlay{ position:absolute; inset:0; display:grid; grid-template-rows:1fr auto; color:#e5e7eb;
+  background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.35) 40%, rgba(0,0,0,.78)) }
+.fc-hero__content{ margin-top:auto; margin-bottom:var(--overlay-bottom) }
+
+/* ---- Badge ---- */
+.fc-hero__badge{ display:inline-flex; align-items:center; gap:.5rem; font-weight:900; margin-bottom:.35rem;
+  padding:.25rem .6rem; border-radius:.75rem; backdrop-filter:saturate(120%) blur(4px);
+  background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.22) }
+.fc-hero__badge .dot{ width:.6rem;height:.6rem;border-radius:999px;background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.45) }
+
+/* ---- Title + sub ---- */
+.fc-hero__title{ line-height:1.02; text-wrap:balance; margin:.15rem 0 .5rem; font-weight:1000;
+  font-size:clamp(1.8rem,1.1rem + 3.8vw,3.2rem) }
+.fc-hero__title .line-2{ color:transparent; background:linear-gradient(180deg,#fff6bf,var(--accent,#facc15));
+  -webkit-background-clip:text; background-clip:text }
+.fc-hero__sub{ max-width:min(68ch,92%); margin-inline:auto; color:#e8edf5; opacity:.92 }
+
+/* ---- Chips ---- */
+.fc-hero__chips{ display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin:.75rem 0 .9rem }
+.chip{ font-size:.86rem; padding:.38rem .7rem; border-radius:.8rem; font-weight:900;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e7ebf2 }
+
+/* ---- CTAs ---- */
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px;
+  font-weight:900; padding:.8rem 1.15rem }
+.btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15;
+  border:1px solid rgba(0,0,0,.22); box-shadow:0 10px 24px rgba(234,179,8,.22) }
+.btn-ghost{ background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); color:#e5e7eb }
+
+/* ---- Meter ---- */
+.tabular{ font-variant-numeric: tabular-nums }
+.meter{ display:grid; gap:.4rem; justify-items:center }
+.hm-track{ width:min(680px,92%); height:12px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.10) }
+.hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,var(--accent,#facc15),#fff5b8) }
+.hm-stats{ display:flex; gap:.5rem; align-items:baseline; font-weight:900 }
+.hm-pct{ opacity:.9 } .hm-sep{ opacity:.7 }
+
+/* ---- Trust badges ---- */
+.fc-hero-badges{ display:flex; gap:.5rem; justify-content:center; margin-top:.6rem; flex-wrap:wrap }
+.pill{ display:inline-flex; align-items:center; gap:.45rem; padding:.38rem .6rem; border-radius:999px; font-weight:900;
+  font-size:.82rem; color:#111; background:linear-gradient(180deg,#fff3c4,#fde68a);
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.06) }
+
+/* ---- Readability belt ---- */
+.fc-hero-card__belt{ position:absolute; inset-inline:6%; top:var(--belt-top); height:5rem; pointer-events:none; z-index:1;
+  background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.42) 18%, rgba(0,0,0,.52) 50%, rgba(0,0,0,.42) 82%, rgba(0,0,0,0) 100%);
+  filter:blur(1px); border-radius:22px }
+  /* Overlay tint (keeps faces visible) */
+.fc-hero__tint {
+  position:absolute; inset:0;
+  background:linear-gradient(to top,
+    rgba(0,0,0,0.75) 0%,
+    rgba(0,0,0,0.45) 35%,
+    rgba(0,0,0,0) 70%);
+  z-index:1;
 }
 
-/* FX layers */
-#fc-hero .fc-hero-card__tint{
-  position:absolute; inset:0; z-index:2; pointer-events:none; mix-blend-mode:multiply; opacity:var(--tint,.22);
-  background: linear-gradient(180deg, rgba(0,0,0,0), rgba(0,0,0,.18) 60%, rgba(0,0,0,.32)), color-mix(in srgb, var(--accent) 10%, transparent);
+/* Headline polish */
+.fc-hero__title {
+  font-size: clamp(2rem, 1.5rem + 3vw, 3.6rem);
+  font-weight: 900;
+  text-transform: uppercase;
+  text-align: center;
+  margin: 0.4rem 0;
+  line-height: 1.05;
+  color: #fff;
 }
-#fc-hero .fc-hero-card__belt{
-  position:absolute; z-index:3; pointer-events:none; left:var(--belt-left); right:var(--belt-right);
-  top:var(--belt-top, auto); height:var(--belt-h); border-radius:999px;
-  background:linear-gradient(90deg, rgba(255,255,255,.12), rgba(255,255,255,.06));
-  border:1px solid rgba(255,255,255,.16);
-  -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
-  box-shadow: 0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
-}
-#fc-hero .fc-hero-card__glare{
-  position:absolute; inset:-20%; z-index:4; pointer-events:none; mix-blend-mode:screen; transform:translateZ(60px);
-  background: radial-gradient(40% 60% at var(--mx) var(--my), rgba(255,255,255,.16), transparent 60%);
-}
-#fc-hero .fc-hero-card__noise{
-  position:absolute; inset:0; z-index:2; pointer-events:none; opacity:.08; transform:translateZ(80px);
-  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>");
-  background-size:160px 160px;
+.fc-hero__title .text-accent { color: var(--accent); }
+
+/* Subtitle */
+.fc-hero__sub {
+  font-size: 1.1rem;
+  max-width: 70ch;
+  opacity: 0.85;
+  margin-bottom: 1rem;
+  text-align: center;
 }
 
-/* Vertical spine visuals (kept off on desktop above) */
-#fc-hero .fc-hero-spine{
-  position:absolute; left:10px; top:10%; bottom:10%; width:4px; z-index:1; pointer-events:none;
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 70%, #fff), transparent);
-  box-shadow: 0 0 24px color-mix(in srgb, var(--accent) 55%, transparent);
+/* Chips */
+.fc-hero__chips {
+  display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center;
+  margin:0.75rem 0 1.25rem;
 }
-#fc-hero .spine-text{
-  position:absolute; left:-.55rem; bottom:0; writing-mode:vertical-rl; transform:rotate(180deg);
-  font-weight:800; letter-spacing:.18em; font-size:.72rem; color:rgba(255,255,255,.65); text-shadow:0 1px 0 rgba(0,0,0,.6);
-}
-
-/* Bottom overlay (clickable content lives here) */
-#fc-hero .fc-hero-overlay{
-  position:absolute; inset-inline:0; bottom:0; top:auto;
-  z-index:6; display:flex; flex-direction:column; gap:.75rem;
-  align-items:center; text-align:center;
-  padding:1rem clamp(1rem, 2vw, 1.6rem);
-  background:var(--overlay-dark); color:#fff; pointer-events:auto;
-}
-.light #fc-hero .fc-hero-overlay{ background:var(--overlay-light); color:#111 }
-
-/* Holo “3-cinema” — standalone, no belt/overlay conflicts */
-#fc-hero .holo3d{
-  position:relative;
+.chip {
+  padding:.45rem .9rem;
+  border-radius:.8rem;
+  font-weight:700;
+  background:rgba(0,0,0,.45);
+  backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.15);
+  font-size:.95rem;
   color:#fff;
-  font-weight:900; letter-spacing:.01em;
-  text-shadow:0 2px 0 rgba(0,0,0,.35), 0 18px 40px rgba(0,0,0,.35);
-  filter:drop-shadow(0 12px 28px rgba(0,0,0,.28));
-}
-#fc-hero .holo3d::after{
-  content:attr(data-text); position:absolute; inset:0;
-  transform:translate(var(--holo-x), var(--holo-y));
-  color:color-mix(in srgb, var(--accent,#facc15) 20%, #0ff);
-  mix-blend-mode:screen; opacity:.35; pointer-events:none;
-}
-#fc-hero .holo3d::before{
-  content:attr(data-text); position:absolute; inset:0;
-  transform:translate(calc(var(--holo-x) * -1), calc(var(--holo-y) * -1));
-  color:#f0f; mix-blend-mode:screen; opacity:.22; pointer-events:none;
-}
-#fc-hero[data-holo-boost="1"] .holo3d::before,
-#fc-hero[data-holo-boost="1"] .holo3d::after{ opacity:.5; filter:blur(.4px); }
-
-@media (forced-colors:active){
-  #fc-hero .holo3d, #fc-hero .holo3d::before, #fc-hero .holo3d::after{
-    color:CanvasText; text-shadow:none; filter:none;
-  }
 }
 
-/* Hero meter (scoped here so removing external files doesn't break it) */
-#fc-hero .hero-meter{ width:100%; max-width:min(720px,92%); }
-#fc-hero .hm-track{
-  position:relative; height:12px; border-radius:9999px; overflow:hidden;
-  background:rgba(255,255,255,.16);
+/* CTA buttons */
+.btn-gold {
+  background:linear-gradient(180deg,#fffbe6,var(--accent));
+  color:#111;
+  font-weight:800;
+  padding:.9rem 1.4rem;
+  border-radius:999px;
+  box-shadow:0 6px 20px rgba(250,204,21,.35);
 }
-#fc-hero .hm-ticks{
-  position:absolute; inset:0; pointer-events:none; opacity:.22;
-  background:repeating-linear-gradient(90deg, rgba(255,255,255,.24) 0, rgba(255,255,255,.24) 1px, transparent 1px, transparent 5%);
-}
-#fc-hero .hm-fill{
-  position:absolute; inset-block:0; left:0;
-  background:var(--accent);
-  box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent);
-  width:var(--meter-pct); transition:width .6s cubic-bezier(.2,.8,.2,1);
-}
-#fc-hero .milestones{ display:flex; gap:.35rem; justify-content:center; margin-top:.4rem; flex-wrap:wrap }
-#fc-hero .milestones .ms{
-  list-style:none; font-size:.72rem; font-weight:800; padding:.18rem .45rem; border-radius:.6rem;
+.btn-ghost {
+  background:rgba(255,255,255,.1);
   border:1px solid rgba(255,255,255,.2);
-  background:linear-gradient(180deg, rgba(255,255,255,.14), rgba(255,255,255,.05));
-  color:#e5e7eb;
+  color:#fff;
+  font-weight:700;
+  padding:.85rem 1.2rem;
+  border-radius:999px;
 }
-#fc-hero .milestones .ms.hit{ transform:scale(1.02) }
-{% endraw %}</style>
-<style nonce="{{ NONCE }}">{% raw %}#fc-hero[data-kenburns="1"] .fc-hero-card__img{transform-origin:var(--img-x) var(--img-y);animation:fcKen 22s ease-in-out both}@keyframes fcKen{0%{transform:translateZ(20px) scale(1.02)}100%{transform:translateZ(20px) scale(1.08)}}#fc-hero[data-holo-animate="1"] .holo3d::before{animation:fcMag 5s linear infinite}#fc-hero[data-holo-animate="1"] .holo3d::after{animation:fcCyan 5s linear infinite}@keyframes fcMag{0%,100%{transform:translate(-.02em,.02em)}50%{transform:translate(-.04em,.01em)}}@keyframes fcCyan{0%,100%{transform:translate(.02em,-.02em)}50%{transform:translate(.03em,-.01em)}}@media (prefers-reduced-motion:reduce){#fc-hero .holo3d::before,#fc-hero .holo3d::after,#fc-hero .fc-hero-card__img{animation:none}}#fc-hero .fc-hero-cta{position:relative;overflow:hidden}#fc-hero .fc-hero-cta::after{content:"";position:absolute;inset:auto -40% 0 -40%;height:2px;background:linear-gradient(90deg,#0000,#fff8,#0000);transform:translateY(200%);transition:transform .6s cubic-bezier(.2,.8,.2,1)}#fc-hero .fc-hero-cta:hover::after{transform:translateY(0)}{% endraw %}</style>
-<style nonce="{{ NONCE }}">{% raw %}#fc-hero[data-hero-scope="cinema"] h1.fc-hero-type.holo,#fc-hero[data-hero-scope="cinema"] h1.fc-hero-type.holo3d{color:transparent!important;-webkit-text-fill-color:transparent!important;background:linear-gradient(180deg,#f8fafc 0%,#fff6bf 55%,var(--accent) 100%)!important;-webkit-background-clip:text!important;background-clip:text!important;text-shadow:0 2px 0 rgba(0,0,0,.35),0 22px 40px rgba(0,0,0,.35)!important}#fc-hero[data-hero-scope="cinema"] .holo3d::before,#fc-hero[data-hero-scope="cinema"] .holo3d::after{opacity:.35!important;mix-blend-mode:screen!important}#fc-hero[data-hero-scope="cinema"] .fc-hero-card__belt{display:none!important}#fc-hero[data-hero-scope="cinema"] .fc-hero-spine{display:none!important}{% endraw %}</style>
-<style nonce="{{ NONCE }}">{% raw %}#fc-hero[data-kenburns="1"] .fc-hero-card__img{transform-origin:var(--img-x) var(--img-y);animation:fcKen 22s ease-in-out both}@keyframes fcKen{0%{transform:translateZ(20px) scale(1.02)}100%{transform:translateZ(20px) scale(1.08)}}#fc-hero[data-holo-animate="1"] .holo3d::before{animation:fcMag 5s linear infinite}#fc-hero[data-holo-animate="1"] .holo3d::after{animation:fcCyan 5s linear infinite}@keyframes fcMag{0%,100%{transform:translate(-.02em,.02em)}50%{transform:translate(-.04em,.01em)}}@keyframes fcCyan{0%,100%{transform:translate(.02em,-.02em)}50%{transform:translate(.03em,-.01em)}}@media (prefers-reduced-motion:reduce){#fc-hero .holo3d::before,#fc-hero .holo3d::after,#fc-hero .fc-hero-card__img{animation:none}}#fc-hero .fc-hero-cta{position:relative;overflow:hidden}#fc-hero .fc-hero-cta::after{content:"";position:absolute;inset:auto -40% 0 -40%;height:2px;background:linear-gradient(90deg,#0000,#fff8,#0000);transform:translateY(200%);transition:transform .6s cubic-bezier(.2,.8,.2,1)}#fc-hero .fc-hero-cta:hover::after{transform:translateY(0)}{% endraw %}</style>
+.btn-ghost:hover { background:rgba(255,255,255,.2); }
+
+/* Meter */
+.hm-track { background:rgba(255,255,255,.2); border-radius:999px; height:12px; }
+.hm-fill { background:linear-gradient(90deg,#e5e7eb,#facc15); height:100%; border-radius:inherit; width:var(--p,0%); }
+.hm-stats { margin-top:.35rem; font-size:.95rem; color:#eee; text-align:center; }
+
+/* Badges */
+.fc-hero-badges {
+  display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap;
+  margin-top:1rem;
+}
+.pill {
+  padding:.35rem .75rem;
+  border-radius:999px;
+  font-weight:700;
+  font-size:.9rem;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.2);
+}
+</style>
+
+<script {{ nonce_attr() }} type="module">
+  // Ensure tilt initializes even if this partial is loaded dynamically
+  try { window.fcTiltInit && window.fcTiltInit(document); } catch {}
+  // Fallback image if hero fails
+  try {
+    const img = document.getElementById('fc-hero-img');
+    img?.addEventListener('error', () => {
+      const fallback = '{{ url_for("static", filename="images/logo.webp") if url_for is defined else "/static/images/logo.webp" }}';
+      if (img.src !== fallback) img.src = fallback;
+    });
+  } catch {}
+</script>
 

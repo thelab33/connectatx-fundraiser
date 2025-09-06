@@ -155,7 +155,7 @@ NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
   </p>
 </div>
 
-<style {{ nonce_attr() }}>
+<style {{ nonce_attr() }}nonce="{{ NONCE }}">
   /* =========================
      HERO BAR — Prime Design
      ========================= */

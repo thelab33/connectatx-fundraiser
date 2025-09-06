@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{# ---------------- Flags from query (unchanged) ---------------- #}
+{# ---------------- Flags from query ---------------- #}
 {% set _q = request.args if request is defined else {} %}
 {% set _OFF = ['0','false','off','no','disable'] %}
 {% set SHOW_TIERS  = (show_tiers  if show_tiers  is defined else (_q.get('tiers','1')  |lower not in _OFF)) %}
@@ -8,7 +8,7 @@
 {% set SHOW_ABOUT  = (show_about  if show_about  is defined else (_q.get('about','1')  |lower not in _OFF)) %}
 
 {# ---------------- Nonce helper passthrough ---------------- #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% if NONCE is not defined %}{% set NONCE = csp_nonce() if csp_nonce is defined else '' %}{% endif %}
 {% if nonce_attr is not defined %}
   {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 {% endif %}
@@ -19,19 +19,19 @@
 {% block extra_head %}
   {{ super() }}
 
-  {# Page-specific meta description for base.html to consume #}
+  {# Page meta for base to consume #}
   {% set _desc = meta_description
                  if meta_description is defined and meta_description
                  else (catch_phrase if catch_phrase is defined and catch_phrase
                        else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
   <meta name="description" content="{{ _desc }}">
 
-  {# LCP image preload if provided #}
+  {# LCP image preload (optional) #}
   {% if hero_image_url is defined and hero_image_url %}
     <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high">
   {% endif %}
 
-  {# Optional Starforge polish (safe if 404) #}
+  {# Optional Starforge polish (safe if missing) #}
   <link rel="stylesheet"
         href="{{ url_for('static', filename='starforge/brand-spine.css') if url_for is defined else '/static/starforge/brand-spine.css' }}"
         referrerpolicy="no-referrer">
@@ -42,27 +42,31 @@
 {% block content %}
 
   {# ===== 0) SPONSOR LEADERBOARD (sticky, below header) ===== #}
-  {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
+  <div id="sponsor-leaderboard" class="seam-header" role="region" aria-label="Sponsor leaderboard">
+    {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
+  </div>
 
   {# ===== 1) HERO (LCP zone) ===== #}
-  <section id="fundraiser-hero" class="seam-header" aria-label="Hero">
+  <section id="fundraiser-hero" class="seam-after-hero" aria-label="Hero" data-p2p-propagate="1" data-where="hero">
     {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
     {% set _brand_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
   </section>
 
   {# ===== 2) SPONSORSHIP TIERS ===== #}
   {% if SHOW_TIERS %}
-  <section id="tiers" class="section seam-after-hero" aria-labelledby="tiers-title" role="region">
-    <div class="container">
+  <section id="tiers" class="section" aria-labelledby="tiers-title" role="region" data-p2p-propagate="1" data-where="tiers" data-lazy>
+    <div class="container" id="tiers-partial">
       <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
-      {% include "partials/tiers.html" ignore missing with context %}
+      <div id="tiers-grid">
+        {% include "partials/tiers.html" ignore missing with context %}
+      </div>
     </div>
   </section>
   {% endif %}
 
   {# ===== 3) IMPACT BUCKETS ===== #}
   {% if SHOW_IMPACT %}
-  <section id="impact" class="section section--tight" aria-labelledby="impact-title" role="region">
+  <section id="impact" class="section section--tight" aria-labelledby="impact-title" role="region" data-p2p-propagate="1" data-where="impact" data-lazy>
     <div class="container">
       <h2 class="sr-only" id="impact-title">Impact buckets</h2>
       {% include "partials/impact_lockers_premium.html" ignore missing with context %}
@@ -72,7 +76,7 @@
 
   {# ===== 4) ABOUT / STORY ===== #}
   {% if SHOW_ABOUT %}
-  <section id="about" class="section section--tight" aria-label="About our program">
+  <section id="about" class="section section--tight" aria-label="About our program" role="region" data-p2p-propagate="1" data-where="about" data-lazy>
     <div class="container">
       {% include "partials/about_section.html" ignore missing with context %}
     </div>
@@ -80,7 +84,7 @@
   {% endif %}
 
   {# ---------------- SV-Elite • Polish Pack (scoped + idempotent) ---------------- #}
-  <style {{ nonce_attr() }}>
+  <style {{ nonce_attr() }}{{ nonce_attr() }}>
     :root{
       --fc-radius:16px;
       --fc-pad-x:clamp(0.9rem,0.6rem + 1.2vw,1.25rem);
@@ -92,123 +96,126 @@
       --fc-btn-px:.9rem;
       --fc-btn-py:.6rem;
     }
-
     .section{padding-block:clamp(1.1rem,1.6vw,1.6rem)}
     .section.section--tight{padding-block:clamp(0.9rem,1.2vw,1.2rem)}
     .section + .section{padding-top:clamp(0.9rem,1.2vw,1.2rem)}
     .container,.sf-container{max-width:1120px;margin-inline:auto}
-
-    /* Glass cards */
+    /* Glass cards (cohesive with hero) */
     .sf-card,.hdr-glass,.fc-hero-card__frame{
       border-radius:var(--fc-radius);
       box-shadow:0 16px 44px rgba(0,0,0,.3);
       border:1px solid rgba(255,255,255,.1);
       background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
     }
-
-    /* Optional subtle glow carrier */
-    .hdr-glow:before{content:"";position:absolute;inset:0;filter:blur(6px);pointer-events:none}
-
-    /* Fluid text helper (used in some partials) */
     .text-fluid-h2{font-size:clamp(1.3rem,1rem + 2vw,2rem);line-height:1.15}
-
-    .legacy-chip{
-      font-size:var(--fc-chip-fs);
-      padding:var(--fc-chip-py) var(--fc-chip-px);
-      border-radius:.7rem;
-    }
-
-    .sf-btn{
-      font-size:var(--fc-btn-fs);
-      padding:var(--fc-btn-py) var(--fc-btn-px);
-      box-shadow:0 8px 24px rgba(0,0,0,.22);
-    }
+    .legacy-chip{font-size:var(--fc-chip-fs);padding:var(--fc-chip-py) var(--fc-chip-px);border-radius:.7rem}
+    .sf-btn{font-size:var(--fc-btn-fs);padding:var(--fc-btn-py) var(--fc-btn-px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
     .sf-btn-sm{padding:.5rem .75rem;font-size:.9rem}
-
-    #tiers-partial [data-tier-cta]{padding:.6rem .9rem}
-
-    #fc-about .stats-grid{gap:.8rem}
+    /* Tighten partial spacing without touching sources */
     #tiers-partial .grid-auto{gap:.9rem}
-    #tiers-partial .tier.card{padding:.9rem}
     #tiers-partial .heading{margin-bottom:.25rem}
+    #tiers-partial [data-tier-cta]{padding:.6rem .9rem}
     #impact [data-bucket]{padding:.85rem}
     #impact .meter{height:9px}
-
     #fc-hero .hm-track{height:12px}
     #fc-hero .milestones li{font-size:.7rem;padding:.14rem .4rem}
-
+    /* CLS guard for announcement/leaderboard area */
+    #sponsor-leaderboard{min-height:0.001px}
     @media print{
       .section{padding-block:.4rem}
       #fc-hero .fc-hero-badges{display:none!important}
     }
   </style>
 
-  <script {{ nonce_attr() }}>
-    (() => {
-      // Stripe seal width sync (prevents face-jump on flip)
-      const seal = document.querySelector(".stripe-seal");
-      if (seal) {
-        const front = seal.querySelector(".seal-front");
-        const back  = seal.querySelector(".seal-back");
-        const sync = () => {
-          const w = Math.max(front?.offsetWidth || 0, back?.offsetWidth || 0);
-          seal.style.minWidth = (w + 12) + "px";
-        };
-        requestAnimationFrame(sync);
-        addEventListener("resize", sync, { passive: true });
-      }
+  {# ---- Deep-link handlers + section analytics ---- #}
+  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+    (function(){
+      "use strict";
 
-      // Softer header scrolled-shadow at very top
-      const hdr = document.getElementById("site-header");
-      if (hdr) {
-        const onScroll = () => hdr.classList.toggle("is-scrolled", (scrollY || 0) > 6);
-        addEventListener("scroll", onScroll, { passive: true });
-        onScroll();
+      // 1) Deep links: #tiers, #sponsor=<Tier>, #impact=<key>, ?ask=<prompt>
+      function actOnHash(){
+        try{
+          var hash=(location.hash||'').slice(1);
+          if(!hash) return;
+          if(hash==='tiers'){
+            var sec=document.getElementById('tiers');
+            sec && sec.scrollIntoView({ behavior:'smooth', block:'start' });
+            return;
+          }
+          var m=hash.split('='), key=m[0], val=decodeURIComponent(m[1]||'');
+          if(key==='sponsor' && val){
+            var card=[...document.querySelectorAll('#tiers-grid .s-tier-card,[data-tier]')].find(function(el){
+              return (el.dataset.tier||'').toLowerCase()===val.toLowerCase();
+            });
+            if(card){ (card.querySelector('[data-tier-cta]')||card).click(); }
+            var tiersSec=document.getElementById('tiers'); tiersSec && tiersSec.scrollIntoView({behavior:'smooth'});
+          }else if(key==='impact' && val){
+            window.dispatchEvent(new CustomEvent('fc:impact:focus',{ detail:{ key: val } }));
+            var impactSec=document.getElementById('impact'); impactSec && impactSec.scrollIntoView({behavior:'smooth'});
+          }
+        }catch(_){}
       }
+      addEventListener('hashchange', actOnHash, { passive:true });
+      if (location.hash) setTimeout(actOnHash, 60);
+
+      // Concierge ask param (?ask=)
+      try{
+        var q=new URLSearchParams(location.search), ask=q.get('ask');
+        if (ask){
+          var open=function(){
+            try{
+              if (window.openConcierge){ window.openConcierge({ prompt: ask }); return; }
+              window.dispatchEvent(new CustomEvent('fc:concierge:open', { detail:{ prompt: ask } }));
+              try{ localStorage.setItem('fc_concierge_q', ask); }catch(_){}
+            }catch(_){}
+          };
+          if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', open, { once:true });
+          else open();
+        }
+      }catch(_){}
+
+      // 2) Section impression → analytics
+      try{
+        var io=new IntersectionObserver(function(ents){
+          ents.forEach(function(ent){
+            if (!ent.isIntersecting) return;
+            var where=ent.target.getAttribute('data-where')||ent.target.id||'section';
+            window.fcTrack && window.fcTrack('section_impression',{ where: where });
+            io.unobserve(ent.target);
+          });
+        }, { rootMargin: "-25% 0px -55% 0px", threshold: 0.01 });
+        ['tiers','impact','about'].forEach(function(id){ var n=document.getElementById(id); n && io.observe(n); });
+      }catch(_){}
+    })();
+  </script>
+
+  {# ---- Page-level seam & meter sync ---- #}
+  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+    (function(){
+      // Sync donation meter with initial server values
+      try{
+        const raised = Math.max(0, {{ (funds_raised or 0)|round(0) }}),
+              goal   = Math.max(0, {{ (fundraising_goal or 0)|round(0) }});
+        if (goal > 0) window.dispatchEvent(new CustomEvent('fc:meter:update',{ detail:{ raised, goal } }));
+      }catch(_){}
+
+      // Soften header shadow at top
+      try{
+        const hdr = document.getElementById('site-header');
+        if (hdr){
+          const onScroll = () => hdr.classList.toggle('is-scrolled', (scrollY||0) > 6);
+          addEventListener('scroll', onScroll, { passive: true }); onScroll();
+        }
+      }catch(_){}
     })();
   </script>
 
   {% block body_scripts %}
     {{ super() }}
-    <script {{ nonce_attr() }}>
-      (function(){
-        // Sync donation meter with initial server values
-        try{
-          const raised = Math.max(0, {{ (funds_raised or 0)|round(0) }}),
-                goal   = Math.max(0, {{ (fundraising_goal or 0)|round(0) }});
-          if (goal > 0) window.dispatchEvent(new CustomEvent('fc:meter:update',{ detail:{ raised, goal } }));
-        }catch(e){}
-
-        // Compute sticky stack height (header + ticker) → CSS vars
-        try{
-          const root   = document.documentElement;
-          const header = document.getElementById('site-header');
-          const ticker = document.getElementById('sponsor-leaderboard');
-          const calc = () => {
-            const h = (header?.offsetHeight || 0) + (ticker?.offsetHeight || 0);
-            if (h) {
-              root.style.setProperty('--fc-header-h', h + 'px');
-              root.style.setProperty('--sticky-offset', h + 'px');
-            }
-          };
-          const rafCalc = () => requestAnimationFrame(calc);
-          rafCalc();
-          if ('ResizeObserver' in window){
-            const ro = new ResizeObserver(rafCalc);
-            header && ro.observe(header);
-            ticker && ro.observe(ticker);
-          }
-          addEventListener('resize', rafCalc, { passive:true });
-          addEventListener('load', rafCalc, { once:true });
-          document.addEventListener('htmx:afterSettle', rafCalc);
-        }catch(e){}
-      })();
-    </script>
-
-    <script {{ nonce_attr() }} type="module">
+    <script {{ nonce_attr() }}{{ nonce_attr() }} type="module">
       try {
         import("{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}").catch(() => {});
-      } catch (e) {}
+      } catch (_) {}
     </script>
   {% endblock %}
 {% endblock %}

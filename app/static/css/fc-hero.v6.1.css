@@ -66,6 +66,7 @@
   inset:-20%; mix-blend-mode:screen;
   background:radial-gradient(40% 60% at var(--mx,50%) var(--my,40%), rgb(255 255 255 / 16%), transparent 60%);
 }
+
 #fc-hero .fc-hero-card__noise{
   opacity:.08;
   background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.35'/></svg>");
@@ -81,6 +82,7 @@
   color:#fff;
   transform:translateZ(80px);
 }
+
 :root.light #fc-hero .fc-hero-overlay{
   background:linear-gradient(180deg, rgb(255 255 255 / 0%), rgb(255 255 255 / 86%) 58%, rgb(255 255 255 / 96%));
   color:#111;
@@ -93,6 +95,7 @@
   text-shadow:0 0 .5px rgb(255 255 255 / 90%), 0 1px 0 rgb(0 0 0 / 35%);
   transform:translateZ(90px);
 }
+
 #fc-hero .holo3d::after{
   content:attr(data-text); position:absolute; inset:0; translate:.02em -.02em;
   color:#0ff; mix-blend-mode:screen; opacity:.35; pointer-events:none;
@@ -105,20 +108,24 @@
 
 /* Meter (hero-scoped) */
 #fc-hero .hero-meter{ width:100%; max-width:min(720px,92%) }
+
 #fc-hero .hm-track{
   position:relative; height:12px; border-radius:9999px; overflow:hidden;
   background:rgb(255 255 255 / 16%);
 }
+
 #fc-hero .hm-ticks{
   position:absolute; inset:0; pointer-events:none; opacity:.22;
   background:repeating-linear-gradient(90deg, rgb(255 255 255 / 24%) 0, rgb(255 255 255 / 24%) 1px, transparent 1px, transparent 5%);
 }
+
 #fc-hero .hm-fill{
   position:absolute; inset-block:0; left:0; background:var(--accent);
   box-shadow:0 0 10px color-mix(in srgb, var(--accent) 25%, transparent);
   transition:width .6s cubic-bezier(.2,.8,.2,1);
 }
 #fc-hero .milestones{ display:flex; gap:.35rem; justify-content:center; margin-top:.4rem; flex-wrap:wrap }
+
 #fc-hero .milestones .ms{
   list-style:none; font-size:.72rem; font-weight:800; padding:.18rem .45rem; border-radius:.6rem;
   border:1px solid rgb(255 255 255 / 20%);
@@ -129,14 +136,18 @@
 
 /* Donor ticker + proof rail */
 #donor-ticker{ width:100%; max-width:48rem; overflow:hidden; display:none; margin-top:.25rem }
+
 #donor-ticker .dt-track{
   display:flex; gap:10px; white-space:nowrap; will-change:transform;
   mask-image:linear-gradient(to right, transparent 0, black 5%, black 95%, transparent)
 }
+
 @media (prefers-reduced-motion:no-preference){
   #donor-ticker[data-run="1"] .dt-track{ animation:ticker 20s linear infinite }
+
   @keyframes ticker{ from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
 }
+
 #fc-hero .proof-rail{
   display:flex; gap:.5rem; justify-content:center; margin-top:.35rem;
   overflow:auto; scrollbar-width:none; -ms-overflow-style:none
@@ -147,10 +158,12 @@
 @media (forced-colors:active){
   #fc-hero .hm-track{ background:CanvasText }
   #fc-hero .hm-fill{ background:LinkText }
+
   #fc-hero .fc-hero-card__tint,
   #fc-hero .fc-hero-card__glare,
   #fc-hero .fc-hero-card__noise{ background:none !important }
 }
+
 @media (prefers-reduced-motion:reduce){
   #fc-hero .hm-fill{ transition:none }
   #donor-ticker .dt-track{ animation:none !important }

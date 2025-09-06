@@ -21,7 +21,7 @@
     role="region"
     aria-label="Mini fundraiser meter"
   >
-    <style nonce="{{ NONCE }}">
+    <style {{ nonce_attr() }}nonce="{{ NONCE }}">
       /* Scoped styles */
       #{{ strip_id }} .track{
         position:relative; height:.55rem; background:rgba(255,255,255,.08);
@@ -73,7 +73,7 @@
     </div>
 
     {% if script_open is defined %}{{ script_open() }}{% else %}
-    <script nonce="{{ NONCE }}">
+    <script {{ nonce_attr() }}nonce="{{ NONCE }}">
       {% endif %}
         (() => {
           const id   = "{{ strip_id }}";

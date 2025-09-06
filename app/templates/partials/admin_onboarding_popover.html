@@ -174,7 +174,7 @@ current_user.is_staff) and not session.get('onboarded') %}
   👋 Click the chat icon for AI support!
 </div>
 
-<style nonce="{{ NONCE }}">
+<style {{ nonce_attr() }}nonce="{{ NONCE }}">
   #admin-onboarding {
     will-change: opacity, transform;
   }
@@ -195,7 +195,7 @@ current_user.is_staff) and not session.get('onboarded') %}
   }
 </style>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const root = document.getElementById('admin-onboarding');
     const tip  = document.getElementById('ai-concierge-tip');

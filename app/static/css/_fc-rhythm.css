@@ -1,37 +1,53 @@
-:root {
-  --fc-vr: clamp(28px, 6vw, 72px);
-  --fc-vr-sm: clamp(16px, 3.5vw, 36px);
+/* =========================================================
+   FC spacing • container • marquee (token-bridged)
+   – Maps to existing tokens with fallbacks
+   – Motion/RTL guards, sticky-anchor friendly
+   ========================================================= */
+
+@layer base {
+  :root {
+    /* Bridge to existing tokens if present, otherwise fallback to clamps */
+    --fc-vr: var(--section-y, clamp(28px, 6vw, 72px));
+    --fc-vr-sm: var(--section-y-tight, clamp(16px, 3.5vw, 36px));
+
+    /* Container + gutters */
+    --fc-container-max: var(--container-max, 92rem);
+    --fc-gutter-x: var(--gutter, clamp(0.5rem, 2.5vw, 1.25rem));
+  }
 }
 
-.fc-section {
-  padding-block: var(--fc-vr);
-}
+@layer components {
+  .fc-section { padding-block: var(--fc-vr); }
+  .fc-section--tight { padding-block: var(--fc-vr-sm); }
+  .fc-section[id] { scroll-margin-top: var(--sticky-offset, 72px); }
 
-.fc-section--tight {
-  padding-block: var(--fc-vr-sm);
-}
+  .fc-container {
+    width: min(var(--fc-container-max), 96vw);
+    margin-inline: auto;
+    padding-inline: var(--fc-gutter-x);
+  }
 
-.fc-container {
-  width: min(92rem, 96vw);
-  margin-inline: auto;
-  padding-inline: clamp(0.5rem, 2.5vw, 1.25rem);
-}
+  .fc-topbar {
+    /* slight fluidity + safe-area friendliness */
+    padding-block: clamp(0.3rem, 0.8vw, 0.45rem);
+    padding-inline: clamp(0.5rem, 1.6vw, 0.75rem);
+  }
 
-.fc-topbar {
-  padding: 0.35rem 0.6rem;
-}
+  /* Soft-edge marquee; pauses on hover; honors reduced motion + RTL */
+  .fc-marquee {
+    animation: fc-slide 26s linear infinite;
+    will-change: transform;
+    mask-image: linear-gradient(to right, transparent 0, black 4%, black 96%, transparent 100%);
+  }
 
-.fc-marquee {
-  animation: fc-slide 26s linear infinite;
-  will-change: transform;
+  @media (hover: hover) { .fc-marquee:hover { animation-play-state: paused; } }
+
+  @media (prefers-reduced-motion: reduce) { .fc-marquee { animation: none; } }
+  [dir="rtl"] .fc-marquee { animation-direction: reverse; }
 }
 
 @keyframes fc-slide {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
 }
+

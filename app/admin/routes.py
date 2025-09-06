@@ -15,7 +15,6 @@ Highlights:
 import csv
 import io
 import threading
-from dataclasses import dataclass
 from decimal import Decimal
 from typing import Any, Dict, Iterable, List, Optional
 

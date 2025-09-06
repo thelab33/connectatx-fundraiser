@@ -10,7 +10,7 @@ missing with context %} {% set NONCE = NONCE if NONCE is defined else
 
   <div id="fc-sticky-reserve" aria-hidden="true" style="height: 0"></div>
 
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     :root {
       --fc-sticky-h: 0px; /* reserved height for bottom-most CTA */
       --fc-sticky-gap: 8px; /* vertical gap between stacked CTAs */
@@ -52,7 +52,7 @@ missing with context %} {% set NONCE = NONCE if NONCE is defined else
     }
   </style>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       if (window.__fcStickyMgr) return;
       window.__fcStickyMgr = true;

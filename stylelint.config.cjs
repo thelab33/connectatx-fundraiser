@@ -1,18 +1,29 @@
 /** @type {import('stylelint').Config} */
 module.exports = {
-  extends: ["stylelint-config-standard", "stylelint-config-recommended"],
+  // Use the opinionated base (already includes "recommended")
+  extends: ["stylelint-config-standard"],
+
+  // Let Stylelint parse <style> blocks in HTML/Jinja templates
+  overrides: [
+    {
+      files: ["**/*.html", "**/*.jinja", "**/*.jinja2"],
+      customSyntax: "postcss-html",
+    },
+    // If you keep any SCSS or nested syntax:
+    {
+      files: ["**/*.scss"],
+      customSyntax: "postcss-scss",
+    },
+  ],
 
   rules: {
-    // ✅ Custom properties: brand tokens, private vars, steps, segmented
+    /* ---------- Design tokens / CSS vars ---------- */
     "custom-property-pattern": [
       "^--(?:[a-z][a-z0-9-]*|_[a-z0-9-]+|step--\\d+)(?:[./][a-z0-9-]+)*$",
-      {
-        message:
-          "Use kebab-case (e.g. --brand-color). Private vars may start with --_.",
-      },
+      { message: "Use kebab-case (e.g. --brand-color). Private vars may start with --_." },
     ],
 
-    // 🌀 Tailwind / utility CSS
+    /* ---------- Tailwind / utility CSS ---------- */
     "at-rule-no-unknown": [
       true,
       {
@@ -30,11 +41,16 @@ module.exports = {
           "container",
           "property",
           "supports",
+          "nest",
         ],
       },
     ],
+    "no-invalid-position-at-import-rule": [
+      true,
+      { ignoreAtRules: ["tailwind", "layer", "use", "forward"] },
+    ],
 
-    // 🎨 Modern CSS features you use
+    /* ---------- Modern CSS ---------- */
     "function-no-unknown": [
       true,
       {
@@ -47,6 +63,9 @@ module.exports = {
           "min",
           "max",
           "clamp",
+          "env",
+          "constant",
+          "image-set",
         ],
       },
     ],
@@ -59,10 +78,15 @@ module.exports = {
           "content-visibility",
           "scrollbar-gutter",
           "text-wrap",
+          "view-transition-name",
+          "animation-timeline",
           "view-timeline-name",
           "view-timeline-axis",
-          "animation-timeline",
           "timeline-scope",
+          "border-start-start-radius",
+          "border-start-end-radius",
+          "border-end-start-radius",
+          "border-end-end-radius",
         ],
       },
     ],
@@ -79,11 +103,20 @@ module.exports = {
           "any-hover",
           "pointer",
           "any-pointer",
+          "view-timeline-axis",
         ],
       },
     ],
+    "selector-pseudo-class-no-unknown": [
+      true,
+      { ignorePseudoClasses: ["where", "is", "has", "not", "nth-col", "nth-last-col", "global", "local"] },
+    ],
+    "selector-pseudo-element-no-unknown": [
+      true,
+      { ignorePseudoElements: ["view-transition", "view-transition-group", "view-transition-image-pair", "file-selector-button", "backdrop"] },
+    ],
 
-    // 🚦 Lint only what matters; unblock aesthetics
+    /* ---------- Pragmatic relaxations for utilities ---------- */
     "selector-class-pattern": null,
     "keyframes-name-pattern": null,
     "declaration-block-single-line-max-declarations": null,
@@ -92,10 +125,13 @@ module.exports = {
     "property-no-deprecated": null,
     "number-max-precision": null,
     "no-descending-specificity": null,
+
+    // Tailwind often uses keywords (e.g., currentColor) / variable-driven values
+    "value-keyword-case": null,
   },
 
+  // Keep CI green on generated/legacy bundles
   ignoreFiles: [
-    // 🚫 Ignore legacy / generated CSS
     "app/static/css/brand.tokens.css",
     "app/static/css/elite-upgrades.css",
     "app/static/css/fc_prestige*.css",
@@ -104,4 +140,14 @@ module.exports = {
     "app/static/css/tiers-elite.css",
     "app/static/css/src/**/*.css",
   ],
+
+  // Optional: enable property order (uncomment to use)
+  /*
+  plugins: ["stylelint-order"],
+  rules: {
+    ...,
+    "order/properties-alphabetical-order": true
+  }
+  */
 };
+

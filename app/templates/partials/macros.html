@@ -1,97 +1,54 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{# templates/macros.html #}
+{# Reusable CTA + Share helpers. Import in any partial with:
+   {% import 'macros.html' as fc with context %}
+#}
 
+{# Defaults with safe fallbacks #}
+{% set _team = team or {} %}
+{% set team_name = _team.team_name or "Connect ATX Elite" %}
+{% set theme_color = _team.theme_color or "#facc15" %}
+{% set stripe_link = stripe_payment_link or "" %}
 
-
-{% macro sr(text) %}
-  <span class="sr-only">{{ text }}</span>
-{% endmacro %}
-
-
-{% macro _attrs(props) -%}
-  {%- if props and props is mapping -%}
-    {%- for k, v in props.items() -%}
-      {%- if v is sameas true -%} {{- " " ~ k -}}
-      {%- elif v not in (none, false) -%} {{- " " ~ k ~ '="' ~ v|e ~ '"' -}}
-      {%- endif -%}
-    {%- endfor -%}
+{# Build a base CTA href. If Stripe link exists, use that; else anchor to donate intent. #}
+{% macro cta_href(where="site", tier=None, amount=None, monthly=None) -%}
+  {%- if stripe_link %}
+    {{ stripe_link }}
+  {%- else %}
+    #intent-donate
   {%- endif -%}
 {%- endmacro %}
 
-
-{% macro currency(cents) -%}
-  {%- set _c = cents if cents is not none else 0 -%}
-  {%- set _n = (_c|string)|float if _c is string else _c -%}
-  {%- set _dollars = (_n or 0) / 100.0 -%}
-  {{- '{:,.2f}'.format(_dollars) -}}
+{# Render a CTA anchor pre-wired for JS router and analytics. #}
+{% macro cta_btn(label, where, tier=None, amount=None, monthly=None, classes="", id=None, aria_label=None) -%}
+  {%- set href = cta_href(where, tier, amount, monthly) -%}
+  <a
+    href="{{ href }}"
+    class="{{ classes }}"
+    {%- if id %} id="{{ id }}"{% endif %}
+    role="button"
+    {%- if aria_label %} aria-label="{{ aria_label }}"{% endif %}
+    data-cta
+    data-where="{{ where }}"
+    {%- if tier %} data-tier="{{ tier }}"{% endif %}
+    {%- if amount %} data-amount="{{ amount }}"{% endif %}
+    {%- if monthly is not none %} data-monthly="{{ 1 if monthly else 0 }}"{% endif %}
+  >
+    {{- label -}}
+  </a>
 {%- endmacro %}
 
+{# Render a button that triggers the share orchestrator. #}
+{% macro share_btn(label, area="header", classes="", anchor=None, id=None) -%}
+  <button
+    type="button"
+    class="{{ classes }}"
+    {%- if id %} id="{{ id }}"{% endif %}
+    data-share
+    data-area="{{ area }}"
+    {%- if anchor %} data-anchor="{{ anchor }}"{% endif %}
+    aria-label="Share this page"
+  >
+    {{- label -}}
+  </button>
+{%- endmacro %}
 
-{% macro render_button(label, href='#', size='md', kind='primary', icon=None, icon_html=None, disabled=False, attrs=None, target=None, rel=None, btn_type='button') %}
-  {%- set base = 'inline-flex items-center justify-center font-semibold rounded-2xl transition focus-ring focus:outline-none gap-2' -%}
-  {%- set sizes = {'sm':'px-3 py-2 text-sm','md':'px-4 py-2.5','lg':'px-5 py-3 text-lg'} -%}
-  {%- set kinds = {
-      'primary':'bg-[var(--fc-brand)] text-black hover:brightness-110 shadow',
-      'ghost':'bg-transparent border border-[var(--fc-brand-200)] text-white/90 hover:border-[var(--fc-brand)]',
-      'surface':'bg-[var(--fc-brand-100)] text-white/90 border border-[var(--fc-brand-200)] hover:border-[var(--fc-brand)]',
-      'success':'bg-emerald-400 text-black hover:brightness-110'
-    } -%}
-  {%- set cls = base ~ ' ' ~ (sizes.get(size, sizes['md'])) ~ ' ' ~ (kinds.get(kind, kinds['primary'])) -%}
-
-  
-  {%- set extra = {} -%}
-  {%- if attrs and attrs is string -%}
-    
-  {%- elif attrs and attrs is mapping -%}
-    {%- set extra = attrs -%}
-  {%- endif -%}
-
-  {%- if href -%}
-    <a
-      href="{{ href }}"
-      class="{{ cls }}{% if disabled %} pointer-events-none opacity-60{% endif %}"
-      {%- if target %} target="{{ target }}"{% endif -%}
-      {%- if rel %} rel="{{ rel }}"{% endif -%}
-      {{ _self._attrs(extra) }}
-      {%- if attrs and attrs is string %} {{ attrs|safe }}{% endif -%}
-    >
-      {%- if icon_html %}{{ icon_html|safe }}{% elif icon %}<i class="{{ icon }}" aria-hidden="true"></i>{% endif -%}
-      <span>{{ label }}</span>
-    </a>
-  {%- else -%}
-    <button
-      type="{{ btn_type }}"
-      class="{{ cls }}{% if disabled %} opacity-60{% endif %}"
-      {%- if disabled %} disabled{% endif -%}
-      {{ _self._attrs(extra) }}
-      {%- if attrs and attrs is string %} {{ attrs|safe }}{% endif -%}
-    >
-      {%- if icon_html %}{{ icon_html|safe }}{% elif icon %}<i class="{{ icon }}" aria-hidden="true"></i>{% endif -%}
-      <span>{{ label }}</span>
-    </button>
-  {%- endif -%}
-{% endmacro %}
-
-
-{% macro render_meter(goal_cents, raised_cents, id=None) %}
-  {%- set _goal = (goal_cents or 0)|int -%}
-  {%- set _raised = (raised_cents or 0)|int -%}
-  {%- set _goal_safe = (_goal if _goal > 0 else 1) -%}
-  {%- set _pct_raw = (_raised / _goal_safe * 100.0) -%}
-  {%- set _pct = 0 if _pct_raw < 0 else (100 if _pct_raw > 100 else _pct_raw) -%}
-  {%- set label_id = (id ~ '-meter-label') if id else none -%}
-
-  <div class="w-full">
-    
-    <div class="flex items-center justify-between text-sm text-white/70 mb-1">
-      <div {% if label_id %}id="{{ label_id }}"{% endif %}>
-        <span class="text-white font-semibold">${{ currency(_raised) }}</span> raised
-      </div>
-      <div>Goal: ${{ currency(_goal) }}</div>
-    </div>
-
-    <div class="h-3 w-full rounded-full bg-[#1A1C27] border border-[var(--fc-brand-200)] overflow-hidden"
-         role="progressbar"
-         aria-valuemin="0"
-         aria-valuemax="{{ (_goal_safe / 100)|int }}"
-         aria-valuenow="{{ (_raised / 100)|int }}"
-         aria-valuetext="{{ '{:,.0f}'.format(_pct) }}% complete"

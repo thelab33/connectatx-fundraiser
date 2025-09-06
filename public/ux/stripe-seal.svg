@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="98" height="28" viewBox="0 0 98 28">
+  <defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#635bff"/><stop offset="1" stop-color="#8a85ff"/></linearGradient></defs>
+  <rect x="0" y="0" width="98" height="28" rx="6" fill="url(#g)"/>
+  <g fill="#fff" font-family="system-ui,Segoe UI,Roboto" font-weight="700" font-size="12">
+    <text x="10" y="18">Stripe Secure</text>
+  </g>
+</svg>

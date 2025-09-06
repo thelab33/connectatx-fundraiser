@@ -177,7 +177,7 @@ stripe_payment_link else '') %}
   </div>
 </div>
 
-<style nonce="{{ NONCE }}">
+<style {{ nonce_attr() }}nonce="{{ NONCE }}">
   .tabular {
     font-variant-numeric: tabular-nums;
   }
@@ -515,7 +515,7 @@ stripe_payment_link else '') %}
   }
 </style>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     if (window.__fpPanel) return; window.__fpPanel = true;
     const $ = (s, r=document) => r.querySelector(s);

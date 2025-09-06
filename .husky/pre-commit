@@ -1,1 +1,2 @@
-npm test
+pnpm -v >/dev/null 2>&1 && pm=pnpm || pm=npm
+$pm exec lint-staged

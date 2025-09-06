@@ -8,7 +8,7 @@
 {% set stripe_payment_link    = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
 {% set team_name              = (team.name if team and team.name else 'FundChamps') %}
 
-<style nonce="{{ NONCE }}">
+<style {{ nonce_attr() }}nonce="{{ NONCE }}">
   /* ===== Scoped to #tiers only (no CSS leak) ===== */
   #tiers .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem}
   #tiers .heading{
@@ -243,7 +243,7 @@
   </div>
 </section>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
 (() => {
   if (window.__tiersBound) return; window.__tiersBound = true;
 
@@ -491,7 +491,7 @@
 })();
 </script>
 
-<script type="application/ld+json" nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
 {
   "@context": "https://schema.org",
   "@type": "OfferCatalog",

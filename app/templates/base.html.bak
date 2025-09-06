@@ -289,7 +289,7 @@
   {% endif %}
   <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:px-3 focus:py-2 focus:rounded-md focus:bg-black focus:text-white">Skip to content</a>
 
-  {% block header %}{% include "partials/header_and_announcement.html" ignore missing with context %}{% endblock %}
+  {% block header_legacy %}{% include "partials/header_and_announcement.html" ignore missing with context %}{% endblock %}
   {% block above_main %}{% endblock %}
 
   <main id="main" role="main" class="relative" tabindex="-1">

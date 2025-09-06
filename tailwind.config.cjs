@@ -1,4 +1,4 @@
-// tailwind.config.cjs — FundChamps Prestige (SV-Grade, v4.x)
+// tailwind.config.cjs — FundChamps Prestige (SV-Grade, v3.x)
 /** @type {import('tailwindcss').Config} */
 
 const plugin = require("tailwindcss/plugin");
@@ -7,27 +7,18 @@ const typography = require("@tailwindcss/typography");
 const aspect = require("@tailwindcss/aspect-ratio");
 
 module.exports = {
-  // -------------------------------------------------------------------
-  // Dark mode strategy
-  // -------------------------------------------------------------------
-  darkMode: ["class", ".dark"],
+  darkMode: "class",
 
-  // -------------------------------------------------------------------
-  // Content scanning (templates, JS, and Python strings)
-  // -------------------------------------------------------------------
   content: [
-    "./app/templates/**/*.{html,jinja,jinja2}",
-    "./app/templates/partials/**/*.{html,jinja,jinja2}",
-    "./app/templates/macros/**/*.{html,jinja,jinja2}",
-    "./app/templates/admin/**/*.{html,jinja,jinja2}",
-    "./partials_bundle*/app/templates/**/*.{html,jinja,jinja2}",
+    "./app/templates/**/*.{html,jinja,jinja2,j2}",
+    "./app/templates/partials/**/*.{html,jinja,jinja2,j2}",
+    "./app/templates/macros/**/*.{html,jinja,jinja2,j2}",
+    "./app/templates/admin/**/*.{html,jinja,jinja2,j2}",
+    "./partials_bundle*/app/templates/**/*.{html,jinja,jinja2,j2}",
     "./app/static/js/**/*.{js,ts,mjs}",
     "./app/**/*.py",
   ],
 
-  // -------------------------------------------------------------------
-  // Safelist — keep only what’s explicitly needed
-  // -------------------------------------------------------------------
   safelist: [
     // Effects
     { pattern: /backdrop-blur.*/ },
@@ -38,7 +29,7 @@ module.exports = {
     { pattern: /to-.*/ },
     { pattern: /will-change.*/ },
 
-    // Layout
+    // Layout helpers
     { pattern: /z-.*/ },
     "w-[min(92rem,96vw)]",
     "max-w-[72rem]",
@@ -52,7 +43,7 @@ module.exports = {
     "prose-invert",
     "sr-only",
 
-    // Border radius (common sizes used with @apply)
+    // Border radius (ensure utilities exist in final CSS)
     "rounded",
     "rounded-sm",
     "rounded-md",
@@ -63,9 +54,6 @@ module.exports = {
     "rounded-full",
   ],
 
-  // -------------------------------------------------------------------
-  // Theme extensions
-  // -------------------------------------------------------------------
   theme: {
     container: {
       center: true,
@@ -93,7 +81,6 @@ module.exports = {
         ],
       },
 
-      // Branding colors
       colors: {
         primary: "#facc15",
         "primary-gold": "#fbbf24",
@@ -149,31 +136,15 @@ module.exports = {
         99999: "99999",
       },
 
-      // Animations
       keyframes: {
         kenburns: {
-          "0%": {
-            transform: "scale(1.12) translateY(6px)",
-            opacity: "0.94",
-          },
-          "100%": {
-            transform: "scale(1.01) translateY(0)",
-            opacity: "1",
-          },
+          "0%": { transform: "scale(1.12) translateY(6px)", opacity: "0.94" },
+          "100%": { transform: "scale(1.01) translateY(0)", opacity: "1" },
         },
         "bounce-in": {
-          "0%": {
-            transform: "scale(0.9) translateY(22px)",
-            opacity: "0",
-          },
-          "70%": {
-            transform: "scale(1.08) translateY(-3px)",
-            opacity: "1",
-          },
-          "100%": {
-            transform: "scale(1) translateY(0)",
-            opacity: "1",
-          },
+          "0%": { transform: "scale(0.9) translateY(22px)", opacity: "0" },
+          "70%": { transform: "scale(1.08) translateY(-3px)", opacity: "1" },
+          "100%": { transform: "scale(1) translateY(0)", opacity: "1" },
         },
         shine: { "100%": { backgroundPosition: "200% center" } },
         sparkle: {
@@ -194,15 +165,11 @@ module.exports = {
         "fade-in": "fade-in 1.5s cubic-bezier(.39,.575,.565,1) both",
       },
 
-      // Typography polish for dark UI
       typography: (theme) => ({
         DEFAULT: {
           css: {
             color: theme("colors.zinc.200"),
-            a: {
-              color: theme("colors.yellow.300"),
-              textDecoration: "none",
-            },
+            a: { color: theme("colors.yellow.300"), textDecoration: "none" },
             strong: { color: theme("colors.zinc.50") },
             h1: { color: theme("colors.yellow.300") },
             h2: { color: theme("colors.yellow.300") },
@@ -220,22 +187,18 @@ module.exports = {
     },
   },
 
-  // -------------------------------------------------------------------
-  // Plugins (first-party + Prestige helpers)
-  // -------------------------------------------------------------------
   plugins: [
     forms({ strategy: "class" }),
     typography,
     aspect,
 
     plugin(function fcPrestige({ addUtilities, addVariant }) {
-      // Variants
+      // --- Variants ---
       addVariant("hocus", ["&:hover", "&:focus-visible"]);
       addVariant("supports-blur", "@supports (backdrop-filter: blur(1px))");
-      addVariant(
-        "no-supports-blur",
-        "@supports not (backdrop-filter: blur(1px))",
-      );
+      addVariant("no-supports-blur", "@supports not (backdrop-filter: blur(1px))");
+
+      // State/data/aria
       addVariant("data-open", [
         '&[data-open="true"]',
         "&[open]",
@@ -243,16 +206,20 @@ module.exports = {
       ]);
       addVariant("aria-expanded", ['&[aria-expanded="true"]']);
       addVariant("aria-selected", ['&[aria-selected="true"]']);
+
+      // Group/peer data-open
       addVariant("group-data-open", [
-        ":merge(.group)[data-open='true'] &",
-        ":merge(.group)[data-state='open'] &",
+        '.group[data-open="true"] &',
+        '.group[data-state="open"] &',
+        ".group[open] &",
       ]);
       addVariant("peer-data-open", [
-        ":merge(.peer)[data-open='true'] ~ &",
-        ":merge(.peer)[data-state='open'] ~ &",
+        '.peer[data-open="true"] ~ &',
+        '.peer[data-state="open"] ~ &',
+        ".peer[open] ~ &",
       ]);
 
-      // Utilities
+      // --- Utilities ---
       addUtilities({
         ".glass-card": {
           backgroundColor: "rgba(11,11,12,0.60)",
@@ -275,8 +242,6 @@ module.exports = {
           "padding-top": "max(1rem, env(safe-area-inset-top))",
           "padding-bottom": "max(1rem, env(safe-area-inset-bottom))",
         },
-
-        // Compact helpers
         ".btn-compact": {
           "font-size": "calc(.95rem * var(--scale, .94))",
           padding:
@@ -284,7 +249,7 @@ module.exports = {
         },
         ".meter-compact": { height: "var(--meter-h, 12px)" },
 
-        // Aliases (replace regex safelist)
+        // Aliases
         ".u-container-w": { width: "min(92rem, 96vw)" },
         ".u-container-max": { maxWidth: "72rem" },
         ".u-card-h": { height: "var(--meter-h, 12px)" },
@@ -292,8 +257,6 @@ module.exports = {
     }),
   ],
 
-  // -------------------------------------------------------------------
-  // Future options
-  // -------------------------------------------------------------------
   future: { hoverOnlyWhenSupported: true },
 };
+

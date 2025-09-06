@@ -352,7 +352,7 @@
       </section>
     </div>
 
-    <script {{ nonce_attr() }} src="https://js.stripe.com/v3/"></script>
+    <script nonce="{{ NONCE }}" src="https://js.stripe.com/v3/"></script>
     <script nonce="{{ NONCE }}">
       (async function () {
         const $ = (id) => document.getElementById(id);

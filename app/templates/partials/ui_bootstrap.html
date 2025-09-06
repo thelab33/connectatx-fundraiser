@@ -2,7 +2,7 @@
 defined else '') %}  {% set __nonce = ( csp_nonce() if csp_nonce is defined else (NONCE if NONCE
   is defined else '') ) %}
 
-  <style nonce="{{ __nonce }}">
+  <style {{ nonce_attr() }}nonce="{{ __nonce }}">
     :root {
       /* --- Brand Core --- */
       --fc-brand: {{ (team.theme_color if team and team.theme_color else '#facc15') }};

@@ -18,7 +18,7 @@
   <span id="btt-sr" class="sr-only" aria-live="polite"></span>
 </a>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const btn = document.getElementById("back-to-top");
     if (!btn || btn.__init) return;
@@ -127,7 +127,7 @@
   })();
 </script>
 
-<style nonce="{{ NONCE }}">
+<style {{ nonce_attr() }}nonce="{{ NONCE }}">
   /* small, truly local rules */
   #back-to-top {
     will-change: opacity, transform;

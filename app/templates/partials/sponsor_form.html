@@ -363,7 +363,7 @@ set quick_amts = quick_amts if quick_amts is defined else [25, 50, 100, 150,
 
    {% if script_open is defined
   %}{{ script_open() }}{% else %}
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     {% endif %}
       (() => {
         const form   = document.getElementById('sponsor-donation-form');
@@ -524,7 +524,7 @@ set quick_amts = quick_amts if quick_amts is defined else [25, 50, 100, 150,
   </script>
   {% endif %}
 
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     @keyframes fc-pulse {
       0% {
         transform: scale(0.98);

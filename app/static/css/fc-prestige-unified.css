@@ -29,8 +29,8 @@
   --radius-2xl: 24px;
 
   /* Fluid type */
-  --step--2: clamp(0.7rem, 0.67rem + 0.2vw, 0.78rem);
-  --step--1: clamp(0.82rem, 0.78rem + 0.3vw, 0.92rem);
+  --step-2: clamp(0.7rem, 0.67rem + 0.2vw, 0.78rem);
+  --step-1: clamp(0.82rem, 0.78rem + 0.3vw, 0.92rem);
   --step-0: clamp(0.95rem, 0.9rem + 0.35vw, 1.05rem);
   --step-1: clamp(1.1rem, 1.02rem + 0.45vw, 1.25rem);
   --step-2: clamp(1.32rem, 1.18rem + 0.7vw, 1.55rem);

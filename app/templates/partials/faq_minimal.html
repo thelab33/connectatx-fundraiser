@@ -79,7 +79,7 @@ us at {{ contact_email }} and we’ll make it right."} ] %}
     </div>
   </div>
 
-  <style nonce="{{ NONCE }}">
+  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
     #faq .supports-backdrop-blur\:bg-black\/30 {
       background-color: rgba(0, 0, 0, 0.3);
     }
@@ -98,7 +98,7 @@ us at {{ contact_email }} and we’ll make it right."} ] %}
     }
   </style>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       if (window.__faqInit) return;
       window.__faqInit = true;
@@ -176,7 +176,7 @@ us at {{ contact_email }} and we’ll make it right."} ] %}
   </script>
 
   
-  <script type="application/ld+json" nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
     {
       "@context": "https://schema.org",
       "@type": "FAQPage",

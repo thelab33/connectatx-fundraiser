@@ -136,7 +136,7 @@
 
 
 {% if include_faq_jsonld and faqs and faqs|length > 0 %}
-  <script type="application/ld+json" nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -149,7 +149,7 @@
   </script>
 {% endif %}
 
-<style nonce="{{ NONCE }}">
+<style {{ nonce_attr() }}nonce="{{ NONCE }}">
   #ai-concierge{opacity:1;pointer-events:auto;transition:opacity .22s cubic-bezier(.4,0,.2,1)}
   #ai-concierge.closed{opacity:0;pointer-events:none}
   #ai-concierge>div{opacity:1;transform:scale(1);transition:opacity .28s,transform .28s cubic-bezier(.4,0,.2,1)}
@@ -161,7 +161,7 @@
   @media (max-width:640px){ #ai-concierge-btn{right:1rem;bottom:5.5rem}}
 </style>
 
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }}nonce="{{ NONCE }}">
 (() => {
   if (window.__aiConciergeBound) return; window.__aiConciergeBound = true;
 

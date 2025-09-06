@@ -22,7 +22,7 @@ defined else '') %}
     data-speed=""
     
   >
-    <style nonce="{{ NONCE }}">
+    <style {{ nonce_attr() }}nonce="{{ NONCE }}">
       /* Scope variables to this component */
       #sponsor-ticker {
         --ppx: 80; /* px/sec baseline */
@@ -188,7 +188,7 @@ defined else '') %}
     </div>
   </div>
 
-  <script nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const root = document.getElementById("sponsor-ticker");
       if (!root || root.__init) return;
