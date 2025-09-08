@@ -1,20 +1,22 @@
 {# ============================================================
-   HERO — SV-Elite 4.2 (lower-third, readable, 3D holo tilt)
-   Drop this file at: app/templates/partials/hero.html
+   HERO — SV-Elite 6.x (lower-third, readable, 3D tilt, ARIA meter)
    ============================================================ #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 
-{# ---------- Theme + Content ---------- #}
-{% set theme_hex     = theme_hex|default('#facc15') %}
-{% set TEAM_NAME     = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set TITLE         = fundraiser_title if fundraiser_title is defined and fundraiser_title else 'Fuel the Season. Fund the Future.' %}
-{% set SUBTITLE      = meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
-{% set CTA_LABEL     = cta_label if cta_label is defined and cta_label else 'Donate' %}
-{% set RAISED        = (funds_raised or 0) | round(0) %}
-{% set GOAL          = (fundraising_goal or 10000) | round(0) %}
-{% set PCT           = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
-{% set HREF_DONATE   = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
+{# ---------- Inputs / theme ---------- #}
+{% set THEME_HEX    = theme_hex|default('#facc15') %}
+{% set TEAM_NAME    = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set TITLE        = fundraiser_title if fundraiser_title is defined and fundraiser_title else 'Fuel the Season.' %}
+{% set TITLE_2      = fundraiser_title_2 if fundraiser_title_2 is defined and fundraiser_title_2 else 'Fund the Future.' %}
+{% set SUBTITLE     = meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set CTA_LABEL    = cta_label if cta_label is defined and cta_label else 'Donate' %}
+{% set HREF_DONATE  = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
+
+{# ---------- Fundraising context ---------- #}
+{% set RAISED = (funds_raised or 0) | round(0) %}
+{% set GOAL   = (fundraising_goal or 10000) | round(0) %}
+{% set PCT    = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
 
 {# ---------- Image fallbacks (robust) ---------- #}
 {% set _hero_src = (
@@ -23,103 +25,113 @@
   (team.hero_image if team and team.hero_image) or
   (team.team_photo if team and team.team_photo) or
   (team.photo_url if team and team.photo_url) or
-  'images/connect-atx-team.jpg'
+  'images/hero/hero-1920.avif'
 ) %}
-{% set _hero_mobile     = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
-{% set hero_src         = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
-{% set hero_src_mobile  = (_hero_mobile if '://' in _hero_mobile else (url_for('static', filename=_hero_mobile.lstrip('/')) if url_for is defined else '/static/' ~ _hero_mobile.lstrip('/'))) %}
-{% set hero_alt         = (hero_alt if hero_alt is defined and hero_alt) or (TEAM_NAME ~ ' team photo') %}
+{% set _hero_mobile = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
+{% set hero_src        = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{% set hero_src_mobile = (_hero_mobile if '://' in _hero_mobile else (url_for('static', filename=_hero_mobile.lstrip('/')) if url_for is defined else '/static/' ~ _hero_mobile.lstrip('/'))) %}
+{% set hero_alt        = (hero_alt if hero_alt is defined and hero_alt) or (TEAM_NAME ~ ' team photo') %}
 
-{# ---------- Preload LCP image ---------- #}
-<section id="fc-hero" class="fc-hero" aria-label="Hero" data-where="hero" style="--accent: {{ theme_hex }};">
-  <div class="sf-container">
+<section id="fc-hero" class="fc-hero section--flush-top" aria-label="Hero" style="--accent: {{ THEME_HEX }};">
+  <div class="container container-wide">
     <div class="fc-hero-card">
+
       <div class="fc-hero-card__frame tilt-3d"
            data-tilt-max="12"
-           data-tilt-perspective="900"
+           data-tilt-perspective="1000"
            data-tilt-glare="1"
-           data-tilt-parallax="1">
+           data-tilt-parallax="1"
+           aria-labelledby="hero-title"
+           aria-describedby="hero-desc">
 
-        <!-- Team photo -->
-        <picture class="tilt-layer" style="--z: 10px">
+        <!-- Picture (LCP) -->
+        <picture class="tilt-layer" style="--z:20px">
+          <source srcset="{{ hero_src_mobile }}" media="(max-width: 640px)">
           <img id="fc-hero-img"
                src="{{ hero_src }}"
                alt="{{ hero_alt }}"
                class="fc-hero__img"
-               loading="eager"
-               decoding="async"
-               fetchpriority="high"
                width="1920" height="1080"
-               draggable="false" />
+               decoding="async" fetchpriority="high" loading="eager"
+               draggable="false">
         </picture>
 
-        <!-- Gradient overlay -->
-        <div class="fc-hero__tint"></div>
+        <!-- Readability tint + belt -->
+        <div class="fc-hero__tint" aria-hidden="true"></div>
+        <div class="fc-hero-card__belt" aria-hidden="true"></div>
 
-        <!-- Content -->
-        <div class="fc-hero__overlay tilt-layer" style="--z: 30px">
-          <div class="fc-hero__badge">
-            <span class="dot"></span>
-            <span class="badge-text">{{ TEAM_NAME }}</span>
-          </div>
+        <!-- Lower-third overlay -->
+        <div class="fc-hero__overlay tilt-layer" style="--z:40px">
+          <div class="fc-hero__content">
 
-          <!-- Headline -->
-          <h1 class="fc-hero__title holo holo3d">
-            <span class="block">Fuel the Season.</span>
-            <span class="block text-accent">Fund the Future.</span>
-          </h1>
-
-          <p class="fc-hero__sub">{{ SUBTITLE }}</p>
-
-          <!-- Chips -->
-          <div class="fc-hero__chips">
-            <span class="chip">🎒 Gear</span>
-            <span class="chip">🚌 Travel</span>
-            <span class="chip">📚 Tutoring</span>
-          </div>
-
-          <!-- CTA -->
-          <div class="fc-hero__cta">
-            <a href="{{ HREF_DONATE }}" class="btn btn-gold cta cta-pulse">
-              {{ CTA_LABEL }} <span aria-hidden="true">→</span>
-            </a>
-            <button type="button" id="hero-share" class="btn btn-ghost"
-                    aria-label="Share this fundraiser"
-                    data-share='{{ {"title": "Support " ~ TEAM_NAME,"text": "Every dollar moves a kid forward — join us!","url": (request.base_url if request is defined else "/")} | tojson }}'>
-              ◴ Share
-            </button>
-          </div>
-
-          <!-- Meter -->
-          <div class="meter">
-            <div class="hm-track" aria-hidden="true">
-              <div class="hm-fill" style="--p: {{ PCT }}%"></div>
+            <div class="fc-hero__badge" role="note" aria-label="{{ TEAM_NAME }}">
+              <span class="dot" aria-hidden="true"></span>
+              <span class="badge-text">{{ TEAM_NAME }}</span>
             </div>
-            <div class="hm-stats">
-              <span class="hm-raised">${{ RAISED | int }}</span>
-              <span class="hm-sep">/</span>
-              <span class="hm-goal">${{ GOAL | int }}</span>
-              <span class="hm-pct">{{ PCT }}%</span>
-            </div>
-          </div>
 
-          <!-- Badges -->
-          <ul class="fc-hero-badges">
-            <li><span class="pill">🏅 500+ Families</span></li>
-            <li><span class="pill">📚 3.5 Team GPA</span></li>
-            <li><span class="pill">🏀 AAU Gold Certified</span></li>
-          </ul>
+            <h1 id="hero-title" class="fc-hero__title">
+              <span>{{ TITLE }}</span>
+              <span class="text-accent">{{ TITLE_2 }}</span>
+            </h1>
+
+            <p id="hero-desc" class="fc-hero__sub">{{ SUBTITLE }}</p>
+
+            <div class="fc-hero__chips" role="list">
+              <span class="chip" role="listitem">🎒 Gear</span>
+              <span class="chip" role="listitem">🚌 Travel</span>
+              <span class="chip" role="listitem">📚 Tutoring</span>
+            </div>
+
+            <div class="fc-hero__cta">
+              <a href="{{ HREF_DONATE }}"
+                 class="btn btn-gold"
+                 data-payment-link
+                 aria-label="{{ CTA_LABEL }} to {{ TEAM_NAME }}">
+                 {{ CTA_LABEL }} <span aria-hidden="true">→</span>
+              </a>
+
+              <button type="button"
+                      id="hero-share"
+                      class="btn btn-ghost"
+                      aria-label="Share this fundraiser"
+                      data-share='{{ {"title": "Support " ~ TEAM_NAME, "text": "Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'>
+                Share
+              </button>
+            </div>
+
+            <!-- Accessible Meter -->
+            <div class="meter" role="meter"
+                 aria-valuemin="0"
+                 aria-valuemax="{{ GOAL|int }}"
+                 aria-valuenow="{{ RAISED|int }}"
+                 aria-label="Fundraising progress">
+              <div class="hm-track" aria-hidden="true">
+                <div class="hm-fill" style="--p: {{ PCT }}%"></div>
+              </div>
+              <div class="hm-stats tabular" aria-hidden="true">
+                <span class="hm-raised">${{ RAISED|int }}</span>
+                <span class="hm-sep">/</span>
+                <span class="hm-goal">${{ GOAL|int }}</span>
+                <span class="hm-pct">{{ PCT }}%</span>
+              </div>
+            </div>
+
+            <!-- Trust pills -->
+            <ul class="fc-hero-badges" aria-label="Program highlights">
+              <li><span class="pill">🏅 500+ Families</span></li>
+              <li><span class="pill">📚 3.5 Team GPA</span></li>
+              <li><span class="pill">🏀 AAU Gold Certified</span></li>
+            </ul>
+
+          </div>
         </div>
 
         <!-- Effects -->
         <div class="holo-glare" aria-hidden="true"></div>
-        <div class="holo-scan" aria-hidden="true"></div>
       </div>
     </div>
   </div>
 </section>
-
-<style>
 
 <style {{ nonce_attr() }}>
 /* ---- Composition knobs (no HTML changes) ---- */
@@ -131,12 +143,12 @@
   background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
   box-shadow:0 16px 44px rgba(0,0,0,.3) }
 .fc-hero__img{ width:100%; height:100%; object-fit:cover; object-position:var(--img-x) var(--img-y);
-  filter:saturate(1.02) contrast(1.02) brightness(.9) }
+  filter:saturate(1.04) contrast(1.04) brightness(.9) }
 
 /* ---- Overlay (lower third) ---- */
 .fc-hero__overlay{ position:absolute; inset:0; display:grid; grid-template-rows:1fr auto; color:#e5e7eb;
-  background:linear-gradient(180deg,rgba(0,0,0,.28),rgba(0,0,0,.35) 40%, rgba(0,0,0,.78)) }
-.fc-hero__content{ margin-top:auto; margin-bottom:var(--overlay-bottom) }
+  background:linear-gradient(180deg,rgba(0,0,0,.22),rgba(0,0,0,.35) 45%, rgba(0,0,0,.84)) }
+.fc-hero__content{ margin-top:auto; margin-bottom:var(--overlay-bottom); text-align:center; padding:1rem }
 
 /* ---- Badge ---- */
 .fc-hero__badge{ display:inline-flex; align-items:center; gap:.5rem; font-weight:900; margin-bottom:.35rem;
@@ -146,35 +158,36 @@
 
 /* ---- Title + sub ---- */
 .fc-hero__title{ line-height:1.02; text-wrap:balance; margin:.15rem 0 .5rem; font-weight:1000;
-  font-size:clamp(1.8rem,1.1rem + 3.8vw,3.2rem) }
-.fc-hero__title .line-2{ color:transparent; background:linear-gradient(180deg,#fff6bf,var(--accent,#facc15));
-  -webkit-background-clip:text; background-clip:text }
-.fc-hero__sub{ max-width:min(68ch,92%); margin-inline:auto; color:#e8edf5; opacity:.92 }
+  font-size:clamp(1.9rem,1.1rem + 3.9vw,3.4rem) }
+.fc-hero__title .text-accent{ color:var(--accent,#facc15) }
+.fc-hero__sub{ max-width:min(70ch,92%); margin-inline:auto; color:#e8edf5; opacity:.92 }
 
 /* ---- Chips ---- */
-.fc-hero__chips{ display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin:.75rem 0 .9rem }
-.chip{ font-size:.86rem; padding:.38rem .7rem; border-radius:.8rem; font-weight:900;
+.fc-hero__chips{ display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; margin:.75rem 0 .95rem }
+.chip{ font-size:.9rem; padding:.45rem .8rem; border-radius:.85rem; font-weight:800;
   background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e7ebf2 }
 
 /* ---- CTAs ---- */
 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px;
-  font-weight:900; padding:.8rem 1.15rem }
+  font-weight:900; padding:.9rem 1.25rem }
 .btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15;
   border:1px solid rgba(0,0,0,.22); box-shadow:0 10px 24px rgba(234,179,8,.22) }
 .btn-ghost{ background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.18); color:#e5e7eb }
+.btn-gold:hover{ transform:translateY(-1px) }
+.btn-gold:active{ transform:translateY(0) }
 
 /* ---- Meter ---- */
 .tabular{ font-variant-numeric: tabular-nums }
 .meter{ display:grid; gap:.4rem; justify-items:center }
-.hm-track{ width:min(680px,92%); height:12px; border-radius:999px; overflow:hidden;
-  background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.10) }
-.hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,var(--accent,#facc15),#fff5b8) }
+.hm-track{ width:min(680px,92%); height:14px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.10) }
+.hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,#e5e7eb,color-mix(in srgb, var(--accent,#facc15) 55%, #d1d5db 45%)) }
 .hm-stats{ display:flex; gap:.5rem; align-items:baseline; font-weight:900 }
 .hm-pct{ opacity:.9 } .hm-sep{ opacity:.7 }
 
 /* ---- Trust badges ---- */
 .fc-hero-badges{ display:flex; gap:.5rem; justify-content:center; margin-top:.6rem; flex-wrap:wrap }
-.pill{ display:inline-flex; align-items:center; gap:.45rem; padding:.38rem .6rem; border-radius:999px; font-weight:900;
+.pill{ display:inline-flex; align-items:center; gap:.45rem; padding:.38rem .65rem; border-radius:999px; font-weight:900;
   font-size:.82rem; color:#111; background:linear-gradient(180deg,#fff3c4,#fde68a);
   box-shadow:inset 0 0 0 1px rgba(0,0,0,.06) }
 
@@ -182,102 +195,103 @@
 .fc-hero-card__belt{ position:absolute; inset-inline:6%; top:var(--belt-top); height:5rem; pointer-events:none; z-index:1;
   background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.42) 18%, rgba(0,0,0,.52) 50%, rgba(0,0,0,.42) 82%, rgba(0,0,0,0) 100%);
   filter:blur(1px); border-radius:22px }
-  /* Overlay tint (keeps faces visible) */
-.fc-hero__tint {
-  position:absolute; inset:0;
-  background:linear-gradient(to top,
-    rgba(0,0,0,0.75) 0%,
-    rgba(0,0,0,0.45) 35%,
-    rgba(0,0,0,0) 70%);
-  z-index:1;
-}
 
-/* Headline polish */
-.fc-hero__title {
-  font-size: clamp(2rem, 1.5rem + 3vw, 3.6rem);
-  font-weight: 900;
-  text-transform: uppercase;
-  text-align: center;
-  margin: 0.4rem 0;
-  line-height: 1.05;
-  color: #fff;
-}
-.fc-hero__title .text-accent { color: var(--accent); }
+/* Overlay tint to keep faces visible */
+.fc-hero__tint{ position:absolute; inset:0; pointer-events:none; z-index:1;
+  background:linear-gradient(to top, rgba(0,0,0,.78) 0%, rgba(0,0,0,.45) 38%, rgba(0,0,0,0) 72%) }
 
-/* Subtitle */
-.fc-hero__sub {
-  font-size: 1.1rem;
-  max-width: 70ch;
-  opacity: 0.85;
-  margin-bottom: 1rem;
-  text-align: center;
-}
+/* Effects */
+.holo-glare{ position:absolute; inset:-20%; pointer-events:none; opacity:0; mix-blend-mode:screen;
+  background:radial-gradient(120% 60% at var(--gx,50%) var(--gy,30%), rgba(255,255,255,.26), transparent 45%);
+  transition:opacity .18s ease; }
+.tilt-3d{ transform-style:preserve-3d; perspective:var(--tilt-persp,900px); will-change:transform }
+.tilt-layer{ transform: translateZ(var(--z,0)) }
 
-/* Chips */
-.fc-hero__chips {
-  display:flex; gap:.6rem; flex-wrap:wrap; justify-content:center;
-  margin:0.75rem 0 1.25rem;
-}
-.chip {
-  padding:.45rem .9rem;
-  border-radius:.8rem;
-  font-weight:700;
-  background:rgba(0,0,0,.45);
-  backdrop-filter:blur(6px);
-  border:1px solid rgba(255,255,255,.15);
-  font-size:.95rem;
-  color:#fff;
-}
-
-/* CTA buttons */
-.btn-gold {
-  background:linear-gradient(180deg,#fffbe6,var(--accent));
-  color:#111;
-  font-weight:800;
-  padding:.9rem 1.4rem;
-  border-radius:999px;
-  box-shadow:0 6px 20px rgba(250,204,21,.35);
-}
-.btn-ghost {
-  background:rgba(255,255,255,.1);
-  border:1px solid rgba(255,255,255,.2);
-  color:#fff;
-  font-weight:700;
-  padding:.85rem 1.2rem;
-  border-radius:999px;
-}
-.btn-ghost:hover { background:rgba(255,255,255,.2); }
-
-/* Meter */
-.hm-track { background:rgba(255,255,255,.2); border-radius:999px; height:12px; }
-.hm-fill { background:linear-gradient(90deg,#e5e7eb,#facc15); height:100%; border-radius:inherit; width:var(--p,0%); }
-.hm-stats { margin-top:.35rem; font-size:.95rem; color:#eee; text-align:center; }
-
-/* Badges */
-.fc-hero-badges {
-  display:flex; gap:.6rem; justify-content:center; flex-wrap:wrap;
-  margin-top:1rem;
-}
-.pill {
-  padding:.35rem .75rem;
-  border-radius:999px;
-  font-weight:700;
-  font-size:.9rem;
-  background:rgba(255,255,255,.12);
-  border:1px solid rgba(255,255,255,.2);
-}
+/* Light theme fallback (if ever toggled) */
+.light #fc-hero .fc-hero__overlay{ background:linear-gradient(180deg,rgba(255,255,255,.18),rgba(255,255,255,.88)) }
+.light #fc-hero .fc-hero__sub{ color:#111 }
 </style>
 
 <script {{ nonce_attr() }} type="module">
-  // Ensure tilt initializes even if this partial is loaded dynamically
+/* Minimal, CSP-safe boot for P2P hero (tilt, share, meter sync) */
+(() => {
+  const reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // Init tilt (from base fcTiltInit if present)
   try { window.fcTiltInit && window.fcTiltInit(document); } catch {}
-  // Fallback image if hero fails
-  try {
-    const img = document.getElementById('fc-hero-img');
-    img?.addEventListener('error', () => {
-      const fallback = '{{ url_for("static", filename="images/logo.webp") if url_for is defined else "/static/images/logo.webp" }}';
-      if (img.src !== fallback) img.src = fallback;
-    });
-  } catch {}
+
+  // Share (Web Share API → clipboard fallback)
+  const shareBtn = document.getElementById('hero-share');
+  if (shareBtn) {
+    shareBtn.addEventListener('click', async () => {
+      try {
+        const payload = JSON.parse(shareBtn.getAttribute('data-share') || '{}');
+        if (navigator.share) { await navigator.share(payload); return; }
+        await navigator.clipboard.writeText(payload.url || location.href);
+        shareBtn.textContent = 'Copied!';
+        setTimeout(() => (shareBtn.textContent = 'Share'), 1200);
+      } catch {}
+    }, { passive: true });
+  }
+
+  // Meter updater — listens for fc:meter:update from index/base
+  const track = document.querySelector('#fc-hero .hm-fill');
+  const stats = {
+    raised: document.querySelector('#fc-hero .hm-raised'),
+    goal:   document.querySelector('#fc-hero .hm-goal'),
+    pct:    document.querySelector('#fc-hero .hm-pct'),
+    meter:  document.querySelector('#fc-hero .meter')
+  };
+
+  function fmt(n){ try { return '$' + Number(n).toLocaleString(); } catch { return '$' + n; } }
+  function setProgress(raised, goal){
+    goal = Math.max(1, Number(goal||0));
+    raised = Math.max(0, Number(raised||0));
+    const pct = Math.min(100, (raised/goal)*100);
+    if (track) track.style.setProperty('--p', pct + '%');
+    if (stats.raised) stats.raised.textContent = fmt(raised);
+    if (stats.goal)   stats.goal.textContent   = fmt(goal);
+    if (stats.pct)    stats.pct.textContent    = (Math.round(pct*10)/10) + '%';
+    if (stats.meter){
+      stats.meter.setAttribute('aria-valuenow', String(Math.round(raised)));
+      stats.meter.setAttribute('aria-valuemax', String(Math.round(goal)));
+    }
+  }
+
+  // Seed with server values
+  setProgress({{ RAISED|int }}, {{ GOAL|int }});
+
+  // Live updates
+  addEventListener('fc:meter:update', (e) => {
+    try {
+      const d = e.detail || {};
+      setProgress(d.raised, d.goal);
+    } catch {}
+  }, { passive: true });
+
+  // LCP safety: fallback if image fails
+  const img = document.getElementById('fc-hero-img');
+  img?.addEventListener('error', () => {
+    const fallback = '{{ url_for("static", filename="images/og_default.jpg") if url_for is defined else "/static/images/og_default.jpg" }}';
+    if (img.src !== fallback) img.src = fallback;
+  }, { passive:true });
+
+  // Glare follow when hovered (if not reduced motion)
+  if (!reduce){
+    const frame = document.querySelector('#fc-hero .fc-hero-card__frame');
+    const glare = document.querySelector('#fc-hero .holo-glare');
+    if (frame && glare){
+      frame.addEventListener('pointermove', (e) => {
+        const b = frame.getBoundingClientRect();
+        const x = ((e.clientX - b.left) / b.width) * 100;
+        const y = ((e.clientY - b.top) / b.height) * 100;
+        glare.style.setProperty('--gx', x + '%');
+        glare.style.setProperty('--gy', y + '%');
+        glare.style.opacity = '.28';
+      }, { passive:true });
+      frame.addEventListener('pointerleave', () => { glare.style.opacity = '0'; }, { passive:true });
+    }
+  }
+})();
 </script>
 

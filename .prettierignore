@@ -1,0 +1,9 @@
+backups/**
+_archive/**
+*.bak
+*.tgz
+*.zip
+node_modules/**
+venv/**
+.venv/**
+

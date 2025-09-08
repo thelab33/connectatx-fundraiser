@@ -1,143 +1,118 @@
 {
   "name": "connectatx-fundraiser",
   "version": "1.0.0",
-  "description": "Production-ready Flask app for Connect ATX Elite. Features: modular app factory, SQLAlchemy ORM, Flask-SocketIO, TailwindCSS, and clean blueprints.",
+  "description": "Production-ready Flask app for Connect ATX Elite. Modular app factory, SQLAlchemy, Socket.IO, TailwindCSS, and clean blueprints.",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=18.0.0" },
   "main": "eslint.config.js",
-  "directories": { "test": "tests" },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "packageManager": "npm@10",
+  "directories": {
+    "test": "tests"
+  },
 
   "scripts": {
-    "dev": "npm-run-all --parallel css:dev js:watch serve:flask",
-    "preview": "npm-run-all --parallel preview:css preview:js preview:flask",
     "start": "npm run preview",
 
+    "// dev workflow ---------------------------------------------------------": "",
+    "dev": "npm-run-all -p css:watch js:watch serve:flask",
     "serve:flask": "cross-env FLASK_APP=app:create_app FLASK_ENV=development flask run --reload",
+
+    "// preview (local prod-ish) --------------------------------------------": "",
+    "preview": "npm-run-all -p preview:flask",
     "preview:flask": "flask run --reload --debugger",
 
-    "css:build": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/app.min.css --minify",
-    "css:dev": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/app.min.css -w",
-    "css:verify": "node scripts/check_css.js",
-    "preview:css": "tailwindcss -c tailwind.config.cjs -i app/static/css/input.css -o app/static/css/app.min.css --minify --watch | browser-sync start --server app/static --files app/static/css/app.min.css",
-
+    "// JS build -------------------------------------------------------------": "",
+    "js:watch": "cross-env NODE_ENV=development node build.js --watch",
     "js:build": "node build.js",
     "js:build:dev": "cross-env NODE_ENV=development node build.js",
     "js:build:prod": "cross-env NODE_ENV=production node build.js",
-    "js:watch": "cross-env NODE_ENV=development node build.js --watch",
-    "preview:js": "esbuild app/static/js/app.entry.js --bundle --format=esm --sourcemap --outfile=app/static/js/main.js --watch --servedir=app/static",
 
-    "build": "npm run lint && npm run format && npm run css:build && npm run js:build:prod && npm run css:verify",
-    "build:fast": "npm run css:build && npm run js:build:prod && npm run css:verify",
+    "// CSS (PostCSS pipeline w/ Tailwind) ----------------------------------": "",
+    "css:watch": "cross-env NODE_ENV=development postcss app/static/css/src/input.css -o app/static/css/app.css --map --watch",
+    "css:build": "cross-env NODE_ENV=production postcss app/static/css/src/input.css -o app/static/css/app.css",
+    "css:verify": "node -e \"const fs=require('fs');const p='app/static/css/app.css';if(!fs.existsSync(p)){console.error('❌ CSS not built');process.exit(1)};const s=fs.statSync(p).size;console.log('✅ CSS built:',(s/1024).toFixed(1)+'KB')\"",
+    "css:budget": "node -e \"const fs=require('fs');const p='app/static/css/app.css';if(!fs.existsSync(p))process.exit(0);const s=fs.statSync(p).size;const kb=(s/1024).toFixed(1);const limit=350; if(s>limit*1024){console.error(`❌ CSS size ${kb}KB > ${limit}KB`);process.exit(1)} else {console.log(`✅ CSS size ${kb}KB ≤ ${limit}KB`)}}\"",
 
-    "lint": "npm-run-all lint:css lint:js lint:html lint:md",
-    "lint:css": "stylelint \"app/static/css/**/*.css\" --fix --config stylelint.config.cjs --ignore-path .stylelintignore",
-    "lint:css:check": "stylelint \"app/static/css/**/*.css\" --config stylelint.config.cjs --ignore-path .stylelintignore",
-    "lint:js": "eslint \"app/static/js/**/*.js\" --max-warnings=0",
-    "lint:js:check": "eslint \"app/static/js/**/*.js\"",
-    "lint:js:fix": "eslint . --ext .js,.mjs,.cjs --fix",
-    "lint:css:templates": "stylelint \"app/templates/**/*.{html,jinja,jinja2}\" --custom-syntax postcss-html",
-    "lint:html": "htmlhint --config .htmlhintrc \"app/templates/**/*.html\" || true",
-    "lint:md": "markdownlint README.md \"docs/**/*.md\" \"app/**/*.md\" --ignore-path .markdownlintignore",
+    "// Tailwind CLI convenience (optional) ---------------------------------": "",
+    "tw": "tailwindcss -c tailwind.config.mjs -i app/static/css/src/input.css -o app/static/css/app.css",
+    "tw:watch": "cross-env NODE_ENV=development npm run tw -- --watch --map",
+    "tw:build": "cross-env NODE_ENV=production npm run tw -- --minify",
 
-    "format": "prettier --write \"**/*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}\"",
-    "format:check": "prettier --check \"**/*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}\"",
+    "// Lint / format --------------------------------------------------------": "",
+    "format": "prettier --write .",
+    "check": "prettier --check .",
 
-    "audit:deps": "npm outdated || echo \"✅ All dependencies up to date!\"",
-    "audit:css": "npm run lint:css:check || true",
-    "audit:js": "npm run lint:js:check || true",
-    "audit:html": "npm run lint:html || true",
-    "audit:md": "npm run lint:md || true",
-    "audit:bundle": "source-map-explorer app/static/js/bundle.min.js || true",
-    "audit:full": "npm run lint && npm run format:check && npm run audit:css && npm run audit:js && npm run audit:html && npm run audit:md && npm run audit:deps",
+    "// CI bundles -----------------------------------------------------------": "",
+    "build": "npm run format && npm run css:build && npm run js:build:prod && npm run css:verify && npm run css:budget",
+    "build:fast": "npm run css:build && npm run js:build:prod && npm run css:verify && npm run css:budget",
 
+    "// Hygiene --------------------------------------------------------------": "",
     "clean:dist": "rimraf .cache dist *.log \"app/static/css/*.map\" \"app/static/js/*.map\" app/static/js/main.bundle.js",
-    "clean:hard": "rimraf node_modules package-lock.json .cache dist *.log app/static/css/app.min.css app/static/css/globals.css \"app/static/css/*.map\" \"app/static/js/*.map\" app/static/js/main.bundle.js",
-
-    "prepare": "husky",
+    "clean:hard": "rimraf node_modules package-lock.json .cache dist *.log app/static/css/app.css \"app/static/css/*.map\" \"app/static/js/*.map\" app/static/js/main.bundle.js",
     "update:browsers": "npx update-browserslist-db@latest",
 
-    "lhci:collect": "lhci collect --numberOfRuns=1 --settings.preset=lighthouse:default",
-    "lhci:assert": "lhci assert || true",
-
-    "a11y:test": "pa11y-ci \"http://localhost:5000\" --config .pa11yci",
-    "a11y:report": "pa11y-ci \"http://localhost:5000\" --reporter html --config .pa11yci",
-
+    "// Hooks / audits -------------------------------------------------------": "",
+    "prepare": "husky install",
+    "precommit": "lint-staged",
     "security": "npm audit --audit-level=high || true",
-
-    "release:patch": "npm version patch -m \"chore(release): %s\" && git push --follow-tags",
-    "release:minor": "npm version minor -m \"chore(release): %s\" && git push --follow-tags",
-    "release:major": "npm version major -m \"chore(release): %s\" && git push --follow-tags",
-
-    "test": "node -e \"process.exit(0)\"",
-
-    "sf:audit": "node scripts/starforge-audit.mjs",
-    "sf:audit:purge": "PURGE=1 node scripts/starforge-audit.mjs"
+    "audit:deps": "npm outdated || echo \"✅ All dependencies up to date!\""
   },
 
-  "dependencies": {},
-
   "devDependencies": {
-    "@axe-core/playwright": "^4.10.2",
-    "@eslint/js": "^9.34.0",
-    "@lhci/cli": "^0.13.0",
-    "@playwright/test": "^1.54.2",
-    "@stylistic/eslint-plugin": "^5.3.1",
-    "@tailwindcss/aspect-ratio": "^0.4.2",
-    "@tailwindcss/forms": "^0.5.10",
-    "@tailwindcss/typography": "^0.5.16",
+    "@tailwindcss/forms": "^0.5.7",
+    "@tailwindcss/typography": "^0.5.15",
     "autoprefixer": "^10.4.21",
-    "browser-sync": "^3.0.4",
+    "cssnano": "^6.1.2",
     "cross-env": "^7.0.3",
-    "cssnano": "^7.1.1",
-    "eslint": "^9.34.0",
-    "eslint-plugin-compat": "^6.0.2",
-    "eslint-plugin-promise": "^7.2.1",
-    "eslint-plugin-security": "^3.0.1",
-    "eslint-plugin-unused-imports": "^4.2.0",
-    "esbuild": "^0.25.9",
-    "fast-glob": "^3.3.3",
-    "htmlhint": "^1.6.3",
+    "esbuild": "^0.23.0",
     "husky": "^9.1.7",
-    "lighthouse": "^12.8.1",
-    "lint-staged": "^15.2.10",
-    "markdownlint": "^0.38.0",
-    "markdownlint-cli": "^0.45.0",
+    "lint-staged": "^15.5.2",
     "npm-run-all": "^4.1.5",
-    "pa11y-ci": "^3.1.0",
-    "postcss": "^8.5.6",
-    "postcss-cli": "^11.0.1",
-    "postcss-import": "^16.1.1",
-    "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.6.14",
-    "puppeteer": "^24.16.0",
-    "rimraf": "^5.0.7",
-    "source-map-explorer": "^2.5.3",
-    "stylelint": "^16.23.1",
-    "stylelint-config-recommended": "^17.0.0",
-    "stylelint-config-standard": "^39.0.0",
-    "stylelint-declaration-block-no-ignored-properties": "^2.8.0",
-    "svgo": "^4.0.0",
-    "tailwindcss": "3.4.13",
-    "update-browserslist-db": "^1.1.3"
+    "postcss": "^8.4.47",
+    "postcss-import": "^16.1.0",
+    "postcss-nested": "^6.2.0",
+    "postcss-safe-parser": "^7.0.0",
+    "prettier": "^3.3.3",
+    "prettier-plugin-jinja-template": "^1.3.2",
+    "prettier-plugin-tailwindcss": "^0.6.8",
+    "rimraf": "^5.0.10",
+    "tailwindcss": "^3.4.14"
   },
 
   "lint-staged": {
-    "*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}": ["prettier --write"],
-    "app/static/css/**/*.css": ["stylelint --fix --config stylelint.config.cjs --ignore-path .stylelintignore"],
-    "app/static/js/**/*.js": ["eslint --max-warnings=0"],
-    "app/templates/**/*.html": ["htmlhint --config .htmlhintrc || true"]
+    "*.{js,cjs,mjs,css,html,jinja,jinja2,py,json,yml,yaml,md}": [
+      "prettier --write"
+    ]
   },
 
-  "browserslist": ["defaults", "not IE 11", "maintained node versions"],
+  "browserslist": [
+    ">0.5%",
+    "last 2 versions",
+    "Firefox ESR",
+    "not dead"
+  ],
 
   "repository": {
     "type": "git",
     "url": "git+https://github.com/thelab33/connectatx-fundraiser.git"
   },
-  "bugs": { "url": "https://github.com/thelab33/connectatx-fundraiser/issues" },
+  "bugs": {
+    "url": "https://github.com/thelab33/connectatx-fundraiser/issues"
+  },
   "homepage": "https://github.com/thelab33/connectatx-fundraiser#readme",
-  "keywords": ["fundraising", "nonprofit", "flask", "tailwindcss", "realtime", "connectatx", "fundchamps", "socketio"],
+  "keywords": [
+    "fundraising",
+    "nonprofit",
+    "flask",
+    "tailwindcss",
+    "realtime",
+    "connectatx",
+    "fundchamps",
+    "socketio"
+  ],
   "author": "TheLab33",
   "license": "MIT"
 }

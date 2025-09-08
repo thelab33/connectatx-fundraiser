@@ -1,31 +1,31 @@
 {
   "version": {
-    "git": "bebabf4d",
-    "builtAt": "2025-09-06T16:55:06.890Z",
+    "git": "33111dc9",
+    "builtAt": "2025-09-08T19:05:43.968Z",
     "mode": "production"
   },
   "assets": {
     "js/bundle.min.js": {
       "path": "app/static/js/bundle.min.js",
       "bytes": 16007,
-      "gzipBytes": 6581,
+      "gzipBytes": 6582,
       "sri": {
-        "sha256": "sha256-F5y1djDHJNd0unz0XBIyrdShrqJfnWjsdoBPY8AKqeo=",
-        "sha384": "sha384-InYniqHk4sRAq5AEp1f1YeC7jqbl5nZn4tDHZ7aied0lgGdC6kKz5ntpEh2vGuJK"
+        "sha256": "sha256-/mRxPWwcSDVKMTcXRcSCMC1uhshAa2qLrBIUX64oDZI=",
+        "sha384": "sha384-q5K8/0ASLCOB0scYhrZ4N3MK6X4QLqUA160KDLf5SueEZX41sStnCrNPWJMMH0R+"
       }
     },
     "css/app.min.css": {
       "path": "app/static/css/app.min.css",
-      "bytes": 2913606,
-      "gzipBytes": 114354,
+      "bytes": 2907503,
+      "gzipBytes": 112650,
       "sri": {
-        "sha256": "sha256-lIgFB+prVe3JZiSmjB6bYH8EzLjUp8IEbYkhLv9JL1Y=",
-        "sha384": "sha384-kWVaOI+Jr7EYtWQxLtPuzbw9T6j5K6+/0Vxc22i/9xeZSlfCshYRnIu7d6CLxqFZ"
+        "sha256": "sha256-1pHtcjcBVmyKToWXy0DqclwdNbUbYGwbUPCZDmfQsqU=",
+        "sha384": "sha384-tHri0X2l3cMEnyP0DZpZGKYVXhM4ILaKdEcwJmTZRebRVs4UzQ17X1H0Bdljm5Px"
       }
     }
   },
   "sri": {
-    "js/bundle.min.js": "sha384-InYniqHk4sRAq5AEp1f1YeC7jqbl5nZn4tDHZ7aied0lgGdC6kKz5ntpEh2vGuJK",
-    "css/app.min.css": "sha384-kWVaOI+Jr7EYtWQxLtPuzbw9T6j5K6+/0Vxc22i/9xeZSlfCshYRnIu7d6CLxqFZ"
+    "js/bundle.min.js": "sha384-q5K8/0ASLCOB0scYhrZ4N3MK6X4QLqUA160KDLf5SueEZX41sStnCrNPWJMMH0R+",
+    "css/app.min.css": "sha384-tHri0X2l3cMEnyP0DZpZGKYVXhM4ILaKdEcwJmTZRebRVs4UzQ17X1H0Bdljm5Px"
   }
 }
