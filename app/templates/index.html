@@ -1,6 +1,12 @@
+{# =====================================================================
+   index.html — Premium Compact (CSP-safe, a11y, less-scroll)
+   - No duplicate section wrappers/IDs
+   - Forces 3-up squares for tiers
+   - Collapsible Impact & About to reduce scroll
+   ===================================================================== #}
 {% extends "base.html" %}
 
-{# ---------------- Flags from query ---------------- #}
+{# ---------------- Flags (query-string overridable) ---------------- #}
 {% set _q = request.args if request is defined else {} %}
 {% set _OFF = ['0','false','off','no','disable'] %}
 {% set SHOW_TIERS  = (show_tiers  if show_tiers  is defined else (_q.get('tiers','1')  |lower not in _OFF)) %}
@@ -13,210 +19,149 @@
   {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 {% endif %}
 
-{% block h1 %}{% endblock %}
 {% block title %}{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}{% endblock %}
+{% block h1 %}{% endblock %}
 
 {% block extra_head %}
   {{ super() }}
+  <meta name="description" content="{{ meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' }}">
 
-  {# Page meta for base to consume #}
-  {% set _desc = meta_description
-                 if meta_description is defined and meta_description
-                 else (catch_phrase if catch_phrase is defined and catch_phrase
-                       else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
-  <meta name="description" content="{{ _desc }}">
+  {# ===== Premium Compact overrides (after Tailwind/app.css) ===== #}
+  <style {{ nonce_attr() }}>
+    /* Layout tighten */
+    .section{ padding-block: clamp(0.9rem, 1.8vw, 1.6rem) }
+    .section.section--tight{ padding-block: clamp(0.7rem, 1.2vw, 1.1rem) }
+    .section + .section{ padding-top: clamp(0.6rem, 1.2vw, 1rem) }
+    .container{ max-width: 1200px; }
 
-  {# LCP image preload (optional) #}
-  {% if hero_image_url is defined and hero_image_url %}
-    <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high">
-  {% endif %}
+    /* Hero: shorter band */
+    #fc-hero{ --hero-min-h: clamp(420px, 55vh, 680px) }
 
-  {# Optional Starforge polish (safe if missing) #}
-  <link rel="stylesheet"
-        href="{{ url_for('static', filename='starforge/brand-spine.css') if url_for is defined else '/static/starforge/brand-spine.css' }}"
-        referrerpolicy="no-referrer">
-  <link rel="modulepreload"
-        href="{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}">
+    /* ===== Tiers: force “trio-squares” without changing the partial ===== */
+    /* Grid: 1 → 2 → 3 tiles */
+    #tiers .grid{
+      display:grid !important;
+      gap:.7rem !important;
+      grid-template-columns: 1fr !important; /* phones */
+      align-items:stretch;
+    }
+    @media (min-width:700px){
+      #tiers .grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
+    }
+    @media (min-width:980px){
+      #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+    }
+    /* Keep 3-up on XL for compactness */
+    @media (min-width:1280px){
+      #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
+    }
+
+    /* Square-ish cards, denser internals */
+    #tiers .flip-card{ aspect-ratio: 1 / 1.05; min-height:0 }
+    #tiers .flip-card-inner{ min-height:0 }
+    #tiers .flip-face.front{ padding:.9rem }
+    #tiers .flip-back{ padding:1rem }
+    #tiers .text-xl{ font-size:1.05rem }
+    #tiers .text-sm{ font-size:.84rem }
+    #tiers .slots{ height:6px; margin-top:.5rem }
+
+    /* Perks -> chips (save vertical space) */
+    #tiers .tier-perks{
+      display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem;
+    }
+    #tiers .tier-perks li{
+      display:inline-flex; align-items:center; gap:.3rem;
+      padding:.24rem .44rem; border-radius:.55rem;
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+      font-weight:800; font-size:.78rem; color:#e5e7eb;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    #tiers .tier-perks li svg{ display:none }
+
+    /* Buttons tighter */
+    #tiers .btn-row{ gap:.45rem; margin-top:.6rem }
+    #tiers [data-tier-cta]{ font-size:.9rem; padding:.56rem .8rem; border-radius:.6rem }
+    #tiers [data-share]{ padding:.42rem .62rem; border-radius:.6rem; font-size:.82rem }
+
+    /* Ribbon → micro tag */
+    #tiers .ribbon{
+      top:10px; right:10px; transform:none;
+      font-size:10px; padding:.18rem .44rem; border-radius:.45rem;
+    }
+
+    /* Collapsible sections (Impact/About) – elegant disclosure */
+    details.fc-fold{ background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12); border-radius:1rem; overflow:hidden }
+    details.fc-fold + details.fc-fold{ margin-top:.8rem }
+    .fc-fold > summary{
+      cursor:pointer; list-style:none; padding:.8rem 1rem; font-weight:1000;
+      display:flex; align-items:center; gap:.6rem;
+      background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.06));
+    }
+    .fc-fold > summary::-webkit-details-marker{ display:none }
+    .fc-fold[open] > summary{ border-bottom:1px solid rgba(255,255,255,.10) }
+    .fc-fold .fold-body{ padding: .9rem 1rem; }
+    .fold-kbd{ font-size:.8rem; padding:.14rem .4rem; border:1px solid rgba(255,255,255,.18); border-radius:.4rem; background:rgba(255,255,255,.06) }
+
+    /* Minor: tighten hero meter, sponsor ticker seam */
+    #fc-hero .hm-track{ height:12px }
+    #sponsor-leaderboard{ min-height:0.001px }
+  </style>
 {% endblock %}
 
 {% block content %}
 
-  {# ===== 0) SPONSOR LEADERBOARD (sticky, below header) ===== #}
-  <div id="sponsor-leaderboard" class="seam-header" role="region" aria-label="Sponsor leaderboard">
-    {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
-  </div>
+  {# ===== 0) Sponsor Leaderboard (no extra wrapper to avoid duplicate IDs) ===== #}
+  {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
 
-  {# ===== 1) HERO (LCP zone) ===== #}
-  <section id="fundraiser-hero" class="seam-after-hero" aria-label="Hero" data-p2p-propagate="1" data-where="hero">
-    {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
-    {% set _brand_name = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-  </section>
+  {# ===== 1) Hero (compact) ===== #}
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
 
-  {# ===== 2) SPONSORSHIP TIERS ===== #}
+  {# ===== 2) Tiers (3-up squares) ===== #}
   {% if SHOW_TIERS %}
-  <section id="tiers" class="section" aria-labelledby="tiers-title" role="region" data-p2p-propagate="1" data-where="tiers" data-lazy>
-    <div class="container" id="tiers-partial">
-      <h2 class="sr-only" id="tiers-title">Sponsorship tiers</h2>
-      <div id="tiers-grid">
-        {% include "partials/tiers.html" ignore missing with context %}
-      </div>
-    </div>
-  </section>
+    {% include "partials/tiers.html" ignore missing with context %}
   {% endif %}
 
-  {# ===== 3) IMPACT BUCKETS ===== #}
+  {# ===== 3) Impact (collapsible to reduce scroll) ===== #}
   {% if SHOW_IMPACT %}
-  <section id="impact" class="section section--tight" aria-labelledby="impact-title" role="region" data-p2p-propagate="1" data-where="impact" data-lazy>
-    <div class="container">
-      <h2 class="sr-only" id="impact-title">Impact buckets</h2>
-      {% include "partials/impact_lockers_premium.html" ignore missing with context %}
-    </div>
-  </section>
+    <section class="section section--tight container">
+      <details class="fc-fold" open>
+        <summary>
+          <span>Impact Buckets</span>
+          <span class="fold-kbd">less scroll</span>
+        </summary>
+        <div class="fold-body">
+          {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+        </div>
+      </details>
+    </section>
   {% endif %}
 
-  {# ===== 4) ABOUT / STORY ===== #}
+  {# ===== 4) About (collapsible) ===== #}
   {% if SHOW_ABOUT %}
-  <section id="about" class="section section--tight" aria-label="About our program" role="region" data-p2p-propagate="1" data-where="about" data-lazy>
-    <div class="container">
-      {% include "partials/about_section.html" ignore missing with context %}
-    </div>
-  </section>
+    <section class="section section--tight container">
+      <details class="fc-fold">
+        <summary>
+          <span>About Our Program</span>
+        </summary>
+        <div class="fold-body">
+          {% include "partials/about_section.html" ignore missing with context %}
+        </div>
+      </details>
+    </section>
   {% endif %}
 
-  {# ---------------- SV-Elite • Polish Pack (scoped + idempotent) ---------------- #}
-  <style {{ nonce_attr() }}{{ nonce_attr() }}>
-    :root{
-      --fc-radius:16px;
-      --fc-pad-x:clamp(0.9rem,0.6rem + 1.2vw,1.25rem);
-      --fc-pad-y:clamp(0.8rem,0.5rem + 1vw,1.1rem);
-      --fc-chip-fs:.82rem;
-      --fc-chip-px:.55rem;
-      --fc-chip-py:.28rem;
-      --fc-btn-fs:.93rem;
-      --fc-btn-px:.9rem;
-      --fc-btn-py:.6rem;
-    }
-    .section{padding-block:clamp(1.1rem,1.6vw,1.6rem)}
-    .section.section--tight{padding-block:clamp(0.9rem,1.2vw,1.2rem)}
-    .section + .section{padding-top:clamp(0.9rem,1.2vw,1.2rem)}
-    .container,.sf-container{max-width:1120px;margin-inline:auto}
-    /* Glass cards (cohesive with hero) */
-    .sf-card,.hdr-glass,.fc-hero-card__frame{
-      border-radius:var(--fc-radius);
-      box-shadow:0 16px 44px rgba(0,0,0,.3);
-      border:1px solid rgba(255,255,255,.1);
-      background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
-    }
-    .text-fluid-h2{font-size:clamp(1.3rem,1rem + 2vw,2rem);line-height:1.15}
-    .legacy-chip{font-size:var(--fc-chip-fs);padding:var(--fc-chip-py) var(--fc-chip-px);border-radius:.7rem}
-    .sf-btn{font-size:var(--fc-btn-fs);padding:var(--fc-btn-py) var(--fc-btn-px);box-shadow:0 8px 24px rgba(0,0,0,.22)}
-    .sf-btn-sm{padding:.5rem .75rem;font-size:.9rem}
-    /* Tighten partial spacing without touching sources */
-    #tiers-partial .grid-auto{gap:.9rem}
-    #tiers-partial .heading{margin-bottom:.25rem}
-    #tiers-partial [data-tier-cta]{padding:.6rem .9rem}
-    #impact [data-bucket]{padding:.85rem}
-    #impact .meter{height:9px}
-    #fc-hero .hm-track{height:12px}
-    #fc-hero .milestones li{font-size:.7rem;padding:.14rem .4rem}
-    /* CLS guard for announcement/leaderboard area */
-    #sponsor-leaderboard{min-height:0.001px}
-    @media print{
-      .section{padding-block:.4rem}
-      #fc-hero .fc-hero-badges{display:none!important}
-    }
-  </style>
+{% endblock %}
 
-  {# ---- Deep-link handlers + section analytics ---- #}
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
-    (function(){
-      "use strict";
-
-      // 1) Deep links: #tiers, #sponsor=<Tier>, #impact=<key>, ?ask=<prompt>
-      function actOnHash(){
-        try{
-          var hash=(location.hash||'').slice(1);
-          if(!hash) return;
-          if(hash==='tiers'){
-            var sec=document.getElementById('tiers');
-            sec && sec.scrollIntoView({ behavior:'smooth', block:'start' });
-            return;
-          }
-          var m=hash.split('='), key=m[0], val=decodeURIComponent(m[1]||'');
-          if(key==='sponsor' && val){
-            var card=[...document.querySelectorAll('#tiers-grid .s-tier-card,[data-tier]')].find(function(el){
-              return (el.dataset.tier||'').toLowerCase()===val.toLowerCase();
-            });
-            if(card){ (card.querySelector('[data-tier-cta]')||card).click(); }
-            var tiersSec=document.getElementById('tiers'); tiersSec && tiersSec.scrollIntoView({behavior:'smooth'});
-          }else if(key==='impact' && val){
-            window.dispatchEvent(new CustomEvent('fc:impact:focus',{ detail:{ key: val } }));
-            var impactSec=document.getElementById('impact'); impactSec && impactSec.scrollIntoView({behavior:'smooth'});
-          }
-        }catch(_){}
-      }
-      addEventListener('hashchange', actOnHash, { passive:true });
-      if (location.hash) setTimeout(actOnHash, 60);
-
-      // Concierge ask param (?ask=)
-      try{
-        var q=new URLSearchParams(location.search), ask=q.get('ask');
-        if (ask){
-          var open=function(){
-            try{
-              if (window.openConcierge){ window.openConcierge({ prompt: ask }); return; }
-              window.dispatchEvent(new CustomEvent('fc:concierge:open', { detail:{ prompt: ask } }));
-              try{ localStorage.setItem('fc_concierge_q', ask); }catch(_){}
-            }catch(_){}
-          };
-          if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', open, { once:true });
-          else open();
-        }
-      }catch(_){}
-
-      // 2) Section impression → analytics
-      try{
-        var io=new IntersectionObserver(function(ents){
-          ents.forEach(function(ent){
-            if (!ent.isIntersecting) return;
-            var where=ent.target.getAttribute('data-where')||ent.target.id||'section';
-            window.fcTrack && window.fcTrack('section_impression',{ where: where });
-            io.unobserve(ent.target);
-          });
-        }, { rootMargin: "-25% 0px -55% 0px", threshold: 0.01 });
-        ['tiers','impact','about'].forEach(function(id){ var n=document.getElementById(id); n && io.observe(n); });
-      }catch(_){}
-    })();
+{% block body_scripts %}
+  {{ super() }}
+  <script {{ nonce_attr() }}>
+    /* Optional: ensure section reveal animation class exists */
+    try{
+      const io=new IntersectionObserver((es)=>es.forEach(x=>x.isIntersecting&&x.target.classList.add('is-visible')), { rootMargin:"-10% 0px -5% 0px" });
+      document.querySelectorAll('.section').forEach(s=>io.observe(s));
+      addEventListener('pagehide',()=>io.disconnect(),{once:true});
+    }catch{}
   </script>
-
-  {# ---- Page-level seam & meter sync ---- #}
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
-    (function(){
-      // Sync donation meter with initial server values
-      try{
-        const raised = Math.max(0, {{ (funds_raised or 0)|round(0) }}),
-              goal   = Math.max(0, {{ (fundraising_goal or 0)|round(0) }});
-        if (goal > 0) window.dispatchEvent(new CustomEvent('fc:meter:update',{ detail:{ raised, goal } }));
-      }catch(_){}
-
-      // Soften header shadow at top
-      try{
-        const hdr = document.getElementById('site-header');
-        if (hdr){
-          const onScroll = () => hdr.classList.toggle('is-scrolled', (scrollY||0) > 6);
-          addEventListener('scroll', onScroll, { passive: true }); onScroll();
-        }
-      }catch(_){}
-    })();
-  </script>
-
-  {% block body_scripts %}
-    {{ super() }}
-    <script {{ nonce_attr() }}{{ nonce_attr() }} type="module">
-      try {
-        import("{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}").catch(() => {});
-      } catch (_) {}
-    </script>
-  {% endblock %}
 {% endblock %}
 

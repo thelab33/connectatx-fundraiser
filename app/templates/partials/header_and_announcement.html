@@ -1,49 +1,43 @@
-{# ================== Header — SV-Elite 4.0 (refactor: clean, hardened, mobile-sheet) ================== #}
+{# ================== Header — SV-Elite 4.8 Ultra Pro (full-bleed, CSP/a11y) ================== #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set HAS_ENDPOINT = has_endpoint is defined %}
 {% set _sf = safe_url_for is defined and safe_url_for %}
 {% set href_home   = (_sf and HAS_ENDPOINT and has_endpoint('main.home')   and safe_url_for('main.home'))   or '/' %}
 {% set href_donate = (_sf and HAS_ENDPOINT and has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate' %}
-{% set team_name   = (team.team_name if team and team.team_name else 'Your Team') %}
-{% set crest       = (team.logo_url  if team and team.logo_url  else None) %}
+{% set BRAND_NAME  = (BRAND_NAME if BRAND_NAME is defined and BRAND_NAME) or 'FundChamps' %}
+{% set team_name   = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set crest       = (team.logo_url or team.logo or team.favicon if team else None) %}
 {% set accent_hex  = theme_hex|default('#facc15') %}
-
 {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 
-<a href="#main" class="skip-link sr-only">Skip to content</a>
+<a href="#main" class="skip-link">Skip to content</a>
 
-<header
-  id="site-header"
-  class="hdr"
-  role="banner"
-  aria-label="Site header"
-  data-accent="{{ accent_hex }}"
-  style="--accent: {{ accent_hex }};"
->
-  <div class="brand-spine" aria-hidden="true"></div>
+<header id="site-header" class="hdr hdr--ultra" role="banner" aria-label="Site header"
+        data-accent="{{ accent_hex }}" style="--accent: {{ accent_hex }};">
+  <!-- Ambient full-bleed band -->
+  <div class="hdr-band" aria-hidden="true"></div>
 
-  <div class="sf-container hdr-shell glass rounded-2xl">
-    <div class="hdr-row">
+  <!-- Interior frame -->
+  <div class="frame glass rounded-2xl">
+    <div class="row">
       <!-- Brand -->
       <a href="{{ href_home }}" class="brand" aria-label="{{ team_name }} — Home" data-analytics="nav:home">
         {% if crest %}
-          <span class="crest" style="background-image:url('{{ crest }}')" aria-hidden="true"></span>
+          {% set crest_src = crest if '://' in crest else (url_for('static', filename=crest.lstrip('/')) if url_for is defined else '/static/' ~ crest.lstrip('/')) %}
+          <span class="crest" style="background-image:url('{{ crest_src }}')" aria-hidden="true"></span>
         {% else %}
           <span class="crest alt" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" fill="currentColor"/>
-            </svg>
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/></svg>
           </span>
         {% endif %}
-
         <span class="brand-text">
-          <span class="brand-name">{{ (BRAND_NAME if BRAND_NAME is defined and BRAND_NAME) or 'FundChamps' }}</span>
+          <span class="brand-name">{{ BRAND_NAME }}</span>
           <span class="brand-sub">for {{ team_name }}</span>
         </span>
       </a>
 
       <!-- Primary nav (desktop) -->
-      <nav id="site-nav" class="primary md:flex hidden" aria-label="Primary">
+      <nav id="site-nav" class="primary lg:flex hidden" aria-label="Primary">
         <ul class="nav-list" role="list">
           <li><a href="#tiers"  class="nav-link">Tiers</a></li>
           <li><a href="#impact" class="nav-link">Impact</a></li>
@@ -53,30 +47,21 @@
 
       <!-- Actions -->
       <div class="actions">
-        <!-- Mobile donate -->
-        <a href="{{ href_donate }}"
-           class="md:hidden btn btn-primary btn-sm cta"
-           id="hdr-donate-mb"
-           data-p2p-propagate="1"
-           data-analytics="cta_click"
-           data-analytics-meta='{{ {"where":"header","surface":"mobile"}|tojson }}'>
-          <span class="donate-label" data-label-full="Donate" data-label-compact="Give">Donate</span>
-        </a>
-
-        <!-- Mobile menu -->
+        <!-- Mobile: menu toggle -->
         <button id="menu-toggle" type="button"
-                class="btn btn-lite btn-sm md:hidden"
-                aria-controls="site-menu" aria-expanded="false" aria-haspopup="menu"
+                class="btn btn-lite btn-sm lg:hidden"
+                aria-controls="site-menu" aria-expanded="false" aria-haspopup="dialog"
                 aria-label="Open menu">
           <svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path class="ham"   d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            <path class="close" d="M6 6l12 12M18 6l-12 12"  stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:0"/>
           </svg>
           <span class="sr-only">Toggle navigation</span>
         </button>
 
-        <!-- Desktop row -->
-        <div class="md:flex hidden items-center gap-2">
-          <a href="#tiers" class="btn btn-ghost btn-sm">Sponsor</a>
+        <!-- Desktop / tablet cluster -->
+        <div class="cta-row">
+          <a href="#tiers" class="btn btn-ghost btn-sm hide-md">Sponsor</a>
 
           <a id="hdr-donate" href="{{ href_donate }}"
              class="btn btn-primary btn-sm cta"
@@ -86,7 +71,7 @@
             Donate
           </a>
 
-          <span class="secure-pill" aria-label="Payments are secured by Stripe">
+          <span class="secure-pill hide-sm" aria-label="Payments are secured by Stripe">
             <span class="dot"></span> Stripe Secure
           </span>
 
@@ -95,95 +80,64 @@
                   aria-label="Share this fundraiser"
                   data-analytics="share_click"
                   data-analytics-meta='{{ {"where":"header"}|tojson }}'
-                  data-share='{{ {
-                    "title": "Support " ~ team_name,
-                    "text": "Every dollar moves a kid forward — join us!",
-                    "url": (request.base_url if request is defined else "/")
-                  } | tojson }}'>
+                  data-share='{{ {"title": "Support " ~ team_name, "text": "Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'>
             Share
           </button>
         </div>
       </div>
     </div>
   </div>
-
-  {% if announcement or launch_note %}
-  <div class="sf-container pb-2" id="announce-wrap" data-annc-key="{{ (team.team_id if team and team.team_id else 'global') }}">
-    <section class="card flex items-center justify-between gap-3"
-             role="region" aria-label="Announcement" id="announcement" aria-live="polite">
-      <div class="flex items-center gap-2">
-        <span class="chip chip-gold">{{ badge_text|default('🏆 Update') }}</span>
-        <p class="text-sm text-zinc-100" id="announcement-text">
-          {{ announcement|default('Sponsor leaderboard is live — real-time shoutouts!') }}
-        </p>
-      </div>
-      <div class="flex items-center gap-2 btn-row">
-        <a href="#impact" class="btn btn-lite btn-sm">See impact</a>
-        <button type="button" id="announcement-dismiss" class="btn btn-ghost btn-sm" aria-label="Dismiss announcement">Dismiss</button>
-      </div>
-    </section>
-  </div>
-  {% endif %}
 </header>
 
 <style {{ nonce_attr() }}>
-/* ===== Header 4.0 — compact, modern, safe ===== */
-:root{ scroll-padding-top: var(--fc-header-h, var(--hdr-h, 72px)) }
+/* ===== Layout & frame ===== */
+:root{
+  scroll-padding-top: var(--fc-header-h, var(--hdr-h, 72px));
+  --frame-max: 1340px;
+  --frame-gutter: clamp(16px, 3vw, 28px);
+}
+.skip-link{position:absolute;inset-inline:0;top:-40px;background:#111318;color:#fff;padding:.6rem 1rem;border-radius:0 0 .6rem .6rem;z-index:9999}
+.skip-link:focus{top:0}
 .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,1px,1px)!important;white-space:nowrap!important;border:0!important}
 
-.sf-container{max-width:1120px;margin-inline:auto}
 .hdr{position:sticky; top:env(safe-area-inset-top,0px); z-index:70; isolation:isolate}
-.hdr .hdr-shell{ padding:clamp(10px,1vw,16px) clamp(12px,2vw,20px) }
-.hdr .hdr-row{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:clamp(.5rem,1.4vw,1rem) }
+.hdr-band{position:absolute; inset:0 0 auto 0; height:64px; background:
+  radial-gradient(120% 160% at 50% -60%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 65%),
+  linear-gradient(180deg, rgba(18,20,26,.92), rgba(12,14,18,.78)); pointer-events:none}
+.frame{max-width:var(--frame-max); margin-inline:auto; padding-inline:var(--frame-gutter)}
+.glass{--g1:rgba(18,20,26,.82);--g2:rgba(12,14,18,.62); background:linear-gradient(180deg,var(--g1),var(--g2));
+  border:1px solid rgba(255,255,255,.10); -webkit-backdrop-filter:saturate(130%) blur(12px); backdrop-filter:saturate(130%) blur(12px);
+  box-shadow:0 14px 36px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06)}
+.rounded-2xl{border-radius:1rem}
+.row{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:clamp(.5rem,1.2vw,1rem); padding-block: clamp(10px, 1vw, 16px) }
 
-.brand-spine{
-  height:3px; background:linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 35%, #ffffff 65%));
-  border-radius:999px; opacity:.7; margin-inline:auto; max-width:1120px; transform:translateY(6px);
-}
-
-.glass{
-  --g1: rgba(18,20,26,.82); --g2: rgba(12,14,18,.62);
-  background:linear-gradient(180deg, var(--g1), var(--g2));
-  border:1px solid rgba(255,255,255,.10);
-  -webkit-backdrop-filter:saturate(130%) blur(12px);
-  backdrop-filter:saturate(130%) blur(12px);
-  box-shadow: 0 14px 36px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
-}
 .hdr.is-scrolled .glass{ box-shadow:0 18px 50px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.04) }
 .hdr.is-hidden{ transform:translateY(-112%); transition:transform .26s cubic-bezier(.2,.8,.2,1) }
 @media (prefers-reduced-motion:reduce){ .hdr.is-hidden{ transform:none } }
 
-.brand{display:inline-flex;align-items:center;gap:.7rem;text-decoration:none}
-.crest{
-  inline-size:clamp(36px,4.2vw,44px); block-size:clamp(36px,4.2vw,44px);
-  border-radius:12px; background-size:cover;background-position:center;
-  box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12);
-  background-color:rgba(255,255,255,.08); color:var(--accent)
-}
+/* ===== Brand ===== */
+.brand{display:inline-flex;align-items:center;gap:.72rem;text-decoration:none}
+.crest{inline-size:clamp(38px, 4.2vw, 44px); block-size:clamp(38px, 4.2vw, 44px); border-radius:12px; background-size:cover; background-position:center;
+  box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12); background-color:rgba(255,255,255,.08); color:var(--accent)}
 .brand-text{display:flex;flex-direction:column;line-height:1}
-.brand-name{font-weight:1000;letter-spacing:-.01em;font-size:clamp(1.06rem,.9rem + 1.15vw,1.6rem);color:#e5e7eb}
-.brand-sub{opacity:.92;color:#cbd5e1;font-size:clamp(.66rem,.6rem + .32vw,.88rem);font-weight:800}
+.brand-name{font-weight:1000;letter-spacing:-.01em;font-size:clamp(1.08rem,.9rem + 1.1vw,1.65rem);color:#e5e7eb}
+.brand-sub{opacity:.92;color:#cbd5e1;font-size:clamp(.66rem,.6rem + .32vw,.9rem);font-weight:800}
 
-.primary .nav-list{display:flex;align-items:center;gap:clamp(.6rem,1.2vw,1.1rem)}
-.nav-link{
-  position:relative;color:#e5e7eb;font-weight:900;opacity:.96;text-decoration:none;
-  font-size:clamp(.92rem,.85rem + .22vw,1.05rem);padding:.25rem .2rem;border-radius:.35rem;
-  transition:color .15s ease,opacity .15s ease,outline-color .15s ease
-}
+/* ===== Nav ===== */
+.primary .nav-list{display:flex;align-items:center;gap:clamp(.6rem,1.1vw,1.1rem)}
+.nav-link{position:relative;color:#e5e7eb;font-weight:900;opacity:.96;text-decoration:none;font-size:clamp(.92rem,.85rem + .22vw,1.05rem);padding:.25rem .2rem;border-radius:.35rem;transition:color .15s ease,opacity .15s ease,outline-color .15s ease}
 .nav-link:hover{color:#fff;opacity:1}
 .nav-link:focus-visible{outline:2px solid color-mix(in srgb, var(--accent) 70%, #ffffff 30%); outline-offset:3px}
-.nav-link::after{
-  content:"";position:absolute;left:.2rem;right:.2rem;bottom:-4px;height:2px;border-radius:2px;
-  background:linear-gradient(90deg,var(--accent),#fff7cc); transform:scaleX(0); transform-origin:left; transition:transform .18s ease;
-}
+.nav-link::after{content:"";position:absolute;left:.2rem;right:.2rem;bottom:-4px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent),#fff7cc);transform:scaleX(0);transform-origin:left;transition:transform .18s ease}
 .nav-link:hover::after{transform:scaleX(1)}
 .nav-link.active{color:var(--accent)}
 .nav-link.active::after{transform:scaleX(1)}
 
+/* ===== Buttons / Actions ===== */
 .actions{display:flex;align-items:center;gap:.5rem}
 .btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:900;line-height:1;gap:.45rem}
 .btn-sm{font-size:.92rem;padding:.56rem .88rem}
-.btn-primary{background:#0b0f15;color:#fff;border:1px solid #000;box-shadow:0 10px 24px rgba(0,0,0,.3)}
+.btn-primary{background:linear-gradient(180deg,#fffbe6,var(--accent));color:#111;border:1px solid rgba(0,0,0,.25);box-shadow:0 10px 24px rgba(250,204,21,.25)}
 .btn-ghost{background:transparent;color:#e5e7eb;border:1px solid rgba(255,255,255,.18)}
 .btn-lite{background:rgba(255,255,255,.06);color:#e5e7eb;border:1px solid rgba(255,255,255,.14)}
 .btn:hover{filter:brightness(1.07)}
@@ -192,64 +146,52 @@
 .cta::before{content:""; position:absolute; inset:-2px; border-radius:inherit; background:conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--accent) 75%, #fff 25%) 30%, transparent 60%); filter:blur(12px); opacity:.35; transition:transform .8s ease}
 .cta:hover::before{ transform:rotate(180deg) }
 
-.secure-pill{
-  display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .6rem;border-radius:999px;
-  font-weight:900;font-size:.78rem;color:#e8ecf3;border:1px solid rgba(255,255,255,.14);
-  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
-}
+/* Toggle icon state via aria-expanded */
+#menu-toggle[aria-expanded="true"] .ham { opacity:0; transition:opacity .15s ease }
+#menu-toggle[aria-expanded="true"] .close { opacity:1 !important; transition:opacity .15s ease }
+
+/* ===== Extras ===== */
+.secure-pill{display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .6rem;border-radius:999px;font-weight:900;font-size:.78rem;color:#e8ecf3;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04))}
 .secure-pill .dot{width:6px;height:6px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
 
-#site-menu.sheet{
-  position:fixed; inset:auto .75rem max(.75rem, env(safe-area-inset-bottom,0px)) .75rem;
-  z-index:90; display:grid; gap:.6rem;
-  background:linear-gradient(180deg, rgba(16,18,24,.96), rgba(10,12,16,.94));
-  color:#e5e7eb; color-scheme:dark;
-  -webkit-backdrop-filter:saturate(120%) blur(10px); backdrop-filter:saturate(120%) blur(10px);
-  border:1px solid rgba(255,255,255,.10); border-radius:1rem; padding:.9rem;
-  transform:translateY(8px); opacity:0; pointer-events:none;
-  transition:transform .18s ease, opacity .18s ease;
-}
+/* ===== Mobile sheet menu ===== */
+#site-menu.sheet{position:fixed;inset:auto var(--frame-gutter) max(.75rem, env(safe-area-inset-bottom,0px)) var(--frame-gutter);z-index:90;display:grid;gap:.6rem;background:linear-gradient(180deg, rgba(16,18,24,.96), rgba(10,12,16,.94));color:#e5e7eb;color-scheme:dark;-webkit-backdrop-filter:saturate(120%) blur(10px);backdrop-filter:saturate(120%) blur(10px);border:1px solid rgba(255,255,255,.10);border-radius:1rem;padding:.9rem;transform:translateY(8px);opacity:0;pointer-events:none;transition:transform .18s ease, opacity .18s ease}
 #site-menu.sheet.open{ transform:none; opacity:1; pointer-events:auto }
 #site-menu a{ text-decoration:none; font-weight:900; font-size:1rem; padding:.6rem .7rem; border-radius:.6rem; color:inherit }
 #site-menu a:hover{ background:rgba(255,255,255,.06) }
 
-.card{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:.65rem .8rem;border-radius:1rem}
-.chip{border-radius:.7rem;padding:.25rem .55rem;font-weight:900}
-.chip-gold{background:linear-gradient(180deg,#fff3c4,#fde68a);color:#111}
+/* ===== Utility / responsive toggles ===== */
+.hidden{display:none}.lg\:hidden{display:none}
+.lg\:flex{display:flex}
+@media (max-width:980px){.lg\:flex{display:none}.lg\:hidden{display:inline-flex}}
+.hide-sm{display:inline-flex}
+@media (max-width:680px){.hide-sm{display:none}}
+.hide-md{display:inline-flex}
+@media (max-width:880px){.hide-md{display:none}}
 
-.rounded-2xl{border-radius:1rem}
-.hidden{display:none}.md\:hidden{display:none}
-.md\:flex{display:flex}@media (max-width:900px){.md\:flex{display:none}.md\:hidden{display:inline-flex}}
-.flex{display:flex}.items-center{align-items:center}.gap-2{gap:.5rem}.pb-2{padding-bottom:.5rem}
-.text-sm{font-size:.875rem}.text-zinc-100{color:#e5e7eb}
-.btn-row{display:flex;gap:.5rem}
-
-/* Kill legacy menus that might collide */
+/* Legacy menus (force off) */
 #menu,.mobile-menu,[data-legacy-menu]{display:none!important}
+
+/* Hero seam */
+#hero,[data-hero]{scroll-margin-top:var(--fc-header-h, 72px); margin-top: clamp(8px, 1.2vh, 16px)}
 </style>
 
 <script {{ nonce_attr() }} type="module">
 (() => {
   "use strict";
-
-  // Ensure a single skip-link (guards accidental duplicates)
+  // De-dupe skip-links from template includes
   try { document.querySelectorAll(".skip-link").forEach((el,i)=>{ if(i>0) el.remove(); }); } catch {}
 
-  const header = document.getElementById("site-header");
-  if (!header) return;
-
+  const header   = document.getElementById("site-header");
   const toggle   = document.getElementById("menu-toggle");
   const donate   = document.getElementById("hdr-donate") || document.getElementById("hdr-donate-mb");
   const shareBtn = document.getElementById("hdr-share");
-  const annWrap  = document.getElementById("announce-wrap");
-  const annDismiss = document.getElementById("announcement-dismiss");
-  const annText  = document.getElementById("announcement-text");
   const saveData = !!(navigator.connection && 'saveData' in navigator.connection && navigator.connection.saveData);
 
-  // Accent var (no CSS attr())
+  /* Accent → CSS var (fallback safe) */
   try { header.style.setProperty("--accent", header.getAttribute("data-accent") || "#facc15"); } catch {}
 
-  // Smart sticky (hide on down, show on up)
+  /* Smart sticky show/hide + scrolled state */
   try {
     let lastY = 0, hidden = false, ticking = false;
     addEventListener("scroll", () => {
@@ -257,7 +199,7 @@
       requestAnimationFrame(() => {
         const y = scrollY || 0;
         header.classList.toggle("is-scrolled", y > 4);
-        if (!saveData){
+        if (!matchMedia("(prefers-reduced-motion: reduce)").matches && !saveData){
           if (y - lastY > 12 && y > 110 && !hidden) { header.classList.add("is-hidden"); hidden = true; }
           else if (lastY - y > 12 || y <= 110)     { header.classList.remove("is-hidden"); hidden = false; }
         }
@@ -266,21 +208,18 @@
     }, { passive: true });
   } catch {}
 
-  // Mobile sheet (idempotent) + focus trap
+  /* Mobile sheet menu (lazy create) + focus trap */
   function ensureSheet(){
     let sheet = header.querySelector("#site-menu");
     if (sheet) return sheet;
     sheet = document.createElement("nav");
-    sheet.id = "site-menu"; sheet.className = "sheet";
-    sheet.setAttribute("role","dialog"); sheet.setAttribute("aria-modal","true");
-    sheet.setAttribute("aria-label","Mobile navigation");
+    sheet.id="site-menu"; sheet.className="sheet"; sheet.setAttribute("role","dialog"); sheet.setAttribute("aria-modal","true"); sheet.setAttribute("aria-label","Mobile navigation");
     sheet.innerHTML = `
       <a class="nav-link" href="{{ href_home }}">Home</a>
       <a class="nav-link" href="#tiers">Tiers</a>
       <a class="nav-link" href="#impact">Impact</a>
       <a class="nav-link" href="#about">About</a>
-      <a class="btn btn-primary" href="{{ href_donate }}" data-p2p-propagate="1"
-         data-analytics="cta_click" data-analytics-meta='{{ {"where":"header","surface":"sheet"}|tojson }}'>Donate</a>
+      <a class="btn btn-primary" href="{{ href_donate }}" data-p2p-propagate="1" data-analytics="cta_click" data-analytics-meta='{{ {"where":"header","surface":"sheet"}|tojson }}'>Donate</a>
     `;
     header.appendChild(sheet);
     return sheet;
@@ -288,8 +227,8 @@
   let untrap = null;
   function trapFocus(node){
     if (!node) return ()=>{};
-    const q='a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
-    const focusables = () => Array.from(node.querySelectorAll(q)).filter(x=>!x.disabled && x.tabIndex!==-1);
+    const sel='a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
+    const focusables = () => Array.from(node.querySelectorAll(sel)).filter(x=>!x.disabled && x.tabIndex!==-1);
     function onKey(e){ if(e.key!=='Tab') return; const k=focusables(); if(!k.length) return;
       const first=k[0], last=k[k.length-1];
       if (e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
@@ -321,49 +260,32 @@
     });
   }
 
-  // Scroll spy for section links
+  /* Scroll spy (activates for present sections only) */
   try {
-    const links = Array.from(document.querySelectorAll("#site-header .nav-link"));
-    const pairs = links.map(a=>[a, document.querySelector(a.getAttribute("href"))]).filter(x=>x[1]);
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent=>{
-        if (!ent.isIntersecting) return;
-        const id = "#" + ent.target.id;
-        links.forEach(a=>{
-          const on = a.getAttribute("href")===id;
-          a.classList.toggle("active", on);
-          if (on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current");
+    const links = Array.from(document.querySelectorAll("#site-header .nav-link")).filter(a=>a.hash);
+    const pairs = links.map(a=>[a, document.querySelector(a.hash)]).filter(([,sec])=>sec && sec.id);
+    if (pairs.length){
+      const io = new IntersectionObserver((ents)=>{
+        ents.forEach(ent=>{
+          if (!ent.isIntersecting) return;
+          const id = "#" + ent.target.id;
+          links.forEach(a=>{
+            const on = a.hash===id;
+            a.classList.toggle("active", on);
+            if (on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current");
+          });
         });
-      });
-    }, { rootMargin: "-20% 0px -70% 0px", threshold: 0.01 });
-    pairs.forEach(([,sec])=> io.observe(sec));
-    addEventListener('pagehide',()=>io.disconnect(),{once:true});
+      }, { rootMargin: "-20% 0px -70% 0px", threshold: 0.01 });
+      pairs.forEach(([,sec])=> io.observe(sec));
+      addEventListener('pagehide',()=>io.disconnect(),{once:true});
+    }
   } catch {}
 
-  // Announcement persistence
+  /* P2P / UTM decoration + Share hardening */
   (function(){
-    if(!annWrap) return;
-    try {
-      const teamKey = annWrap.getAttribute("data-annc-key") || "global";
-      const msg = (annText?.textContent || "").trim().slice(0,160);
-      const key = "fc_announce_dismissed:"+teamKey+":"+msg;
-      if (localStorage.getItem(key)==="1") annWrap.style.display="none";
-      annDismiss && annDismiss.addEventListener("click", ()=>{
-        try { localStorage.setItem(key,"1"); } catch {}
-        annWrap.style.display="none";
-      }, { passive:true });
-    } catch {}
-  })();
-
-  // UTM / P2P propagation to header links
-  (function(){
-    const root = header; if (!root) return;
     const keys = ["ref","ref_id","peer","peer_id","peer_slug","campaign","campaign_id"];
     const parseQS = () => Object.fromEntries(keys.map(k=>[k, new URLSearchParams(location.search).get(k)]).filter(([,v])=>v));
-    const readCtx = () => {
-      try { const raw = localStorage.getItem("fc_ref_ctx"); if(!raw) return {};
-        const obj = JSON.parse(raw)||{}; if (obj.ttl && Date.now()>obj.ttl) return {}; return obj.data||{}; } catch { return {}; }
-    };
+    const readCtx = () => { try { const raw = localStorage.getItem("fc_ref_ctx"); if(!raw) return {}; const obj = JSON.parse(raw)||{}; if (obj.ttl && Date.now()>obj.ttl) return {}; return obj.data||{}; } catch { return {}; } };
     const merged = Object.assign({}, readCtx(), parseQS());
     const add = (url, extra={}) => {
       try{ const u=new URL(url, location.origin);
@@ -371,27 +293,27 @@
         return u.toString();
       }catch{ const sep=url.includes("?")?"&":"?"; return url+sep+new URLSearchParams({...merged, ...extra}).toString(); }
     };
-    root.querySelectorAll('a[href*="donate"], a[href*="sponsor"], a[data-p2p-propagate="1"]').forEach(a=>{
+    document.querySelectorAll('#site-header a[href*="donate"], #site-header a[href*="sponsor"], #site-header a[data-p2p-propagate="1"]').forEach(a=>{
       a.href = add(a.getAttribute("href")||"#", {utm_source:"site",utm_medium:"header",utm_campaign:"fundraiser"});
       if (a.hasAttribute("data-payment-link") && !a.hasAttribute("target")) { a.target="_blank"; a.rel="nofollow noopener noreferrer"; }
     });
-    const sh = document.getElementById("hdr-share");
-    if (sh){ try{ const p = JSON.parse(sh.getAttribute("data-share")||"{}");
+    if (shareBtn){ try{
+      const p = JSON.parse(shareBtn.getAttribute("data-share")||"{}");
       p.url = add(p.url||location.href, {utm_source:"share",utm_medium:"header",utm_campaign:"fan_share"});
-      sh.setAttribute("data-share", JSON.stringify(p)); }catch{} }
+      shareBtn.setAttribute("data-share", JSON.stringify(p));
+    }catch{} }
   })();
 
-  // Share button
   if (shareBtn) {
     shareBtn.addEventListener("click", async ()=>{
       let cfg = {}; try { cfg = JSON.parse(shareBtn.getAttribute("data-share") || "{}"); } catch {}
-      let ok=false; try{ if (navigator.share) ok=await navigator.share(Object.assign({ url: location.href }, cfg));
+      let ok=false; try{ if (navigator.share) { await navigator.share(Object.assign({ url: location.href }, cfg)); ok=true; }
         else { await navigator.clipboard.writeText(cfg.url||location.href); ok=true; } }catch{}
       if (ok){ const t=shareBtn.textContent; shareBtn.textContent="Copied!"; setTimeout(()=>shareBtn.textContent=t,1100); }
     }, { passive: true });
   }
 
-  // Header height vars + theme-color sync
+  /* Header height → CSS vars */
   (function(){
     function setHdrVars(){
       try { const h = header.offsetHeight || 72;
@@ -401,37 +323,15 @@
     }
     setHdrVars();
     try { new ResizeObserver(setHdrVars).observe(header); } catch { addEventListener("resize", setHdrVars, { passive: true }); }
-
-    function syncTheme(){
-      try {
-        const meta = document.getElementById('meta-theme-color') || document.querySelector('meta[name="theme-color"]');
-        if (!meta) return;
-        const dark = matchMedia && matchMedia("(prefers-color-scheme: dark)").matches;
-        const scrolled = header.classList.contains("is-scrolled");
-        meta.setAttribute("content", (dark || scrolled) ? "#0b0b0c" : "#111318");
-      } catch {}
-    }
-    syncTheme();
-    addEventListener("scroll", syncTheme, { passive: true });
-    try { matchMedia("(prefers-color-scheme: dark)").addEventListener("change", syncTheme); } catch {}
   })();
 
-  // Donate hover prefetch (lightweight)
+  /* Donate prefetch (save-data aware) */
   try{
     if (donate && !saveData) donate.addEventListener('pointerenter', ()=>{
       let l = document.querySelector('link[data-prefetch="donate"]');
       if (!l){ l = document.createElement('link'); l.rel='prefetch'; l.href='{{ href_donate }}'; l.as='document'; l.setAttribute('data-prefetch','donate'); document.head.appendChild(l); }
     }, { passive:true });
   }catch{}
-
-  // Compact label on tiny screens
-  (function(){
-    const el = document.querySelector('#hdr-donate-mb .donate-label'); if (!el) return;
-    const full = el.getAttribute('data-label-full')||'Donate';
-    const compact = el.getAttribute('data-label-compact')||full;
-    const set = ()=>{ el.textContent = (innerWidth < 360) ? compact : full; };
-    set(); addEventListener('resize', set, {passive:true});
-  })();
 })();
 </script>
 

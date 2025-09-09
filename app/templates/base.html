@@ -1,4 +1,4 @@
-{# ===================== Base Context + Helpers (SV-Elite, prod) ===================== #}
+{# ===================== Base Context + Helpers (SV-Elite, prod • refactor) ===================== #}
 
 {# ---------- Inputs / team context ---------- #}
 {% set TEAM         = team|default(_team|default({})) %}
@@ -53,11 +53,15 @@
 {% set OG_IMG       = PEER_IMG or CAMP_IMG or OG_BRAND_IMG %}
 
 {# ---------------- Macros ---------------- #}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
 {% macro sri(path)   -%}{{ SRI.get(path) if SRI else None }}{%- endmacro %}
 {% macro asset(path) -%}
   {%- if path and path|length -%}
-    {{ url_for('static', filename=path, v=VER if VER else None) }}
+    {%- if url_for is defined -%}
+      {{ url_for('static', filename=path, v=VER if VER else None) }}
+    {%- else -%}
+      {{ '/static/' ~ path }}
+    {%- endif -%}
   {%- endif -%}
 {%- endmacro %}
 {% macro asset_abs(path) -%}
@@ -146,7 +150,7 @@
   <link rel="stylesheet" href="{{ asset('starforge/brand-spine.css') }}">
   <link rel="modulepreload" href="{{ asset('starforge/enable-brand-spine.js') }}">
 
-  <style {{ nonce_attr() }}{{ nonce_attr() }}>
+  <style {{ nonce_attr() }}>
     :root{
       --fc-brand: {{ BRAND_HEX }}; --fc-gold: var(--fc-brand);
       --fc-ink:#0B0B10; --fc-ash:#1B1E26; --fc-coal:#111318;
@@ -185,7 +189,7 @@
   </style>
 
   <!-- ===================== JSON-LD ===================== -->
-  <script {{ nonce_attr() }}{{ nonce_attr() }} type="application/ld+json">
+  <script {{ nonce_attr() }} type="application/ld+json">
   {
     "@context":"https://schema.org",
     "@graph":[
@@ -216,8 +220,8 @@
   }
   </script>
 
-  <!-- ===================== Analytics ===================== -->
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <!-- ===================== Analytics bootstrap ===================== -->
+  <script {{ nonce_attr() }}>
     window.dataLayer = window.dataLayer || [];
     window.fcTrack = function(event, props){
       try{ window.dataLayer.push({event, ...(props||{})}); }catch{}
@@ -226,8 +230,8 @@
   </script>
 
   {% if GA_ID %}
-    <script {{ nonce_attr() }}{{ nonce_attr() }} async src="https://www.googletagmanager.com/gtag/js?id={{ GA_ID }}"></script>
-    <script {{ nonce_attr() }}{{ nonce_attr() }}>
+    <script {{ nonce_attr() }} async src="https://www.googletagmanager.com/gtag/js?id={{ GA_ID }}"></script>
+    <script {{ nonce_attr() }}>
       function gtag(){ (window.dataLayer = window.dataLayer || []).push(arguments); }
       gtag('js', new Date());
       gtag('config', '{{ GA_ID }}', { anonymize_ip:true, send_page_view:true });
@@ -235,7 +239,7 @@
   {% endif %}
   {% if POSTHOG_KEY %}
     <link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>
-    <script {{ nonce_attr() }}{{ nonce_attr() }}>
+    <script {{ nonce_attr() }}>
       !function(d,w){var p=w.posthog||(w.posthog=[]),s=d.createElement("script");
         s.async=true; s.src=("{{ POSTHOG_HOST }}".replace(/\/$/,"")||"https://app.posthog.com")+"/static/array.js";
         var x=d.getElementsByTagName("script")[0]; x.parentNode.insertBefore(s,x);
@@ -245,6 +249,7 @@
   {% endif %}
 
   {% block extra_head %}{% endblock %}
+  <link rel="stylesheet" href="/static/css/qr-badge.css">
 </head>
 
 <body class="min-h-full bg-[color:var(--fc-ink)] text-zinc-100">
@@ -274,7 +279,7 @@
   <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}"
         {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}>
 
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <script {{ nonce_attr() }}>
   (function(){
     var head=document.head;
     function addFallback(){
@@ -298,12 +303,12 @@
   </script>
 
   {% if IS_DONATE %}
-    <script {{ nonce_attr() }}{{ nonce_attr() }} id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
+    <script {{ nonce_attr() }} id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
             {% if sri('js/donate.min.js') %}integrity="{{ sri('js/donate.min.js') }}" crossorigin="anonymous"{% endif %}></script>
   {% endif %}
-  {% if USE_SOCKETIO %}<script {{ nonce_attr() }}{{ nonce_attr() }} src="/socket.io/socket.io.js" defer></script>{% endif %}
+  {% if USE_SOCKETIO %}<script {{ nonce_attr() }} src="/socket.io/socket.io.js" defer></script>{% endif %}
 
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <script {{ nonce_attr() }}>
     window.FC_CFG = { donorsURL: "/api/donors?limit=20" };
     (function(){
       var meta=document.getElementById('meta-theme-color'); if(!meta) return;
@@ -319,7 +324,7 @@
   {% endif %}
 
   <!-- Sticky seam calc (minimal) -->
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <script {{ nonce_attr() }}>
   (() => {
     if (window.__fcSeam) return; window.__fcSeam = true;
     const root=document.documentElement;
@@ -335,11 +340,13 @@
   })();
   </script>
 
-  <script {{ nonce_attr() }}{{ nonce_attr() }} src="{{ asset('js/fc_elite.js') }}" defer
+  <script {{ nonce_attr() }} src="{{ asset('js/fc_elite.js') }}" defer
           {% if sri('js/fc_elite.js') %}integrity="{{ sri('js/fc_elite.js') }}" crossorigin="anonymous"{% endif %}></script>
-  <script {{ nonce_attr() }}{{ nonce_attr() }} src="{{ url_for('static', filename='js/ux.js') }}" defer></script>
-  <script {{ nonce_attr() }}{{ nonce_attr() }} src="{{ url_for('static', filename='js/lazy-img.js') }}" defer></script>
-  
+  {% if url_for is defined %}
+    <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/ux.js') }}" defer></script>
+    <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/lazy-img.js') }}" defer></script>
+  {% endif %}
+
   <script {{ nonce_attr() }} type="module">
 (() => {
   if (window.fcTiltInit) return; // run once
@@ -412,7 +419,7 @@
 </script>
 
   <!-- Section reveal + misc -->
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <script {{ nonce_attr() }}>
     (function(){
       try{
         const io=new IntersectionObserver((es)=>es.forEach(x=>x.isIntersecting&&x.target.classList.add('is-visible')), { rootMargin:"-10% 0px -5% 0px" });
@@ -422,7 +429,7 @@
   </script>
 
   <!-- ==== P2P/UTM propagation (sandboxed, CSP-safe) ==== -->
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <script {{ nonce_attr() }}>
   (() => {
     "use strict";
     const qs = new URLSearchParams(location.search);
@@ -493,10 +500,16 @@
   {% block extra_js %}{% endblock %}
 
   <!-- Avoid duplicate heroes -->
-  <script {{ nonce_attr() }}{{ nonce_attr() }} type="module">
+  <script {{ nonce_attr() }} type="module">
     const nodes=document.querySelectorAll('#fc-hero');
     if(nodes.length>1){ [...nodes].slice(1).forEach(n=>n.remove()); console.warn('[fc-hero] duplicate removed'); }
   </script>
+  <!-- DEV inject: QR + SSE (remove before prod) -->
+  <!-- DEV inject: QR + meter (CSP-safe) -->
+  <script {{ nonce_attr() }} defer src="/static/js/qrcode.min.js"></script>
+  <script {{ nonce_attr() }} defer src="/static/js/hero-qr-init.js"></script>
+  <script {{ nonce_attr() }} defer src="/static/js/sse-meter.js"></script>
+  <script defer src="/static/js/qr-init-shim.js"></script>
 </body>
 </html>
 

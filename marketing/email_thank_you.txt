@@ -1,0 +1,14 @@
+Subject: Thank you from {{ team_name|default("Connect ATX Elite") }} — your gift is already at work 🙌
+
+Hi {{ first_name|default("friend") }},
+
+On behalf of {{ team_name|default("Connect ATX Elite") }}, THANK YOU for your gift of {{ amount|default("$___") }} on {{ date|default("__/__/__") }}.
+
+Your support moves a kid forward — directly funding:
+• 🎒 Gear      • 🚌 Travel      • 📚 Tutoring
+
+Quick receipt: {{ receipt_url|default("<< paste Stripe/FC receipt URL >>") }}
+Share our page (huge help!): {{ donate_url|default("<< paste main donate url >>") }}
+
+We’ll share updates as we hit our season goals.  
+— {{ signer|default("Coach & Program Staff") }}

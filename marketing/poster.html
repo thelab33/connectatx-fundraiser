@@ -1,0 +1,81 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Fund the Future — Poster</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{ --accent:#facc15; --ink:#0b0c10; --paper:#0a0b0d; --text:#e9eef9; --mut:#c8d0e0 }
+*{ box-sizing:border-box }
+@page{ size: letter portrait; margin: 0.5in }
+@media print{ .noprint{ display:none } }
+body{ margin:0; font-family: system-ui, Inter, Segoe UI, Roboto, sans-serif; background:#0a0b0d; color:var(--text) }
+.wrap{ width: 8.5in; max-width: 100vw; margin:0 auto; padding:1.1in .75in }
+.poster{ position:relative; border-radius:24px; padding:36px; background:
+  radial-gradient(140% 80% at 50% -10%, color-mix(in srgb,var(--accent) 14%, transparent) 0%, transparent 60%),
+  linear-gradient(180deg,#0a0b0d,#0b0c10 42%,#0a0b0d); border:1px solid rgba(255,255,255,.08);
+  box-shadow: 0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06); }
+h1{ font-size: 72px; line-height: .98; margin: 0 0 8px; font-weight: 1000 }
+h1 .accent{ color:var(--accent) }
+.sub{ font-size: 18px; opacity:.95; margin-bottom: 16px }
+.pills{ display:flex; gap:8px; flex-wrap:wrap; margin: 16px 0 24px }
+.pill{ background:linear-gradient(180deg,#fff3c4,#fde68a); color:#111; border-radius:999px; padding:8px 12px; font-weight:900; font-size:14px }
+.row{ display:grid; grid-template-columns: 2fr 1fr; gap:28px; align-items:center }
+.card{ border-radius:16px; padding:16px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14) }
+#qr{ width:100%; aspect-ratio:1; display:grid; place-items:center }
+#qr > canvas, #qr > img{ width:100%; height:auto; border-radius:12px; box-shadow:0 12px 28px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,255,255,.08) }
+.url{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace; font-size:12px; color:var(--mut); word-break:break-all }
+.brand{ display:flex; gap:8px; align-items:center; font-weight:900; margin-bottom:6px }
+.dot{ width:10px; height:10px; border-radius:50%; background:var(--accent) }
+.cta{ display:inline-block; margin-top:10px; font-weight:900; padding:12px 16px; border-radius:999px;
+      color:#0b0f15; background:linear-gradient(180deg,#fffbe6,var(--accent)); border:1px solid rgba(0,0,0,.22) }
+@media (max-width: 840px){ .row{ grid-template-columns:1fr } .wrap{ padding:24px } h1{ font-size:42px } }
+</style>
+
+<div class="wrap">
+  <div class="poster">
+    <div class="brand"><span class="dot"></span> <span id="team">Connect ATX Elite</span></div>
+    <h1>Fuel the Season.<br><span class="accent">Fund the Future.</span></h1>
+    <div class="sub">Direct support for gear, travel, and tutoring — every dollar moves a kid forward.</div>
+    <div class="pills">
+      <span class="pill">🏅 500+ Families</span>
+      <span class="pill">📚 3.5 Team GPA</span>
+      <span class="pill">🏀 AAU Gold Certified</span>
+    </div>
+
+    <div class="row">
+      <div>
+        <div class="card">
+          <div style="font-weight:900;margin-bottom:6px">Scan to Give</div>
+          <div id="qr"></div>
+          <div class="url" id="url"></div>
+          <a class="cta" id="cta" href="#" target="_blank" rel="noopener">Donate →</a>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <div style="font-weight:900;margin-bottom:6px">Your Impact</div>
+          <ul style="margin:0;padding-left:18px;line-height:1.5">
+            <li>🎒 Gear: uniforms, shoes, socks</li>
+            <li>🚌 Travel: hotels, vans, tournament fees</li>
+            <li>📚 Tutoring: academic support and mentoring</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../static/js/qrcode.min.js"></script>
+<script>
+(function(){
+  // Set your base donate URL (server or prod)
+  var base = (location.origin||'') + '/donate';
+  var peer = new URLSearchParams(location.search).get('peer');
+  var u = new URL(base, location.origin);
+  u.searchParams.set('utm_source','qr'); u.searchParams.set('utm_medium','poster'); u.searchParams.set('utm_campaign','fundraiser');
+  if (peer) u.searchParams.set('peer', peer);
+  document.getElementById('url').textContent = u.toString();
+  document.getElementById('cta').href = u.toString();
+  new QRCode(document.getElementById('qr'), { text: u.toString(), width: 512, height: 512, correctLevel: QRCode.CorrectLevel.M });
+})();
+</script>
+<p class="noprint" style="text-align:center; color:#cbd5e1; margin:.5rem 0 2rem">Tip: File → Print → Save as PDF (Letter). For A4, change the page size in print options.</p>

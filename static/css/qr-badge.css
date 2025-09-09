@@ -1,0 +1,14 @@
+#fc-hero .qr-badge{
+  position:absolute; right:clamp(12px,2vw,24px); bottom:clamp(12px,2vw,24px);
+  width:min(340px,90vw); padding:12px 12px 10px; border-radius:16px;
+  background:rgba(0,0,0,.55); border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 12px 28px rgba(0,0,0,.35); backdrop-filter:blur(6px)
+}
+#fc-hero .qr-badge .qr-meter{margin-bottom:.55rem}
+#fc-hero .qr-badge .hm-track{height:10px;border-radius:999px;background:rgba(255,255,255,.16);overflow:hidden}
+#fc-hero .qr-badge .hm-fill{height:100%;width:var(--p,0%);background:linear-gradient(90deg,#e5e7eb,#facc15)}
+#fc-hero .qr-badge .hm-stats{display:flex;gap:.4rem;justify-content:flex-end;font-weight:800;opacity:.95}
+#fc-hero .qr-badge .qr-caption{margin:.45rem 0 0;text-align:center;opacity:.9}
+@media (max-width: 560px){
+  #fc-hero .qr-badge{right:8px;left:8px;width:auto}
+}

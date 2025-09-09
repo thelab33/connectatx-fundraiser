@@ -1,0 +1,19 @@
+Subject: Sponsor local scholars & athletes — {{ team_name|default("Connect ATX Elite") }} 2024–25
+
+Hi {{ contact_name|default("there") }},
+
+I’m reaching out from {{ team_name|default("Connect ATX Elite") }}. We’re a family-built, community-backed AAU program (500+ families served; 3.5 team GPA). This season we’re inviting a small group of businesses to sponsor our travel, tutoring, and gear.
+
+Why partner:
+• Community visibility with families across Central TX
+• Recognition on site/social; VIP invites; (Platinum) logo on jerseys
+• Direct impact: scholarships, travel, tutoring
+
+Tiers: Bronze $500 • Silver $1,000 • Gold $2,500 • Platinum $5,000+  
+Deck (1-pager): {{ deck_url|default("<< link to PDF or site /tiers >>") }}  
+Give or pledge: {{ donate_url|default("<< direct sponsor/donate url >>") }}
+
+Could we send the deck and hold a 10-minute call next week?
+
+Thank you for supporting local youth!
+— {{ sender_name|default("Coach / Program Lead") }} · {{ phone|default("(___) ___-____") }}

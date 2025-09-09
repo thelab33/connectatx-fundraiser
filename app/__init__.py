@@ -238,6 +238,16 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
     app.jinja_env.globals.setdefault("static_url", static_url)
     app.jinja_env.globals.setdefault("asset_url", static_url)
 
+    # Tiny SRI helper for templates:
+    #   <link rel="stylesheet" href="{{ asset('css/app.min.css') }}"{{ sri_attr('css/app.min.css') }}>
+    def sri_attr(path: str) -> str:
+        try:
+            h = (app.jinja_env.globals.get("SRI") or {}).get(path)
+            return f' integrity="{h}" crossorigin="anonymous"' if h else ""
+        except Exception:
+            return ""
+    app.jinja_env.globals.setdefault("sri_attr", sri_attr)
+
     # Config
     cfg = _resolve_config(config_class)
     try:
@@ -351,6 +361,28 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
 
     _load_asset_manifest(app)
 
+    # ── CSP extender: if some middleware already set CSP, append YT hosts ──
+    @app.after_request
+    def _extend_csp_for_youtube(resp):
+        try:
+            csp = resp.headers.get("Content-Security-Policy")
+            if not csp:
+                return resp  # our default will be set by _std_headers below
+            yt_hosts = "https://www.youtube-nocookie.com https://www.youtube.com"
+            # frame-src
+            if "frame-src" in csp:
+                if ("youtube.com" not in csp) and ("youtube-nocookie.com" not in csp):
+                    csp = re.sub(r"(frame-src[^;]*)(;|$)", rf"\1 {yt_hosts};", csp, count=1)
+            else:
+                csp = csp.rstrip("; ") + f"; frame-src 'self' {yt_hosts}"
+            # img-src (thumbnails)
+            if "img-src" in csp and "i.ytimg.com" not in csp:
+                csp = re.sub(r"(img-src[^;]*)(;|$)", r"\1 https://i.ytimg.com;", csp, count=1)
+            resp.headers["Content-Security-Policy"] = csp
+        except Exception:
+            pass
+        return resp
+
     # Security headers (CSP + others)
     @app.after_request
     def _std_headers(resp):
@@ -364,20 +396,23 @@ def create_app(config_class: ConfigLike | None = None) -> Flask:
         paypal_api_sbx = "https://api-m.sandbox.paypal.com"
         socketio_cdn = "https://cdn.socket.io"
 
-        csp = (
+        # Include YT + ytimg in the DEFAULT we set if no CSP exists yet.
+        yt_hosts = "https://www.youtube-nocookie.com https://www.youtube.com"
+
+        csp_default = (
             "default-src 'self'; "
             f"script-src 'self' 'nonce-{nonce}' 'strict-dynamic' {stripe_js} {paypal_core} {paypal_all} {socketio_cdn}; "
             f"connect-src 'self' {stripe_api} {paypal_api_live} {paypal_api_sbx} wss:; "
-            "img-src 'self' data: blob: https:; "
+            "img-src 'self' data: blob: https: https://i.ytimg.com; "
             f"style-src 'self' 'nonce-{nonce}' 'unsafe-inline'; "
             "font-src 'self' https: data:; "
-            f"frame-src 'self' {stripe_js} https://checkout.stripe.com {paypal_core} {paypal_all}; "
+            f"frame-src 'self' {stripe_js} https://checkout.stripe.com {paypal_core} {paypal_all} {yt_hosts}; "
             "frame-ancestors 'none'; "
             "base-uri 'self'; "
             "object-src 'none'; "
             "form-action 'self' https://checkout.stripe.com https://www.paypal.com;"
         )
-        resp.headers.setdefault("Content-Security-Policy", csp)
+        resp.headers.setdefault("Content-Security-Policy", csp_default)
         resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
         resp.headers.setdefault("Permissions-Policy", "camera=(), geolocation=(), microphone=(), payment=()")
         resp.headers.setdefault("X-Frame-Options", "DENY")

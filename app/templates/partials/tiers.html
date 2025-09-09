@@ -1,5 +1,7 @@
-{# ================== Sponsorship Tiers — FundChamps SV-Elite v3.9 (flip-guard • deep-link • live sync) ================== #}
+{# ================== Sponsorship Tiers — SV-Elite 5.7 Compact Matrix (Pro) ================== #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
 {% set brand_color            = (team.theme_color if team and team.theme_color else '#facc15') %}
 {% set donate_init_url        = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint('main.donate')) else '/donate') %}
 {% set tiers_stats_url        = (safe_url_for('main.stats_json') if (safe_url_for is defined and has_endpoint('main.stats_json')) else '/stats') %}
@@ -9,276 +11,265 @@
 {% set stripe_payment_link    = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
 {% set team_name              = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
 
-<section id="tiers" class="section section--tight" aria-labelledby="tiers-heading"
-         data-where="tiers" data-currency="{{ currency }}" data-spl="{{ stripe_payment_link|e }}">
-  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
-    /* ===== Scoped to #tiers only (no CSS leak) ===== */
-    #tiers{ --fc-brand: {{ brand_color }}; color-scheme: dark light }
-    #tiers .section-head{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem}
-    #tiers .heading{
-      font-weight:1000;letter-spacing:-.02em;
-      font-size:clamp(1.6rem,2.8vw,2.25rem);
-      background-image:linear-gradient(180deg,#fff 0%, color-mix(in srgb, var(--fc-brand) 72%, #fff) 100%);
-      -webkit-background-clip:text;background-clip:text;color:transparent;
-      text-shadow:0 0 .5px rgba(0,0,0,.65),0 12px 28px rgba(0,0,0,.35);
-    }
-    @supports not ((-webkit-background-clip:text) or (background-clip:text)){ #tiers .heading{color:var(--fc-brand);background:none;text-shadow:none} }
+<section id="tiers"
+         class="section section--flush tiers--compact"
+         aria-labelledby="tiers-heading"
+         data-where="tiers"
+         data-currency="{{ currency }}"
+         data-spl="{{ stripe_payment_link|e }}">
+  <div class="mx-auto w-[min(1380px,98vw)]">
+    <style {{ nonce_attr() }}>
+      /* ===== Compact Matrix (flush with hero, 5-up desktop) ===== */
+      #tiers{
+        --fc-brand: {{ brand_color }};
+        --shell-w: min(1380px, 98vw);
+        --pad-x: clamp(14px, 2.6vw, 28px);
+        --gap: clamp(16px, 1.6vw, 22px);
+        --min-col: 220px;
+        color-scheme: dark light;
+        scroll-margin-top: calc(var(--fc-header-h,72px) + 10px);
+      }
+      #tiers .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,1px,1px)!important;white-space:nowrap!important;border:0!important}
 
-    /* Controls bar */
-    #tiers .controls{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;margin-top:.5rem}
-    #tiers .controls .spacer{flex:1}
-    #tiers .controls .chip{display:inline-flex;align-items:center;gap:.4rem;padding:.35rem .6rem;border-radius:.6rem;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);font-weight:700;font-size:.85rem;color:#e5e7eb}
-    #tiers .controls select{appearance:none;background:#0b0c0f;color:#e5e7eb;border:1px solid rgba(255,255,255,.12);border-radius:.6rem;padding:.45rem .7rem;font-weight:700}
+      /* Section head + controls align to hero shell */
+      #tiers .section-head,
+      #tiers .controls,
+      #tiers #tiers-grid{
+        max-width: var(--shell-w);
+        margin-inline: auto;
+        padding-inline: var(--pad-x);
+      }
+      #tiers .section-head{display:flex;align-items:center;justify-content:space-between;gap:.65rem;margin-bottom:.25rem}
+      #tiers .heading{
+        font-weight:1000;letter-spacing:-.02em;
+        font-size:clamp(1.35rem,1.4vw,1.9rem);
+        background-image:linear-gradient(180deg,#fff, color-mix(in srgb, var(--fc-brand) 72%, #fff));
+        -webkit-background-clip:text;background-clip:text;color:transparent;
+      }
 
-    #tiers .fc-tiers{content-visibility:auto;contain-intrinsic-size:600px}
-    #tiers .grid{contain:layout paint}
+      /* Controls (trim) */
+      #tiers .controls{display:flex;flex-wrap:wrap;gap:.4rem;align-items:center;margin:.25rem 0 .65rem}
+      #tiers .controls .spacer{flex:1}
+      #tiers .chip{display:inline-flex;align-items:center;gap:.4rem;padding:.28rem .5rem;border-radius:.55rem;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);font-weight:900;font-size:.8rem;color:#e5e7eb}
+      #tiers select{appearance:none;background:#0b0c0f;color:#e5e7eb;border:1px solid rgba(255,255,255,.14);border-radius:.55rem;padding:.35rem .6rem;font-weight:900;font-size:.85rem}
 
-    /* Flip cards (motion-safe) */
-    #tiers .flip-card{perspective:1800px;min-height:400px;cursor:pointer;touch-action:manipulation;position:relative}
-    #tiers .flip-card-inner{position:relative;width:100%;height:100%;min-height:372px;transform-style:preserve-3d;will-change:transform;transition:transform .7s cubic-bezier(.4,1.6,.6,1)}
-    #tiers .flip-card.card-flipped .flip-card-inner,
-    #tiers .flip-card:focus-visible .flip-card-inner{transform:rotateY(180deg)}
-    #tiers.tiers-hover .flip-card:hover .flip-card-inner{transform:rotateY(180deg)}
-    #tiers .flip-card-front,#tiers .flip-card-back{
-      position:absolute;inset:0;border-radius:1rem;overflow:hidden;z-index:1;backface-visibility:hidden;-webkit-backface-visibility:hidden;transform:translateZ(0)
-    }
-    #tiers .flip-card-back{transform:rotateY(180deg) translateZ(1px);display:flex;flex-direction:column;align-items:center;justify-content:center}
+      /* Grid → 5 / 4 / 3 / 2 / 1 */
+      #tiers #tiers-grid{
+        display:grid;
+        gap: var(--gap);
+        grid-template-columns: repeat(5, minmax(var(--min-col), 1fr));
+        align-items: stretch;
+      }
+      @media (max-width:1280px){ #tiers #tiers-grid{ grid-template-columns: repeat(4, minmax(var(--min-col),1fr)); } }
+      @media (max-width:1024px){ #tiers #tiers-grid{ grid-template-columns: repeat(3, minmax(var(--min-col),1fr)); } }
+      @media (max-width:768px) { #tiers #tiers-grid{ grid-template-columns: repeat(2, minmax(var(--min-col),1fr)); } }
+      @media (max-width:520px) { #tiers #tiers-grid{ grid-template-columns: 1fr; } }
 
-    @media (hover:none), (pointer:coarse){
-      #tiers .flip-card:hover .flip-card-inner{transform:none!important}
-    }
-    @media (prefers-reduced-motion: reduce){ #tiers .flip-card-inner{transition:none!important} }
+      /* Square-ish tiles with glass */
+      #tiers .flip-card{position:relative;aspect-ratio:1 / 1.05;min-height:0;cursor:pointer;perspective:1400px;touch-action:manipulation}
+      #tiers .flip-card-inner{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.4,1.2,.4,1)}
+      #tiers .flip-card.card-flipped .flip-card-inner,
+      #tiers.tiers-hover .flip-card:hover .flip-card-inner{transform:rotateY(180deg)}
+      @media (hover:none),(pointer:coarse){ #tiers .flip-card:hover .flip-card-inner{transform:none!important} }
+      @media (prefers-reduced-motion:reduce){ #tiers .flip-card-inner{transition:none!important} }
 
-    /* Glass + spotlight */
-    #tiers .glassy-card{
-      background:rgba(17,17,17,.58);backdrop-filter:blur(16px) saturate(120%);-webkit-backdrop-filter:blur(16px) saturate(120%);
-      position:relative;isolation:isolate;border:1px solid color-mix(in srgb, var(--fc-brand) 26%, transparent);
-      box-shadow:0 10px 34px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06)
-    }
-    #tiers .glassy-card::before{content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;z-index:0;background:
-        radial-gradient(160% 90% at var(--fc-spot-x,50%) var(--fc-spot-y,0%), color-mix(in srgb, var(--fc-brand) 26%, transparent), transparent 55%),
-        linear-gradient(to top, rgba(255,255,255,.06), transparent 50%);filter:blur(18px);opacity:.45}
-    #tiers .glassy-card::after{content:"";position:absolute;inset:0 0 auto 0;height:38%;background:linear-gradient(to bottom, rgba(255,255,255,.06), transparent);pointer-events:none}
+      #tiers .face{position:absolute;inset:0;border-radius:.9rem;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+      #tiers .front{padding:.9rem}
+      #tiers .back{padding:1rem;display:grid;place-items:center;text-align:center;transform:rotateY(180deg) translateZ(1px)}
 
-    /* Price/badges */
-    #tiers .price{font-variant-numeric:tabular-nums}
-    #tiers .badge{border:1px solid color-mix(in srgb, var(--fc-brand) 20%, transparent);background:rgba(250,204,21,.10)}
-    #tiers .ribbon{position:absolute;top:12px;right:-42px;transform:rotate(35deg);background:linear-gradient(90deg,#eab308,#fde68a);color:#111;font-weight:900;font-size:11px;letter-spacing:.02em;padding:.25rem 2.25rem;box-shadow:0 6px 22px rgba(234,179,8,.25)}
+      #tiers .glass{
+        background:linear-gradient(180deg,rgba(17,17,17,.66),rgba(17,17,17,.52));
+        -webkit-backdrop-filter:blur(10px) saturate(120%);backdrop-filter:blur(10px) saturate(120%);
+        border:1px solid color-mix(in srgb, var(--fc-brand) 22%, transparent);
+        box-shadow:0 8px 28px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.06);
+      }
+      #tiers .glass::before{
+        content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
+        background:radial-gradient(120% 80% at var(--spot-x,50%) var(--spot-y,0%), color-mix(in srgb, var(--fc-brand) 22%, transparent), transparent 52%);
+        filter:blur(14px);opacity:.35
+      }
 
-    /* Slots meter */
-    #tiers .slots{height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);margin-top:.5rem}
-    #tiers .slots > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#fde047,#facc15);box-shadow:0 0 10px rgba(250,204,21,.35)}
+      /* Header row */
+      #tiers .hdr{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:.45rem}
+      #tiers .emoji{font-size:1.15rem}
+      #tiers .title{font-weight:1000;color:#fef3c7;line-height:1;font-size:1rem}
+      #tiers .meta{font-size:.78rem;color:#cbd5e1}
+      #tiers .badge{border:1px solid color-mix(in srgb, var(--fc-brand) 20%, transparent);background:rgba(250,204,21,.10);padding:.1rem .35rem;border-radius:.5rem;font-size:.65rem;color:#fde68a}
+      #tiers .ribbon{position:absolute;top:10px;right:10px;background:linear-gradient(90deg,#eab308,#fde68a);color:#111;font-weight:900;font-size:10px;padding:.18rem .44rem;border-radius:.45rem}
 
-    /* States */
-    #tiers .soldout{pointer-events:none;opacity:.58;filter:saturate(.6)}
-    #tiers .pulse{animation:tiers-pulse 1100ms ease-out 1}
-    @keyframes tiers-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.03)}}
+      /* Price + micro meter */
+      #tiers .price{font-variant-numeric:tabular-nums;font-weight:900;color:#fde68a;font-size:.96rem}
+      #tiers .slots{height:6px;border-radius:999px;background:rgba(255,255,255,.10);overflow:hidden;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08);margin-top:.45rem}
+      #tiers .slots > i{display:block;height:100%;width:0;background:linear-gradient(90deg,#fde047,#facc15)}
 
-    /* ≤360px: keep CTAs single-line and reduce gaps */
-    @media (max-width:360px){
-      #tiers .btn-row{gap:.4rem!important;flex-wrap:nowrap!important}
-      #tiers .btn-row .chip{padding-inline:.5rem}
-      #tiers [data-tier-cta]{padding-inline:.65rem}
-    }
+      /* Perk chips (1–2 rows max) */
+      #tiers .perks{display:flex;flex-wrap:wrap;gap:.35rem;margin-top:.55rem}
+      #tiers .perk{display:inline-flex;align-items:center;gap:.3rem;padding:.24rem .44rem;font-size:.78rem;font-weight:800;border-radius:.55rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#e5e7eb;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
-    /* Print: show backs as details (no flip) */
-    @media print{
-      #tiers .flip-card{break-inside:avoid}
-      #tiers .flip-card-back{position:static;transform:none}
-      #tiers .flip-card-front{display:none!important}
-    }
+      /* Buttons */
+      #tiers .btn-row{display:flex;gap:.45rem;align-items:center;margin-top:.6rem}
+      #tiers [data-tier-cta]{font-size:.9rem;padding:.56rem .8rem;border-radius:.6rem}
+      #tiers .btn-ghost{padding:.42rem .62rem;border-radius:.6rem;font-size:.82rem;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#e5e7eb}
 
-    /* Forced colors / HC */
-    @media (forced-colors: active){
-      #tiers .glassy-card{background:Canvas!important;border-color:CanvasText!important}
-      #tiers .badge{border-color:CanvasText!important;color:CanvasText!important;background:Canvas!important}
-    }
-  </style>
+      /* States & accessibility */
+      #tiers .flip-card:focus-visible{outline:2px solid color-mix(in srgb, var(--fc-brand) 80%, #fff);outline-offset:2px}
+      #tiers .soldout{pointer-events:none;opacity:.6;filter:saturate(.7)}
 
-  <div class="section-head">
-    <h2 id="tiers-heading" class="heading" tabindex="0" aria-label="Sponsorship Tiers">
-      Sponsorship&nbsp;Tiers
-    </h2>
-    <p class="sr-only">Press Enter or Space on a tier card to flip and see details. Press Escape to return.</p>
-  </div>
+      /* Make faces fill cells perfectly */
+      #tiers #tiers-grid .flip-card,
+      #tiers #tiers-grid .flip-card-inner,
+      #tiers #tiers-grid .front,
+      #tiers #tiers-grid .back{height:100%}
 
-  <!-- Controls bar -->
-  <div class="controls" aria-label="Tier controls">
-    <label class="chip" for="tiers-monthly">
-      <input id="tiers-monthly" type="checkbox" class="accent-yellow-400" aria-describedby="tiers-price-mode" />
-      Show monthly
-    </label>
-    <span id="tiers-price-mode" class="sr-only">Toggle between monthly and one-time pricing.</span>
+      @media (forced-colors:active){
+        #tiers .glass{background:Canvas!important;border-color:CanvasText!important;box-shadow:none}
+        #tiers .perk{background:Canvas!important;border-color:CanvasText!important}
+      }
+    </style>
 
-    <div class="spacer" aria-hidden="true"></div>
+    <div class="section-head">
+      <h2 id="tiers-heading" class="heading" tabindex="0">Sponsorship&nbsp;Tiers</h2>
+      <p class="sr-only">Press Enter/Space to flip a tier for details. Press Escape to close.</p>
+    </div>
 
-    <label class="sr-only" for="tiers-sort">Sort tiers</label>
-    <select id="tiers-sort" aria-label="Sort tiers">
-      <option value="rec">Sort: Recommended</option>
-      <option value="price-desc">Price: High → Low</option>
-      <option value="price-asc">Price: Low → High</option>
-      <option value="availability">Availability</option>
-    </select>
-  </div>
+    <div class="controls" aria-label="Tier controls">
+      <label class="chip" for="tiers-monthly">
+        <input id="tiers-monthly" type="checkbox" aria-describedby="tiers-price-mode" /> Show monthly
+      </label>
+      <span id="tiers-price-mode" class="sr-only">Toggle between monthly and one-time pricing.</span>
+      <div class="spacer" aria-hidden="true"></div>
+      <label class="sr-only" for="tiers-sort">Sort tiers</label>
+      <select id="tiers-sort" aria-label="Sort tiers">
+        <option value="rec">Sort: Recommended</option>
+        <option value="price-desc">Price: High → Low</option>
+        <option value="price-asc">Price: Low → High</option>
+        <option value="availability">Availability</option>
+      </select>
+    </div>
 
-  {% set tiers = tiers if tiers is defined and tiers else [
-    {"title":"Platinum","amount":"5,000+","benefits":["Logo on jerseys","Shout-outs on social","VIP invites"],"emoji":"🏆","badge":"VIP","fomo":"Only 2 Platinum spots left!","slots_left":2,"price_id":None},
-    {"title":"Gold","amount":"2,500","benefits":["Warm-ups logo","Social features","Appreciation invites"],"emoji":"🥇","popular":true,"fomo":"Most Popular! Limited to 4 sponsors.","slots_left":4,"price_id":None},
-    {"title":"Silver","amount":"1,000","benefits":["Social shout-outs","Thank-you certificate","Board listing"],"emoji":"🥈","fomo":"Recognition on sponsor board.","slots_left":8,"price_id":None},
-    {"title":"Bronze","amount":"500","benefits":["Public thank-you","Board listing"],"emoji":"🥉","fomo":"Perfect for first-timers.","slots_left":12,"price_id":None},
-    {"title":"Custom","amount":"Custom","benefits":["Tailored benefits","Personalized impact"],"emoji":"✨","fomo":"We build a package for you.","slots_left":999,"price_id":None}
-  ] %}
-
-  <!-- Grid -->
-  <div
-    class="fc-tiers grid gap-6 mt-4 sm:grid-cols-2 lg:grid-cols-3"
-    id="tiers-grid"
-    role="list"
-    aria-labelledby="tiers-heading"
-    data-stats-url="{{ tiers_stats_url }}"
-    data-sse-url="{{ tiers_sse_url }}"
-    data-donate-url="{{ donate_init_url }}"
-    data-has-stripe="{{ '1' if stripe_publishable_key else '0' }}"
-    data-currency="{{ currency }}"
-    data-p2p-propagate="1"
-  >
+    {% set tiers = tiers if tiers is defined and tiers else [
+      {"title":"Platinum","amount":"5,000+","benefits":["Logo on jerseys","Shout-outs on social","VIP invites"],"emoji":"🏆","badge":"VIP","fomo":"Only 2 Platinum spots left!","slots_left":2},
+      {"title":"Gold","amount":"2,500","benefits":["Warm-ups logo","Social features","Appreciation invites"],"emoji":"🥇","popular":true,"fomo":"Most Popular! Limited to 4 sponsors.","slots_left":4},
+      {"title":"Silver","amount":"1,000","benefits":["Social shout-outs","Thank-you certificate","Board listing"],"emoji":"🥈","fomo":"Recognition on sponsor board.","slots_left":8},
+      {"title":"Bronze","amount":"500","benefits":["Public thank-you","Board listing"],"emoji":"🥉","fomo":"Perfect for first-timers.","slots_left":12},
+      {"title":"Custom","amount":"Custom","benefits":["Tailored benefits","Personalized impact"],"emoji":"✨","fomo":"We build a package for you.","slots_left":999}
+    ] %}
     {% set cap_map = {'Platinum':2,'Gold':4,'Silver':8,'Bronze':12,'Custom':999} %}
-    {% for tier in tiers %}
-      {% set is_premium   = tier.title in ['Gold','Platinum','VIP'] %}
-      {% set amt_clean    = 'custom' if tier.amount|string|lower == 'custom' else (tier.amount|string|replace('+','')|replace(',','')) %}
-      {% set price_id     = tier.price_id if 'price_id' in tier else None %}
-      {% set checkout_url = tier.checkout_url if 'checkout_url' in tier else None %}
-      {% set sold_out     = (tier.slots_left is not none and (tier.slots_left|int) <= 0) %}
 
-      <article
-        class="flip-card group rounded-2xl outline-none focus:ring-2 focus:ring-yellow-300 {% if sold_out %}soldout{% endif %}"
-        role="listitem"
-        aria-roledescription="sponsorship tier"
-        tabindex="0"
-        aria-labelledby="tier-{{ loop.index }}-title"
-        aria-describedby="tier-{{ loop.index }}-benefits"
-        aria-expanded="false"
-        aria-controls="back-{{ loop.index }}"
-        data-tier="{{ tier.title }}"
-        data-amount="{{ amt_clean }}"
-        data-slots="{{ tier.slots_left or 0 }}"
-        data-cap="{{ cap_map.get(tier.title, 12) }}"
-        {% if price_id %}data-price-id="{{ price_id }}"{% endif %}
-        {% if checkout_url %}data-checkout-url="{{ checkout_url }}"{% endif %}
-        itemscope itemtype="https://schema.org/Offer"
-      >
-        <meta itemprop="category" content="Sponsorship" />
-        <meta itemprop="name" content="{{ tier.title }} Tier" />
-        <meta itemprop="priceCurrency" content="{{ currency }}" />
-        <meta itemprop="availability" content="https://schema.org/{% if sold_out %}SoldOut{% else %}InStock{% endif %}" />
+    <!-- Matrix -->
+    <div id="tiers-grid"
+         class="fc-tiers"
+         role="list"
+         aria-labelledby="tiers-heading"
+         data-stats-url="{{ tiers_stats_url }}"
+         data-sse-url="{{ tiers_sse_url }}"
+         data-donate-url="{{ donate_init_url }}"
+         data-has-stripe="{{ '1' if stripe_publishable_key else '0' }}"
+         data-currency="{{ currency }}"
+         data-p2p-propagate="1">
+      {% for tier in tiers %}
+        {% set is_premium = tier.title in ['Gold','Platinum','VIP'] %}
+        {% set amt_clean  = 'custom' if tier.amount|string|lower == 'custom' else (tier.amount|string|replace('+','')|replace(',','')) %}
+        {% set price_id   = tier.price_id if 'price_id' in tier else None %}
+        {% set checkout_url = tier.checkout_url if 'checkout_url' in tier else None %}
+        {% set sold_out = (tier.slots_left is not none and (tier.slots_left|int) <= 0) %}
 
-        <div class="flip-card-inner" data-flip-root>
-          <!-- FRONT -->
-          <div class="flip-card-front glassy-card bg-zinc-900/60 p-5 shadow-xl" aria-hidden="false">
-            {% if tier.popular %}<div class="ribbon" aria-hidden="true">Most&nbsp;popular</div>{% endif %}
+        <article id="tier-card-{{ loop.index }}"
+                 class="flip-card {% if sold_out %}soldout{% endif %}"
+                 role="listitem"
+                 aria-roledescription="sponsorship tier"
+                 tabindex="0"
+                 aria-labelledby="tier-{{ loop.index }}-title"
+                 aria-describedby="tier-{{ loop.index }}-benefits"
+                 aria-expanded="false"
+                 aria-controls="back-{{ loop.index }}"
+                 data-tier="{{ tier.title }}"
+                 data-amount="{{ amt_clean }}"
+                 data-slots="{{ tier.slots_left or 0 }}"
+                 data-cap="{{ cap_map.get(tier.title, 12) }}"
+                 {% if price_id %}data-price-id="{{ price_id }}"{% endif %}
+                 {% if checkout_url %}data-checkout-url="{{ checkout_url }}"{% endif %}
+                 itemscope itemtype="https://schema.org/Offer">
+          <meta itemprop="category" content="Sponsorship" />
+          <meta itemprop="name" content="{{ tier.title }} Tier" />
+          <meta itemprop="priceCurrency" content="{{ currency }}" />
+          <meta itemprop="availability" content="https://schema.org/{% if sold_out %}SoldOut{% else %}InStock{% endif %}" />
 
-            <div class="flex items-start justify-between gap-3">
-              <div class="flex items-center gap-3">
-                <div class="text-2xl" aria-hidden="true">{{ tier.emoji }}</div>
+          <div class="flip-card-inner">
+            <!-- FRONT -->
+            <div class="face front glass">
+              {% if tier.popular %}<span class="ribbon" aria-hidden="true">Popular</span>{% endif %}
+              <div class="hdr">
+                <span class="emoji" aria-hidden="true">{{ tier.emoji }}</span>
                 <div>
-                  <h3 id="tier-{{ loop.index }}-title" class="text-xl font-extrabold text-yellow-300">{{ tier.title }}</h3>
-                  <p class="text-sm text-zinc-300">
+                  <h3 id="tier-{{ loop.index }}-title" class="title">{{ tier.title }}</h3>
+                  <div class="meta">
                     {% if tier.amount|string|lower == 'custom' %}
-                      <span class="price" data-original="custom" data-monthly="custom">Custom package</span>
+                      <span class="price" data-original="custom">Custom package</span>
                     {% else %}
-                      From <span class="price font-semibold text-yellow-200" data-original="${{ tier.amount }}" data-amt="{{ amt_clean }}">{{ "$" ~ tier.amount }}</span>{% if '+' in tier.amount|string %}<span class="opacity-80">+</span>{% endif %}
+                      From <span class="price" data-amt="{{ amt_clean }}" data-original="${{ tier.amount }}">{{ "$" ~ tier.amount }}</span>{% if '+' in tier.amount|string %}+{% endif %}
                       <span class="sr-only">one-time</span>
                     {% endif %}
-                  </p>
+                  </div>
+                </div>
+                {% if tier.badge %}<span class="badge">{{ tier.badge }}</span>{% endif %}
+              </div>
+
+              <div class="slots" aria-label="Availability">
+                <i role="progressbar"
+                   aria-valuemin="0"
+                   aria-valuemax="{{ cap_map.get(tier.title, 12) }}"
+                   aria-valuenow="{{ (cap_map.get(tier.title, 12) - (tier.slots_left or 0)) }}"
+                   style="width: {{ ((cap_map.get(tier.title, 12) - (tier.slots_left or 0)) * 100 // cap_map.get(tier.title, 12)) }}%"></i>
+              </div>
+
+              <div id="tier-{{ loop.index }}-benefits" class="perks" aria-label="Benefits">
+                {% for ben in tier.benefits %}<span class="perk">{{ ben }}</span>{% endfor %}
+              </div>
+
+              <div class="btn-row">
+                <button
+                  class="{% if sold_out %}opacity-60 cursor-not-allowed {% endif %}{% if is_premium %}bg-yellow-400 text-black ring-1 ring-yellow-400/60{% else %}bg-zinc-900 text-yellow-200 border border-yellow-400/25{% endif %}"
+                  data-tier-cta type="button" data-where="tiers"
+                  aria-label="Sponsor the {{ tier.title }} tier{% if tier.amount|string|lower != 'custom' %} for ${{ tier.amount }}{% endif %}"
+                  {% if sold_out %}disabled{% endif %}{% if stripe_payment_link %} data-payment-link="1"{% endif %}>
+                  Sponsor {{ tier.title }}
+                </button>
+                <button type="button" class="btn-ghost" data-share data-where="tiers" aria-label="Share {{ tier.title }} tier">Share</button>
+              </div>
+            </div>
+
+            <!-- BACK -->
+            <div id="back-{{ loop.index }}" class="face back glass" aria-hidden="true">
+              <div>
+                <div class="emoji" aria-hidden="true" style="font-size:1.4rem">{{ tier.emoji }}</div>
+                <h3 class="title" style="margin-top:.35rem">{{ tier.title }} Tier</h3>
+                <p class="meta" style="margin-top:.25rem">{{ tier.fomo or "Sponsor now for max impact!" }}</p>
+                <div class="btn-row" style="margin-top:.7rem">
+                  <button
+                    class="{% if sold_out %}opacity-60 cursor-not-allowed {% endif %}{% if is_premium %}bg-yellow-400 text-black ring-1 ring-yellow-400/60{% else %}bg-zinc-900 text-yellow-200 border border-yellow-400/25{% endif %}"
+                    type="button" data-tier-cta data-where="tiers"
+                    aria-label="Sponsor the {{ tier.title }} tier now"
+                    {% if sold_out %}disabled{% endif %}{% if stripe_payment_link %} data-payment-link="1"{% endif %}>
+                    Become a {{ tier.title }} Sponsor
+                  </button>
                 </div>
               </div>
-
-              <div class="flex flex-col items-end gap-2 text-right">
-                {% if tier.badge %}
-                  <span class="badge rounded-full bg-black/50 px-2 py-0.5 text-[11px] font-semibold text-yellow-200">{{ tier.badge }}</span>
-                {% endif %}
-                {% if tier.slots_left is not none %}
-                  <span class="mt-1 text-[11px] tabular-nums {% if sold_out %}text-red-300{% else %}text-yellow-200/90{% endif %}" data-slots-left aria-live="polite">
-                    {% if sold_out %}Sold out{% elif tier.slots_left|int <= 4 %}Only {{ tier.slots_left }} left{% else %}{{ tier.slots_left }} available{% endif %}
-                  </span>
-                {% endif %}
-              </div>
             </div>
-
-            <ul id="tier-{{ loop.index }}-benefits" class="mt-4 space-y-2 text-sm tier-perks">
-              {% for ben in tier.benefits %}
-              <li class="flex items-start gap-2">
-                <svg viewBox="0 0 20 20" class="mt-0.5 h-4 w-4" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0l-3-3a1 1 0 111.414-1.414l2.293 2.293 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                </svg>
-                <span>{{ ben }}</span>
-              </li>
-              {% endfor %}
-            </ul>
-
-            <!-- Accessible scarcity meter -->
-            <div class="mt-3 h-2 rounded bg-zinc-800 overflow-hidden slots" aria-label="Availability">
-              <i class="h-2" role="progressbar"
-                 aria-valuemin="0"
-                 aria-valuemax="{{ cap_map.get(tier.title, 12) }}"
-                 aria-valuenow="{{ (cap_map.get(tier.title, 12) - (tier.slots_left or 0)) }}"
-                 style="width: {{ ((cap_map.get(tier.title, 12) - (tier.slots_left or 0)) * 100 // cap_map.get(tier.title, 12)) }}%"></i>
-            </div>
-
-            <div class="mt-4 flex items-center gap-2 btn-row">
-              <button
-                class="{% if sold_out %}opacity-60 cursor-not-allowed {% endif %}{% if is_premium %}bg-yellow-400 text-black ring-yellow-400/70{% else %}bg-zinc-900 text-yellow-200 border-yellow-400/30{% endif %} inline-flex flex-1 items-center justify-center gap-2 rounded-lg border px-4 py-2 font-bold shadow ring-1 ring-[color:color-mix(in srgb, var(--fc-brand) 20%, transparent)] transition hover:scale-[1.02]"
-                data-tier-cta
-                type="button"
-                data-where="tiers"
-                aria-describedby="tier-{{ loop.index }}-benefits"
-                aria-label="Sponsor the {{ tier.title }} tier{% if tier.amount|string|lower != 'custom' %} for ${{ tier.amount }}{% endif %}"
-                {% if sold_out %}disabled{% endif %}
-              >
-                Sponsor {{ tier.title }}
-                <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12.293 4.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 11-1.414-1.414L14.586 10H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"/></svg>
-              </button>
-
-              <button type="button" class="chip" data-share data-where="tiers" aria-label="Share {{ tier.title }} tier">Share</button>
-            </div>
-
-            <p class="mt-2 text-xs text-zinc-300/80">Limited spots • Fast, secure checkout</p>
           </div>
+        </article>
+      {% endfor %}
+    </div>
 
-          <!-- BACK -->
-          <div class="flip-card-back border border-[color:color-mix(in srgb, var(--fc-brand) 20%, transparent)] bg-black/70 p-6 text-center shadow-2xl"
-               id="back-{{ loop.index }}" aria-hidden="true">
-            <span class="text-3xl" aria-hidden="true">{{ tier.emoji }}</span>
-            <h3 class="mt-2 text-xl font-extrabold text-yellow-300">{{ tier.title }} Tier</h3>
-            <p class="mt-2 text-sm text-zinc-200/90">{{ tier.fomo or "Sponsor now for max impact!" }}</p>
-
-            <button
-              class="{% if sold_out %}opacity-60 cursor-not-allowed {% endif %}{% if is_premium %}bg-yellow-400 text-black ring-yellow-400/70{% else %}bg-zinc-900 text-yellow-200 border-yellow-400/30{% endif %} mt-4 inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-2 font-bold shadow ring-1 ring-[color:color-mix(in srgb, var(--fc-brand) 20%, transparent)] transition hover:scale-[1.02]"
-              type="button"
-              data-tier-cta
-              data-where="tiers"
-              aria-label="Sponsor the {{ tier.title }} tier now"
-              {% if sold_out %}disabled{% endif %}
-            >
-              Become a {{ tier.title }} Sponsor
-              <svg viewBox="0 0 20 20" class="h-4 w-4" fill="currentColor" aria-hidden="true"><path d="M12.293 4.293a1 1 0 011.414 0l4 4a1 1 0 010 1.414l-4 4a1 1 0 11-1.414-1.414L14.586 10H3a1 1 0 110-2h11.586l-2.293-2.293a1 1 0 010-1.414z"/></svg>
-            </button>
-          </div>
-        </div>
-      </article>
-    {% endfor %}
+    <div id="tiers-sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
   </div>
-
-  <div id="tiers-sr" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 </section>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} type="module">
+/* Compact Matrix JS (lean, a11y, SSE) */
 (() => {
   if (window.__tiersBound) return; window.__tiersBound = true;
-
-  const root = document.getElementById('tiers');
-  const grid = document.getElementById('tiers-grid');
-  if (!root || !grid) return;
+  const root = document.getElementById('tiers'); const grid = document.getElementById('tiers-grid'); if(!root||!grid) return;
 
   const HAS_STRIPE = (grid.dataset.hasStripe === '1');
   const SPL        = root.dataset.spl || grid.dataset.spl || '';
@@ -286,323 +277,162 @@
   const donateUrl  = grid.dataset.donateUrl || '/donate';
   const statsUrl   = grid.dataset.statsUrl  || '/stats';
   const sseUrl     = grid.dataset.sseUrl    || '/sse/tiers';
-  const saveData   = !!(navigator.connection && 'saveData' in navigator.connection && navigator.connection.saveData);
+  const saveData   = !!(navigator.connection && navigator.connection.saveData);
   const prefersReduced = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+
   const $  = (s, r=document)=>r.querySelector(s);
   const $$ = (s, r=document)=>Array.from(r.querySelectorAll(s));
-  const on = (el,t,fn,o)=>el&&el.addEventListener(t,fn,o);
   const sr = $('#tiers-sr');
 
-  const nfmt = (v, opts={}) => {
-    const locale = navigator.language || 'en-US';
-    try {
-      return new Intl.NumberFormat(locale, { style:'currency', currency:CURRENCY, maximumFractionDigits:0, notation: opts.notation || 'standard' }).format(v);
-    } catch { return String(v); }
-  };
-  const parseAmt = (raw) => { if (raw == null) return null; const s = String(raw); if (/custom/i.test(s)) return null; const n = parseFloat(s.replace(/[^0-9.]/g,'')); return Number.isFinite(n) ? n : null; };
+  const nfmt = (v)=>{ try{ return new Intl.NumberFormat(navigator.language||'en-US',{style:'currency',currency:CURRENCY,maximumFractionDigits:0}).format(v) }catch{ return String(v) } };
+  const parseAmt = (raw)=>{ if(raw==null) return null; const s=String(raw); if(/custom/i.test(s)) return null; const n=parseFloat(s.replace(/[^0-9.]/g,'')); return Number.isFinite(n)?n:null; };
 
-  /* ── Flip-hover guard: allow :hover flips only after a real fine-pointer move ── */
-  const mqlFine = window.matchMedia?.('(hover:hover) and (pointer:fine)');
-  let sawRealMove = false;
-  const applyHoverGate = () => root.classList.toggle('tiers-hover', !!(mqlFine?.matches && sawRealMove));
-  const onFirstMove = () => { sawRealMove = true; applyHoverGate(); window.removeEventListener('pointermove', onFirstMove, true); };
-  window.addEventListener('pointermove', onFirstMove, true);
-  mqlFine?.addEventListener?.('change', applyHoverGate);
-  try { if (/Headless|puppeteer|playwright/i.test(navigator.userAgent||'')) root.classList.remove('tiers-hover'); } catch {}
-  applyHoverGate();
+  /* Hover gate: only enable flips for fine pointers */
+  const mqlFine = matchMedia?.('(hover:hover) and (pointer:fine)'); let moved=false;
+  const gate = () => root.classList.toggle('tiers-hover', !!(mqlFine?.matches && moved));
+  addEventListener('pointermove', ()=>{ moved=true; gate(); }, { once:true, capture:true });
+  mqlFine?.addEventListener?.('change', gate); gate();
 
-  /* ---------- Spotlight follow (motion-safe) ---------- */
+  /* Spotlight follow */
   if (!prefersReduced){
-    root.addEventListener('pointermove', (e)=>{
-      const card = e.target.closest('.glassy-card'); if(!card) return;
-      const r = card.getBoundingClientRect();
-      card.style.setProperty('--fc-spot-x', (((e.clientX - r.left)/Math.max(1,r.width))*100)+'%');
-      card.style.setProperty('--fc-spot-y', (((e.clientY - r.top)/Math.max(1,r.height))*100)+'%');
-    }, {passive:true});
+    root.addEventListener('pointermove',(e)=>{
+      const card=e.target.closest('.glass'); if(!card) return;
+      const r=card.getBoundingClientRect();
+      card.style.setProperty('--spot-x', (((e.clientX-r.left)/Math.max(1,r.width))*100)+'%');
+      card.style.setProperty('--spot-y', (((e.clientY-r.top)/Math.max(1,r.height))*100)+'%');
+    },{passive:true});
   }
 
-  /* ---------- Flip behavior + ARIA ---------- */
+  /* Flip + ARIA */
   function toggleCard(card, force){
-    const on = (typeof force === 'boolean') ? force : !card.classList.contains('card-flipped');
+    const on=(typeof force==='boolean')?force:!card.classList.contains('card-flipped');
     card.classList.toggle('card-flipped', on);
     card.setAttribute('aria-expanded', String(on));
-    card.querySelector('.flip-card-front')?.setAttribute('aria-hidden', on ? 'true' : 'false');
-    card.querySelector('.flip-card-back')?.setAttribute('aria-hidden', on ? 'false' : 'true');
+    card.querySelector('.front')?.setAttribute('aria-hidden', on?'true':'false');
+    card.querySelector('.back') ?.setAttribute('aria-hidden', on?'false':'true');
   }
-  document.addEventListener('click', (e) => {
-    const card = e.target.closest('.flip-card'); if (!card) return;
+  document.addEventListener('click',(e)=>{
+    const card=e.target.closest('.flip-card'); if(!card) return;
     if (e.target.closest('button,[data-tier-cta],[data-share]')) return;
     toggleCard(card);
   });
-  document.addEventListener('keydown', (e) => {
-    const card = e.target.closest('.flip-card'); if (!card) return;
-    if (e.key === 'Enter' || e.key === ' ') { if (document.activeElement?.hasAttribute('data-tier-cta')) return; e.preventDefault(); toggleCard(card); }
-    if (e.key === 'Escape') toggleCard(card, false);
-    if ((e.key === 's' || e.key === 'S') && !/input|textarea|select/i.test(e.target.tagName||'')) { e.preventDefault(); card.querySelector('[data-tier-cta]')?.click(); }
+  document.addEventListener('keydown',(e)=>{
+    const card=e.target.closest('.flip-card'); if(!card) return;
+    if (e.key==='Enter'||e.key===' '){ if(document.activeElement?.hasAttribute('data-tier-cta')) return; e.preventDefault(); toggleCard(card); }
+    if (e.key==='Escape') toggleCard(card,false);
   });
 
-  /* ---------- Prefetch checkout on hover ---------- */
-  const prefetch = (href) => {
-    try{
-      if (!href) return;
-      const key = 'tiers-prefetch-'+href;
-      if (document.querySelector('link[data-key="'+key+'"]')) return;
-      const l = document.createElement('link'); l.rel='prefetch'; l.href=href; l.as='document'; l.setAttribute('data-key', key); document.head.appendChild(l);
-    }catch{}
-  };
-
-  /* ---------- P2P/UTM decoration ---------- */
-  function decorate(u, source='tiers', medium='cta', campaign='sponsorship'){
-    try{
-      if (window.FC?.decorateUrl) return window.FC.decorateUrl(u, source, medium, campaign);
-      const url = new URL(u, location.origin);
-      url.searchParams.set('utm_source', source);
-      url.searchParams.set('utm_medium', medium);
-      url.searchParams.set('utm_campaign', campaign);
-      return url.toString();
-    }catch{ return u; }
-  }
-
-  /* ---------- VIP signals ---------- */
-  function vipMaybe({ tier, amount }) {
-    const high = (amount && amount >= 2500) || /platinum|gold|vip/i.test(String(tier));
-    if (!high) return;
-    try {
-      window.dispatchEvent(new CustomEvent('fc:vip:hit', { detail: { threshold: amount || tier, source: 'tiers' }}));
-      window.dispatchEvent(new CustomEvent('fc:funds:update', { detail: { sponsorName: `VIP ${tier} Sponsor` }}));
-    } catch {}
-  }
-
-  /* ---------- Checkout ---------- */
-  async function startCheckout({ tier, amount, card }) {
-    const priceId = card?.dataset?.priceId || null;
-    const checkoutUrl = card?.dataset?.checkoutUrl || null;
-
-    try{
-      const ref = (window.FC && FC.loadRefCtx) ? (FC.loadRefCtx()||{}) : {};
-      window.fcTrack && window.fcTrack('cta_click', { where: 'tiers', tier, amount, peer_slug: ref.peer_slug || ref.peer || null, campaign: ref.campaign || null });
-    }catch{}
-
-    if (checkoutUrl) { const u=decorate(checkoutUrl); prefetch(u); location.assign(u); vipMaybe({ tier, amount }); return; }
-    if (HAS_STRIPE && SPL) { const u=decorate(SPL); prefetch(u); location.assign(u); vipMaybe({ tier, amount }); return; }
-    if (typeof window.openDonationModal === 'function') { window.openDonationModal({ tier, amount, priceId }); vipMaybe({ tier, amount }); return; }
-
-    try {
-      const resp = await fetch(donateUrl, { method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin', body: JSON.stringify({ tier, amount, price_id: priceId }) });
-      if (resp.ok) { const data = await resp.json().catch(()=>({})); if (data?.url) { const u=decorate(data.url); prefetch(u); location.assign(u); return; } }
-    } catch {}
-    const qs = new URLSearchParams({ tier, amount: amount ?? 'custom' }).toString(); location.assign('/donate?' + qs);
-  }
-
-  /* ---------- Monthly toggle + localization ---------- */
+  /* Monthly toggle */
   const monthlyToggle = document.getElementById('tiers-monthly');
-  const PRICE_MODE_KEY = 'fc_tiers_price_mode';
-  try { const qp=new URLSearchParams(location.search); const force=qp.get('price'); if (force==='monthly') monthlyToggle.checked=true; if (force==='once') monthlyToggle.checked=false; } catch {}
-  try { if (!('price' in (Object.fromEntries(new URLSearchParams(location.search))))) { if (localStorage.getItem(PRICE_MODE_KEY) === 'monthly') monthlyToggle.checked = true; } } catch {}
   function renderPrices(){
     const monthly = !!monthlyToggle?.checked;
-    document.querySelectorAll('#tiers-grid .flip-card .price').forEach(el=>{
-      const rawAmt = el.getAttribute('data-amt');
-      const base = parseAmt(rawAmt);
+    grid.querySelectorAll('.price').forEach(el=>{
+      const base = parseAmt(el.getAttribute('data-amt'));
       if (!base){ el.textContent = monthly ? 'Custom / mo' : (el.getAttribute('data-original') || 'Custom package'); return; }
-      if (monthly){
-        const per = Math.max(1, Math.round(base/12));
-        el.textContent = nfmt(per).replace(/\s/g,'') + '/mo';
-      } else {
-        el.textContent = nfmt(base).replace(/\s/g,'');
-      }
+      el.textContent = monthly ? (nfmt(Math.max(1,Math.round(base/12))) + '/mo') : nfmt(base);
     });
-    try { localStorage.setItem(PRICE_MODE_KEY, monthly ? 'monthly' : 'once'); } catch {}
+    try{ localStorage.setItem('fc_tiers_price_mode', monthly?'monthly':'once'); }catch{}
   }
-  monthlyToggle?.addEventListener('change', renderPrices);
-  renderPrices();
+  try{ if(localStorage.getItem('fc_tiers_price_mode')==='monthly') monthlyToggle.checked=true; }catch{}
+  monthlyToggle?.addEventListener('change', renderPrices); renderPrices();
 
-  /* ---------- Scarcity meter + labels ---------- */
+  /* Slots UI */
   function updateSlotsUI(card){
-    const slotsLeft = Math.max(0, parseInt(card.dataset.slots||'0',10));
-    const cap = Math.max(1, parseInt(card.dataset.cap||'1',10));
-    const filled = Math.max(0, cap - slotsLeft);
-    const pct = Math.min(100, Math.round((filled/cap)*100));
-    const bar = card.querySelector('.slots > i'); if (bar){ bar.style.width = pct + '%'; bar.setAttribute('aria-valuenow', String(filled)); }
-    const flag = card.querySelector('[data-slots-left]');
-    if (flag){
-      if (slotsLeft <= 0){ flag.textContent = 'Sold out'; flag.classList.add('text-red-300'); card.classList.add('soldout'); card.querySelector('[data-tier-cta]')?.setAttribute('disabled',''); sr && (sr.textContent = `${card.dataset.tier} sold out.`); }
-      else if (slotsLeft <= Math.ceil(cap*0.25)){ flag.textContent = `Going fast — ${slotsLeft} left`; flag.classList.remove('text-red-300'); }
-      else { flag.textContent = `${slotsLeft} available`; flag.classList.remove('text-red-300'); }
-    }
-    const avail = card.querySelector('[itemprop="availability"]');
-    if (avail) avail.setAttribute('content', slotsLeft <= 0 ? 'https://schema.org/SoldOut' : 'https://schema.org/InStock');
+    const slotsLeft=Math.max(0,parseInt(card.dataset.slots||'0',10));
+    const cap=Math.max(1,parseInt(card.dataset.cap||'1',10));
+    const filled=Math.max(0,cap-slotsLeft);
+    const pct=Math.min(100,Math.round((filled/cap)*100));
+    const bar=card.querySelector('.slots > i'); if(bar){ bar.style.width=pct+'%'; bar.setAttribute('aria-valuenow', String(filled)); }
+    const avail=card.querySelector('[itemprop="availability"]'); if(avail) avail.setAttribute('content', slotsLeft<=0?'https://schema.org/SoldOut':'https://schema.org/InStock');
   }
   $$('#tiers-grid .flip-card').forEach(updateSlotsUI);
 
-  /* ---------- CTA handler + optimistic slot decrement ---------- */
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-tier-cta]'); if (!btn) return;
-    const card = btn.closest('.flip-card'); if (btn.disabled || card.classList.contains('soldout')) return;
-    const title = card?.dataset?.tier || 'Custom';
-    const amount = parseAmt(card?.dataset?.amount);
-
-    // optimistic decrement
-    let slots = parseInt(card.dataset.slots || '0', 10);
-    if (slots > 0) { card.dataset.slots = String(slots - 1); updateSlotsUI(card); }
-
-    startCheckout({ tier: title, amount, card });
-  });
-
-  /* ---------- Share deep link per tier (P2P + UTM) ---------- */
-  async function shareTier(card){
-    const tier = card.dataset.tier || 'Sponsor';
-    const shareData = { title: `${tier} Sponsor — {{ team_name }}`, text: `Join as a ${tier} Sponsor for {{ team_name }}!` };
-    try{
-      const url = new URL(location.href); url.hash = 'sponsor=' + encodeURIComponent(tier);
-      shareData.url = decorate(url.toString(), 'tiers', 'share', 'sponsorship');
-      if (window.FC?.handleShare){ await FC.handleShare('tiers', shareData); return; }
-      if (navigator.share){ await navigator.share(shareData); return; }
-      await navigator.clipboard.writeText(shareData.url);
-      sr && (sr.textContent = `${tier} share link copied.`);
-    }catch{}
-  }
-  document.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-share]'); if (!btn) return;
-    const card = btn.closest('.flip-card'); if (!card) return;
-    try{ window.fcTrack && window.fcTrack('share_click', { where:'tiers', tier: card.dataset.tier||'Unknown' }); }catch{}
-    shareTier(card);
-  });
-
-  /* ---------- Sorting control ---------- */
-  const sortSel = document.getElementById('tiers-sort');
-  function sortCards(mode){
-    const cards = Array.from(grid.querySelectorAll('.flip-card'));
-    const score = (c)=>{
-      const amt = parseAmt(c.dataset.amount) || 0;
-      const slots = parseInt(c.dataset.slots||'0',10);
-      const cap = Math.max(1, parseInt(c.dataset.cap||'1',10));
-      const availPct = slots/cap;
-      const popular = c.querySelector('.ribbon') ? 1 : 0;
-      return (popular*3) + (amt/5000) + (availPct*0.5);
+  /* Checkout */
+  async function startCheckout({ tier, amount, card }){
+    const priceId = card?.dataset?.priceId || null;
+    const checkoutUrl = card?.dataset?.checkoutUrl || null;
+    try{ window.fcTrack?.('cta_click',{where:'tiers',tier,amount}); }catch{}
+    const decorate=(u,source='tiers',medium='cta',campaign='sponsorship')=>{
+      try{ if(window.FC?.decorateUrl) return FC.decorateUrl(u,source,medium,campaign);
+           const url=new URL(u,location.origin); url.searchParams.set('utm_source',source); url.searchParams.set('utm_medium',medium); url.searchParams.set('utm_campaign',campaign); return url.toString(); }
+      catch{ return u; }
     };
+    const prefetch=(href)=>{ try{ if(!href) return; const k='tiers-prefetch-'+href; if(document.querySelector('link[data-key="'+k+'"]')) return; const l=document.createElement('link'); l.rel='prefetch'; l.href=href; l.as='document'; l.setAttribute('data-key',k); document.head.appendChild(l);}catch{} };
+
+    if (checkoutUrl){ const u=decorate(checkoutUrl); prefetch(u); location.assign(u); return; }
+    if (HAS_STRIPE && SPL){ const u=decorate(SPL); prefetch(u); location.assign(u); return; }
+    if (typeof window.openDonationModal === 'function'){ window.openDonationModal({ tier, amount, priceId }); return; }
+
+    try{
+      const r=await fetch(donateUrl,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',body:JSON.stringify({tier,amount,price_id:priceId})});
+      if (r.ok){ const d=await r.json().catch(()=>({})); if (d?.url){ const u=decorate(d.url); prefetch(u); location.assign(u); return; } }
+    }catch{}
+    location.assign('/donate?' + new URLSearchParams({tier,amount:amount??'custom'}));
+  }
+
+  document.addEventListener('click',(e)=>{
+    const btn=e.target.closest('[data-tier-cta]'); if(!btn) return;
+    const card=btn.closest('.flip-card'); if(btn.disabled || card.classList.contains('soldout')) return;
+    const title=card?.dataset?.tier || 'Custom';
+    const amount=parseAmt(card?.dataset?.amount);
+    let slots=parseInt(card.dataset.slots||'0',10); if(slots>0){ card.dataset.slots=String(slots-1); updateSlotsUI(card); }
+    if (btn.hasAttribute('data-payment-link')) { try{ btn.target='_blank'; btn.rel='nofollow noopener noreferrer'; }catch{} }
+    startCheckout({ tier:title, amount, card });
+  });
+
+  /* Share */
+  document.addEventListener('click',(e)=>{
+    const btn=e.target.closest('[data-share]'); if(!btn) return;
+    const card=btn.closest('.flip-card'); if(!card) return;
+    const tier=card.dataset.tier || 'Sponsor';
+    const url=new URL(location.href); url.hash='sponsor='+encodeURIComponent(tier);
+    const decorated = (window.FC?.decorateUrl ? FC.decorateUrl(url.toString(),'tiers','share','sponsorship') : url.toString());
+    (async()=>{ try{
+      if (window.FC?.handleShare) return FC.handleShare('tiers',{title:`${tier} Sponsor — {{ team_name }}`,text:`Join as a ${tier} Sponsor for {{ team_name }}!`,url:decorated});
+      if (navigator.share) return navigator.share({title:`${tier} Sponsor`,text:`Support {{ team_name }}`,url:decorated});
+      await navigator.clipboard.writeText(decorated); sr && (sr.textContent=`${tier} share link copied.`);
+    }catch{} })();
+  });
+
+  /* Sort */
+  const sortSel=document.getElementById('tiers-sort');
+  const amt=(c)=>parseAmt(c.dataset.amount)||0;
+  function sortCards(mode){
+    const cards=[...grid.querySelectorAll('.flip-card')];
     cards.sort((a,b)=>{
-      if (mode==='price-desc') return (parseAmt(b.dataset.amount)||0) - (parseAmt(a.dataset.amount)||0);
-      if (mode==='price-asc')  return (parseAmt(a.dataset.amount)||0) - (parseAmt(b.dataset.amount)||0);
+      if (mode==='price-desc') return amt(b)-amt(a);
+      if (mode==='price-asc')  return amt(a)-amt(b);
       if (mode==='availability'){
-        const aAvail = (parseInt(a.dataset.slots||'0',10))/Math.max(1,parseInt(a.dataset.cap||'1',10));
-        const bAvail = (parseInt(b.dataset.slots||'0',10))/Math.max(1,parseInt(b.dataset.cap||'1',10));
-        return bAvail - aAvail;
+        const ap=(+a.dataset.slots||0)/Math.max(1,+a.dataset.cap||1);
+        const bp=(+b.dataset.slots||0)/Math.max(1,+b.dataset.cap||1);
+        return bp-ap;
       }
-      return score(b) - score(a);
+      const popA=a.querySelector('.ribbon')?1:0, popB=b.querySelector('.ribbon')?1:0;
+      return (popB-popA) || (amt(b)-amt(a));
     });
     cards.forEach(c=>grid.appendChild(c));
   }
-  sortSel?.addEventListener('change', ()=>sortCards(sortSel.value));
-  sortCards('rec');
+  sortSel?.addEventListener('change',()=>sortCards(sortSel.value)); sortCards('rec');
 
-  /* ---------- Deep-link: focus & pulse matching tier (hash sponsor=...) ---------- */
-  const focusFromHash = () => {
-    try{
-      const h = new URL(location.href).hash;
-      const m = h.match(/sponsor=([^&]+)/i);
-      if (!m) return;
-      const name = decodeURIComponent(m[1]).toLowerCase();
-      const card = $$('#tiers-grid .flip-card').find(c => (c.dataset.tier||'').toLowerCase() === name);
-      if (!card) return;
-      card.scrollIntoView({ behavior:'smooth', block:'center' });
-      card.classList.add('pulse'); setTimeout(()=>card.classList.remove('pulse'), 900);
-      card.focus({ preventScroll:true });
-    }catch{}
-  };
-  focusFromHash();
-  window.addEventListener('hashchange', focusFromHash, { passive:true });
-
-  /* ---------- In-view analytics beacons ---------- */
-  try {
-    const seen = new WeakSet();
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent=>{
-        if (ent.isIntersecting && !seen.has(ent.target)){
-          seen.add(ent.target);
-          const tier = ent.target.dataset.tier || 'Unknown';
-          const detail = { tier, source:'tiers', time: Date.now() };
-          window.dataLayer?.push({ event:'tiers_impression', ...detail });
-          window.dispatchEvent(new CustomEvent('fundchamps:tiers:impression', { detail }));
-        }
-      });
-    }, { rootMargin:'-10% 0px', threshold:.5 });
-    document.querySelectorAll('#tiers-grid .flip-card').forEach(el=>io.observe(el));
-    window.addEventListener('pagehide', ()=>io.disconnect(), { once:true });
-  } catch {}
-
-  /* ---------- Live slot sync (SSE → poll fallback; Save-Data aware) ---------- */
-  const updateFromData = (rows=[]) => {
-    rows.forEach(row => {
-      const title = (row?.title || '').toString();
-      const slots = parseInt(row?.slots_left ?? 0, 10);
-      const card = $$('#tiers-grid .flip-card').find(el => (el.dataset.tier||'').toLowerCase() === title.toLowerCase());
-      if (!card) return;
-      const prev = parseInt(card.dataset.slots||'0',10);
-      card.dataset.slots = String(Math.max(0, slots));
-      updateSlotsUI(card);
-      if (slots < prev) { sr && (sr.textContent = `${title} availability updated: ${slots} left.`); }
+  /* Live slots (SSE → poll) */
+  const updateFromData=(rows=[])=>{
+    rows.forEach(row=>{
+      const title=(row?.title||'').toString(); const slots=parseInt(row?.slots_left ?? 0,10);
+      const card=$$('#tiers-grid .flip-card').find(el=>(el.dataset.tier||'').toLowerCase()===title.toLowerCase()); if(!card) return;
+      const prev=parseInt(card.dataset.slots||'0',10); card.dataset.slots=String(Math.max(0,slots)); updateSlotsUI(card);
+      if (slots<prev){ sr && (sr.textContent=`${title} availability updated: ${slots} left.`); }
     });
   };
-
-  const trySSE = () => {
-    if (saveData) return false;
-    try{
-      if (!('EventSource' in window)) return false;
-      const es = new EventSource(sseUrl);
-      es.addEventListener('tiers', (e) => { try{ updateFromData(JSON.parse(e.data)||[]); }catch{} });
-      es.addEventListener('message', (e) => { try{ updateFromData(JSON.parse(e.data)||[]); }catch{} });
-      window.addEventListener('pagehide', ()=>es.close(), { once:true });
-      return true;
-    }catch{ return false; }
-  };
-
-  const poll = async () => {
-    try {
-      const res = await fetch(statsUrl, { headers: { 'Accept': 'application/json' }});
-      if (res.ok) updateFromData(await res.json());
-    } catch {}
-    const delay = saveData ? 60000 : (prefersReduced ? 45000 : 20000);
-    setTimeout(poll, delay);
-  };
-
-  if (!trySSE()) setTimeout(poll, 800);
-
-  /* ---------- Ensure P2P params decorate dynamic CTAs ---------- */
-  try{ window.FC?.decorateLinks && FC.decorateLinks(grid); }catch{}
-
-  /* ---------- Prefetch checkout hrefs on hover ---------- */
-  on(document, 'pointerenter', (e)=>{
-    const btn = e.target.closest?.('[data-tier-cta]'); if (!btn) return;
-    const card = btn.closest('.flip-card'); if (!card) return;
-    const href = card.dataset.checkoutUrl || SPL || '';
-    if (href) prefetch(decorate(href));
-  }, { passive:true });
-
+  const trySSE=()=>{ if(saveData) return false; try{
+    if(!('EventSource' in window)) return false;
+    const es=new EventSource(sseUrl);
+    es.addEventListener('tiers',(e)=>{ try{ updateFromData(JSON.parse(e.data)||[]);}catch{} });
+    es.addEventListener('message',(e)=>{ try{ updateFromData(JSON.parse(e.data)||[]);}catch{} });
+    addEventListener('pagehide',()=>es.close(),{once:true});
+    return true;
+  }catch{ return false; } };
+  const poll=async()=>{ try{ const r=await fetch(statsUrl,{headers:{Accept:'application/json'}}); if(r.ok) updateFromData(await r.json()); }catch{} setTimeout(poll, saveData?60000:(prefersReduced?45000:20000)); };
+  if(!trySSE()) setTimeout(poll,800);
 })();
-</script>
-
-<script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
-{
-  "@context": "https://schema.org",
-  "@type": "OfferCatalog",
-  "name": "Sponsorship Tiers",
-  "itemListElement": [
-    {% for tier in tiers %}
-    {
-      "@type": "Offer",
-      "name": "{{ tier.title }}",
-      "priceCurrency": "{{ currency }}",
-      {% if tier.amount|string|lower == 'custom' %}
-      "price": "0",
-      "description": "{{ (tier.fomo or 'Custom sponsorship package')|e }}"
-      {% else %}
-      "price": "{{ tier.amount|string|replace(',','')|replace('+','') }}",
-      "description": "{{ (tier.benefits|join(', '))|e }}"
-      {% endif %}
-    }{% if not loop.last %},{% endif %}
-    {% endfor %}
-  ]
-}
 </script>
 

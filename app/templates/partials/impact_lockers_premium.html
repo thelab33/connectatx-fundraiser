@@ -1,204 +1,235 @@
-{# ================= Impact Buckets — SV-Elite v3.5 (a11y, deep links, i18n, live updates, local prefs) ================ #}
-{% set NONCE    = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set team_name= (team.name if team and team.name else 'FundChamps') %}
-{% set currency = (team.currency if team and team.currency else 'USD') %}
-{% set IMPACT   = IMPACT if IMPACT is defined and IMPACT else [
+{# ============== Impact Buckets — SV-Elite 4.8 Prestige (glass, deep-links, donate bridge, i18n, local prefs) ============== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% set team_name        = (team.name if team and team.name else 'FundChamps') %}
+{% set currency         = (team.currency if team and team.currency else 'USD') %}
+{% set brand_color      = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set donate_init_url  = (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint('main.donate')) else '/donate') %}
+{% set stripe_link      = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
+
+{% set IMPACT = IMPACT if IMPACT is defined and IMPACT else [
   {'key':'gym','title':'Gym Access (rentals)','icon':'🏟️','raised':900,'goal':1200,'blurb':'Keep practices strong.'},
   {'key':'travel','title':'Tournament Travel','icon':'🚌','raised':240,'goal':900,'blurb':'Gas, hotels on the road.'},
   {'key':'gear','title':'Team Gear','icon':'🎒','raised':60,'goal':400,'blurb':'Shoes, uniforms, socks.'},
 ] %}
 
-<style {{ nonce_attr() }}nonce="{{ NONCE }}">
-  /* ---------- Scope: #impact ---------- */
-  #impact{ --brand: var(--fc-gold, #facc15); }
-  #impact .optical-tight{ letter-spacing:-.01em }
-  #impact .tabular{ font-variant-numeric:tabular-nums }
+<section id="impact" class="section section--tight" aria-labelledby="impact-heading"
+         data-where="impact"
+         data-currency="{{ currency }}"
+         data-donate-url="{{ donate_init_url }}"
+         data-spl="{{ stripe_link }}"
+         data-p2p-propagate="1"
+         style="--fc-gold: {{ brand_color }};">
+  <div class="sf-container">
+    <header class="mb-4">
+      <h2 id="impact-heading" class="text-fluid-h2 font-extrabold tracking-tight text-white"
+          style="letter-spacing:-.01em">
+        Unlock What Matters — <span class="text-[color:var(--fc-gold)]">Real Impact Buckets</span>
+      </h2>
+      <p class="mt-1 max-w-3xl text-sm text-zinc-200">Pick a bucket and we’ll route your gift to that need.</p>
+    </header>
 
-  /* Grid fallback (works even if utilities missing) */
-  #impact.impact-grid{ display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:clamp(.7rem,1.5vw,1rem) }
-  @media (min-width:640px){ #impact.impact-grid{ grid-template-columns:repeat(2,minmax(0,1fr)) } }
-  @media (min-width:960px){ #impact.impact-grid{ grid-template-columns:repeat(3,minmax(0,1fr)) } }
+    <style {{ nonce_attr() }}>
+      /* ===== Scope: #impact ===== */
+      #impact{ --brand: var(--fc-gold, {{ brand_color }}); scroll-margin-top: var(--fc-header-h, 72px) }
+      #impact .sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,1px,1px)!important;white-space:nowrap!important;border:0!important}
+      #impact .tabular{ font-variant-numeric: tabular-nums }
 
-  /* Cards */
-  #impact .impact-card{
-    position:relative;border-radius:16px;padding:clamp(.9rem,1.2vw,1.1rem);
-    background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
-    border:1px solid rgba(255,255,255,.10);
-    box-shadow:0 14px 36px rgba(0,0,0,.30);
-    transition:transform .18s ease,box-shadow .18s ease;
-  }
-  #impact .impact-card:hover{ transform:translateY(-1px); box-shadow:0 18px 44px rgba(0,0,0,.36) }
-  #impact .impact-card:focus-within{ outline:2px solid color-mix(in srgb, var(--brand) 70%, #fff 30%); outline-offset:3px }
+      /* Grid (safe fallback even without Tailwind) */
+      #impact .impact-grid{ display:grid; grid-template-columns:repeat(1,minmax(0,1fr)); gap:clamp(.7rem,1.5vw,1rem) }
+      @media (min-width:640px){ #impact .impact-grid{ grid-template-columns:repeat(2,minmax(0,1fr)) } }
+      @media (min-width:960px){ #impact .impact-grid{ grid-template-columns:repeat(3,minmax(0,1fr)) } }
 
-  /* Pointer glow */
-  #impact .impact-card::after{
-    content:"";position:absolute;inset:-1px;border-radius:inherit;pointer-events:none;
-    background:radial-gradient(38% 28% at var(--mx,60%) var(--my,20%), color-mix(in srgb,var(--brand) 26%, transparent) 0%, transparent 70%);
-    opacity:0;transition:opacity .2s ease;
-  }
-  #impact .impact-card:hover::after{ opacity:.9 }
-  #impact .is-selected{ outline:2px solid color-mix(in srgb, var(--brand) 75%, #fff 25%); outline-offset:3px }
+      /* Glass cards + spotlight */
+      #impact .impact-card{
+        position:relative;border-radius:16px;padding:clamp(.9rem,1.2vw,1.1rem);
+        background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.03));
+        border:1px solid rgba(255,255,255,.10);
+        -webkit-backdrop-filter:saturate(120%) blur(10px); backdrop-filter:saturate(120%) blur(10px);
+        box-shadow:0 14px 36px rgba(0,0,0,.30);
+        transition:transform .18s ease,box-shadow .18s ease;
+        isolation:isolate;
+      }
+      #impact .impact-card:hover{ transform:translateY(-1px); box-shadow:0 18px 44px rgba(0,0,0,.36) }
+      #impact .impact-card:focus-within{ outline:2px solid color-mix(in srgb, var(--brand) 70%, #fff 30%); outline-offset:3px }
+      #impact .impact-card::before{
+        content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; z-index:0;
+        background:
+          radial-gradient(150% 80% at var(--mx,60%) var(--my,18%), color-mix(in srgb, var(--brand) 26%, transparent), transparent 55%),
+          linear-gradient(to top, rgba(255,255,255,.06), transparent 50%);
+        filter:blur(14px); opacity:.45;
+      }
+      #impact .is-selected{ outline:2px solid color-mix(in srgb, var(--brand) 75%, #fff 25%); outline-offset:3px }
 
-  /* Buttons (compact) */
-  #impact .btn-compact{ --btn-py:.55rem; --btn-px:.8rem; --btn-fs:.92rem }
+      /* Meter */
+      #impact .fc-meter{ position:relative; height:12px; border-radius:999px; overflow:hidden }
+      #impact .fc-meter__track{ position:absolute; inset:0; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.16); border-radius:inherit }
+      #impact .fc-meter__bar{ position:absolute; inset:1px; transform-origin:left; transform:scaleX(var(--p,0));
+        background:linear-gradient(90deg, #e5e7eb, color-mix(in srgb, var(--brand) 45%, #d1d5db)); border-radius:inherit;
+        box-shadow:0 0 10px color-mix(in srgb, var(--brand) 25%, transparent);
+        transition:transform .6s cubic-bezier(.2,.8,.2,1)
+      }
+      #impact .fc-meter__ticks{ position:absolute; inset:0; background-image:linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px); background-size:10% 100%; pointer-events:none }
+      #impact .fc-meter__shine{ position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(255,255,255,.22), transparent 40%); mix-blend-mode:soft-light }
 
-  /* Meter */
-  #impact .fc-meter{ position:relative; height:12px; border-radius:999px; overflow:hidden }
-  #impact .fc-meter__track{ position:absolute; inset:0; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.18); border-radius:inherit }
-  #impact .fc-meter__bar{
-    position:absolute; inset:1px; transform-origin:left; transform:scaleX(var(--p,0));
-    background:linear-gradient(90deg, var(--brand), color-mix(in srgb, var(--brand) 40%, #fff));
-    border-radius:inherit; transition:transform .6s cubic-bezier(.2,.8,.2,1)
-  }
-  #impact .fc-meter__ticks{ position:absolute; inset:0; background-image:linear-gradient(90deg, rgba(255,255,255,.06) 1px, transparent 1px); background-size:10% 100%; pointer-events:none }
-  #impact .fc-meter__shine{ position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(255,255,255,.22), transparent 40%); mix-blend-mode:soft-light }
+      /* Buttons */
+      .fc-btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:900; line-height:1; text-decoration:none }
+      .fc-btn-primary{ background:#0b0f15; color:#fff; border:1px solid #000; padding:.78rem 1.1rem; box-shadow:0 8px 24px rgba(0,0,0,.25) }
+      .fc-btn-ghost{ background:rgba(255,255,255,.06); color:#e5e7eb; border:1px solid rgba(255,255,255,.14); padding:.72rem 1rem }
+      .fc-btn:hover{ filter:brightness(1.08) }
+      .btn-compact{ --btn-py:.55rem; --btn-px:.8rem; --btn-fs:.92rem; padding:var(--btn-py) var(--btn-px); font-size:var(--btn-fs) }
 
-  /* A11y + system prefs */
-  .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
-  @media (prefers-reduced-motion:reduce){
-    #impact .impact-card, #impact .impact-card::after, #impact .fc-meter__bar{ transition:none }
-  }
-  @media (forced-colors:active){
-    #impact .impact-card{ border:1px solid CanvasText; box-shadow:none; background:Canvas }
-    #impact .fc-meter__track{ border-color:CanvasText }
-  }
-  @supports not (color: color-mix(in srgb, black, white)){
-    #impact .impact-card:focus-within{ outline-color: var(--fc-gold,#facc15) }
-    #impact .fc-meter__bar{ background:linear-gradient(90deg, #e5e7eb, var(--brand)) }
-  }
-</style>
+      /* System prefs */
+      @media (prefers-reduced-motion:reduce){
+        #impact .impact-card, #impact .impact-card::before, #impact .fc-meter__bar{ transition:none }
+      }
+      @media (forced-colors:active){
+        #impact .impact-card{ border:1px solid CanvasText; background:Canvas; box-shadow:none }
+        #impact .fc-meter__track{ border-color:CanvasText }
+        #impact .fc-meter__bar{ background:Highlight }
+      }
+      @supports not (color: color-mix(in srgb, black, white)){
+        #impact .impact-card:focus-within{ outline-color: var(--fc-gold,#facc15) }
+        #impact .fc-meter__bar{ background:linear-gradient(90deg, #e5e7eb, var(--brand)) }
+      }
+    </style>
 
-<header class="mb-4">
-  <h2 id="impact-heading" class="text-fluid-h2 font-extrabold tracking-tight text-white optical-tight">
-    Unlock What Matters — <span class="text-[color:var(--fc-gold)]">Real Impact Buckets</span>
-  </h2>
-  <p class="mt-1 max-w-3xl text-sm text-zinc-200">Pick a bucket and we’ll route your gift to that need.</p>
-</header>
+    <div class="impact-grid" role="list" aria-labelledby="impact-heading">
+      {% for b in IMPACT %}
+        {% set goal      = (b.goal|default(0)|float) %}
+        {% set raised    = (b.raised|default(0)|float) %}
+        {% set remaining = (goal - raised) if goal > raised else 0 %}
+        {% set pct_raw   = (0 if goal <= 0 else (raised/goal*100)) %}
+        {% set pct       = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw))|round(1) %}
+        {% set pct_frac  = (pct/100)|round(4) %}
+        {# heuristic: suggest min( max( round(goal*0.1), 25 ), remaining ) #}
+        {% set suggested = (goal*0.1)|round(0,'ceil') %}
+        {% set prefill   = (b.prefill if b.prefill is defined else (suggested if suggested>25 else 25))|int %}
+        {% set prefill   = (prefill if prefill <= remaining else (remaining|int)) %}
+        {% set locked    = (remaining <= 0) %}
+        {% set _id       = 'impact-' ~ b.key %}
+        {% set aria_text = (('$' ~ raised|int) ~ ' raised of $' ~ goal|int ~ ' — ' ~ ('%.0f' % pct) ~ '%') %}
 
-<div id="impact"
-     class="impact-grid md:grid md:grid-cols-3 gap-4"
-     role="list"
-     aria-labelledby="impact-heading"
-     data-currency="{{ currency }}"
-     data-where="impact"
-     data-p2p-propagate="1">
-  {% for b in IMPACT %}
-    {% set goal      = (b.goal|default(0)|float) %}
-    {% set raised    = (b.raised|default(0)|float) %}
-    {% set remaining = (goal - raised) if goal > raised else 0 %}
-    {% set pct_raw   = (0 if goal <= 0 else (raised/goal*100)) %}
-    {% set pct       = (0 if pct_raw < 0 else (100 if pct_raw > 100 else pct_raw))|round(1) %}
-    {% set pct_frac  = (pct/100)|round(4) %}
-    {% set prefill   = (b.prefill if b.prefill is defined else (50 if remaining > 50 else remaining))|int %}
-    {% set locked    = (remaining <= 0) %}
-    {% set _id       = 'impact-' ~ b.key %}
-    {% set aria_text = (('$' ~ raised|int) ~ ' raised of $' ~ goal|int ~ ' — ' ~ ('%.0f' % pct) ~ '%') %}
+        <article id="{{ _id }}"
+                 class="impact-card"
+                 role="listitem"
+                 aria-labelledby="{{ _id }}-title"
+                 data-bucket="{{ b.key }}"
+                 data-goal="{{ goal|int }}"
+                 data-raised="{{ raised|int }}"
+                 tabindex="-1">
+          <div class="flex items-start justify-between gap-3">
+            <h3 id="{{ _id }}-title" class="min-w-0 truncate text-[15px] font-extrabold text-white">
+              <span aria-hidden="true" class="mr-1">{{ b.icon }}</span>{{ b.title }}
+            </h3>
 
-    <article id="{{ _id }}"
-             class="fc-glass impact-card"
-             role="listitem"
-             aria-labelledby="{{ _id }}-title"
-             data-bucket="{{ b.key }}"
-             data-goal="{{ goal|int }}"
-             data-raised="{{ raised|int }}"
-             tabindex="-1">
-      <div class="flex items-start justify-between gap-3">
-        <h3 id="{{ _id }}-title" class="min-w-0 truncate text-[15px] font-extrabold text-white">
-          <span aria-hidden="true" class="mr-1">{{ b.icon }}</span>{{ b.title }}
-        </h3>
+            {% if locked %}
+              <span class="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">Fully funded ✅</span>
+            {% else %}
+              <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[color:var(--fc-gold)] border border-white/25 bg-white/10">
+                ${{ goal|int }} goal
+              </span>
+            {% endif %}
+          </div>
 
-        {% if locked %}
-          <span class="rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">Fully funded ✅</span>
-        {% else %}
-          <span class="rounded-full px-2 py-0.5 text-[11px] font-semibold text-[color:var(--fc-gold)] border border-white/25 bg-white/10">
-            ${{ goal|int }} goal
-          </span>
-        {% endif %}
-      </div>
+          {% if b.blurb %}<p class="mt-1 text-[13px] text-zinc-200">{{ b.blurb }}</p>{% endif %}
 
-      {% if b.blurb %}<p class="mt-1 text-[13px] text-zinc-200">{{ b.blurb }}</p>{% endif %}
+          <!-- Meter -->
+          <div class="mt-3">
+            <div class="fc-meter"
+                 role="progressbar"
+                 aria-label="{{ b.title }} funding progress"
+                 aria-valuemin="0"
+                 aria-valuemax="{{ goal|int }}"
+                 aria-valuenow="{{ raised|int }}"
+                 aria-valuetext="{{ aria_text }}">
+              <div class="fc-meter__track"></div>
+              <div class="fc-meter__ticks"></div>
+              <div class="fc-meter__bar" style="--p: {{ pct_frac }};"></div>
+              <div class="fc-meter__shine"></div>
+            </div>
 
-      <!-- Meter -->
-      <div class="mt-3">
-        <div class="fc-meter"
-             role="progressbar"
-             aria-label="{{ b.title }} funding progress"
-             aria-valuemin="0"
-             aria-valuemax="{{ goal|int }}"
-             aria-valuenow="{{ raised|int }}"
-             aria-valuetext="{{ aria_text }}">
-          <div class="fc-meter__track"></div>
-          <div class="fc-meter__ticks"></div>
-          <div class="fc-meter__bar" style="--p: {{ pct_frac }};"></div>
-          <div class="fc-meter__shine"></div>
-        </div>
+            <p class="mt-1 flex items-center justify-between text-[12px] text-zinc-300 tabular" data-progress-row>
+              <span><span class="num font-semibold text-zinc-100" data-raised>${{ raised|int }}</span> raised • <span class="num" data-percent>{{ '%.0f' % pct }}%</span></span>
+              {% if not locked and remaining > 0 %}
+                <span>Left: <span class="num font-semibold text-[color:var(--fc-gold)]" data-left>${{ remaining|int }}</span></span>
+              {% endif %}
+            </p>
+            <span class="sr-only" aria-live="polite" data-live></span>
+          </div>
 
-        <p class="mt-1 flex items-center justify-between text-[12px] text-zinc-300 tabular" data-progress-row>
-          <span><span class="num font-semibold text-zinc-100" data-raised>${{ raised|int }}</span> raised • <span class="num" data-percent>{{ '%.0f' % pct }}%</span></span>
-          {% if not locked and remaining > 0 %}
-            <span>Left: <span class="num font-semibold text-[color:var(--fc-gold)]" data-left>${{ remaining|int }}</span></span>
+          <!-- CTA row -->
+          <div class="mt-3 grid grid-cols-2 gap-2">
+            {% if not locked %}
+              <button class="fc-btn fc-btn-primary btn-compact w-full justify-center"
+                      data-donate
+                      data-bucket="{{ b.key }}"
+                      {% if prefill > 0 %}data-amount="{{ prefill }}"{% endif %}
+                      aria-describedby="{{ _id }}-title"
+                      aria-label="Donate{% if prefill>0 %} ${{ prefill }}{% endif %} to {{ b.title }}">
+                {% if prefill > 0 %}Donate ${{ prefill }}{% else %}Donate{% endif %}
+              </button>
+
+              <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center"
+                      data-donate
+                      data-bucket="{{ b.key }}"
+                      aria-describedby="{{ _id }}-title"
+                      aria-label="Choose custom amount for {{ b.title }}">
+                💛 Choose amount
+              </button>
+            {% else %}
+              <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center" disabled>Thank you, sponsors! 🎉</button>
+              <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center" data-share aria-label="Share {{ b.title }}">🔗 Share</button>
+            {% endif %}
+          </div>
+
+          {% if not locked %}
+            <button class="mt-2 fc-btn fc-btn-ghost btn-compact w-full justify-center"
+                    data-share
+                    aria-describedby="{{ _id }}-title"
+                    aria-label="Share {{ b.title }}">
+              🔗 Share
+            </button>
           {% endif %}
-        </p>
-        <span class="sr-only" aria-live="polite" data-live></span>
-      </div>
+        </article>
+      {% endfor %}
+    </div>
 
-      <!-- Actions -->
-      <div class="mt-3 grid grid-cols-2 gap-2">
-        {% if not locked %}
-          <button class="fc-btn fc-btn-primary btn-compact w-full justify-center"
-                  data-donate
-                  data-bucket="{{ b.key }}"
-                  {% if prefill > 0 %}data-amount="{{ prefill }}"{% endif %}
-                  data-analytics="impact:quick-donate:{{ b.key }}"
-                  aria-describedby="{{ _id }}-title"
-                  aria-label="Donate{% if prefill>0 %} ${{ prefill }}{% endif %} to {{ b.title }}">
-            {% if prefill > 0 %}Donate ${{ prefill }}{% else %}Donate{% endif %}
-          </button>
+    <div class="sr-only" id="impact-sr" aria-live="polite" aria-atomic="true"></div>
+  </div>
 
-          <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center"
-                  data-donate
-                  data-bucket="{{ b.key }}"
-                  data-analytics="impact:choose:{{ b.key }}"
-                  aria-describedby="{{ _id }}-title"
-                  aria-label="Choose custom amount for {{ b.title }}">
-            💛 Choose amount
-          </button>
-        {% else %}
-          <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center" disabled>Thank you, sponsors! 🎉</button>
-          <button class="fc-btn fc-btn-ghost btn-compact w-full justify-center" data-share data-analytics="impact:share:{{ b.key }}">🔗 Share</button>
-        {% endif %}
-      </div>
+  <noscript>
+    <div class="sf-container mt-2 text-sm text-zinc-200">
+      JavaScript is required for quick donate and live progress. You can still
+      <a class="underline" href="{{ donate_init_url }}?utm_source=impact&utm_medium=noscript">donate here</a>.
+    </div>
+  </noscript>
+</section>
 
-      {% if not locked %}
-        <button class="mt-2 fc-btn fc-btn-ghost btn-compact w-full justify-center"
-                data-share
-                data-analytics="impact:share:{{ b.key }}"
-                aria-describedby="{{ _id }}-title">
-          🔗 Share
-        </button>
-      {% endif %}
-    </article>
-  {% endfor %}
-</div>
-
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} type="module">
 (() => {
-  // Impact Buckets UX: glow, deep-link, share, donate bridge, impressions, live updates, local prefs
-  const TEAM_NAME = {{ team_name|tojson }};
   const root = document.getElementById('impact'); if (!root) return;
-  const CURRENCY = root.dataset.currency || 'USD';
-  const nf = (v) => new Intl.NumberFormat(navigator.language || 'en-US', { style:'currency', currency: CURRENCY, maximumFractionDigits:0 }).format(v);
+  const TEAM_NAME = {{ team_name|tojson }};
+  const CURRENCY  = root.dataset.currency || 'USD';
+  const donateUrl = root.dataset.donateUrl || '/donate';
+  const SPL       = root.dataset.spl || '';
+  const sr        = document.getElementById('impact-sr');
+
+  const nf = (v) => {
+    try { return new Intl.NumberFormat(navigator.language||'en-US',{ style:'currency', currency:CURRENCY, maximumFractionDigits:0 }).format(v) }
+    catch { return String(v) }
+  };
   const qs = (s, r=root) => Array.from(r.querySelectorAll(s));
 
-  // Pointer glow origin
+  /* Pointer glow origin (motion-safe by design) */
   root.addEventListener('mousemove', (e)=>{
     const card = e.target.closest?.('.impact-card'); if(!card) return;
     const r = card.getBoundingClientRect();
-    card.style.setProperty('--mx', ((e.clientX - r.left) / Math.max(1,r.width) * 100).toFixed(0) + '%');
-    card.style.setProperty('--my', ((e.clientY - r.top)  / Math.max(1,r.height)* 100).toFixed(0) + '%');
+    card.style.setProperty('--mx', ((e.clientX - r.left)/Math.max(1,r.width)*100).toFixed(0) + '%');
+    card.style.setProperty('--my', ((e.clientY - r.top) /Math.max(1,r.height)*100).toFixed(0) + '%');
   }, { passive:true });
 
-  // Deep-link highlight (#impact=<key>)
+  /* Deep-link highlight (#impact=<key>) */
   function applyHashFocus(){
     try{
       const key = (location.hash.startsWith('#impact=') ? location.hash.slice(8) : '').trim();
@@ -211,82 +242,108 @@
   addEventListener('hashchange', applyHashFocus, { passive:true });
   queueMicrotask(applyHashFocus);
 
-  // Persist last custom amount per bucket (for the quick button)
-  const AMT_KEY = 'fc_bucket_amounts_v1';
-  function loadAmts(){ try { return JSON.parse(localStorage.getItem(AMT_KEY) || '{}'); } catch { return {}; } }
-  function saveAmt(bucket, amount){ try { const m = loadAmts(); m[bucket]=amount; localStorage.setItem(AMT_KEY, JSON.stringify(m)); } catch {} }
+  /* Persist last chosen amount per bucket (powers the quick button) */
+  const AMT_KEY='fc_bucket_amounts_v1';
+  const loadAmts=()=>{ try{ return JSON.parse(localStorage.getItem(AMT_KEY)||'{}'); }catch{ return {}; } };
+  const saveAmt=(k,a)=>{ try{ const m=loadAmts(); m[k]=a; localStorage.setItem(AMT_KEY, JSON.stringify(m)); }catch{} };
 
-  // Enhance quick-donate labels if user stored a preference
-  (function hydrateQuickAmounts(){
+  // Hydrate quick-amount buttons from prefs
+  (function(){
     const map = loadAmts();
-    qs('[data-bucket]').forEach(card => {
-      const key = card.dataset.bucket;
-      const pref = parseInt(map[key]||'0',10);
-      if (pref > 0){
-        const btn = card.querySelector('[data-donate][data-amount]');
-        if (btn){ btn.dataset.amount = String(pref); btn.textContent = `Donate ${nf(pref)}`; btn.setAttribute('aria-label', `Donate ${nf(pref)} to ${key}`); }
+    qs('[data-bucket]').forEach(card=>{
+      const key=card.dataset.bucket; const pref=parseInt(map[key]||'0',10);
+      if (pref>0){
+        const btn=card.querySelector('[data-donate][data-amount]');
+        if (btn){ btn.dataset.amount=String(pref); btn.textContent=`Donate ${nf(pref)}`; btn.setAttribute('aria-label',`Donate ${nf(pref)} to ${key}`); }
       }
     });
   })();
 
-  // Share (per-bucket deep link)
+  /* P2P / UTM decoration */
+  function decorate(u, source='impact', medium='cta', campaign='fundraiser'){
+    try{
+      if (window.FC?.decorateUrl) return window.FC.decorateUrl(u, source, medium, campaign);
+      const url = new URL(u, location.origin);
+      url.searchParams.set('utm_source', source);
+      url.searchParams.set('utm_medium', medium);
+      url.searchParams.set('utm_campaign', campaign);
+      return url.toString();
+    }catch{ return u; }
+  }
+
+  /* Share per bucket */
   root.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-share]'); if (!btn) return;
-    const card = btn.closest('[data-bucket]'); const key = card?.dataset?.bucket || '';
-    const url = new URL(location.href); url.hash = 'impact=' + encodeURIComponent(key || 'all');
-    const shareData = { title:`Support ${TEAM_NAME}`, text:`Help fund ${key || 'our program'} for ${TEAM_NAME}.`, url:url.toString() };
-    try { if (navigator.share) { await navigator.share(shareData); return; } } catch {}
-    try {
-      await navigator.clipboard.writeText(url.toString());
-      const t = btn.textContent; btn.textContent = 'Link copied!'; setTimeout(()=>btn.textContent=t, 1100);
-    } catch {}
+    const card = btn.closest('[data-bucket]'); const key = card?.dataset?.bucket || 'program';
+    const url = new URL(location.href); url.hash = 'impact=' + encodeURIComponent(key);
+    const shareData = { title:`Support ${TEAM_NAME}`, text:`Help fund ${key} for ${TEAM_NAME}.`, url: decorate(url.toString(), 'impact', 'share', 'fan_share') };
+    try{ if (window.FC?.handleShare){ await FC.handleShare('impact', shareData); return; } }catch{}
+    try{ if (navigator.share){ await navigator.share(shareData); return; } }catch{}
+    try{ await navigator.clipboard.writeText(shareData.url); const t=btn.textContent; btn.textContent='Link copied!'; setTimeout(()=>btn.textContent=t,1100); }catch{}
   });
 
-  // Donate bridge → use global flow + remember amount if user confirms
+  /* Donate bridge → prefer modal; fallback to server or Stripe link */
+  async function startBucketCheckout({ bucket, amount }){
+    try{ window.fcTrack && window.fcTrack('cta_click', { where:'impact', bucket, amount }); }catch{}
+    if (typeof window.openDonationModal === 'function'){
+      window.openDonationModal({ bucket, amount, onConfirm:(a)=>saveAmt(bucket, a) });
+      return;
+    }
+    if (SPL){ location.assign(decorate(SPL)); return; }
+    try{
+      const r = await fetch(donateUrl, {
+        method:'POST', headers:{'Content-Type':'application/json'}, credentials:'same-origin',
+        body: JSON.stringify({ bucket, amount })
+      });
+      if (r.ok){ const d = await r.json().catch(()=>({})); if (d?.url){ location.assign(decorate(d.url)); return; } }
+    }catch{}
+    // Last-chance GET with query params
+    const qs = new URLSearchParams({ bucket, amount: amount ?? 'custom' }).toString();
+    location.assign(decorate('/donate?'+qs));
+  }
+
+  // Hook up CTA buttons
   root.addEventListener('click', (e)=>{
-    const btn = e.target.closest('[data-donate]'); if(!btn) return;
+    const btn = e.target.closest('[data-donate]'); if (!btn) return;
     const card = btn.closest('[data-bucket]');
     const bucket = card?.dataset?.bucket || 'general';
     const amt = parseInt(btn.getAttribute('data-amount')||'0',10) || null;
-    try{ (window.dataLayer = window.dataLayer || []).push({ event:'impact_donate_click', bucket, amount: amt }); }catch{}
-    try{ window.dispatchEvent(new CustomEvent('fc:donate:open', { detail: { bucket, amount: amt }})); }catch{}
-    try{ window.openDonationModal?.({ bucket, amount: amt, onConfirm:(a)=>saveAmt(bucket, a) }); }catch{}
+    startBucketCheckout({ bucket, amount: amt });
   });
 
   // Enter on focused card → open “Choose amount”
   root.addEventListener('keydown', (e)=>{
     if (e.key !== 'Enter') return;
     const card = e.target.closest?.('.impact-card'); if (!card) return;
-    const choose = card.querySelector('[data-donate]:not([data-amount])'); if (choose) choose.click();
+    const choose = card.querySelector('[data-donate]:not([data-amount])'); choose?.click();
   });
 
-  // Impressions (IO-gated)
+  /* Impressions (IO-gated) */
   try{
-    const seen = new WeakSet();
-    const io = new IntersectionObserver((ents)=>{
+    const seen=new WeakSet();
+    const io=new IntersectionObserver((ents)=>{
       ents.forEach(ent=>{
-        if (ent.isIntersecting && !seen.has(ent.target)) {
+        if (ent.isIntersecting && !seen.has(ent.target)){
           seen.add(ent.target);
-          const key = ent.target.dataset.bucket || 'unknown';
-          const detail = { bucket:key, source:'impact', time:Date.now() };
-          (window.dataLayer = window.dataLayer || []).push({ event:'impact_impression', ...detail });
-          window.dispatchEvent(new CustomEvent('fundchamps:impact:impression', { detail }));
+          const bucket=ent.target.dataset.bucket||'unknown';
+          window.dataLayer=(window.dataLayer||[]); window.dataLayer.push({ event:'impact_impression', bucket, source:'impact', time:Date.now() });
+          window.dispatchEvent(new CustomEvent('fundchamps:impact:impression',{ detail:{ bucket } }));
         }
       });
     }, { rootMargin:'-10% 0px', threshold:.5 });
     qs('[data-bucket]').forEach(el=>io.observe(el));
+    addEventListener('pagehide',()=>io.disconnect(),{ once:true });
   }catch{}
 
-  // Tiny text fade for number changes
+  /* Live updates via custom events: fc:bucket:update { key, goal, raised } */
   function bump(el, txt){
     if (!el) return; const cur = el.textContent||'';
     if (cur === txt) return;
     const t0 = performance.now(), dur=200;
-    function step(t){ const p=Math.min(1,(t-t0)/dur); el.style.opacity=(1-p).toString(); if(p>=1){ el.textContent=txt; el.style.opacity='1'; } else requestAnimationFrame(step); }
+    const step = (t)=>{ const p=Math.min(1,(t-t0)/dur); el.style.opacity=(1-p).toString(); if(p>=1){ el.textContent=txt; el.style.opacity='1'; } else requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
 
-  // Live updates (fc:bucket:update)
   addEventListener('fc:bucket:update', ev => {
     const d = ev.detail || {}; if (!d.key) return;
     const card = root.querySelector(`[data-bucket="${CSS.escape(d.key)}"]`); if (!card) return;
@@ -312,16 +369,18 @@
     if (live){ live.textContent = `Updated: ${nf(Math.round(raised))} of ${nf(Math.round(goal))}`; }
 
     if (left <= 0){
+      // mark as funded
       const badge = card.querySelector('.rounded-full');
       if (badge){ badge.className = 'rounded-full bg-emerald-400/15 px-2 py-0.5 text-[11px] font-semibold text-emerald-300'; badge.textContent = 'Fully funded ✅'; }
       card.querySelectorAll('[data-donate]').forEach(btn => { btn.setAttribute('disabled',''); btn.classList.add('opacity-60','cursor-not-allowed'); });
       try{ ('vibrate' in navigator) && navigator.vibrate(30); }catch{}
+      sr && (sr.textContent = `${d.key} fully funded.`);
     }
   }, { passive:true });
 })();
 </script>
 
-<script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "OfferCatalog",

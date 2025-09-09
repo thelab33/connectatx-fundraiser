@@ -1,5 +1,8 @@
-{# =============== Sponsor Leaderboard — SV-Elite v3.6 (dup-safe, a11y, offline, IO-pause) =============== #}
+{# =============== Sponsor Leaderboard — SV-Elite 4.4 Ultra Pro (CSP/a11y/perf) =============== #}
 {% set NONCE      = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{# ---- Inputs ---- #}
 {% set _seed      = (shoutouts if shoutouts is defined and shoutouts else []) %}
 {% set _team_id   = (team.team_id if team and team.team_id else 'global') %}
 {% set _brand     = (team.theme_color if team and team.theme_color else '#facc15') %}
@@ -8,183 +11,204 @@
 
 <section
   id="sponsor-leaderboard"
-  class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 sticky z-40 print:hidden"
+  class="fc-leaderband sticky z-40 print:hidden"
   role="region"
   aria-label="Live sponsor shoutouts"
-  style="top: var(--fc-header-h, 0px); --fc-brand: {{ _brand }};"
+  style="--fc-brand: {{ _brand }}; top: var(--fc-header-h, 0px);"
   data-team-key="{{ _team_id }}"
   data-api="{{ API_SHOUTS }}"
   data-vip-tiers="Platinum,Gold"
   data-ttl-seconds="86400"
-  data-max-store="24"
+  data-max-store="48"
   data-dedupe-window-seconds="600"
   data-default-speed="normal"
-  data-autoscroll="1"
->
-  <style{% if NONCE %} nonce="{{ NONCE }}"{% endif %}>
+  data-autoscroll="1">
+
+  <style {{ nonce_attr() }}>
+    /* ===== Band + ambience ===== */
     #sponsor-leaderboard{
+      position:relative;
       background:
-        linear-gradient(180deg, rgb(6 7 10 / .84), rgb(6 7 10 / .64)),
-        radial-gradient(140% 120% at 50% -20%, color-mix(in srgb, var(--fc-brand) 22%, transparent) 0%, transparent 60%);
+        linear-gradient(180deg,rgba(10,11,14,.86),rgba(10,11,14,.66)),
+        radial-gradient(130% 120% at 50% -30%, color-mix(in srgb, var(--fc-brand,#facc15) 22%, transparent) 0%, transparent 60%);
       -webkit-backdrop-filter: blur(10px) saturate(140%);
       backdrop-filter: blur(10px) saturate(140%);
-      border-bottom: 1px solid rgb(255 255 255 / .10);
-      contain: content;
+      border-bottom:1px solid rgba(255,255,255,.10);
+      box-shadow:0 8px 28px rgba(0,0,0,.28);
+      isolation:isolate;
     }
     .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 
-    /* Viewport with soft masks */
-    #sponsor-leaderboard .fc-ticker__viewport{overflow:hidden;position:relative;--fade:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+    /* ===== Viewport with edge fade ===== */
+    .fc-ticker__viewport{
+      max-width:min(1280px, 96vw);
+      margin-inline:auto;
+      padding:.45rem .6rem;
+      overflow:hidden;
+      position:relative;
+      --fade: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    }
     @supports (mask-image: linear-gradient(black, white)){
-      #sponsor-leaderboard .fc-ticker__viewport{mask-image:var(--fade);-webkit-mask-image:var(--fade)}
+      .fc-ticker__viewport{ mask-image:var(--fade); -webkit-mask-image:var(--fade) }
     }
 
-    /* Row + pill */
-    #sponsor-leaderboard .fc-row{display:flex;align-items:center;gap:.6rem;padding:.55rem .75rem;font-weight:700;letter-spacing:-.01em}
-    #sponsor-leaderboard .pill{
-      display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .6rem;border-radius:999px;
-      background:rgb(255 255 255 / .06);border:1px solid rgb(255 255 255 / .10);white-space:nowrap;will-change:transform;
-      max-width:clamp(12rem, 38vw, 30rem);overflow:hidden;text-overflow:ellipsis
+    /* ===== Rail + marquee ===== */
+    .fc-ticker__rail{ display:flex; align-items:center; gap:1rem; padding:.15rem .3rem; will-change:transform; }
+    @keyframes fc-marquee{ from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
+    .fc-marquee{ animation: fc-marquee var(--speed-s, 24s) linear infinite; }
+    #sponsor-leaderboard:hover .fc-marquee{ animation-play-state: paused; }
+
+    /* ===== Pills ===== */
+    .pill{
+      display:inline-flex; align-items:center; gap:.5rem; max-width:clamp(12rem, 36vw, 30rem);
+      padding:.42rem .72rem; border-radius:999px; font-weight:900; letter-spacing:-.01em; white-space:nowrap;
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e8edf6;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.06);
+      overflow:hidden; text-overflow:ellipsis;
     }
-    #sponsor-leaderboard .pill .txt{display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    #sponsor-leaderboard .headline{color:#fde68a;text-shadow:0 0 10px rgb(250 204 21 / .35)}
+    .pill .txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+    .pill .who{ color:#fff; font-weight:1000 }
 
-    /* Empty state */
-    #sponsor-leaderboard .pill.placeholder{opacity:.9;color:#e5e7eb;border-style:dashed;border-color:rgb(255 255 255 / .18)}
-    #sponsor-leaderboard .placeholder .link-btn{all:unset;cursor:pointer;text-decoration:underline;font-weight:800}
-    #sponsor-leaderboard .placeholder .link-btn:focus-visible{outline:2px solid #fde047;outline-offset:2px;border-radius:.4rem}
+    /* Tier tints */
+    [data-tier="Platinum"]{ color:#e0e7ff; text-shadow:0 0 14px #a78bfa }
+    [data-tier="Gold"]    { color:#fde68a; text-shadow:0 0 10px #facc15 }
+    [data-tier="Silver"]  { color:#e5e7eb }
+    [data-tier="Bronze"]  { color:#fbbf24 }
 
-    /* Rail + marquee */
-    #sponsor-leaderboard .fc-ticker__rail{display:flex;gap:1.25rem;padding:.35rem .75rem;will-change:transform}
-    @keyframes fc-marquee{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-    #sponsor-leaderboard .fc-marquee{animation:fc-marquee var(--speed, 24s) linear infinite}
-    #sponsor-leaderboard:hover .fc-marquee{animation-play-state:paused}
-
-    /* Tier accents + VIP glow */
-    #sponsor-leaderboard [data-tier="Platinum"]{color:#e0e7ff;font-weight:900;text-shadow:0 0 12px #a78bfa}
-    #sponsor-leaderboard [data-tier="Gold"]{color:#fde68a;text-shadow:0 0 8px #facc15}
-    #sponsor-leaderboard [data-tier="Silver"]{color:#d1d5db}
-    #sponsor-leaderboard [data-tier="Bronze"]{color:#fbbf24}
-    #sponsor-leaderboard .vip{box-shadow:0 0 0 0 rgba(250,204,21,0)}
+    /* VIP entrance pulse (motion-safe) */
+    .vip{ box-shadow:0 0 0 0 rgba(250,204,21,0) }
     @media (prefers-reduced-motion: no-preference){
-      #sponsor-leaderboard .vip{animation:vipPulse 1.2s ease-out 1}
-      @keyframes vipPulse{0%,100%{box-shadow:0 0 0 0 rgba(250,204,21,0);transform:scale(1)}50%{box-shadow:0 0 22px 2px rgba(250,204,21,.35);transform:scale(1.03)}}
+      .vip{ animation: vipPulse 1.1s ease-out 1 }
+      @keyframes vipPulse{
+        0%,100%{ box-shadow:0 0 0 0 rgba(250,204,21,0); transform:scale(1) }
+        50%    { box-shadow:0 0 22px 2px rgba(250,204,21,.35); transform:scale(1.03) }
+      }
     }
 
-    /* Controls */
-    #sponsor-leaderboard .ctrl{display:inline-flex;align-items:center;gap:.4rem;font-weight:800;font-size:.9rem;background:rgb(255 255 255 / .06);border:1px solid rgb(255 255 255 / .10);padding:.35rem .6rem;border-radius:999px}
-    #sponsor-leaderboard .ctrl[aria-pressed="true"]{background:rgb(255 255 255 / .14)}
-    #sponsor-leaderboard .ctrl-group{margin-left:auto;display:flex;gap:.5rem;align-items:center}
+    /* Headline + placeholder */
+    .headline{ color:#fde68a; text-shadow:0 0 12px rgba(250,204,21,.35) }
+    .pill.placeholder{ opacity:.92; border-style:dashed; color:#e5e7eb }
+    .placeholder .link-btn{ all:unset; cursor:pointer; text-decoration:underline; font-weight:900 }
+    .placeholder .link-btn:focus-visible{ outline:2px solid #fde047; outline-offset:2px; border-radius:.35rem }
 
-    /* Offline banner */
-    #sponsor-leaderboard .offline-pill{background:#7f1d1d;border-color:#fecaca;color:#fff;display:none}
-    #sponsor-leaderboard .offline-pill.show{display:inline-flex}
+    /* Controls cluster */
+    .ctrl-group{ margin-left:auto; display:inline-flex; align-items:center; gap:.5rem }
+    .ctrl{
+      display:inline-flex; align-items:center; gap:.45rem; font-weight:900; font-size:.9rem;
+      background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e5e7eb; border-radius:999px; padding:.38rem .68rem;
+    }
+    .ctrl[aria-pressed="true"]{ background:rgba(255,255,255,.16) }
+    .offline-pill{ background:#7f1d1d; border-color:#fecaca; color:#fff; display:none }
+    .offline-pill.show{ display:inline-flex }
 
-    @media (prefers-reduced-motion: reduce){ #sponsor-leaderboard .fc-marquee{animation:none!important} }
+    /* Reduced motion / transparency / HCM */
+    @media (prefers-reduced-motion: reduce){ .fc-marquee{ animation:none!important } }
+    @media (prefers-reduced-transparency: reduce), (prefers-contrast: more){
+      #sponsor-leaderboard{ background:linear-gradient(180deg,rgba(12,14,18,.96),rgba(12,14,18,.86)) }
+      .pill{ background:rgba(255,255,255,.14) }
+    }
     @media (forced-colors: active){
-      #sponsor-leaderboard{border-bottom:1px solid CanvasText}
-      #sponsor-leaderboard .pill{border:1px solid CanvasText}
-      #sponsor-leaderboard .headline{text-shadow:none;color:CanvasText}
+      #sponsor-leaderboard{ border-bottom:1px solid CanvasText }
+      .pill{ border:1px solid CanvasText; text-shadow:none }
+      .headline{ text-shadow:none; color:CanvasText }
     }
     @supports not (color: color-mix(in srgb, black, white)){
-      #sponsor-leaderboard{background:linear-gradient(180deg,#0b0c10cc,#0b0c1099)}
+      #sponsor-leaderboard{ background:linear-gradient(180deg,#0b0c10cc,#0b0c1099) }
     }
   </style>
 
-  <!-- Screen-reader live regions -->
-  <p class="sr-only" aria-live="polite" id="sr-shout">
-    {{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else 'Shoutouts ready.' }}
-  </p>
-  <p class="sr-only" aria-live="assertive" aria-atomic="true" id="sr-vip"></p>
+  <!-- Screenreader live regions -->
+  <p class="sr-only" aria-live="polite"    id="sr-shout">{{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else 'Shoutouts ready.' }}</p>
+  <p class="sr-only" aria-live="assertive" id="sr-vip" aria-atomic="true"></p>
 
+  <!-- Viewport -->
   <div class="fc-ticker__viewport">
-    <div class="fc-ticker__rail fc-marquee" role="list" id="ticker-rail" aria-busy="true">
-      {# SSR seeds (safe) #}
+    <div class="fc-ticker__rail fc-marquee" id="ticker-rail" role="list" aria-busy="true">
+      {# ---- SSR seed items (optional) ---- #}
       {% for s in _seed %}
         {% set t = (s.tier or 'General')|string %}
         {% set badge = '✨' if t|lower=='platinum' else '🏅' if t|lower=='gold' else '🎉' if t|lower=='silver' else '🥉' if t|lower=='bronze' else '🔥' %}
         <span role="listitem" class="pill" data-tier="{{ t }}" data-sponsor="{{ s.sponsor|e }}" data-msg="{{ s.msg|e }}">
-          {{ badge }} <span class="txt"><span class="text-white">{{ s.sponsor }}</span> {{ s.msg }}</span>
+          {{ badge }} <span class="txt"><span class="who">{{ s.sponsor }}</span> {{ s.msg }}</span>
         </span>
       {% endfor %}
 
+      <!-- Ongoing headline -->
       <span aria-hidden="true" class="pill headline">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
 
       {% if not _seed %}
       <span id="shoutouts-empty" role="listitem" class="pill placeholder">
-        No shoutouts yet —
-        <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>
+        No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>
       </span>
       {% endif %}
 
       <!-- Controls -->
       <div class="ctrl-group" role="group" aria-label="Ticker controls">
         <button type="button" class="ctrl" id="ticker-ctrl" aria-pressed="false" aria-label="Pause live ticker">⏸ Pause</button>
-        <button type="button" class="ctrl" id="speed-ctrl" aria-pressed="false" aria-label="Speed: Normal" data-speed="normal">⏩ Speed</button>
+        <button type="button" class="ctrl" id="speed-ctrl"  aria-pressed="false" aria-label="Speed: Normal" data-speed="normal">⏩ Speed</button>
         <span class="pill offline-pill" id="offline-pill">⚠ Offline — queued</span>
       </div>
     </div>
   </div>
 
-  <script{% if NONCE %} nonce="{{ NONCE }}"{% endif %}>
+  <script {{ nonce_attr() }}>
   (() => {
-    // hard guard against multiple mounts
-    if (window.__fcTickerEliteV7) return; window.__fcTickerEliteV7 = true;
+    if (window.__FC_LEADERBOARD_V44__) return; window.__FC_LEADERBOARD_V44__ = true;
 
-    const root        = document.getElementById('sponsor-leaderboard');
-    const rail        = document.getElementById('ticker-rail');
-    const ctrl        = document.getElementById('ticker-ctrl');
-    const speedCtrl   = document.getElementById('speed-ctrl');
-    const sr          = document.getElementById('sr-shout');
-    const srVIP       = document.getElementById('sr-vip');
-    const offlinePill = document.getElementById('offline-pill');
+    const root   = document.getElementById('sponsor-leaderboard');
+    const rail   = document.getElementById('ticker-rail');
+    const ctrl   = document.getElementById('ticker-ctrl');
+    const speedC = document.getElementById('speed-ctrl');
+    const sr     = document.getElementById('sr-shout');
+    const srVIP  = document.getElementById('sr-vip');
+    const offEl  = document.getElementById('offline-pill');
     if (!root || !rail) return;
 
-    const reduced      = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)
-                      || !!(navigator.connection && navigator.connection.saveData);
-    const AUTOSCROLL   = root.getAttribute('data-autoscroll') !== '0';
-    const vipTiers     = (root.getAttribute('data-vip-tiers') || '').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-    const TTL          = parseInt(root.getAttribute('data-ttl-seconds') || '86400', 10);
-    const MAX_STORE    = parseInt(root.getAttribute('data-max-store') || '24', 10);
-    const DEDUPE_WIN   = parseInt(root.getAttribute('data-dedupe-window-seconds') || '600', 10) * 1000;
-    const defaultSpeed = (root.getAttribute('data-default-speed') || 'normal').toLowerCase();
-    const teamKey      = root.getAttribute('data-team-key') || 'global';
-    const API          = root.getAttribute('data-api') || '/api/shoutouts';
-    const storeKey     = `fc_sponsor_shoutouts_v1:${teamKey}`;
+    /* ---------- Config ---------- */
+    const reduced     = !!(matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ||
+                        !!(navigator.connection && (navigator.connection.saveData || String(navigator.connection.effectiveType||'').includes('2g')));
+    const AUTOSCROLL  = root.getAttribute('data-autoscroll') !== '0';
+    const vipTiers    = (root.getAttribute('data-vip-tiers') || '').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
+    const TTL         = parseInt(root.getAttribute('data-ttl-seconds') || '86400', 10);
+    const MAX_STORE   = parseInt(root.getAttribute('data-max-store') || '48', 10);
+    const DEDUPE_MS   = parseInt(root.getAttribute('data-dedupe-window-seconds') || '600', 10) * 1000;
+    const defaultSpd  = (root.getAttribute('data-default-speed') || 'normal').toLowerCase();
+    const teamKey     = root.getAttribute('data-team-key') || 'global';
+    const API         = root.getAttribute('data-api') || '/api/shoutouts';
+    const storeKey    = `fc_sponsor_shoutouts_v3:${teamKey}`;
 
-    /* ---------- Speed control + tuning ---------- */
+    /* ---------- Speed ---------- */
     const speedMap = { slow: 32, normal: 24, fast: 16 };
-    function setSpeed(mode) {
-      const m = (mode in speedMap ? mode : 'normal');
-      rail.style.setProperty('--speed', speedMap[m] + 's');
-      if (speedCtrl){
-        speedCtrl.dataset.speed = m;
-        speedCtrl.setAttribute('aria-label', `Speed: ${m[0].toUpperCase()}${m.slice(1)}`);
+    function setSpeed(mode){
+      const m = (mode in speedMap) ? mode : 'normal';
+      rail.style.setProperty('--speed-s', (speedMap[m] || 24) + 's');
+      if (speedC){
+        speedC.dataset.speed = m;
+        speedC.setAttribute('aria-label', `Speed: ${m[0].toUpperCase()}${m.slice(1)}`);
       }
     }
     function tuneSpeed(){
-      const viewport = root.querySelector('.fc-ticker__viewport'); if (!viewport) return;
-      const w = rail.scrollWidth, v = viewport.clientWidth || 1;
-      const factor = Math.min(2, Math.max(.8, w / (v * 2)));        // normalize for content width
-      const base = speedMap[speedCtrl?.dataset.speed || 'normal'] || 24;
-      rail.style.setProperty('--speed', (base * factor) + 's');
+      try{
+        const viewport = root.querySelector('.fc-ticker__viewport'); if (!viewport) return;
+        const w = rail.scrollWidth || 1, v = viewport.clientWidth || 1;
+        const factor = Math.min(2.3, Math.max(.85, w / (v * 2))); // keep readable pace
+        const base = speedMap[speedC?.dataset.speed || 'normal'] || 24;
+        rail.style.setProperty('--speed-s', (base * factor) + 's');
+      }catch{}
     }
-    setSpeed(reduced ? 'slow' : defaultSpeed);
-    speedCtrl?.addEventListener('click', () => {
+    setSpeed(reduced ? 'slow' : defaultSpd);
+    speedC?.addEventListener('click', () => {
       const order = ['slow','normal','fast'];
-      const idx = order.indexOf(speedCtrl.dataset.speed || 'normal');
-      setSpeed(order[(idx + 1) % order.length]);
-      tuneSpeed();
-    });
-    addEventListener('resize', () => requestAnimationFrame(tuneSpeed));
-    try {
-      new ResizeObserver(() => requestAnimationFrame(tuneSpeed)).observe(rail);
-    } catch {}
+      const idx = order.indexOf(speedC.dataset.speed || 'normal');
+      setSpeed(order[(idx + 1) % order.length]); requestAnimationFrame(tuneSpeed);
+    }, { passive:true });
+    addEventListener('resize', () => requestAnimationFrame(tuneSpeed), { passive:true });
+    try { new ResizeObserver(() => requestAnimationFrame(tuneSpeed)).observe(rail); } catch {}
 
-    /* ---------- Pause control & IO visibility ---------- */
+    /* ---------- Pause / Play & Visibility ---------- */
     function setPaused(paused){
+      ctrl?.setAttribute('aria-pressed', paused ? 'true' : 'false');
       if (ctrl){
-        ctrl.setAttribute('aria-pressed', paused ? 'true' : 'false');
         ctrl.textContent = paused ? '▶ Play' : '⏸ Pause';
         ctrl.setAttribute('aria-label', paused ? 'Play live ticker' : 'Pause live ticker');
       }
@@ -192,37 +216,34 @@
     }
     ctrl?.addEventListener('click', () => setPaused(ctrl.getAttribute('aria-pressed') !== 'true'));
     if (reduced || !AUTOSCROLL) setPaused(true);
-
     try{
       const viewport = root.querySelector('.fc-ticker__viewport');
-      const io = new IntersectionObserver((ents)=>{
-        ents.forEach(e => setPaused(!e.isIntersecting || reduced || !AUTOSCROLL));
-      }, { threshold: .01 });
+      const io = new IntersectionObserver((ents)=> ents.forEach(ent => setPaused(!ent.isIntersecting || reduced || !AUTOSCROLL)), { threshold:.01 });
       viewport && io.observe(viewport);
+      addEventListener('pagehide', () => io.disconnect(), { once:true });
     }catch{}
 
     /* ---------- Local store ---------- */
-    function loadStore(){
-      try {
+    const loadStore = () => {
+      try{
         const raw = JSON.parse(localStorage.getItem(storeKey) || '[]');
-        const cutoff = Date.now() - TTL * 1000;
+        const cutoff = Date.now() - TTL*1000;
         return raw.filter(x => (x.ts||0) > cutoff).slice(0, MAX_STORE);
-      } catch { return []; }
-    }
-    function saveStore(list){
-      try { localStorage.setItem(storeKey, JSON.stringify(list.slice(0, MAX_STORE))); } catch {}
-    }
+      }catch{ return []; }
+    };
+    const saveStore = (list) => { try{ localStorage.setItem(storeKey, JSON.stringify(list.slice(0, MAX_STORE))); }catch{} };
 
-    /* ---------- Empty state helpers ---------- */
+    /* ---------- Empty state ---------- */
     function wireEmptyCTA(){
-      ['shoutouts-empty-cta','shoutouts-empty-cta-2'].map(id => document.getElementById(id)).filter(Boolean).forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
+      ['shoutouts-empty-cta','shoutouts-empty-cta-2'].forEach(id=>{
+        const btn = document.getElementById(id);
+        btn?.addEventListener('click', async ()=>{
           try{
-            if (window.FC?.handleShare) { await FC.handleShare('ticker'); return; }
-            if (navigator.share) { await navigator.share({ title: document.title, text:'Support our season!', url: location.href }); return; }
+            if (window.fc && typeof fc.handleShare === 'function'){ await fc.handleShare('ticker'); return; }
+            if (navigator.share){ await navigator.share({ title: document.title, text:'Support our season!', url: location.href }); return; }
             await navigator.clipboard.writeText(location.href);
           }catch{}
-        });
+        }, { passive:true });
       });
     }
     function hideEmpty(){ document.getElementById('shoutouts-empty')?.remove(); }
@@ -233,89 +254,78 @@
         const span = document.createElement('span');
         span.id = 'shoutouts-empty'; span.className='pill placeholder'; span.setAttribute('role','listitem');
         span.innerHTML = 'No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta-2" aria-label="Be the first to cheer us on">be the first 🎉</button>';
-        const headline = rail.querySelector('.headline');
-        rail.insertBefore(span, headline ? headline.nextSibling : rail.firstChild);
+        const after = rail.querySelector('.headline');
+        rail.insertBefore(span, after ? after.nextSibling : rail.firstChild);
       }
       wireEmptyCTA();
     }
 
-    /* ---------- De-dupe: sponsor + message, primed from SSR ---------- */
-    const recentByKey = new Map(); // key -> { ts, el, count }
-    const norm   = (s) => String(s || '').trim().toLowerCase();
-    const makeKey= (sponsor, msg) => `${norm(sponsor)}|${norm(msg)}`;
-    const esc    = (t) => String(t).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    /* ---------- De-dupe + render ---------- */
+    const recent = new Map();
+    const norm = s => String(s||'').trim().toLowerCase();
+    const keyOf = (sponsor,msg) => `${norm(sponsor)}|${norm(msg)}`;
+    const esc = t => String(t).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
-    // Seed map from any SSR pills so hydrate() won't re-add them
-    (function primeFromSSR(){
+    // Prime from SSR
+    (() => {
       const now = Date.now();
-      rail.querySelectorAll('.pill[data-sponsor][data-msg]').forEach((el) => {
-        const key = makeKey(el.dataset.sponsor, el.dataset.msg);
-        if (!recentByKey.has(key)) recentByKey.set(key, { ts: now, el, count: 1 });
+      rail.querySelectorAll('.pill[data-sponsor][data-msg]').forEach(el=>{
+        const k = keyOf(el.dataset.sponsor, el.dataset.msg);
+        if (!recent.has(k)) recent.set(k, { ts: now, el, count: 1 });
       });
     })();
 
-    function renderPill(data, { vip=false, prepend=true } = {}){
-      const tier    = String(data?.tier || 'General');
-      const sponsor = esc(data?.sponsor ?? 'Anonymous');
-      const msg     = esc(data?.msg ?? 'supported the team!');
-      const badge   = /platinum/i.test(tier) ? '✨' : /gold/i.test(tier) ? '🏅' : /silver/i.test(tier) ? '🎉' : /bronze/i.test(tier) ? '🥉' : '🔥';
-
+    function renderPill({ tier='General', sponsor='Anonymous', msg='supported the team!' }, { vip=false, prepend=true }={}){
+      const badge = /platinum/i.test(tier) ? '✨' : /gold/i.test(tier) ? '🏅' : /silver/i.test(tier) ? '🎉' : /bronze/i.test(tier) ? '🥉' : '🔥';
       const el = document.createElement('span');
       el.className = 'pill' + (vip ? ' vip' : '');
       el.setAttribute('role','listitem');
       el.dataset.tier = tier;
       el.dataset.sponsor = sponsor;
       el.dataset.msg = msg;
-      el.innerHTML = `${badge} <span class="txt"><span class="text-white">${sponsor}</span> ${msg}</span>`;
+      el.innerHTML = `${badge} <span class="txt"><span class="who">${esc(sponsor)}</span> ${esc(msg)}</span>`;
       (prepend ? rail.prepend(el) : rail.appendChild(el));
-
-      if (vip) { if (srVIP) srVIP.textContent = `VIP: ${data.sponsor} ${data.msg}`; }
-      else     { if (sr)    sr.textContent    = `${data.sponsor} ${data.msg}`; }
+      (vip ? srVIP : sr).textContent = `${sponsor} ${msg}`;
       return el;
     }
 
     function addItemRaw(data){
       if (!data) return;
       hideEmpty();
+      const now = Date.now();
+      const tier = String(data.tier || 'General');
+      const sponsor = data.sponsor || 'Anonymous';
+      const msg = data.msg || 'supported the team!';
+      const k = keyOf(sponsor, msg);
+      const isVIP = vipTiers.includes(tier.toLowerCase());
 
-      const now        = Date.now();
-      const tier       = String(data.tier || 'General');
-      const sponsorRaw = data.sponsor || 'Anonymous';
-      const msgRaw     = data.msg || 'supported the team!';
-      const key        = makeKey(sponsorRaw, msgRaw);
-      const isVIP      = vipTiers.includes(tier.toLowerCase());
-
-      const existing = recentByKey.get(key);
-      if (existing && now - existing.ts <= DEDUPE_WIN){
-        existing.count = (existing.count || 1) + 1;
-        existing.ts = now;
-        const badge = existing.el.querySelector('.x-times') || document.createElement('b');
-        badge.className = 'x-times';
-        badge.textContent = ` ×${existing.count}`;
-        badge.style.marginLeft = '2px';
-        existing.el.appendChild(badge);
-        rail.prepend(existing.el);
+      const seen = recent.get(k);
+      if (seen && now - seen.ts <= DEDUPE_MS){
+        seen.count = (seen.count||1) + 1; seen.ts = now;
+        const bump = seen.el.querySelector('.x-times') || Object.assign(document.createElement('b'), { className:'x-times' });
+        bump.textContent = ` ×${seen.count}`; bump.style.marginLeft='2px';
+        seen.el.appendChild(bump);
+        rail.prepend(seen.el);
         return;
       }
 
-      const el = renderPill({ tier, sponsor: sponsorRaw, msg: msgRaw }, { vip: isVIP, prepend: true });
-      recentByKey.set(key, { ts: now, el, count: 1 });
+      const el = renderPill({ tier, sponsor, msg }, { vip:isVIP, prepend:true });
+      recent.set(k, { ts: now, el, count: 1 });
 
-      const stored = loadStore();
-      stored.unshift({ sponsor: sponsorRaw, msg: msgRaw, tier, ts: now });
-      saveStore(stored);
-      tuneSpeed();
+      const cached = loadStore();
+      cached.unshift({ sponsor, msg, tier, ts: now });
+      saveStore(cached);
+      requestAnimationFrame(tuneSpeed);
     }
 
-    /* ---------- Seamless loop cloning (no headline/placeholder) ---------- */
-    function cloneOnce(){
-      if (rail.__clonedOnce) return;
-      rail.__clonedOnce = true;
-
+    /* ---------- Loop clones for seamless marquee ---------- */
+    function cloneLoopOnce(){
+      if (rail.__clonedOnce) return; rail.__clonedOnce = true;
       const items = [...rail.querySelectorAll('.pill:not(.placeholder):not(.headline)')];
-      items.forEach((node) => {
+      if (!items.length) return;
+      items.forEach(node => {
         const c = node.cloneNode(true);
-        c.setAttribute('aria-hidden', 'true');
+        c.setAttribute('aria-hidden','true');
         c.tabIndex = -1;
         c.dataset.clone = '1';
         rail.appendChild(c);
@@ -324,49 +334,60 @@
 
     /* ---------- Offline queue ---------- */
     const offlineQueue = [];
-    function setOffline(on){ offlinePill?.classList.toggle('show', !!on); }
+    const setOffline = on => offEl?.classList.toggle('show', !!on);
     addEventListener('offline', () => setOffline(true));
     addEventListener('online',  () => { setOffline(false); while (offlineQueue.length) addItemRaw(offlineQueue.shift()); });
 
-    /* ---------- Hydrate ---------- */
+    /* ---------- Fetch helpers (CSP-safe, timeout) ---------- */
+    function fetchJSON(url, { timeout=10000 } = {}){
+      return new Promise((resolve, reject) => {
+        const ctrl = new AbortController(); const id = setTimeout(() => ctrl.abort(), timeout);
+        fetch(url, { headers:{ 'Accept':'application/json' }, signal: ctrl.signal })
+          .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)))
+          .then(d => { clearTimeout(id); resolve(d); })
+          .catch(err => { clearTimeout(id); reject(err); });
+      });
+    }
+
+    /* ---------- Hydrate (cache → API) ---------- */
     async function hydrate(){
       ensureEmptyState();
-
-      try {
+      try{
         const cached = loadStore();
         if (Array.isArray(cached) && cached.length){ cached.slice().reverse().forEach(addItemRaw); }
 
-        const url = API.startsWith('http') ? new URL(API) : new URL(API, location.origin);
-        url.searchParams.set('team', teamKey);
-        const r = await fetch(url.toString(), { headers:{ 'Accept':'application/json' } });
-        if (r?.ok){
-          const list = await r.json().catch(()=>[]);
-          if (Array.isArray(list) && list.length){ list.slice().reverse().forEach(addItemRaw); }
-        }
-      } catch {} finally {
+        const u = API.startsWith('http') ? new URL(API) : new URL(API, location.origin);
+        u.searchParams.set('team', teamKey);
+        const list = await fetchJSON(u.toString()).catch(()=>[]);
+        if (Array.isArray(list) && list.length){ list.slice().reverse().forEach(addItemRaw); }
+      }catch{} finally{
         rail.removeAttribute('aria-busy');
         ensureEmptyState();
-        cloneOnce();
-        tuneSpeed();
+        cloneLoopOnce();
+        requestAnimationFrame(tuneSpeed);
       }
     }
 
-    /* ---------- Socket.IO (optional) ---------- */
-    try {
-      if (window.io && !window.__fcTickerSocketBound){
-        window.__fcTickerSocketBound = true;
+    /* ---------- Optional Socket.IO live events ---------- */
+    try{
+      if (window.io && !window.__FC_TICKER_SOCKET_BOUND__){
+        window.__FC_TICKER_SOCKET_BOUND__ = true;
         const socket = io();
         socket.on('new_shoutout', (data) => (navigator.onLine ? addItemRaw(data) : offlineQueue.push(data)));
       }
-    } catch {}
+    }catch{}
 
-    /* ---------- Public event API ---------- */
+    /* ---------- Public event API ----------
+       window.dispatchEvent(new CustomEvent('fc:shoutout', {
+         detail: { sponsor:'Acme Co', msg:'backed the team!', tier:'Gold' }
+       }))
+    --------------------------------------- */
     addEventListener('fc:shoutout', (e) => {
       const d = e.detail || {};
       (navigator.onLine ? addItemRaw : offlineQueue.push.bind(offlineQueue))(d);
     });
 
-    /* ---------- Init ---------- */
+    // init
     if ('requestIdleCallback' in window) requestIdleCallback(hydrate, { timeout:1200 }); else setTimeout(hydrate, 0);
     if (reduced || !AUTOSCROLL) setPaused(true);
     wireEmptyCTA();

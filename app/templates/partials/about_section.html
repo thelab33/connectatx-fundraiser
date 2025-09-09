@@ -1,96 +1,90 @@
-{# ================== About — SV-Elite 4.0 (a11y, counters, copy-chips, meter, ribbon, CSP) ================== #}
+{# ================== About — SV-Elite (drop-in, CSP/a11y) ================== #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set _team = team if team is defined and team else none %}
-{% set TEAM_NAME = _team.team_name if _team and _team.team_name else "Connect ATX Elite" %}
-{% set REGION = _team.region if _team and _team.region else "Austin, TX" %}
-{% set MISSION_TXT = _team.mission if _team and _team.mission else "Beyond basketball, we’re building scholars, leaders, and great teammates — for life." %}
-{% set EIN = _team.ein if _team and _team.ein else "" %}
-{% set IS_501C3 = _team.is_501c3 if _team is defined and _team is not none and _team.is_501c3 else true %}
-{% set IMPACT_BADGES = IMPACT_BADGES if IMPACT_BADGES is defined and IMPACT_BADGES else [
-  "Need-based scholarships", "Tutoring & mentoring", "Travel assistance"
-] %}
-{% set SHOW_VIDEO = SHOW_VIDEO if SHOW_VIDEO is defined else True %}
-{% set VIDEO_URL = VIDEO_URL if VIDEO_URL is defined and VIDEO_URL else (_team.video_url if _team and _team.video_url else 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{# ---- Context ---- #}
+{% set _team         = team if team is defined and team else none %}
+{% set TEAM_NAME     = _team.team_name if _team and _team.team_name else "Connect ATX Elite" %}
+{% set REGION        = _team.region if _team and _team.region else "Austin, TX" %}
+{% set MISSION_TXT   = _team.mission if _team and _team.mission else "Beyond basketball, we’re building scholars, leaders, and great teammates — for life." %}
+{% set EIN           = _team.ein if _team and _team.ein else "" %}
+{% set IS_501C3      = _team.is_501c3 if _team is defined and _team is not none and _team.is_501c3 else true %}
+{% set IMPACT_BADGES = IMPACT_BADGES if IMPACT_BADGES is defined and IMPACT_BADGES else ["Need-based scholarships","Tutoring & mentoring","Travel assistance"] %}
+{% set SHOW_VIDEO    = SHOW_VIDEO if SHOW_VIDEO is defined else True %}
+
+{# YouTube embed (nocookie, autoplay muted) #}
+{% set _embed_default = 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&mute=1&rel=0' %}
+{% set _embed_src = (VIDEO_URL if VIDEO_URL is defined and VIDEO_URL else (_team.video_url if _team and _team.video_url else _embed_default)) %}
+{% set _origin = (request.url_root.rstrip('/') if request is defined else '') %}
+{% if _origin %}{% set _embed_src = _embed_src ~ ('&' if '?' in _embed_src else '?') ~ 'origin=' ~ _origin %}{% endif %}
+
 {% set STATS = STATS if STATS is defined and STATS else [
   {"icon":"🏀","label":"Regionals record","value": (_team.regionals_record if _team and _team.regionals_record else "15")},
   {"icon":"🏆","label":"Championships","value": (_team.championships if _team and _team.championships else "3")},
   {"icon":"🎓","label":"Top academic athletes","value": (_team.top_academic if _team and _team.top_academic else "12")}
 ] %}
-{% set TRUST_LOGOS = TRUST_LOGOS if TRUST_LOGOS is defined and TRUST_LOGOS else [] %}
-{% set default_logo = (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
-{% set donate_link = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint('main.donate')) else '/donate')) %}
-{% set sms_number = (_team.sms_number if _team and _team.sms_number else '+15125551234') %}
-{% set _raised = (funds_raised if funds_raised is defined else none) %}
-{% set _goal = (fundraising_goal if fundraising_goal is defined else none) %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% set TRUST_LOGOS   = TRUST_LOGOS if TRUST_LOGOS is defined and TRUST_LOGOS else [] %}
+{% set default_logo  = (url_for('static', filename='images/logo.webp') if url_for is defined else '/static/images/logo.webp') %}
+{% set donate_link   = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint('main.donate')) else '/donate')) %}
+{% set sms_number    = (_team.sms_number if _team and _team.sms_number else '+15125551234') %}
+{% set _raised       = (funds_raised if funds_raised is defined else none) %}
+{% set _goal         = (fundraising_goal if fundraising_goal is defined else none) %}
+{% set _locale       = locale_str|default('en-US') %}
+{% set _currency     = currency_code|default('USD') %}
+{% set _share_url    = share_url|default(request.url if request is defined else '') %}
 
-<section
-  id="fc-about"
-  role="region"
-  aria-labelledby="fc-about-title"
+<section id="fc-about" role="region" aria-labelledby="fc-about-title"
   class="section section--tight"
-  data-share-url="{{ share_url|default(request.url if request is defined else '') }}"
+  data-share-url="{{ _share_url }}"
   data-donate="{{ donate_link }}"
   data-sms="{{ sms_number }}"
   data-team="{{ TEAM_NAME }}"
-  data-locale="{{ locale_str|default('en-US') }}"
-  data-currency="{{ currency_code|default('USD') }}"
+  data-locale="{{ _locale }}"
+  data-currency="{{ _currency }}"
 >
-  <style {{ nonce_attr() }}{{ nonce_attr() }}>
-    /* ===== Scope: #fc-about — SV-Elite 4.0 ===== */
+  <style {{ nonce_attr() }}>
+    /* ===== Scope: #fc-about (visuals) ===== */
     #fc-about{ --ring: color-mix(in srgb, var(--fc-gold,#facc15) 65%, #fff); scroll-margin-top: var(--sticky-offset, 80px) }
     #fc-about .about-card{
-      position:relative; max-width:64rem; margin-inline:auto; border-radius: clamp(22px, 18px + 1.2vw, 34px);
+      position:relative; max-width:64rem; margin-inline:auto; border-radius:clamp(22px, 18px + 1.2vw, 34px);
       background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
       border:1px solid rgba(255,255,255,.12);
       -webkit-backdrop-filter:saturate(120%) blur(10px); backdrop-filter:saturate(120%) blur(10px);
-      box-shadow: 0 24px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
+      box-shadow:0 24px 70px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06), inset 0 0 0 1px rgba(255,255,255,.04);
       overflow:hidden;
     }
-    /* Polished conic ring */
     #fc-about .about-card::before{
       content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; z-index:0;
-      background:
-        linear-gradient(#0000,#0000) padding-box,
-        conic-gradient(from 180deg at 50% 50%, var(--ring), #e5e7eb, var(--ring)) border-box;
-      border:1px solid transparent; opacity:.25; filter: drop-shadow(0 12px 40px rgba(0,0,0,.35));
+      background:linear-gradient(#0000,#0000) padding-box,
+                 conic-gradient(from 180deg at 50% 50%, var(--ring), #e5e7eb, var(--ring)) border-box;
+      border:1px solid transparent; opacity:.25; filter:drop-shadow(0 12px 40px rgba(0,0,0,.35));
     }
-    /* Pointer glow */
     #fc-about .about-card::after{
       content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none; z-index:0;
-      background: radial-gradient(38% 28% at var(--mx,60%) var(--my,20%), color-mix(in srgb, var(--fc-gold,#facc15) 24%, transparent) 0%, transparent 70%);
+      background:radial-gradient(38% 28% at var(--mx,60%) var(--my,20%), color-mix(in srgb, var(--fc-gold,#facc15) 24%, transparent) 0%, transparent 70%);
       opacity:0; transition:opacity .2s ease;
     }
     #fc-about .about-card:hover::after{ opacity:.9 }
-
-    /* Content */
     #fc-about .inner{ position:relative; z-index:1; padding:clamp(20px, 2.6vw, 30px) }
 
-    /* Title */
     #fc-about .title{
       font-weight:1000; letter-spacing:-.02em; text-wrap:balance;
       font-size:clamp(1.35rem,1.1rem + 1.4vw,2rem);
-      color:transparent;
-      background:linear-gradient(180deg,#fff, color-mix(in srgb,var(--fc-gold,#facc15) 75%, #fff));
-      -webkit-background-clip:text; background-clip:text;
-      text-shadow:0 12px 28px rgba(0,0,0,.35);
-      margin:0 0 .35rem 0;
+      color:transparent; background:linear-gradient(180deg,#fff,color-mix(in srgb,var(--fc-gold,#facc15) 75%, #fff));
+      -webkit-background-clip:text; background-clip:text; text-shadow:0 12px 28px rgba(0,0,0,.35); margin:0 0 .35rem 0;
     }
     #fc-about .lede{ font-weight:800; color:#e5e7eb; font-size:clamp(.98rem,.9rem + .35vw,1.12rem); margin:0 0 .25rem 0 }
     #fc-about .body{ margin-top:.25rem; color:#e5e7eb; opacity:.95; font-size:clamp(.95rem,.86rem + .3vw,1.08rem) }
 
-    /* Impact chips */
     #fc-about .impact{ display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.8rem }
     #fc-about .legacy-chip{
       display:inline-flex; align-items:center; gap:.4rem; padding:.32rem .64rem; border-radius:.65rem;
       background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.22); color:#eef2f7; font-weight:900; font-size:.86rem;
-      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-      transition:transform .15s ease, background .15s ease;
+      -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px); transition:transform .15s ease, background .15s ease;
     }
     #fc-about .legacy-chip:hover{ transform:translateY(-1px); background:rgba(255,255,255,.16) }
     #fc-about .legacy-chip:focus-visible{ outline:2px solid color-mix(in srgb, var(--fc-gold,#facc15) 60%, #ffffff 40%); outline-offset:3px }
 
-    /* Stats */
     #fc-about .stats{ display:grid; gap:clamp(.65rem,.6rem + .6vw,1rem); grid-template-columns: repeat(auto-fit, minmax(180px,1fr)); margin-top:.9rem }
     #fc-about .stat{
       display:grid; grid-template-columns:auto 1fr; gap:.35rem .6rem; align-items:center;
@@ -101,48 +95,30 @@
     #fc-about .stat .v{ grid-column:2; font-weight:900; letter-spacing:.01em; font-variant-numeric:tabular-nums; font-size:clamp(1.05rem,1rem + .4vw,1.3rem); color:#fff }
     #fc-about .stat .k{ grid-column:2; font-size:.85rem; color:#cbd5e1 }
 
-    /* Snapshot / meter */
     #fc-about .snapshot{ margin-top:.9rem }
-    #fc-about .kbd{
-      padding:.15rem .4rem; border-radius:.45rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-      font-variant-numeric:tabular-nums;
-    }
+    #fc-about .kbd{ padding:.15rem .4rem; border-radius:.45rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); font-variant-numeric:tabular-nums }
     #fc-about .mini{ display:flex; align-items:center; justify-content:space-between; margin-top:.35rem; font-size:.9rem; color:#e5e7eb }
     #fc-about .fc-meter{ position:relative; height:14px; border-radius:9999px; overflow:hidden; background:rgba(255,255,255,.14); box-shadow:inset 0 0 0 1px rgba(255,255,255,.10) }
-    #fc-about .fc-meter__ticks{ position:absolute; inset:0; pointer-events:none; opacity:.28;
-      background:repeating-linear-gradient(90deg,rgba(255,255,255,.24) 0, rgba(255,255,255,.24) 1px, transparent 1px, transparent 5%);
-    }
-    #fc-about .fc-meter__bar{ position:absolute; inset-block:0; left:0; width:calc(var(--p,0) * 100%);
-      background: linear-gradient(90deg, #e5e7eb, color-mix(in srgb, var(--fc-gold,#facc15) 45%, #d1d5db));
-      box-shadow:0 0 10px color-mix(in srgb, var(--fc-gold,#facc15) 25%, transparent);
-      transition: width .6s cubic-bezier(.2,.8,.2,1);
-    }
-    #fc-about .fc-meter__shine{ position:absolute; inset:0; pointer-events:none;
-      background: linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,0) 60%);
-      mix-blend-mode:screen;
-    }
+    #fc-about .fc-meter__ticks{ position:absolute; inset:0; pointer-events:none; opacity:.28; background:repeating-linear-gradient(90deg,rgba(255,255,255,.24) 0, rgba(255,255,255,.24) 1px, transparent 1px, transparent 5%) }
+    #fc-about .fc-meter__bar{ position:absolute; inset-block:0; left:0; width:calc(var(--p,0)*100%); background:linear-gradient(90deg,#e5e7eb,color-mix(in srgb,var(--fc-gold,#facc15) 45%,#d1d5db)); box-shadow:0 0 10px color-mix(in srgb,var(--fc-gold,#facc15) 25%, transparent); transition:width .6s cubic-bezier(.2,.8,.2,1) }
+    #fc-about .fc-meter__shine{ position:absolute; inset:0; pointer-events:none; background:linear-gradient(180deg, rgba(255,255,255,.25), rgba(255,255,255,0) 60%); mix-blend-mode:screen }
 
-    /* CTA row (inherits global fc-btn tokens when present) */
     #fc-about .cta{ display:flex; flex-wrap:wrap; gap:.5rem .6rem; margin-top:.9rem }
     .fc-btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:900; line-height:1; text-decoration:none }
-    .fc-btn-primary{ background:#0b0f15; color:#fff; border:1px solid #000; padding:.85rem 1.2rem; box-shadow:0 8px 24px rgba(0,0,0,.25) }
+    .fc-btn-primary{ background:linear-gradient(180deg,#fffbe6,var(--fc-gold,#facc15)); color:#111; border:1px solid rgba(0,0,0,.25); padding:.85rem 1.2rem; box-shadow:0 8px 24px rgba(250,204,21,.25) }
     .fc-btn-ghost{ background:rgba(255,255,255,.06); color:#e5e7eb; border:1px solid rgba(255,255,255,.14); padding:.78rem 1.1rem }
     .fc-btn:hover{ filter:brightness(1.08) }
     .fc-btn:focus-visible{ outline:2px solid color-mix(in srgb, var(--fc-gold,#facc15) 60%, #ffffff 40%); outline-offset:3px }
 
-    /* Ribbon */
-    #fc-about .ribbon{ display:grid; grid-auto-flow:column; grid-auto-columns:max-content; gap:1rem; overflow:auto; padding:.4rem .1rem;
-      scrollbar-width:none; -ms-overflow-style:none;
+    #fc-about .ribbon{ display:flex; gap:1rem; overflow:auto; padding:.4rem .1rem; scrollbar-width:none; -ms-overflow-style:none;
       mask-image:linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
       -webkit-mask-image:linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
     }
     #fc-about .ribbon::-webkit-scrollbar{ display:none }
     #fc-about .slogo{ height:30px; width:auto; filter:grayscale(.1) contrast(1.1) brightness(.95); opacity:.95 }
 
-    /* Utility / a11y */
     .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
 
-    /* Guards */
     @media (prefers-reduced-motion:reduce){
       #fc-about .about-card::after{ transition:none }
       #fc-about .fc-meter__bar{ transition:none }
@@ -157,11 +133,18 @@
       #fc-about .cta, #fc-about .ribbon{ display:none!important }
       #fc-about .about-card{ box-shadow:none }
     }
+    /* Prevent body scroll when modal open */
+    body.fc-modal-open{ overflow:hidden!important }
   </style>
+
+  {% if SHOW_VIDEO %}
+    <link rel="preconnect" href="https://www.youtube-nocookie.com" crossorigin>
+    <link rel="preconnect" href="https://i.ytimg.com" crossorigin>
+  {% endif %}
 
   <div class="about-card">
     <div class="inner" itemscope itemtype="https://schema.org/SportsTeam" aria-live="polite">
-      <meta itemprop="name" content="{{ TEAM_NAME }}" />
+      <meta itemprop="name" content="{{ TEAM_NAME }}">
 
       <h2 id="fc-about-title" class="title">More Than Basketball — We’re Family</h2>
 
@@ -174,186 +157,202 @@
 
       {% set show_impact = (IMPACT_BADGES and IMPACT_BADGES|length > 0) or IS_501C3 or EIN %}
       {% if show_impact %}
-      <div class="impact" role="list" aria-label="Impact highlights">
-        {% if IS_501C3 %}
-        <button class="legacy-chip" role="listitem" type="button" id="chip-501c3" data-copy="501(c)(3)" title="Copy status">✅ 501(c)(3)</button>
-        {% endif %}
-        {% if EIN %}
-        <button class="legacy-chip" role="listitem" type="button" id="chip-ein" data-copy="{{ EIN }}" title="Copy EIN">EIN: {{ EIN }}</button>
-        {% endif %}
-        {% for b in IMPACT_BADGES %}
-          <span class="legacy-chip" role="listitem">{{ b }}</span>
-        {% endfor %}
-      </div>
+        <div class="impact" role="list" aria-label="Impact highlights">
+          {% if IS_501C3 %}<button class="legacy-chip" role="listitem" type="button" id="chip-501c3" data-copy="501(c)(3)" title="Copy status">✅ 501(c)(3)</button>{% endif %}
+          {% if EIN %}<button class="legacy-chip" role="listitem" type="button" id="chip-ein" data-copy="{{ EIN }}" title="Copy EIN">EIN: {{ EIN }}</button>{% endif %}
+          {% for b in IMPACT_BADGES %}<span class="legacy-chip" role="listitem">{{ b }}</span>{% endfor %}
+        </div>
       {% endif %}
 
-      <!-- Stats -->
       <div class="stats" aria-label="Team highlights">
         {% for s in STATS %}
-        <div class="stat" role="group" aria-label="{{ s.label }}">
-          <div class="icon" aria-hidden="true">{{ s.icon }}</div>
-          <div class="v fc-counter" data-target="{{ (s.value|string)|replace('–','-') }}">{{ s.value }}</div>
-          <div class="k">{{ s.label }}</div>
-        </div>
+          <div class="stat" role="group" aria-label="{{ s.label }}">
+            <div class="icon" aria-hidden="true">{{ s.icon }}</div>
+            <div class="v fc-counter" data-target="{{ (s.value|string)|replace('–','-') }}">{{ s.value }}</div>
+            <div class="k">{{ s.label }}</div>
+          </div>
         {% endfor %}
       </div>
 
-      <!-- Snapshot (optional) -->
-      <div class="snapshot" id="about-snapshot" {% if _raised is none or _goal is none %}hidden{% endif %}>
+      <div class="snapshot" id="about-snapshot" {% if _raised is none or _goal is none %}hidden{% endif %} aria-live="polite">
         <div class="fc-meter" aria-hidden="true">
           <div class="fc-meter__ticks"></div>
           <div class="fc-meter__bar" id="about-bar" style="--p:0"></div>
           <div class="fc-meter__shine"></div>
         </div>
-        <div class="mini">
+        <div class="mini" role="group" aria-label="Fundraising progress">
           <span>
-            <span id="about-raised" class="kbd">{{ _raised if _raised is not none else '—' }}</span>
+            <span id="about-raised" class="kbd" data-raw="{{ _raised or 0 }}">{{ _raised if _raised is not none else '—' }}</span>
             /
-            <span id="about-goal" class="kbd">{{ _goal if _goal is not none else '—' }}</span>
+            <span id="about-goal" class="kbd" data-raw="{{ _goal or 0 }}">{{ _goal if _goal is not none else '—' }}</span>
           </span>
           <strong id="about-pct">0%</strong>
         </div>
       </div>
 
-      <!-- CTAs -->
       <div class="cta" role="group" aria-label="Actions">
-        <a href="{{ donate_link }}?utm_source=about&utm_medium=cta&utm_campaign=donate_now"
-           class="fc-btn fc-btn-primary" data-analytics="about:donate">💛 Donate Now</a>
-
+        <a href="{{ donate_link }}?utm_source=about&utm_medium=cta&utm_campaign=donate_now" class="fc-btn fc-btn-primary" data-analytics="about:donate">💛 Donate Now</a>
         <a href="{{ tiers_url|default('#tiers') }}" class="fc-btn fc-btn-ghost" data-analytics="about:sponsor_tiers">🏅 Sponsor Tiers</a>
-
         {% if SHOW_VIDEO %}
-        <button id="fc-video-open" class="fc-btn fc-btn-ghost" type="button"
-                data-video-src="{{ VIDEO_URL }}" aria-haspopup="dialog" aria-expanded="false"
-                data-analytics="about:video_open">▶ Watch Our Story</button>
+          <button class="fc-btn fc-btn-ghost" type="button"
+                  data-video-src="{{ _embed_src|replace('"','%22') }}"
+                  aria-haspopup="dialog" aria-expanded="false"
+                  data-analytics="about:video_open">▶ Watch Our Story</button>
         {% endif %}
-
         <a id="fc-sms" class="fc-btn fc-btn-ghost"
-           href="sms:{{ sms_number }}?&body={{ ('Pledge for ' ~ TEAM_NAME ~ ' — ' ~ (share_url if share_url is defined else (request.url if request is defined else ''))) | urlencode }}"
+           href="sms:{{ sms_number }}?&body={{ ('Pledge for ' ~ TEAM_NAME ~ ' — ' ~ _share_url) | urlencode }}"
            data-analytics="about:text_to_donate">💬 Text to Donate</a>
-
         <button id="fc-share" class="fc-btn fc-btn-ghost" type="button" aria-label="Share this program" data-analytics="about:share">🔗 Share</button>
       </div>
 
       {% if TRUST_LOGOS and TRUST_LOGOS|length > 0 %}
-      <div class="mt-3">
-        <div class="mb-1 text-sm text-zinc-400">Trusted by partners &amp; featured in:</div>
-        <div class="ribbon" id="about-ribbon" aria-label="Partners and press">
-          {% for src in TRUST_LOGOS[:12] %}
-          <img class="slogo" src="{{ src or default_logo }}" alt="Partner logo" loading="lazy" decoding="async"/>
-          {% endfor %}
+        <div class="mt-3">
+          <div class="mb-1 text-sm text-zinc-400">Trusted by partners &amp; featured in:</div>
+          <div class="ribbon" id="about-ribbon" aria-label="Partners and press">
+            {% for src in TRUST_LOGOS[:12] %}
+              <img class="slogo" src="{{ src or default_logo }}" alt="Partner logo" loading="lazy" decoding="async" width="160" height="40">
+            {% endfor %}
+          </div>
         </div>
-      </div>
       {% endif %}
     </div>
   </div>
-
-  <script {{ nonce_attr() }}{{ nonce_attr() }} type="module">
-    (() => {
-      const about = document.getElementById("fc-about");
-      if (!about) return;
-
-      /* Pointer glow origin */
-      about.addEventListener("mousemove", (e) => {
-        const card = about.querySelector(".about-card"); if (!card) return;
-        const r = card.getBoundingClientRect();
-        card.style.setProperty("--mx", (((e.clientX - r.left) / r.width) * 100).toFixed(0) + "%");
-        card.style.setProperty("--my", (((e.clientY - r.top) / r.height) * 100).toFixed(0) + "%");
-      }, { passive:true });
-
-      /* Copy chips (EIN / 501c3) */
-      const copy = (txt) => navigator.clipboard?.writeText(txt).catch(()=>{});
-      const bindCopy = (btn) => btn && btn.addEventListener("click",(e)=>{
-        const v = e.currentTarget.getAttribute("data-copy") || e.currentTarget.textContent || "";
-        copy(v.trim());
-        const t = e.currentTarget.textContent; e.currentTarget.textContent = "Copied ✓";
-        setTimeout(()=> e.currentTarget.textContent = t, 1100);
-      }, { passive:true });
-      bindCopy(about.querySelector("#chip-ein"));
-      bindCopy(about.querySelector("#chip-501c3"));
-
-      /* Counter-on-view (motion-safe) */
-      const reduce = matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      const counters = Array.from(about.querySelectorAll(".fc-counter"));
-      const animateNum = (el) => {
-        const end = Number((el.getAttribute("data-target")||"").replace(/[^\d.-]/g,"")) || 0;
-        if (reduce) { el.textContent = String(end); return; }
-        const t0 = performance.now(), dur = 900;
-        const step = (t) => {
-          const x = Math.min(1, (t - t0)/dur);
-          el.textContent = String(Math.round(end * (1 - Math.pow(1 - x, 3))));
-          if (x < 1) requestAnimationFrame(step);
-        };
-        requestAnimationFrame(step);
-      };
-      try{
-        const io = new IntersectionObserver((ents, obs)=>{
-          ents.forEach(ent=>{
-            if (ent.isIntersecting){ animateNum(ent.target); obs.unobserve(ent.target); }
-          });
-        }, { rootMargin: "0px 0px -15% 0px", threshold: .2 });
-        counters.forEach(c=> io.observe(c));
-        addEventListener("pagehide",()=> io.disconnect(), { once:true });
-      }catch{ counters.forEach(animateNum); }
-
-      /* Snapshot meter + locale currency format */
-      try{
-        const locale = about.dataset.locale || navigator.language || "en-US";
-        const currency = about.dataset.currency || "USD";
-        const asMoney = (n) => new Intl.NumberFormat(locale, { style:"currency", currency, maximumFractionDigits:0 }).format(n);
-
-        const raisedEl = about.querySelector("#about-raised");
-        const goalEl   = about.querySelector("#about-goal");
-        const pctEl    = about.querySelector("#about-pct");
-        const bar      = about.querySelector("#about-bar");
-
-        const parseNum = (txt) => Number(String(txt||"").replace(/[^0-9.]/g,"")) || 0;
-        const rawRaised = parseNum(raisedEl?.textContent);
-        const rawGoal   = parseNum(goalEl?.textContent);
-
-        if (rawGoal > 0 && bar && pctEl){
-          const pct = Math.max(0, Math.min(1, rawRaised / rawGoal));
-          bar.style.setProperty("--p", pct.toFixed(4));
-          pctEl.textContent = Math.round(pct * 100) + "%";
-          // pretty print the numbers
-          raisedEl.textContent = asMoney(rawRaised);
-          goalEl.textContent   = asMoney(rawGoal);
-        }
-      }catch{}
-
-      /* Simple video modal (expects #fc-video-modal elsewhere; no-op if missing) */
-      const modal = document.getElementById("fc-video-modal");
-      const openBtn = document.getElementById("fc-video-open");
-      if (modal && openBtn){
-        const iframe = modal.querySelector("iframe");
-        const overlay = modal.querySelector("[data-modal-overlay]");
-        const closeBtn = modal.querySelector("[data-modal-close]");
-        const open = () => { modal.classList.remove("hidden"); openBtn.setAttribute("aria-expanded","true"); const src=openBtn.getAttribute("data-video-src"); if(iframe && src) iframe.src=src; };
-        const close= () => { modal.classList.add("hidden"); openBtn.setAttribute("aria-expanded","false"); if(iframe) iframe.src=""; };
-        openBtn.addEventListener("click", open, { passive:true });
-        closeBtn?.addEventListener("click", close, { passive:true });
-        overlay?.addEventListener("click", close, { passive:true });
-        document.addEventListener("keydown",(e)=>{ if(e.key==="Escape") close(); }, { passive:true });
-      }
-
-      /* Share (Web Share → clipboard fallback) */
-      const shareBtn = document.getElementById("fc-share");
-      shareBtn?.addEventListener("click", async ()=>{
-        const url = about.getAttribute("data-share-url") || location.href;
-        const data = { title: document.title || "{{ TEAM_NAME|e }}", text: "Support our team — every dollar moves a kid forward!", url };
-        let ok=false;
-        try{ if(navigator.share){ await navigator.share(data); ok=true; } }catch{}
-        if(!ok){
-          try{ await navigator.clipboard.writeText(url); ok=true; }catch{}
-        }
-        if(ok){ const t=shareBtn.textContent; shareBtn.textContent="Copied!"; setTimeout(()=> shareBtn.textContent=t, 1100); }
-        try{ (window.dataLayer=window.dataLayer||[]).push({event:"share_click", where:"about"});}catch{}
-      }, { passive:true });
-    })();
-  </script>
 </section>
 
-<script {{ nonce_attr() }}{{ nonce_attr() }} type="application/ld+json">
+{% if SHOW_VIDEO %}
+  <!-- Robust, attribute-controlled modal (can’t be broken by global .hidden rules) -->
+  <div id="fc-video-modal" data-state="closed" role="dialog" aria-modal="true" aria-labelledby="fc-video-title" tabindex="-1">
+    <style {{ nonce_attr() }}>
+      #fc-video-modal[data-state="closed"]{display:none!important}
+      #fc-video-modal{position:fixed;inset:0;z-index:1000;display:grid;place-items:center;background:rgb(0 0 0/.65)}
+      #fc-video-modal .sheet{width:min(920px,92vw);aspect-ratio:16/9;background:#000;border-radius:14px;overflow:hidden;border:1px solid rgb(255 255 255/.12);box-shadow:0 30px 90px rgb(0 0 0/.6)}
+      #fc-video-modal .bar{display:flex;justify-content:space-between;align-items:center;background:rgb(17 19 24/.9);color:#e5e7eb;padding:.4rem .6rem;font-weight:800}
+      #fc-video-modal .close{border:1px solid rgb(255 255 255/.18);background:rgb(255 255 255/.06);color:#e5e7eb;border-radius:8px;padding:.3rem .5rem}
+      #fc-video-modal .close:focus-visible{outline:2px solid color-mix(in srgb, var(--fc-gold,#facc15) 60%, #ffffff 40%);outline-offset:3px}
+      #fc-video-modal iframe{display:block;width:100%;height:calc(100% - 36px);border:0;background:#000}
+    </style>
+    <div class="sheet" role="document">
+      <div class="bar">
+        <div id="fc-video-title">Our Story</div>
+        <button data-modal-close class="close" type="button" aria-label="Close video">✕</button>
+      </div>
+      <iframe title="Team video"
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              referrerpolicy="strict-origin-when-cross-origin"
+              loading="lazy"></iframe>
+    </div>
+  </div>
+{% endif %}
+
+<script {{ nonce_attr() }} type="module">
+(() => {
+  if (window.__FC_ABOUT_WIRED__) return; window.__FC_ABOUT_WIRED__ = true;
+
+  const root = document.getElementById("fc-about");
+  if (!root) return;
+
+  /* ---------- utils ---------- */
+  const qs  = (s,el=root)=>el.querySelector(s);
+  const qsa = (s,el=root)=>Array.from(el.querySelectorAll(s));
+  const on  = (el,ev,fn,opt)=>el&&el.addEventListener(ev,fn,opt);
+  const setText=(el,t)=>{ if(el) el.textContent=String(t) };
+  const clamp01=(n)=>Math.max(0,Math.min(1,n));
+
+  /* pointer glow */
+  on(root,"mousemove",(e)=>{ const c=qs(".about-card"); if(!c) return;
+    const r=c.getBoundingClientRect();
+    c.style.setProperty("--mx",(((e.clientX-r.left)/r.width)*100).toFixed(0)+"%");
+    c.style.setProperty("--my",(((e.clientY-r.top)/r.height)*100).toFixed(0)+"%");
+  },{passive:true});
+
+  /* copy chips */
+  const copy = async (t)=>{ try{ await navigator.clipboard?.writeText(t) }catch{} };
+  ["#chip-ein","#chip-501c3"].forEach(sel=>{
+    const b=qs(sel); on(b,"click",async(e)=>{const v=e.currentTarget.getAttribute("data-copy")||e.currentTarget.textContent||"";const t=e.currentTarget.textContent;await copy(v.trim());e.currentTarget.textContent="Copied ✓";setTimeout(()=>e.currentTarget.textContent=t,1100)},{passive:true});
+  });
+
+  /* counters (motion-safe) */
+  const reduce = matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+  const counters=qsa(".fc-counter");
+  const animate=(el)=>{ const end=Number((el.getAttribute("data-target")||"").replace(/[^\d.-]/g,""))||0;
+    if(reduce) return setText(el,end);
+    const t0=performance.now(),dur=900;
+    const step=(t)=>{ const x=Math.min(1,(t-t0)/dur); setText(el,Math.round(end*(1-Math.pow(1-x,3)))); if(x<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  };
+  try{ const io=new IntersectionObserver((ents,obs)=>{ ents.forEach(ent=>{ if(ent.isIntersecting){ animate(ent.target); obs.unobserve(ent.target); } });},{rootMargin:"0px 0px -15% 0px",threshold:.2}); counters.forEach(c=>io.observe(c)); addEventListener("pagehide",()=>io.disconnect(),{once:true}); }catch{ counters.forEach(animate); }
+
+  /* snapshot meter */
+  try{
+    const fmt=new Intl.NumberFormat(root.dataset.locale||"en-US",{style:"currency",currency:root.dataset.currency||"USD",maximumFractionDigits:0});
+    const raisedEl=qs("#about-raised"), goalEl=qs("#about-goal"), pctEl=qs("#about-pct"), bar=qs("#about-bar"), snap=qs("#about-snapshot");
+    const r=Number(raisedEl?.getAttribute("data-raw")??"0"), g=Number(goalEl?.getAttribute("data-raw")??"0");
+    if(g>0&&bar&&pctEl&&raisedEl&&goalEl){ const p=clamp01(r/g); bar.style.setProperty("--p",p.toFixed(4)); setText(pctEl,Math.round(p*100)+"%"); setText(raisedEl,fmt.format(r)); setText(goalEl,fmt.format(g)); if(snap?.hasAttribute("hidden")) snap.removeAttribute("hidden"); }
+  }catch{}
+
+  /* ---------- video modal (attribute state, delegated, trap) ---------- */
+  const modal = document.getElementById("fc-video-modal");
+  if (modal){
+    const iframe   = modal.querySelector("iframe");
+    const closeBtn = modal.querySelector("[data-modal-close]");
+    let opener=null, lastFocus=null;
+
+    const isOpen = ()=> modal.getAttribute("data-state")==="open";
+    const setState=(s)=> modal.setAttribute("data-state",s);
+
+    const open=(btn)=>{
+      opener=btn||document.activeElement; lastFocus=document.activeElement;
+      const src=(btn?.getAttribute("data-video-src")||"").trim();
+      if(iframe) iframe.src = src;
+      setState("open"); document.body.classList.add("fc-modal-open");
+      btn?.setAttribute?.("aria-expanded","true");
+      (closeBtn||modal).focus?.();
+      try{ window.fcTrack?.("video_open",{where:"about"});}catch{}
+    };
+    const close=()=>{
+      if(iframe) iframe.src="";
+      setState("closed"); document.body.classList.remove("fc-modal-open");
+      opener?.setAttribute?.("aria-expanded","false");
+      (lastFocus||opener)?.focus?.(); opener=null;
+      try{ window.fcTrack?.("video_close",{where:"about"});}catch{}
+    };
+
+    // open: any [data-video-src]
+    document.addEventListener("click",(e)=>{ const btn=e.target.closest("[data-video-src]"); if(btn){ e.preventDefault(); open(btn); }});
+    // close: ✕
+    closeBtn?.addEventListener("click",(e)=>{ e.preventDefault(); close(); });
+    // close: backdrop (only when clicking the overlay itself)
+    modal.addEventListener("click",(e)=>{ if(e.target===modal) close(); });
+
+    // Esc + focus trap
+    document.addEventListener("keydown",(e)=>{
+      if(!isOpen()) return;
+      if(e.key==="Escape"){ e.preventDefault(); close(); return; }
+      if(e.key==="Tab"){
+        const focusables=modal.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])');
+        const list=[...focusables].filter(el=>!el.hasAttribute("disabled"));
+        if(!list.length) return;
+        const first=list[0], last=list[list.length-1];
+        if(e.shiftKey && document.activeElement===first){ last.focus(); e.preventDefault(); }
+        else if(!e.shiftKey && document.activeElement===last){ first.focus(); e.preventDefault(); }
+      }
+    },{capture:true});
+  }
+
+  /* share */
+  const shareBtn=document.getElementById("fc-share");
+  shareBtn?.addEventListener("click", async ()=>{
+    const url=root.getAttribute("data-share-url")||location.href;
+    const data={ title:document.title||root.getAttribute("data-team")||"Support our team", text:"Support our team — every dollar moves a kid forward!", url };
+    let ok=false; try{ if(navigator.share){ await navigator.share(data); ok=true; } }catch{}
+    if(!ok){ try{ await navigator.clipboard.writeText(url); ok=true; }catch{} }
+    if(ok){ const t=shareBtn.textContent; shareBtn.textContent="Copied!"; setTimeout(()=>shareBtn.textContent=t,1100); }
+    try{ (window.dataLayer=window.dataLayer||[]).push({event:"share_click",where:"about"}); }catch{}
+  },{passive:true});
+})();
+</script>
+
+<script {{ nonce_attr() }} type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@graph": [
@@ -371,7 +370,7 @@
       "target": {
         "@type": "EntryPoint",
         "urlTemplate": {{ (donate_link ~ '?utm_source=seo&utm_medium=jsonld&utm_campaign=donate_action') | tojson }},
-        "actionPlatform": [ "http://schema.org/DesktopWebPlatform", "http://schema.org/MobileWebPlatform" ]
+        "actionPlatform": ["http://schema.org/DesktopWebPlatform","http://schema.org/MobileWebPlatform"]
       }
     }
   ]
