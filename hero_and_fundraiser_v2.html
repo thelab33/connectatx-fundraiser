@@ -1,0 +1,145 @@
+<!-- hero_and_fundraiser_v2.html
+Version: 2.0
+Notes:
+- Adds CSS variables for focal point and overlay sizing
+- Adds data-overlay="right|left" to position donate panel
+- Reserves padding on overlay side at desktop so faces aren't covered
+- Minor spacing/ARIA/alt tweaks
+-->
+<section class="fc-hero" data-overlay="right"
+  style="--hero-focal-x: 20%; --hero-focal-y: 50%; --overlay-w: clamp(280px, 30vw, 360px); --overlay-gap: 24px; --accent: {{ team.theme_color|default('#facc15') }};">
+
+  <style nonce="{{ NONCE|default('') }}">
+    .fc-hero{position:relative;display:block;isolation:isolate;color:#fff;background:#0b0b0f;--tw-glow:0 0 80px color-mix(in oklab,var(--accent, #facc15) 20%, transparent);}
+    .fc-hero .fc-wrap{max-width:1200px;margin-inline:auto;position:relative;padding:24px clamp(16px,4vw,28px) 56px;}
+    .fc-hero .fc-hero-photo{position:relative;aspect-ratio:16/9;border-radius:20px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,.45);background:#111;}
+    .fc-hero .fc-hero-photo::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.25) 30%,rgba(0,0,0,.15) 55%,rgba(0,0,0,.66));pointer-events:none}
+    .fc-hero .fc-hero-photo img{width:100%;height:100%;object-fit:cover;object-position:var(--hero-focal-x,50%) var(--hero-focal-y,50%);filter:saturate(1.03) contrast(1.02)}
+    .fc-hero .fc-hgroup{position:absolute;inset:auto auto 20px 24px;z-index:2;max-width:min(600px,60%);}
+    .fc-hero .fc-badge{display:inline-flex;gap:.5rem;align-items:center;font:600 12px/1.2 ui-sans-serif,system-ui;letter-spacing:.02em;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.55);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.08)}
+    .fc-hero h1{margin:.6rem 0 0;font:800 clamp(30px,4.6vw,54px)/1.05 ui-sans-serif,system-ui;text-wrap:balance}
+    .fc-hero h1 em{font-style:normal;color:var(--accent,#facc15);text-shadow:var(--tw-glow)}
+    .fc-hero .fc-lede{margin:.6rem 0 1rem;color:#e5e7eb;max-width:60ch}
+    .fc-hero .fc-chips{display:flex;gap:.5rem;flex-wrap:wrap}
+    .fc-hero .fc-chip{font:600 12px/1 ui-sans-serif,system-ui;padding:.55rem .7rem;border-radius:999px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.08)}
+    .fc-hero .fc-cta-row{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:.8rem}
+    .fc-btn{appearance:none;border:0;border-radius:999px;padding:.8rem 1rem;font:700 14px/1 ui-sans-serif,system-ui;cursor:pointer}
+    .fc-btn--primary{background:linear-gradient(#fff,#fff) padding-box,linear-gradient( to bottom right, oklch(0.9 0.08 95),var(--accent,#facc15)) border-box;border:1px solid transparent;color:#111;box-shadow:0 6px 30px rgba(0,0,0,.35);}
+    .fc-btn--ghost{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);color:#fff}
+    .fc-amt{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:.55rem .7rem;font:700 13px/1 ui-sans-serif}
+    /* Donate overlay panel */
+    .fc-hero .fc-donate-panel{position:absolute;top:50%;transform:translateY(-50%);z-index:3;width:var(--overlay-w,340px);left:auto;right:var(--overlay-gap,24px);}
+    .fc-card{border-radius:18px;padding:16px;background:linear-gradient(180deg,rgba(17,17,20,.86),rgba(12,12,16,.86));backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);box-shadow:0 10px 40px rgba(0,0,0,.45)}
+    .fc-meter{display:flex;align-items:center;gap:.5rem;margin:8px 2px 12px}
+    .fc-meter progress{width:100%;height:10px;border:0;border-radius:999px;overflow:hidden;background:#111}
+    .fc-meter progress::-webkit-progress-bar{background:#111}
+    .fc-meter progress::-webkit-progress-value{background:var(--accent,#facc15)}
+    .fc-meter progress::-moz-progress-bar{background:var(--accent,#facc15)}
+    .fc-qr{display:grid;grid-template-columns:1fr;place-items:center;margin:10px 0 14px}
+    .fc-qr img{width:min(220px,55%);height:auto;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:#fff}
+    .fc-kpis{display:flex;gap:.5rem;flex-wrap:wrap;margin-top:10px}
+    .fc-kpis .kpi{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .6rem;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font:600 12px/1 ui-sans-serif}
+    .fc-donate-panel .fc-sub{font:600 12px/1.4 ui-sans-serif;color:#cbd5e1;margin:8px 2px 0}
+    .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    /* Focal point + overlay guard */
+    @media (min-width: 1024px){
+      .fc-hero[data-overlay="right"] .fc-wrap{padding-right: calc(var(--overlay-w,340px) + var(--overlay-gap,24px) + 28px);}
+      .fc-hero[data-overlay="left"]  .fc-wrap{padding-left:  calc(var(--overlay-w,340px) + var(--overlay-gap,24px) + 28px);}
+    }
+    /* Overlay placement */
+    .fc-hero[data-overlay="right"] .fc-donate-panel{right:var(--overlay-gap,24px);left:auto}
+    .fc-hero[data-overlay="left"]  .fc-donate-panel{left:var(--overlay-gap,24px);right:auto}
+    /* Responsive tweaks */
+    @media (max-width: 1023px){
+      .fc-hero .fc-donate-panel{position:relative;top:auto;transform:none;width:100%;margin-top:16px}
+      .fc-hero .fc-hero-photo::after{background:linear-gradient(180deg,rgba(0,0,0,.55),transparent 40%,rgba(0,0,0,.65))}
+      .fc-hero .fc-hgroup{position:static;max-width:none;margin:12px 0 0}
+    }
+  </style>
+
+  <div class="fc-wrap">
+    <!-- Photo -->
+    <div class="fc-hero-photo">
+      <picture>
+        {% if hero_image_webp %}
+          <source srcset="{{ hero_image_avif }}" type="image/avif">
+          <source srcset="{{ hero_image_webp }}" type="image/webp">
+        {% endif %}
+        <img src="{{ hero_image_url|default('/static/hero.jpg') }}"
+             alt="{{ hero_image_alt|default('Team photo at tournament') }}">
+      </picture>
+
+      <!-- Headings / chip rail -->
+      <div class="fc-hgroup">
+        <span class="fc-badge">🏷️ <strong>{{ team.team_name|default('Connect ATX Elite') }}</strong></span>
+        <h1>
+          {{ fundraiser_title|default('Fuel the Season.') }}<br>
+          <em>{{ fundraiser_title_2|default('Fund the Future.') }}</em>
+        </h1>
+        <p class="fc-lede">{{ meta_description|default('Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') }}</p>
+        <div class="fc-chips">
+          {% for chip in hero_chips|default(['Gear','Travel','Tutoring','Scholarships']) %}
+            <span class="fc-chip">{{ chip }}</span>
+          {% endfor %}
+        </div>
+        <div class="fc-cta-row">
+          <a class="fc-btn fc-btn--primary" href="{{ stripe_payment_link or url_for('main.donate', team_slug=team.team_slug) }}">Donate</a>
+          {% for amt in [25,50,100] %}
+            <a class="fc-amt" href="{{ (stripe_payment_link or url_for('main.donate', team_slug=team.team_slug)) }}?amount={{ amt }}">+${{ amt }}</a>
+          {% endfor %}
+          <a class="fc-btn fc-btn--ghost" href="#impact">View impact</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Donate / QR Panel -->
+    <aside class="fc-donate-panel" role="complementary" aria-label="Donate and sponsor panel">
+      <div class="fc-card">
+        <div class="fc-meter">
+          <progress value="0" max="100" id="fcMeter"></progress>
+          <span id="fcPct" aria-hidden="true">0%</span>
+        </div>
+        <div class="fc-qr">
+          <img src="{{ qr_url|default('/static/qr-donate.png') }}"
+               alt="Scan to give to {{ team.team_name|default('Connect ATX Elite') }}">
+        </div>
+
+        <a class="fc-btn fc-btn--primary" href="{{ stripe_payment_link or url_for('main.donate', team_slug=team.team_slug) }}">Donate Now</a>
+        <p class="fc-sub" id="fcGoalCopy">
+          ${{ funds_raised|default(0) }} of ${{ fundraising_goal|default(10000) }} raised
+        </p>
+
+        <div class="fc-cta-row" style="margin-top:10px">
+          <span class="fc-amt">Text <strong>{{ TEXT_KEYWORD|default('ELITE') }}</strong> to <strong>{{ TEXT_SHORTCODE|default('44321') }}</strong></span>
+          <a class="fc-btn fc-btn--ghost" href="#sponsor">Become a Sponsor →</a>
+        </div>
+
+        <div class="fc-kpis" aria-label="Program highlights">
+          <span class="kpi">🏅 500+ Families</span>
+          <span class="kpi">📚 3.5 Team GPA</span>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <script nonce="{{ NONCE|default('') }}">
+    // Minimal meter hydrate from template data attributes
+    (function(){
+      var goal = Number({{ fundraising_goal|default(10000) }});
+      var raised = Number({{ funds_raised|default(0) }});
+      var pct = goal > 0 ? Math.min(100, Math.round((raised/goal)*100)) : 0;
+      var meter = document.getElementById('fcMeter');
+      var label = document.getElementById('fcPct');
+      if(meter){ meter.value = pct; }
+      if(label){ label.textContent = pct + '%'; }
+      // Announce updates for SR users
+      try {
+        var live = document.createElement('div');
+        live.setAttribute('aria-live','polite');
+        live.className = 'sr-only';
+        live.textContent = 'Campaign at ' + pct + ' percent of goal';
+        meter && meter.parentNode.appendChild(live);
+      } catch(e){}
+    })();
+  </script>
+</section>

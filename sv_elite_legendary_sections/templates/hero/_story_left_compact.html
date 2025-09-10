@@ -1,0 +1,47 @@
+<header class="title-block" aria-labelledby="hero-title" aria-describedby="hero-desc" data-test="hero-title" data-anim>
+  <div class="hero-badge" role="note" aria-label="{{ TEAM_NAME }}">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="badge-text">{{ TEAM_NAME }}</span>
+  </div>
+
+  <h1 id="hero-title" class="hero-title">
+    <span class="title-line">{{ TITLE }}</span>
+    <span class="title-line accent">{{ TITLE_2 }}</span>
+  </h1>
+
+  <p id="hero-desc" class="hero-sub">{{ SUBTITLE }}</p>
+
+  <ul class="hero-chips" role="list" aria-label="Areas your gift supports">
+    <li class="chip" role="listitem">🎒 <span>Gear</span></li>
+    <li class="chip" role="listitem">🚌 <span>Travel</span></li>
+    <li class="chip" role="listitem">📚 <span>Tutoring</span></li>
+  </ul>
+
+  <div class="hero-cta" role="group" aria-label="Primary actions">
+    <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen" data-payment-link data-test="donate-primary"
+       aria-label="{{ CTA_LABEL }} to {{ TEAM_NAME }}">
+      <span class="cta-label">{{ CTA_LABEL }}</span>
+      <span class="cta-arrow" aria-hidden="true">→</span>
+    </a>
+
+    {% for amt in [25,50,100] %}
+      <a href="{{ HREF_DONATE }}?amount={{ amt }}" class="btn btn-ghost btn-micro"
+         data-payment-link data-amount="{{ amt }}" data-test="quick-amount"
+         aria-label="Donate ${{ amt }} to {{ TEAM_NAME }}">
+         <span class="quick-amt-prefix">+</span><span class="quick-amt-val">${{ amt }}</span>
+      </a>
+    {% endfor %}
+
+    <button id="hero-share" type="button" class="btn btn-ghost btn-micro" data-test="share"
+            data-share='{{ {"title":"Support " ~ TEAM_NAME, "text":"Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'
+            aria-describedby="share-live" aria-label="Share this fundraiser">
+      <span class="share-label">Share</span>
+    </button>
+
+    <a href="{{ HREF_IMPACT }}" class="btn btn-ghost btn-micro cta-secondary">
+      <span class="impact-label">View Impact</span> <span aria-hidden="true">↓</span>
+    </a>
+
+    <span id="share-live" class="sr-only" aria-live="polite"></span>
+  </div>
+</header>

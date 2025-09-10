@@ -1,0 +1,216 @@
+{# ============================================================
+   HERO — SV-Elite 7.9.3 “Compact-Pro / split-partials”
+   - Denser layout (≈20–25% shorter), split story/rail
+   - Inline quick amounts (+25/+50/+100)
+   - Compact right rail (thin meter + grouped QR + CTA)
+   - A11y meter + live hydrate from /api/totals (+ fc:meter:update hook)
+   - Mobile: rail stacks, QR hides <480px, sticky Donate
+   - CSP-safe; preserves data hooks & Jinja vars
+   - Optional: announcement bar + live countdown; sponsor reel hook
+   ============================================================ #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{# ---------- Inputs / theme ---------- #}
+{% set THEME_HEX    = theme_hex|default('#facc15') %}
+{% set TEAM_NAME    = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set TITLE        = fundraiser_title if fundraiser_title is defined and fundraiser_title else 'Fuel the Season.' %}
+{% set TITLE_2      = fundraiser_title_2 if fundraiser_title_2 is defined and fundraiser_title_2 else 'Fund the Future.' %}
+{% set SUBTITLE     = meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set CTA_LABEL    = cta_label if cta_label is defined and cta_label else 'Donate' %}
+{% set SPL          = (stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link) else '') %}
+{% set HREF_DONATE  = SPL or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
+{% set HREF_IMPACT  = (safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact') %}
+
+{# ---------- Fundraising context ---------- #}
+{% set RAISED = (funds_raised or 0) | round(0) %}
+{% set GOAL   = (fundraising_goal or GOAL_USD or 10000) | round(0) %}
+{% set PCT    = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
+{% set METER_TEXT = ('$' ~ (RAISED|int)|string ~ ' raised of $' ~ (GOAL|int)|string ~ ' (' ~ PCT|string ~ '%)') %}
+
+{# ---------- Text-to-Give (env-backed) ---------- #}
+{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
+{% set TEXT_SHORT   = TEXT_SHORTCODE or '44321' %}
+
+{# ---------- Optional: announcement/countdown/sponsors ---------- #}
+{% set ANNOUNCEMENT = announcement_text if announcement_text is defined else '' %}
+{% set EVENT_ISO    = event_datetime_iso if event_datetime_iso is defined else '' %}
+{% set SPONSORS     = sponsors if sponsors is defined else [] %}
+
+{# ---------- Images (robust) ---------- #}
+{% set _hero_src = (
+  (hero_image_url if hero_image_url is defined and hero_image_url) or
+  (team.hero_bg if team and team.hero_bg) or
+  (team.hero_image if team and team.hero_image) or
+  (team.team_photo if team and team.team_photo) or
+  (team.photo_url if team and team.photo_url) or
+  'images/hero/hero-1920.avif'
+) %}
+{% set _hero_mobile = (hero_image_mobile_url if hero_image_mobile_url is defined and hero_image_mobile_url else _hero_src) %}
+{% set hero_src        = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{% set hero_src_mobile = (_hero_mobile if '://' in _hero_mobile else (url_for('static', filename=_hero_mobile.lstrip('/')) if url_for is defined else '/static/' ~ _hero_mobile.lstrip('/'))) %}
+{% set hero_alt        = (hero_alt if hero_alt is defined and hero_alt) or (TEAM_NAME ~ ' team photo') %}
+
+<section id="fc-hero"
+         class="fc-hero v7 compact-pro fullbleed dashboard"
+         aria-label="Fundraiser hero"
+         style="--accent: {{ THEME_HEX }};"
+         data-focal-x="50%" data-focal-y="28%"
+         data-test="hero">
+
+  <i class="hero-vignette" aria-hidden="true"></i>
+
+  <div class="hero-shell tilt-3d" data-tilt-max="8" data-tilt-perspective="1000" data-tilt-glare="1">
+
+    {# Optional announce / countdown #}
+    <div class="fc-announce" data-active="{{ 'true' if ANNOUNCEMENT or EVENT_ISO else 'false' }}">
+      <div class="fc-announce-inner">
+        {% if ANNOUNCEMENT %}<span class="msg">{{ ANNOUNCEMENT }}</span>{% endif %}
+        {% if EVENT_ISO %}<strong id="hero-countdown" class="countdown" data-datetime="{{ EVENT_ISO }}">Starts in 00:00:00</strong>{% endif %}
+      </div>
+      <button type="button" class="a-dismiss" aria-label="Dismiss">×</button>
+    </div>
+
+    <!-- Media -->
+    <picture class="hero-media tilt-layer" style="--z:20px">
+      <source srcset="{{ hero_src_mobile }}" media="(max-width: 640px)">
+      <img id="fc-hero-img" src="{{ hero_src }}" alt="{{ hero_alt }}"
+           width="1920" height="1080" sizes="100vw"
+           class="hero-img" decoding="async" fetchpriority="high" loading="eager" draggable="false">
+    </picture>
+
+    <!-- Readability overlays -->
+    <div class="face-belt" aria-hidden="true"></div>
+    <div class="bottom-fade" aria-hidden="true"></div>
+
+    <!-- Grid -->
+    <div class="hero-grid tilt-layer" style="--z:36px">
+      {% include "hero/_story_left_compact.html" %}
+      {% include "hero/_donation_rail_compact.html" %}
+    </div>
+
+    <div class="holo-glare" aria-hidden="true"></div>
+    <button id="hero-cue" class="scroll-cue" type="button" aria-label="Scroll to content"><span class="dot" aria-hidden="true"></span> Scroll</button>
+
+    <!-- Mobile sticky donate (shows under 640px) -->
+    <a class="mobile-sticky-cta" href="{{ HREF_DONATE }}" data-payment-link data-test="mobile-sticky">Donate Now</a>
+  </div>
+</section>
+
+<style {{ nonce_attr() }}>
+/* ===== HERO v7.9.3 Compact-Pro (integrated) ===== */
+#fc-hero.v7.compact-pro{
+  --edge: clamp(14px, 2.2vw, 24px);
+  --hero-h: clamp(480px, 58vh, 780px); /* tighter */
+  --img-x: 50%; --img-y: 28%;
+  --card-r: 1rem;
+  --line: rgba(255,255,255,.16);
+  --line-strong: rgba(255,255,255,.22);
+  --tag-bg: rgba(255,255,255,.10);
+  --tag-bd: 1px solid rgba(255,255,255,.16);
+  --glass-bg: linear-gradient(180deg, rgba(18,18,18,.72), rgba(18,18,18,.46));
+  --glass-bd: 1px solid color-mix(in srgb, var(--accent,#facc15) 24%, transparent);
+  --glass-shadow: 0 16px 36px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.08);
+  position:relative; isolation:isolate; scroll-margin-top: calc(var(--fc-header-h,72px) + 10px);
+}
+#fc-hero.v7 .hero-shell{ position:relative; min-height:var(--hero-h); max-width:min(1380px,98vw); margin-inline:auto; border-radius:1.1rem; overflow:hidden; border:1px solid rgba(255,255,255,.10); box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06) }
+#fc-hero.v7 .hero-vignette{ position:absolute; inset:0; z-index:-1; background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent,#facc15) 22%, transparent) 0%, transparent 60%), linear-gradient(180deg, #0a0b0d 0%, #0b0c0f 40%, #0a0b0d 100%) }
+
+/* Announcement (compact) */
+.fc-announce{ display:none; align-items:center; justify-content:space-between; gap:.6rem; padding:.5rem .7rem; border-bottom:1px solid rgba(255,255,255,.12); background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.04)); color:#e5e7eb; font-weight:700 }
+.fc-announce[data-active="true"]{ display:flex }
+.fc-announce .msg{ opacity:.95 }
+.fc-announce .countdown{ font-variant-numeric:tabular-nums; white-space:nowrap }
+.fc-announce .a-dismiss{ appearance:none; background:transparent; border:0; color:#cbd5e1; font-weight:900; cursor:pointer }
+
+/* Grid */
+#fc-hero.v7 .hero-grid{ position:absolute; inset:0; display:grid; gap:.8rem; padding:var(--edge); align-items:end }
+@media (min-width:960px){ #fc-hero.v7.dashboard .hero-grid{ grid-template-columns: 1.08fr .92fr; align-items:center } }
+#fc-hero.v7 .hero-img{ width:100%; height:100%; aspect-ratio:16/9; object-fit:cover; object-position:var(--img-x) var(--img-y); filter:saturate(1.03) contrast(1.04) brightness(.92); -webkit-user-drag:none; user-select:none }
+
+/* Titles & chips */
+#fc-hero.v7 .title-block{ color:#f6f7fb; text-shadow:0 1px 0 rgba(0,0,0,.5) }
+#fc-hero.v7 .hero-badge{ display:inline-flex; align-items:center; gap:.5rem; font-weight:900; margin-bottom:.1rem; padding:.22rem .5rem; border-radius:.75rem; background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); border:1px solid var(--line-strong); backdrop-filter:saturate(120%) blur(4px) }
+#fc-hero.v7 .hero-badge .dot{ width:.5rem; height:.5rem; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.45) }
+#fc-hero.v7 .hero-title{ margin:.04rem 0 .2rem; font-weight:1000; line-height:1.02; text-wrap:balance; font-size:clamp(1.8rem, 1rem + 3.4vw, 3.1rem) }
+#fc-hero.v7 .accent{ color:var(--accent,#facc15) }
+#fc-hero.v7 .hero-sub{ color:#eaf0fa; opacity:.92; line-height:1.42; max-width:70ch }
+@media (min-width:960px){ #fc-hero.v7 .hero-sub{ max-width:58% } }
+#fc-hero.v7 .hero-chips{ display:flex; gap:.38rem; flex-wrap:wrap; margin:.48rem 0 .62rem; list-style:none; padding:0 }
+#fc-hero.v7 .chip{ font-size:.86rem; padding:.3rem .56rem; border-radius:.9rem; font-weight:900; background:var(--tag-bg); border:var(--tag-bd); color:#eef2f8 }
+
+/* CTA rail */
+#fc-hero.v7 .hero-cta{ display:flex; gap:.46rem; flex-wrap:wrap; align-items:center }
+#fc-hero.v7 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.42rem; border-radius:999px; font-weight:1000; padding:.82rem 1.12rem; text-decoration:none; position:relative; transition:transform .18s ease }
+#fc-hero.v7 .btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15; border:1px solid rgba(0,0,0,.22); box-shadow:0 10px 22px rgba(234,179,8,.22) }
+#fc-hero.v7 .btn-ghost{ background:rgba(255,255,255,.08); border:var(--tag-bd); color:#e5e7eb }
+#fc-hero.v7 .btn-micro{ padding:.44rem .68rem; font-size:.86rem }
+#fc-hero.v7 .cta-secondary{ opacity:.9 }
+@media (hover:hover){ #fc-hero.v7 .btn-gold:hover{ transform:translateY(-1px) } }
+
+/* Sponsor reel hook */
+.fc-sponsors{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin:.5rem 0 0 }
+.fc-sponsors .sp{ display:inline-grid; place-items:center; width:32px; height:32px; border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); overflow:hidden }
+.fc-sponsors .sp.vip{ box-shadow:0 0 0 2px color-mix(in oklab,var(--accent,#facc15) 70%, transparent) inset, 0 0 20px color-mix(in oklab,var(--accent,#facc15) 30%, transparent) }
+.fc-sponsors .sp img{ width:100%; height:100%; object-fit:cover }
+
+/* Right rail (compact) */
+#fc-hero.v7 .dashboard-card{ display:grid; gap:.68rem; text-align:center; background:var(--glass-bg); border:var(--glass-bd); border-radius:var(--card-r); padding:.78rem; box-shadow:var(--glass-shadow) }
+#fc-hero.v7 .qr-group{ display:grid; gap:.56rem }
+#fc-hero.v7 .meter{ display:grid; gap:.4rem }
+#fc-hero.v7 .hm-track{ width:100%; height:7px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1) }
+#fc-hero.v7 .hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent,#facc15) 55%, #d1d5db 45%)); transition:width 900ms ease }
+#fc-hero.v7 .hm-stats{ display:flex; gap:.32rem; justify-content:flex-end; align-items:baseline; font-weight:1000; color:#e9eef9 }
+.tabular{ font-variant-numeric: tabular-nums }
+
+/* QR */
+#fc-hero.v7 .qr-wrap{ display:grid; justify-items:center; gap:.3rem; padding:.5rem .6rem; border-radius:.7rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14) }
+#fc-hero.v7 .qr-title{ font-size:.76rem; font-weight:1000; opacity:.9 }
+#fc-hero.v7 #qr-box canvas, #fc-hero.v7 #qr-box img{ width:116px; height:116px; image-rendering:pixelated; border-radius:.5rem; box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08) }
+@media (max-width:480px){ #fc-hero.v7 .qr-wrap{ display:none } }
+
+/* Text-to-Give & trust pills */
+#fc-hero.v7 .text2give{ display:flex; align-items:center; justify-content:center; gap:.35rem; margin-top:.05rem; font-size:.84rem; color:#e5e7eb }
+#fc-hero.v7 .t2g-key, #fc-hero.v7 .t2g-num{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); padding:.16rem .44rem; border-radius:.45rem; font-weight:1000 }
+#fc-hero.v7 .hero-pills{ display:flex; gap:.42rem; flex-wrap:wrap; justify-content:center; margin-top:.32rem; list-style:none; padding:0 }
+#fc-hero.v7 .hero-pills .pill{ display:inline-flex; align-items:center; gap:.35rem; padding:.28rem .6rem; border-radius:999px; font-weight:1000; font-size:.8rem; color:#e9eef9; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14) }
+
+/* Donate Now gentle pulse */
+@keyframes glowPulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 22px rgba(250,204,21,.45)}}
+#fc-hero.v7 .donate-now{ animation:glowPulse 9s infinite }
+
+/* Right-lock on XL */
+@media (min-width:1100px){
+  #fc-hero.v7.fullbleed .sidecard--rightlock{ position:absolute; z-index:4; right:clamp(16px,3vw,36px); bottom:clamp(16px,2.4vw,26px); margin:0; max-width:min(360px,31vw); backdrop-filter: blur(16px) saturate(120%); box-shadow:0 14px 40px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06) }
+}
+
+/* Scroll cue */
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+#fc-hero.v7 .scroll-cue{ position:absolute; left:50%; translate:-50% 0; bottom:10px; z-index:3; display:inline-flex; align-items:center; gap:.45rem; padding:.3rem .6rem; border-radius:999px; font-weight:1000; font-size:.78rem; color:#0b0c10; background:linear-gradient(180deg,#fff3c4,#fde68a); border:1px solid rgba(0,0,0,.18); box-shadow:0 8px 24px rgba(0,0,0,.28); cursor:pointer; opacity:.96; animation:bounce 2.4s infinite }
+#fc-hero.v7 .scroll-cue .dot{ width:6px; height:6px; border-radius:999px; background:var(--accent) }
+#fc-hero.v7 .scroll-cue.hide{ opacity:0; pointer-events:none }
+
+/* Effects & reveal */
+#fc-hero.v7 .holo-glare{ position:absolute; inset:-18%; pointer-events:none; opacity:0; mix-blend-mode:screen; background:radial-gradient(120% 60% at var(--gx,50%) var(--gy,30%), rgba(255,255,255,.26), transparent 45%); transition:opacity .18s ease }
+.tilt-3d{ transform-style:preserve-3d; perspective:var(--tilt-persp,900px) }
+.tilt-layer{ transform: translateZ(var(--z,0)) }
+#fc-hero.v7 [data-anim]{ opacity:0; transform:translateY(8px); transition:opacity .34s ease, transform .34s ease }
+#fc-hero.v7 [data-anim].in{ opacity:1; transform:none }
+
+@media (prefers-reduced-motion: reduce){
+  .tilt-3d, .tilt-layer, .holo-glare, #fc-hero.v7 [data-anim]{ transition:none!important; transform:none!important; opacity:1!important }
+}
+
+/* Mobile sticky donate */
+.mobile-sticky-cta{
+  position:fixed; left:50%; translate:-50% 0; bottom:14px; z-index:40;
+  display:none; padding:.64rem 1.05rem; border-radius:999px; font-weight:1000; text-decoration:none;
+  background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15; border:1px solid rgba(0,0,0,.22); box-shadow:0 14px 28px rgba(234,179,8,.25)
+}
+@media (max-width:639.98px){ .mobile-sticky-cta{ display:inline-flex } }
+</style>
+
+<!-- QR lib (optional; graceful fallback if missing) -->
+<script {{ nonce_attr() }} defer src="{{ url_for('static', filename='js/qrcode.min.js') if url_for is defined else '/static/js/qrcode.min.js' }}"></script>
+<!-- Hero module -->
+<script {{ nonce_attr() }} type="module" src="{{ url_for('static', filename='js/hero_compact_pro.module.js') if url_for is defined else '/static/js/hero_compact_pro.module.js' }}"></script>

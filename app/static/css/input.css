@@ -1,5 +1,5 @@
 /* ────────────────────────────────────────────────────────────────
-   FundChamps Tailwind Entry (Elite v4)
+   FundChamps Tailwind Entry (Elite v4 — hero-free)
    - CSP-safe (no external font fetches)
    - Dark-first, light overrides
    - No global .hidden override (modal-safe)
@@ -79,10 +79,6 @@
     --focus-ring: var(--focus-ring-w) solid var(--fc-gold);
     --vip-bronze:#cd7f32; --vip-silver:#c0c0c0; --vip-gold:#ffd700; --vip-platinum:#b3e5fc;
 
-    /* Hero helpers */
-    --hero-shift: clamp(8vh, 22vh, 30vh);
-    --hero-shift-sm: clamp(4vh, 12vh, 16vh);
-
     /* Scrollbars */
     scrollbar-width: thin;
     scrollbar-color: var(--fc-gold) var(--fc-coal);
@@ -146,7 +142,7 @@
     html:focus-within{ scroll-behavior: auto; }
   }
   @media (prefers-reduced-transparency: reduce), (prefers-contrast: more) {
-    .glass, .fc-glass, .hero-glass { backdrop-filter: none !important; background: rgb(0 0 0 / 72%) !important; }
+    .glass, .fc-glass { backdrop-filter: none !important; background: rgb(0 0 0 / 72%) !important; }
   }
 
   /* Forced colors & print */
@@ -221,15 +217,15 @@
    4) COMPONENTS — glass, buttons, inputs, switches
    ================================================================= */
 @layer components {
-  /* Glass cards (hero/about parity) */
-  .fc-glass,.hero-glass{
+  /* Glass cards (shared) */
+  .fc-glass{
     position:relative; background:var(--glass-bg);
     border:1px solid var(--glass-brd);
     box-shadow: var(--elev-4), inset 0 1px 0 var(--glass-hi), inset 0 0 0 1px var(--glass-in);
     border-radius: clamp(24px, 22px + 1vw, 36px); contain: paint; will-change: transform, opacity;
   }
-  @supports (backdrop-filter: blur(1px)){ .fc-glass,.hero-glass{ backdrop-filter: blur(16px) saturate(1.05); } }
-  @supports not (backdrop-filter: blur(1px)){ .fc-glass,.hero-glass{ background: rgb(12 12 14 / 80%); } }
+  @supports (backdrop-filter: blur(1px)){ .fc-glass{ backdrop-filter: blur(16px) saturate(1.05); } }
+  @supports not (backdrop-filter: blur(1px)){ .fc-glass{ background: rgb(12 12 14 / 80%); } }
 
   /* Buttons (variants) */
   .fc-btn{ @apply inline-flex items-center justify-center gap-2 font-extrabold; border-radius:999px; padding:var(--btn-py) var(--btn-px); font-size:var(--btn-fs); transition:transform .08s ease, box-shadow .2s ease, filter .2s ease; }
@@ -280,7 +276,7 @@
 }
 
 /* =================================================================
-   6) ABOUT — Snapshot meter + chips (consistent with hero)
+   6) ABOUT — Snapshot meter + chips
    ================================================================= */
 @layer components{
   #fc-about .snapshot{ margin-top:.9rem; }
@@ -303,14 +299,10 @@
 }
 
 /* =================================================================
-   7) HERO — SV-ELITE (visual polish only; JS handles tilt)
+   7) (Intentionally removed) HERO styles
+   - All #fc-hero rules were deleted to avoid cross-component bleed.
+   - Your hero partial ships its own scoped CSS.
    ================================================================= */
-@layer components{
-  #fc-hero { position:relative; color-scheme: dark light; }
-  #fc-hero .hm-track{ height:14px; } /* parity with about meter */
-  #fc-hero .milestones li{ font-size:.72rem; padding:.18rem .45rem; }
-  #fc-hero .fc-hero-cta{ text-decoration:none; }
-}
 
 /* =================================================================
    8) P2P Components — Cards, Leaderboard, Share, Rail, Feed
@@ -398,7 +390,7 @@
 }
 
 /* =================================================================
-   11) OPTIONAL: Modal class helpers (if you ever move modal CSS out of inline)
+   11) OPTIONAL: Modal class helpers
    ================================================================= */
 @layer components{
   .fc-modal{ position:fixed; inset:0; z-index:100; display:grid; place-items:center; background:rgb(0 0 0 / .65); }
@@ -411,28 +403,8 @@
 }
 
 /* =================================================================
-   12) HERO → SECTION seam helpers
+   12) (Removed) HERO → SECTION seam helpers
+   - Previously added padding to sections adjacent to #fc-hero.
+   - Use the utility .seam-after-hero on the next section instead.
    ================================================================= */
-@layer components{
-  #fc-hero + .fc-section,
-  #fc-hero + .section{ padding-block-start: var(--section-y-tight); }
-
-  #fc-hero + .fc-topbar + .fc-section,
-  #fc-hero + .fc-topbar + .section,
-  #fc-hero + .fc-announce + .fc-section,
-  #fc-hero + .fc-announce + .section,
-  #fc-hero + .fc-container + .fc-section,
-  #fc-hero + .fc-container + .section,
-  #fc-hero + .container + .fc-section,
-  #fc-hero + .container + .section{ padding-block-start: var(--section-y-tight); }
-
-  .seam-after-hero{ padding-block-start: var(--section-y-tight); }
-
-  #fc-hero + .fc-section--flush-top,
-  #fc-hero + .section--flush-top,
-  .seam-after-hero.section--flush-top,
-  .seam-after-hero.fc-section--flush-top{ padding-block-start: 0; }
-
-  .fc-section[id], .section[id]{ scroll-margin-top: var(--sticky-offset, 72px); }
-}
 

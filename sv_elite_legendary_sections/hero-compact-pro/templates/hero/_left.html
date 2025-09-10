@@ -1,0 +1,42 @@
+{% set TEAM_NAME    = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set TITLE        = fundraiser_title if fundraiser_title is defined and fundraiser_title else 'Fuel the Season.' %}
+{% set TITLE_2      = fundraiser_title_2 if fundraiser_title_2 is defined and fundraiser_title_2 else 'Fund the Future.' %}
+{% set SUBTITLE     = meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set CTA_LABEL    = cta_label if cta_label is defined and cta_label else 'Donate' %}
+{% set HREF_DONATE  = (stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link) else (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) %}
+{% set HREF_IMPACT  = (safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact') %}
+
+<header class="title-block" aria-labelledby="hero-title" aria-describedby="hero-desc" data-test="hero-title">
+  <div class="hero-badge" role="note" aria-label="{{ TEAM_NAME }}">
+    <span class="dot" aria-hidden="true"></span>
+    <span class="badge-text">{{ TEAM_NAME }}</span>
+  </div>
+
+  <h1 id="hero-title" class="hero-title" data-anim>
+    <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
+  </h1>
+
+  <p id="hero-desc" class="hero-sub" data-anim data-anim-delay="60">{{ SUBTITLE }}</p>
+
+  <ul class="hero-chips" role="list" aria-label="Areas your gift supports" data-anim data-anim-delay="120">
+    <li class="chip" role="listitem">🎒 Gear</li>
+    <li class="chip" role="listitem">🚌 Travel</li>
+    <li class="chip" role="listitem">📚 Tutoring</li>
+  </ul>
+
+  <div class="hero-cta" role="group" aria-label="Primary actions" data-anim data-anim-delay="180">
+    <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen" data-payment-link data-test="donate-primary" aria-label="{{ CTA_LABEL }} to {{ TEAM_NAME }}">
+      {{ CTA_LABEL }} <span aria-hidden="true">→</span>
+    </a>
+    {% for amt in [25,50,100] %}
+      <a href="{{ HREF_DONATE }}?amount={{ amt }}" class="btn btn-ghost btn-micro"
+         data-payment-link data-amount="{{ amt }}" data-test="quick-amount"
+         aria-label="Donate ${{ amt }} to {{ TEAM_NAME }}">+${{ amt }}</a>
+    {% endfor %}
+    <button id="hero-share" type="button" class="btn btn-ghost btn-micro" data-test="share"
+            data-share='{{ {"title":"Support " ~ TEAM_NAME, "text":"Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'
+            aria-describedby="share-live" aria-label="Share this fundraiser">Share</button>
+    <a href="{{ HREF_IMPACT }}" class="btn btn-ghost btn-micro cta-secondary">View Impact ↓</a>
+    <span id="share-live" class="sr-only" aria-live="polite"></span>
+  </div>
+</header>

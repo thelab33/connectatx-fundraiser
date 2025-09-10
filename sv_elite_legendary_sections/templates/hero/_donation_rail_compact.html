@@ -1,0 +1,45 @@
+<aside class="sidecard dashboard-card sidecard--rightlock"
+       role="complementary" aria-label="Donate"
+       data-goal="{{ GOAL|int }}" data-raised="{{ RAISED|int }}" data-test="donation-rail" data-anim>
+
+  <div id="hero-meter-desc" class="sr-only">Live donation progress meter for this fundraiser.</div>
+
+  <div class="meter" role="meter"
+       aria-valuemin="0" aria-valuemax="{{ GOAL|int }}" aria-valuenow="{{ RAISED|int }}"
+       aria-describedby="hero-meter-desc" aria-valuetext="{{ METER_TEXT }}">
+    <div class="hm-track" aria-hidden="true"><div class="hm-fill" style="--p: {{ PCT }}%"></div></div>
+
+    <div class="hm-stats tabular" aria-live="polite">
+      <span class="hm-label-raised">Raised</span>
+      <span class="hm-raised" data-value="{{ RAISED|int }}">${{ RAISED|int }}</span>
+      <span class="hm-sep">/</span>
+      <span class="hm-label-goal">of goal</span>
+      <span class="hm-goal" data-value="{{ GOAL|int }}">${{ GOAL|int }}</span>
+      <span class="hm-pct">{{ PCT }}%</span>
+    </div>
+  </div>
+
+  <div class="qr-group" role="group" aria-label="Scan or tap to donate">
+    <div class="qr-wrap">
+      <span class="qr-title">Scan to Give</span>
+      <div id="qr-box" role="img" aria-label="Donation QR"></div>
+      <a id="qr-fallback-link" class="qr-open-link" href="{{ HREF_DONATE }}">Open donate link</a>
+    </div>
+    <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen donate-now" data-payment-link data-test="donate-now">Donate Now</a>
+  </div>
+
+  <div class="text2give" aria-label="Text to give">
+    <span class="t2g-label t2g-text">Text</span>
+    <strong class="t2g-key">{{ TEXT_KEYWORD }}</strong>
+    <span class="t2g-label t2g-to">to</span>
+    <strong class="t2g-num">{{ TEXT_SHORT }}</strong>
+  </div>
+
+  <a href="/sponsor" class="cta-link" data-test="sponsor-link">Become a Sponsor →</a>
+
+  <ul class="hero-pills" role="list" aria-label="Program highlights">
+    <li role="listitem"><span class="pill">🏅 500+ Families</span></li>
+    <li role="listitem"><span class="pill">📚 3.5 Team GPA</span></li>
+    <li role="listitem"><span class="pill">🏀 AAU Gold Certified</span></li>
+  </ul>
+</aside>

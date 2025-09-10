@@ -1,0 +1,49 @@
+{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
+{% set TEXT_SHORT   = TEXT_SHORTCODE or '44321' %}
+{% set RAISED = (funds_raised or 0) | round(0) %}
+{% set GOAL   = (fundraising_goal or GOAL_USD or 10000) | round(0) %}
+{% set PCT    = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
+{% set METER_TEXT = ('$' ~ (RAISED|int)|string ~ ' raised of $' ~ (GOAL|int)|string ~ ' (' ~ PCT|string ~ '%)') %}
+{% set HREF_DONATE  = (stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link) else (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) %}
+
+<aside class="sidecard dashboard-card sidecard--rightlock"
+       role="complementary" aria-label="Donate" id="donation-rail"
+       data-anim data-anim-delay="240"
+       data-goal="{{ GOAL|int }}" data-raised="{{ RAISED|int }}" data-test="donation-rail">
+
+  <div id="hero-meter-desc" class="sr-only">Live donation progress meter for this fundraiser.</div>
+
+  <div class="meter" role="meter"
+       aria-labelledby="donation-rail"
+       aria-valuemin="0" aria-valuemax="{{ GOAL|int }}" aria-valuenow="{{ RAISED|int }}"
+       aria-describedby="hero-meter-desc" aria-valuetext="{{ METER_TEXT }}">
+    <div class="hm-track" aria-hidden="true"><div class="hm-fill"></div></div>
+    <div class="hm-stats tabular" aria-live="polite">
+      <span class="sr-only">Raised</span><span class="hm-raised">${{ RAISED|int }}</span>
+      <span class="hm-sep">/</span><span class="sr-only">of goal</span><span class="hm-goal">${{ GOAL|int }}</span>
+      <span class="hm-pct">{{ PCT }}%</span>
+    </div>
+  </div>
+
+  <div class="qr-group" role="group" aria-label="Scan or tap to donate">
+    <div class="qr-wrap">
+      <span class="qr-title">Scan to Give</span>
+      <div id="qr-box" role="img" aria-label="Donation QR"></div>
+      <a id="qr-fallback-link" class="sr-only" href="{{ HREF_DONATE }}">Open donate link</a>
+    </div>
+    <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen donate-now" data-payment-link data-test="donate-now">Donate Now</a>
+  </div>
+
+  <div class="text2give" aria-label="Text to give">
+    <span class="t2g-label">Text</span> <strong class="t2g-key">{{ TEXT_KEYWORD }}</strong>
+    <span class="t2g-label">to</span> <strong class="t2g-num">{{ TEXT_SHORT }}</strong>
+  </div>
+
+  <a href="/sponsor" class="cta-link" data-test="sponsor-link">Become a Sponsor →</a>
+
+  <ul class="hero-pills" role="list" aria-label="Program highlights">
+    <li role="listitem"><span class="pill">🏅 500+ Families</span></li>
+    <li role="listitem"><span class="pill">📚 3.5 Team GPA</span></li>
+    <li role="listitem"><span class="pill">🏀 AAU Gold Certified</span></li>
+  </ul>
+</aside>

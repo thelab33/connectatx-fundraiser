@@ -88,7 +88,7 @@
           <li class="chip" role="listitem">📚 Tutoring</li>
         </ul>
 
-        <!-- Optimized CTA rail -->
+        <!-- Single CTA rail: Donate + quick amounts + Share + Impact -->
         <div class="hero-cta" role="group" aria-label="Primary actions" data-anim data-anim-delay="180">
           <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen" data-payment-link data-test="donate-primary" aria-label="{{ CTA_LABEL }} to {{ TEAM_NAME }}">
             {{ CTA_LABEL }} <span aria-hidden="true">→</span>
@@ -98,28 +98,26 @@
                data-payment-link data-amount="{{ amt }}" data-test="quick-amount"
                aria-label="Donate ${{ amt }} to {{ TEAM_NAME }}">+${{ amt }}</a>
           {% endfor %}
-          <a href="{{ HREF_IMPACT }}" class="btn btn-ghost btn-micro cta-secondary">Impact ↓</a>
           <button id="hero-share" type="button" class="btn btn-ghost btn-micro" data-test="share"
                   data-share='{{ {"title":"Support " ~ TEAM_NAME, "text":"Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'
                   aria-describedby="share-live" aria-label="Share this fundraiser">Share</button>
+          <a href="{{ HREF_IMPACT }}" class="btn btn-ghost btn-micro cta-secondary">View Impact ↓</a>
           <span id="share-live" class="sr-only" aria-live="polite"></span>
         </div>
       </header>
 
-      <!-- RIGHT: Donation Rail -->
+      <!-- RIGHT: Compact donation rail -->
       <aside class="sidecard dashboard-card sidecard--rightlock"
-             role="complementary" aria-label="Donation summary"
+             role="complementary" aria-label="Donate"
              data-anim data-anim-delay="240"
              data-goal="{{ GOAL|int }}" data-raised="{{ RAISED|int }}" data-test="donation-rail">
 
-        <div id="hero-meter-desc" class="sr-only">Live donation progress for this campaign.</div>
+        <div id="hero-meter-desc" class="sr-only">Live donation progress meter for this fundraiser.</div>
 
         <div class="meter" role="meter"
              aria-valuemin="0" aria-valuemax="{{ GOAL|int }}" aria-valuenow="{{ RAISED|int }}"
              aria-describedby="hero-meter-desc" aria-valuetext="{{ METER_TEXT }}">
-          <div class="hm-track" aria-hidden="true">
-            <div class="hm-fill" style="--p: {{ PCT }}%"></div>
-          </div>
+          <div class="hm-track" aria-hidden="true"><div class="hm-fill" style="--p: {{ PCT }}%"></div></div>
           <div class="hm-stats tabular" aria-live="polite">
             <span class="sr-only">Raised</span><span class="hm-raised">${{ RAISED|int }}</span>
             <span class="hm-sep">/</span><span class="sr-only">of goal</span><span class="hm-goal">${{ GOAL|int }}</span>
@@ -127,7 +125,7 @@
           </div>
         </div>
 
-        <div class="qr-group" role="group" aria-label="Scan to donate">
+        <div class="qr-group" role="group" aria-label="Scan or tap to donate">
           <div class="qr-wrap">
             <span class="qr-title">Scan to Give</span>
             <div id="qr-box" role="img" aria-label="Donation QR"></div>
@@ -136,14 +134,14 @@
           <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen donate-now" data-payment-link data-test="donate-now">Donate Now</a>
         </div>
 
-        <div class="text2give" aria-label="Text-to-Give Instructions">
+        <div class="text2give" aria-label="Text to give">
           <span class="t2g-label">Text</span> <strong class="t2g-key">{{ TEXT_KEYWORD }}</strong>
           <span class="t2g-label">to</span> <strong class="t2g-num">{{ TEXT_SHORT }}</strong>
         </div>
 
         <a href="/sponsor" class="cta-link" data-test="sponsor-link">Become a Sponsor →</a>
 
-        <ul class="hero-pills" role="list" aria-label="Team Highlights">
+        <ul class="hero-pills" role="list" aria-label="Program highlights">
           <li role="listitem"><span class="pill">🏅 500+ Families</span></li>
           <li role="listitem"><span class="pill">📚 3.5 Team GPA</span></li>
           <li role="listitem"><span class="pill">🏀 AAU Gold Certified</span></li>
@@ -152,25 +150,19 @@
     </div>
 
     <div class="holo-glare" aria-hidden="true"></div>
-    <button id="hero-cue" class="scroll-cue" type="button" aria-label="Scroll to content">
-      <span class="dot" aria-hidden="true"></span> Scroll
-    </button>
+    <button id="hero-cue" class="scroll-cue" type="button" aria-label="Scroll to content"><span class="dot" aria-hidden="true"></span> Scroll</button>
 
+    <!-- Mobile sticky donate (shows under 640px) -->
     <a class="mobile-sticky-cta" href="{{ HREF_DONATE }}" data-payment-link data-test="mobile-sticky">Donate Now</a>
   </div>
 </section>
 
 <style {{ nonce_attr() }}>
-/* ===== HERO v7.9 Compact-Pro (rail-safe) ===== */
+/* ===== HERO v7.9 Compact-Pro ===== */
 #fc-hero.v7.compact-pro{
   --edge: clamp(14px, 2.2vw, 24px);
   --hero-h: clamp(500px, 62vh, 820px);
   --img-x: 50%; --img-y: 28%;
-
-  /* NEW: right-rail sizing + gap for safe layout */
-  --rail-w: clamp(300px, 28vw, 380px);
-  --rail-gap: clamp(12px, 2vw, 28px);
-
   --card-r: 1rem;
   --line: rgba(255,255,255,.16);
   --line-strong: rgba(255,255,255,.22);
@@ -181,34 +173,14 @@
   --glass-shadow: 0 16px 36px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.08);
   position:relative; isolation:isolate; scroll-margin-top: calc(var(--fc-header-h,72px) + 10px);
 }
-
-/* Shell & vignette */
-#fc-hero.v7 .hero-shell{
-  position:relative; min-height:var(--hero-h);
-  max-width:min(1380px,98vw); margin-inline:auto; border-radius:1.1rem;
-  overflow:visible; /* allow the rail's shadow without clipping */
-  border:1px solid rgba(255,255,255,.10);
-  box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06)
-}
+#fc-hero.v7 .hero-shell{ position:relative; min-height:var(--hero-h); max-width:min(1380px,98vw); margin-inline:auto; border-radius:1.1rem; overflow:hidden; border:1px solid rgba(255,255,255,.10); box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06) }
 #fc-hero.v7 .hero-vignette{ position:absolute; inset:0; z-index:-1;
-  background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent,#facc15) 22%, transparent) 0%, transparent 60%),
-             linear-gradient(180deg, #0a0b0d 0%, #0b0c0f 40%, #0a0b0d 100%) }
+  background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent,#facc15) 22%, transparent) 0%, transparent 60%), linear-gradient(180deg, #0a0b0d 0%, #0b0c0f 40%, #0a0b0d 100%) }
 
 /* Grid */
 #fc-hero.v7 .hero-grid{ position:absolute; inset:0; display:grid; gap:.9rem; padding:var(--edge); align-items:end }
-@media (min-width:960px){
-  /* Reserve space on the RIGHT for the rail so text never sits under it */
-  #fc-hero.v7.dashboard .hero-grid{
-    grid-template-columns: 1.15fr 0.85fr; align-items:center;
-    padding-right: calc(var(--edge) + var(--rail-w) + var(--rail-gap));
-  }
-}
-#fc-hero.v7 .hero-img{
-  width:100%; height:100%; aspect-ratio:16/9; object-fit:cover;
-  object-position:var(--img-x) var(--img-y);
-  filter:saturate(1.03) contrast(1.04) brightness(.92);
-  -webkit-user-drag:none; user-select:none
-}
+@media (min-width:960px){ #fc-hero.v7.dashboard .hero-grid{ grid-template-columns: 1.15fr 0.85fr; align-items:center } }
+#fc-hero.v7 .hero-img{ width:100%; height:100%; aspect-ratio:16/9; object-fit:cover; object-position:var(--img-x) var(--img-y); filter:saturate(1.03) contrast(1.04) brightness(.92); -webkit-user-drag:none; user-select:none }
 
 /* Titles & chips */
 #fc-hero.v7 .title-block{ color:#f6f7fb; text-shadow:0 1px 0 rgba(0,0,0,.5) }
@@ -228,28 +200,11 @@
 #fc-hero.v7 .btn-ghost{ background:rgba(255,255,255,.08); border:var(--tag-bd); color:#e5e7eb }
 #fc-hero.v7 .btn-micro{ padding:.48rem .72rem; font-size:.88rem }
 #fc-hero.v7 .cta-secondary{ opacity:.9 }
-@media (hover:hover){
-  #fc-hero.v7 .btn-ghost.btn-micro:hover{ background:rgba(255,255,255,.16); transform:translateY(-1px) }
-  #fc-hero.v7 .btn-gold:hover{ transform:translateY(-1px) }
-}
+#fc-hero.v7 .btn-ghost.btn-micro:hover{ background:rgba(255,255,255,.16); transform:translateY(-1px) }
+@media (hover:hover){ #fc-hero.v7 .btn-gold:hover{ transform:translateY(-1px) } }
 
-/* Right rail (compact) — absolute and sized by vars */
-#fc-hero.v7 .dashboard-card{
-  display:grid; gap:.75rem; text-align:center; background:var(--glass-bg); border:var(--glass-bd);
-  border-radius:var(--card-r); padding:.9rem; box-shadow:var(--glass-shadow)
-}
-
-/* NEW: lock rail to the right and set width; never overlaps text due to grid padding-right */
-@media (min-width:1100px){
-  #fc-hero.v7.fullbleed .sidecard--rightlock{
-    position:absolute; z-index:4; right:var(--rail-gap); bottom:clamp(16px,2.6vw,28px);
-    margin:0; width:var(--rail-w); max-width:32vw;
-    backdrop-filter: blur(16px) saturate(120%);
-    box-shadow:0 14px 40px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06)
-  }
-}
-
-/* Meter */
+/* Right rail (compact) */
+#fc-hero.v7 .dashboard-card{ display:grid; gap:.75rem; text-align:center; background:var(--glass-bg); border:var(--glass-bd); border-radius:var(--card-r); padding:.9rem; box-shadow:var(--glass-shadow) }
 #fc-hero.v7 .qr-group{ display:grid; gap:.6rem }
 #fc-hero.v7 .meter{ display:grid; gap:.45rem }
 #fc-hero.v7 .hm-track{ width:100%; height:8px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1) }
@@ -272,6 +227,11 @@
 /* Donate Now gentle pulse */
 @keyframes glowPulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 22px rgba(250,204,21,.45)}}
 #fc-hero.v7 .donate-now{ animation:glowPulse 9s infinite }
+
+/* Right-lock on XL */
+@media (min-width:1100px){
+  #fc-hero.v7.fullbleed .sidecard--rightlock{ position:absolute; z-index:4; right:clamp(16px,3vw,36px); bottom:clamp(16px,2.6vw,28px); margin:0; max-width:min(380px,32vw); backdrop-filter: blur(16px) saturate(120%); box-shadow:0 14px 40px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06) }
+}
 
 /* Scroll cue */
 @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
@@ -302,7 +262,6 @@
 }
 @media (max-width:639.98px){ .mobile-sticky-cta{ display:inline-flex } }
 </style>
-
 
 <!-- QR lib -->
 <script {{ nonce_attr() }} defer src="{{ url_for('static', filename='js/qrcode.min.js') if url_for is defined else '/static/js/qrcode.min.js' }}"></script>
@@ -464,4 +423,3 @@
   addEventListener('scroll', ()=>{ if ((scrollY||document.documentElement.scrollTop||0) > 20) hideCue(); }, { passive:true });
 })();
 </script>
-
