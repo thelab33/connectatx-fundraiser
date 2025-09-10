@@ -1,6 +1,11 @@
 {# ============================================================
-   HERO — SV-Elite 7.3 “Sidekick+ Fullbleed” (Starforge polish)
-   Faces-safe banding • QR (peer-aware) • CSP/a11y • smooth reveal
+   HERO — SV-Elite 7.9 “Compact-Pro” (keep everything, tighter)
+   - Same content, denser layout (≈20–25% shorter)
+   - Inline quick amounts (+25/+50/+100)
+   - Compact right rail (thinner meter, grouped QR + CTA)
+   - A11y meter + live hydrate from /api/totals
+   - Mobile: rail stacks under copy, QR hides <480px, sticky Donate
+   - CSP-safe; keeps your data hooks & Jinja vars
    ============================================================ #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
@@ -14,12 +19,17 @@
 {% set CTA_LABEL    = cta_label if cta_label is defined and cta_label else 'Donate' %}
 {% set SPL          = (stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link) else '') %}
 {% set HREF_DONATE  = SPL or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
+{% set HREF_IMPACT  = (safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact') %}
 
 {# ---------- Fundraising context ---------- #}
 {% set RAISED = (funds_raised or 0) | round(0) %}
-{% set GOAL   = (fundraising_goal or 10000) | round(0) %}
+{% set GOAL   = (fundraising_goal or GOAL_USD or 10000) | round(0) %}
 {% set PCT    = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
 {% set METER_TEXT = ('$' ~ (RAISED|int)|string ~ ' raised of $' ~ (GOAL|int)|string ~ ' (' ~ PCT|string ~ '%)') %}
+
+{# ---------- Text-to-Give (env-backed) ---------- #}
+{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
+{% set TEXT_SHORT   = TEXT_SHORTCODE or '44321' %}
 
 {# ---------- Images (robust) ---------- #}
 {% set _hero_src = (
@@ -36,10 +46,12 @@
 {% set hero_alt        = (hero_alt if hero_alt is defined and hero_alt) or (TEAM_NAME ~ ' team photo') %}
 
 <section id="fc-hero"
-         class="fc-hero v7 compact"
-         aria-label="Hero"
+         class="fc-hero v7 compact-pro fullbleed dashboard"
+         aria-label="Fundraiser hero"
          style="--accent: {{ THEME_HEX }};"
-         data-focal-x="50%" data-focal-y="28%">
+         data-focal-x="50%" data-focal-y="28%"
+         data-test="hero">
+
   <i class="hero-vignette" aria-hidden="true"></i>
 
   <div class="hero-shell tilt-3d" data-tilt-max="8" data-tilt-perspective="1000" data-tilt-glare="1">
@@ -55,17 +67,17 @@
     <div class="face-belt" aria-hidden="true"></div>
     <div class="bottom-fade" aria-hidden="true"></div>
 
-    <!-- Content -->
+    <!-- Grid -->
     <div class="hero-grid tilt-layer" style="--z:36px">
-      <header class="title-block" aria-labelledby="hero-title" aria-describedby="hero-desc hero-meter-desc">
+      <!-- LEFT: Story & CTAs -->
+      <header class="title-block" aria-labelledby="hero-title" aria-describedby="hero-desc" data-test="hero-title">
         <div class="hero-badge" role="note" aria-label="{{ TEAM_NAME }}">
           <span class="dot" aria-hidden="true"></span>
           <span class="badge-text">{{ TEAM_NAME }}</span>
         </div>
 
         <h1 id="hero-title" class="hero-title" data-anim>
-          <span>{{ TITLE }}</span>
-          <span class="accent">{{ TITLE_2 }}</span>
+          <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
         </h1>
 
         <p id="hero-desc" class="hero-sub" data-anim data-anim-delay="60">{{ SUBTITLE }}</p>
@@ -76,41 +88,58 @@
           <li class="chip" role="listitem">📚 Tutoring</li>
         </ul>
 
+        <!-- Single CTA rail: Donate + quick amounts + Share + Impact -->
         <div class="hero-cta" role="group" aria-label="Primary actions" data-anim data-anim-delay="180">
-          <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen"
-             data-p2p-propagate="1" data-payment-link
-             data-analytics="cta_click"
-             data-analytics-meta='{{ {"where":"hero"}|tojson }}'
-             aria-label="{{ CTA_LABEL }} to {{ TEAM_NAME }}">
+          <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen" data-payment-link data-test="donate-primary" aria-label="{{ CTA_LABEL }} to {{ TEAM_NAME }}">
             {{ CTA_LABEL }} <span aria-hidden="true">→</span>
           </a>
-          <button id="hero-share" type="button" class="btn btn-ghost"
-                  aria-label="Share this fundraiser"
-                  data-analytics="share_click"
-                  data-analytics-meta='{{ {"where":"hero"}|tojson }}'
-                  data-share='{{ {"title":"Support " ~ TEAM_NAME, "text":"Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'>
-            Share
-          </button>
+          {% for amt in [25,50,100] %}
+            <a href="{{ HREF_DONATE }}?amount={{ amt }}" class="btn btn-ghost btn-micro"
+               data-payment-link data-amount="{{ amt }}" data-test="quick-amount"
+               aria-label="Donate ${{ amt }} to {{ TEAM_NAME }}">+${{ amt }}</a>
+          {% endfor %}
+          <button id="hero-share" type="button" class="btn btn-ghost btn-micro" data-test="share"
+                  data-share='{{ {"title":"Support " ~ TEAM_NAME, "text":"Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'
+                  aria-describedby="share-live" aria-label="Share this fundraiser">Share</button>
+          <a href="{{ HREF_IMPACT }}" class="btn btn-ghost btn-micro cta-secondary">View Impact ↓</a>
+          <span id="share-live" class="sr-only" aria-live="polite"></span>
         </div>
       </header>
 
-      <!-- Sidecard -->
-      <aside class="sidecard" role="complementary" aria-label="Progress and quick donate" data-anim data-anim-delay="240">
+      <!-- RIGHT: Compact donation rail -->
+      <aside class="sidecard dashboard-card sidecard--rightlock"
+             role="complementary" aria-label="Donate"
+             data-anim data-anim-delay="240"
+             data-goal="{{ GOAL|int }}" data-raised="{{ RAISED|int }}" data-test="donation-rail">
+
+        <div id="hero-meter-desc" class="sr-only">Live donation progress meter for this fundraiser.</div>
+
         <div class="meter" role="meter"
              aria-valuemin="0" aria-valuemax="{{ GOAL|int }}" aria-valuenow="{{ RAISED|int }}"
-             aria-valuetext="{{ METER_TEXT }}" aria-label="Fundraising progress">
+             aria-describedby="hero-meter-desc" aria-valuetext="{{ METER_TEXT }}">
           <div class="hm-track" aria-hidden="true"><div class="hm-fill" style="--p: {{ PCT }}%"></div></div>
-          <div class="hm-stats tabular" aria-hidden="true" id="hero-meter-desc">
-            <span class="hm-raised">${{ RAISED|int }}</span><span class="hm-sep">/</span>
-            <span class="hm-goal">${{ GOAL|int }}</span><span class="hm-pct">{{ PCT }}%</span>
+          <div class="hm-stats tabular" aria-live="polite">
+            <span class="sr-only">Raised</span><span class="hm-raised">${{ RAISED|int }}</span>
+            <span class="hm-sep">/</span><span class="sr-only">of goal</span><span class="hm-goal">${{ GOAL|int }}</span>
+            <span class="hm-pct">{{ PCT }}%</span>
           </div>
         </div>
 
-        <div class="qr-wrap" id="hero-qr" role="region" aria-label="Scan to donate">
-          <span class="qr-title">Scan to Give</span>
-          <div id="qr-box" role="img" aria-label="Donation QR"></div>
-          <a id="qr-fallback-link" class="sr-only" href="{{ HREF_DONATE }}">Open donate link</a>
+        <div class="qr-group" role="group" aria-label="Scan or tap to donate">
+          <div class="qr-wrap">
+            <span class="qr-title">Scan to Give</span>
+            <div id="qr-box" role="img" aria-label="Donation QR"></div>
+            <a id="qr-fallback-link" class="sr-only" href="{{ HREF_DONATE }}">Open donate link</a>
+          </div>
+          <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen donate-now" data-payment-link data-test="donate-now">Donate Now</a>
         </div>
+
+        <div class="text2give" aria-label="Text to give">
+          <span class="t2g-label">Text</span> <strong class="t2g-key">{{ TEXT_KEYWORD }}</strong>
+          <span class="t2g-label">to</span> <strong class="t2g-num">{{ TEXT_SHORT }}</strong>
+        </div>
+
+        <a href="/sponsor" class="cta-link" data-test="sponsor-link">Become a Sponsor →</a>
 
         <ul class="hero-pills" role="list" aria-label="Program highlights">
           <li role="listitem"><span class="pill">🏅 500+ Families</span></li>
@@ -121,140 +150,120 @@
     </div>
 
     <div class="holo-glare" aria-hidden="true"></div>
+    <button id="hero-cue" class="scroll-cue" type="button" aria-label="Scroll to content"><span class="dot" aria-hidden="true"></span> Scroll</button>
 
-    <button id="hero-cue" class="scroll-cue" type="button" aria-label="Scroll for impact">
-      <span class="dot" aria-hidden="true"></span> Scroll
-    </button>
+    <!-- Mobile sticky donate (shows under 640px) -->
+    <a class="mobile-sticky-cta" href="{{ HREF_DONATE }}" data-payment-link data-test="mobile-sticky">Donate Now</a>
   </div>
 </section>
 
 <style {{ nonce_attr() }}>
-/* ===== Layout & ambient ===== */
-#fc-hero.v7{ --edge: clamp(14px, 2.6vw, 28px); --hero-h: clamp(520px, 66vh, 880px); --glass: rgba(255,255,255,.08); --ink:#0b0c10; --img-x:50%; --img-y:28% }
-#fc-hero.v7{ position:relative; isolation:isolate; scroll-margin-top: calc(var(--fc-header-h,72px) + 10px) }
-#fc-hero.v7 .hero-shell{ position:relative; min-height:var(--hero-h); max-width:min(1380px,98vw); margin-inline:auto; border-radius:1.25rem; overflow:hidden;
-  border:1px solid rgba(255,255,255,.10); box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06) }
+/* ===== HERO v7.9 Compact-Pro ===== */
+#fc-hero.v7.compact-pro{
+  --edge: clamp(14px, 2.2vw, 24px);
+  --hero-h: clamp(500px, 62vh, 820px);
+  --img-x: 50%; --img-y: 28%;
+  --card-r: 1rem;
+  --line: rgba(255,255,255,.16);
+  --line-strong: rgba(255,255,255,.22);
+  --tag-bg: rgba(255,255,255,.10);
+  --tag-bd: 1px solid rgba(255,255,255,.16);
+  --glass-bg: linear-gradient(180deg, rgba(18,18,18,.72), rgba(18,18,18,.46));
+  --glass-bd: 1px solid color-mix(in srgb, var(--accent,#facc15) 24%, transparent);
+  --glass-shadow: 0 16px 36px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.08);
+  position:relative; isolation:isolate; scroll-margin-top: calc(var(--fc-header-h,72px) + 10px);
+}
+#fc-hero.v7 .hero-shell{ position:relative; min-height:var(--hero-h); max-width:min(1380px,98vw); margin-inline:auto; border-radius:1.1rem; overflow:hidden; border:1px solid rgba(255,255,255,.10); box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06) }
 #fc-hero.v7 .hero-vignette{ position:absolute; inset:0; z-index:-1;
-  background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent,#facc15) 22%, transparent) 0%, transparent 60%),
-             linear-gradient(180deg, #0a0b0d 0%, #0b0c0f 40%, #0a0b0d 100%) }
-#fc-hero.v7.fullbleed .hero-shell{ max-width:100vw; border-radius:0; border-left:0; border-right:0 }
-#fc-hero.v7.fullbleed{ --hero-h: clamp(560px, 76vh, 980px) }
-
-/* Media (focal via vars) */
-#fc-hero.v7 .hero-img{ width:100%; height:100%; aspect-ratio:16/9; object-fit:cover; object-position:var(--img-x) var(--img-y);
-  filter:saturate(1.03) contrast(1.04) brightness(.92); -webkit-user-drag:none; user-select:none }
-
-/* Readability belts */
-#fc-hero.v7 .face-belt{ position:absolute; inset-inline:0; top:42%; height:24%;
-  background:linear-gradient(180deg, transparent, rgba(0,0,0,.20) 40%, rgba(0,0,0,.28) 60%, transparent) }
-#fc-hero.v7 .bottom-fade{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.36) 46%, rgba(0,0,0,.88)) }
+  background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent,#facc15) 22%, transparent) 0%, transparent 60%), linear-gradient(180deg, #0a0b0d 0%, #0b0c0f 40%, #0a0b0d 100%) }
 
 /* Grid */
-#fc-hero.v7 .hero-grid{ position:absolute; inset:0; display:grid; align-items:end; grid-template-columns:1fr; gap:1rem;
-  padding: var(--edge) var(--edge) calc(var(--edge) + 6px) var(--edge) }
-@media (min-width:960px){ #fc-hero.v7 .hero-grid{ grid-template-columns: 1.1fr minmax(280px,360px) } }
+#fc-hero.v7 .hero-grid{ position:absolute; inset:0; display:grid; gap:.9rem; padding:var(--edge); align-items:end }
+@media (min-width:960px){ #fc-hero.v7.dashboard .hero-grid{ grid-template-columns: 1.15fr 0.85fr; align-items:center } }
+#fc-hero.v7 .hero-img{ width:100%; height:100%; aspect-ratio:16/9; object-fit:cover; object-position:var(--img-x) var(--img-y); filter:saturate(1.03) contrast(1.04) brightness(.92); -webkit-user-drag:none; user-select:none }
 
-/* Title & chips */
-#fc-hero.v7 .hero-badge{ display:inline-flex; align-items:center; gap:.5rem; font-weight:900; margin-bottom:.35rem;
-  padding:.28rem .64rem; border-radius:.75rem; -webkit-backdrop-filter:saturate(120%) blur(4px); backdrop-filter:saturate(120%) blur(4px);
-  background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.22) }
-#fc-hero.v7 .hero-badge .dot{ width:.6rem; height:.6rem; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.45) }
-#fc-hero.v7 .title-block{ color:#e6ebf5; text-shadow:0 1px 0 rgba(0,0,0,.5) }
-#fc-hero.v7 .hero-title{ margin:.1rem 0 .5rem; font-weight:1000; line-height:1.02; text-wrap:balance; font-size:clamp(2rem,1.1rem + 4.2vw,3.7rem) }
-#fc-hero.v7 .hero-title .accent{ color:var(--accent,#facc15) }
-#fc-hero.v7 .hero-sub{ max-width:70ch; color:#eaf0fa; opacity:.95 }
-#fc-hero.v7 .hero-chips{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0 .95rem; list-style:none; padding:0 }
-#fc-hero.v7 .chip{ font-size:.95rem; padding:.48rem .85rem; border-radius:.9rem; font-weight:800; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); color:#eef2f8 }
+/* Titles & chips */
+#fc-hero.v7 .title-block{ color:#f6f7fb; text-shadow:0 1px 0 rgba(0,0,0,.5) }
+#fc-hero.v7 .hero-badge{ display:inline-flex; align-items:center; gap:.5rem; font-weight:900; margin-bottom:.2rem; padding:.24rem .52rem; border-radius:.75rem; background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); border:1px solid var(--line-strong); backdrop-filter:saturate(120%) blur(4px) }
+#fc-hero.v7 .hero-badge .dot{ width:.5rem; height:.5rem; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.45) }
+#fc-hero.v7 .hero-title{ margin:.08rem 0 .25rem; font-weight:1000; line-height:1.02; text-wrap:balance; font-size:clamp(1.9rem, 1rem + 3.8vw, 3.3rem) }
+#fc-hero.v7 .accent{ color:var(--accent,#facc15) }
+#fc-hero.v7 .hero-sub{ color:#eaf0fa; opacity:.9; line-height:1.45; max-width:70ch }
+@media (min-width:960px){ #fc-hero.v7 .hero-sub{ max-width:60% } }
+#fc-hero.v7 .hero-chips{ display:flex; gap:.42rem; flex-wrap:wrap; margin:.55rem 0 .75rem; list-style:none; padding:0 }
+#fc-hero.v7 .chip{ font-size:.9rem; padding:.34rem .6rem; border-radius:.9rem; font-weight:800; background:var(--tag-bg); border:var(--tag-bd); color:#eef2f8 }
 
-/* CTAs + sheen */
-#fc-hero.v7 .hero-cta{ display:flex; gap:.6rem; flex-wrap:wrap }
-#fc-hero.v7 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:900; padding:.92rem 1.28rem; position:relative; overflow:hidden }
-#fc-hero.v7 .btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15; border:1px solid rgba(0,0,0,.22); box-shadow:0 10px 24px rgba(234,179,8,.22) }
-#fc-hero.v7 .btn-ghost{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e5e7eb }
-#fc-hero.v7 .sheen::before{ content:""; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
-  background:conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--accent) 75%, #fff 25%) 30%, transparent 60%); filter:blur(14px); opacity:.35; transform:rotate(0deg); transition:transform .9s ease }
-@media (hover:hover){ #fc-hero.v7 .btn-gold:hover{ transform:translateY(-1px) } #fc-hero.v7 .sheen:hover::before{ transform:rotate(190deg) } }
+/* CTA rail */
+#fc-hero.v7 .hero-cta{ display:flex; gap:.5rem; flex-wrap:wrap; align-items:center }
+#fc-hero.v7 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:900; padding:.86rem 1.2rem; text-decoration:none; position:relative; transition:transform .18s ease }
+#fc-hero.v7 .btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15; border:1px solid rgba(0,0,0,.22); box-shadow:0 10px 22px rgba(234,179,8,.22) }
+#fc-hero.v7 .btn-ghost{ background:rgba(255,255,255,.08); border:var(--tag-bd); color:#e5e7eb }
+#fc-hero.v7 .btn-micro{ padding:.48rem .72rem; font-size:.88rem }
+#fc-hero.v7 .cta-secondary{ opacity:.9 }
+#fc-hero.v7 .btn-ghost.btn-micro:hover{ background:rgba(255,255,255,.16); transform:translateY(-1px) }
+@media (hover:hover){ #fc-hero.v7 .btn-gold:hover{ transform:translateY(-1px) } }
 
-/* Sidecard */
-#fc-hero.v7 .sidecard{ place-self:end; display:grid; gap:.7rem; align-content:end;
-  background:linear-gradient(180deg, rgba(17,17,17,.62), rgba(17,17,17,.48));
-  -webkit-backdrop-filter: blur(14px) saturate(120%); backdrop-filter: blur(14px) saturate(120%);
-  border:1px solid color-mix(in srgb, var(--accent) 24%, transparent); box-shadow:0 12px 36px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.06);
-  border-radius:1rem; padding:.85rem .9rem }
-@media (max-width:959.98px){ #fc-hero.v7 .sidecard{ background:transparent; border:0; box-shadow:none; padding:0 } }
-
-.tabular{ font-variant-numeric: tabular-nums }
+/* Right rail (compact) */
+#fc-hero.v7 .dashboard-card{ display:grid; gap:.75rem; text-align:center; background:var(--glass-bg); border:var(--glass-bd); border-radius:var(--card-r); padding:.9rem; box-shadow:var(--glass-shadow) }
+#fc-hero.v7 .qr-group{ display:grid; gap:.6rem }
 #fc-hero.v7 .meter{ display:grid; gap:.45rem }
-#fc-hero.v7 .hm-track{ width:100%; height:14px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.10) }
-#fc-hero.v7 .hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent,#facc15) 55%, #d1d5db 45%)) }
-#fc-hero.v7 .hm-stats{ display:flex; gap:.5rem; justify-content:flex-end; align-items:baseline; font-weight:900; color:#e9eef9 }
-#fc-hero.v7 .hm-pct{ opacity:.9 } #fc-hero.v7 .hm-sep{ opacity:.7 }
+#fc-hero.v7 .hm-track{ width:100%; height:8px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.1) }
+#fc-hero.v7 .hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent,#facc15) 55%, #d1d5db 45%)); transition:width 1s ease }
+#fc-hero.v7 .hm-stats{ display:flex; gap:.35rem; justify-content:flex-end; align-items:baseline; font-weight:900; color:#e9eef9 }
+.tabular{ font-variant-numeric: tabular-nums }
 
 /* QR */
-#fc-hero.v7 .qr-wrap{ display:inline-flex; flex-direction:column; align-items:center; gap:.35rem; align-self:center;
-  padding:.55rem .75rem; border-radius:.75rem; background:var(--glass); border:1px solid rgba(255,255,255,.16) }
-#fc-hero.v7 .qr-title{ font-size:.8rem; font-weight:900; opacity:.9 }
-#fc-hero.v7 #qr-box canvas, #fc-hero.v7 #qr-box img{ width:100px; height:100px; image-rendering:pixelated; border-radius:.5rem; box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08) }
-@media (max-width:420px){ #fc-hero.v7 .qr-wrap{ display:none } }
+#fc-hero.v7 .qr-wrap{ display:grid; justify-items:center; gap:.35rem; padding:.5rem .6rem; border-radius:.7rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14) }
+#fc-hero.v7 .qr-title{ font-size:.78rem; font-weight:900; opacity:.9 }
+#fc-hero.v7 #qr-box canvas, #fc-hero.v7 #qr-box img{ width:120px; height:120px; image-rendering:pixelated; border-radius:.5rem; box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08) }
+@media (max-width:480px){ #fc-hero.v7 .qr-wrap{ display:none } }
 
-/* Pills */
-#fc-hero.v7 .hero-pills{ display:flex; gap:.5rem; flex-wrap:wrap; list-style:none; padding:0; justify-content:flex-end }
-#fc-hero.v7 .pill{ display:inline-flex; align-items:center; gap:.45rem; padding:.40rem .68rem; border-radius:999px; font-weight:900; font-size:.84rem; color:#111; background:linear-gradient(180deg,#fff3c4,#fde68a); box-shadow:inset 0 0 0 1px rgba(0,0,0,.06) }
+/* Text-to-Give & trust pills */
+#fc-hero.v7 .text2give{ display:flex; align-items:center; justify-content:center; gap:.35rem; margin-top:.1rem; font-size:.84rem; color:#e5e7eb }
+#fc-hero.v7 .t2g-key, #fc-hero.v7 .t2g-num{ background:rgba(255,255,255,.1); border:1px solid rgba(255,255,255,.18); padding:.18rem .48rem; border-radius:.45rem; font-weight:900 }
+#fc-hero.v7 .hero-pills{ display:flex; gap:.45rem; flex-wrap:wrap; justify-content:center; margin-top:.35rem; list-style:none; padding:0 }
+#fc-hero.v7 .hero-pills .pill{ display:inline-flex; align-items:center; gap:.35rem; padding:.32rem .64rem; border-radius:999px; font-weight:900; font-size:.82rem; color:#e9eef9; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14) }
 
-/* Effects */
-#fc-hero.v7 .holo-glare{ position:absolute; inset:-18%; pointer-events:none; opacity:0; mix-blend-mode:screen;
-  background:radial-gradient(120% 60% at var(--gx,50%) var(--gy,30%), rgba(255,255,255,.26), transparent 45%); transition:opacity .18s ease }
-.tilt-3d{ transform-style:preserve-3d; perspective:var(--tilt-persp,900px); will-change:transform }
-.tilt-layer{ transform: translateZ(var(--z,0)) }
+/* Donate Now gentle pulse */
+@keyframes glowPulse{0%,100%{box-shadow:0 0 0 rgba(0,0,0,0)}50%{box-shadow:0 0 22px rgba(250,204,21,.45)}}
+#fc-hero.v7 .donate-now{ animation:glowPulse 9s infinite }
+
+/* Right-lock on XL */
+@media (min-width:1100px){
+  #fc-hero.v7.fullbleed .sidecard--rightlock{ position:absolute; z-index:4; right:clamp(16px,3vw,36px); bottom:clamp(16px,2.6vw,28px); margin:0; max-width:min(380px,32vw); backdrop-filter: blur(16px) saturate(120%); box-shadow:0 14px 40px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.06) }
+}
 
 /* Scroll cue */
-#fc-hero.v7 .scroll-cue{
-  position:absolute; left:50%; translate:-50% 0; bottom:12px; z-index:3;
-  display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .7rem; border-radius:999px;
-  font-weight:900; font-size:.82rem; color:#0b0c10; background:linear-gradient(180deg,#fff3c4,#fde68a);
-  border:1px solid rgba(0,0,0,.18); box-shadow:0 8px 24px rgba(0,0,0,.28); cursor:pointer; opacity:.96;
-  transition:opacity .2s ease, transform .2s ease;
-}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+#fc-hero.v7 .scroll-cue{ position:absolute; left:50%; translate:-50% 0; bottom:10px; z-index:3; display:inline-flex; align-items:center; gap:.45rem; padding:.32rem .64rem; border-radius:999px; font-weight:900; font-size:.8rem; color:#0b0c10; background:linear-gradient(180deg,#fff3c4,#fde68a); border:1px solid rgba(0,0,0,.18); box-shadow:0 8px 24px rgba(0,0,0,.28); cursor:pointer; opacity:.96; animation:bounce 2.4s infinite }
 #fc-hero.v7 .scroll-cue .dot{ width:6px; height:6px; border-radius:999px; background:var(--accent) }
 #fc-hero.v7 .scroll-cue.hide{ opacity:0; pointer-events:none }
 
-/* Reveal */
-#fc-hero.v7 [data-anim]{ opacity:0; transform:translateY(8px); transition:opacity .38s ease, transform .38s ease }
+/* Effects & reveal */
+#fc-hero.v7 .holo-glare{ position:absolute; inset:-18%; pointer-events:none; opacity:0; mix-blend-mode:screen; background:radial-gradient(120% 60% at var(--gx,50%) var(--gy,30%), rgba(255,255,255,.26), transparent 45%); transition:opacity .18s ease }
+.tilt-3d{ transform-style:preserve-3d; perspective:var(--tilt-persp,900px) }
+.tilt-layer{ transform: translateZ(var(--z,0)) }
+#fc-hero.v7 [data-anim]{ opacity:0; transform:translateY(8px); transition:opacity .34s ease, transform .34s ease }
 #fc-hero.v7 [data-anim].in{ opacity:1; transform:none }
 #fc-hero.v7 [data-anim][data-anim-delay="60"]{  transition-delay:.06s }
 #fc-hero.v7 [data-anim][data-anim-delay="120"]{ transition-delay:.12s }
 #fc-hero.v7 [data-anim][data-anim-delay="180"]{ transition-delay:.18s }
 #fc-hero.v7 [data-anim][data-anim-delay="240"]{ transition-delay:.24s }
 
-/* Compact density for full-bleed hero */
-#fc-hero.v7.compact{ --hero-h: clamp(500px, 62vh, 860px); --edge: clamp(16px, 2vw, 24px) }
-
-/* tighten type & spacing */
-#fc-hero.v7.compact .hero-title{
-  font-size: clamp(1.8rem, .95rem + 3.0vw, 3.2rem);
-}
-#fc-hero.v7.compact .hero-sub{ font-size: .95rem }
-#fc-hero.v7.compact .chip{ font-size: .9rem; padding: .4rem .7rem }
-#fc-hero.v7.compact .hero-cta .btn{ padding: .78rem 1.05rem }
-#fc-hero.v7.compact .sidecard{ padding: .7rem .75rem; max-width: 320px }
-#fc-hero.v7.compact .hm-track{ height: 12px }
-#fc-hero.v7.compact #qr-box canvas,
-#fc-hero.v7.compact #qr-box img{ width: 90px; height: 90px }
-#fc-hero.v7.compact .scroll-cue{ transform: translateY(0); bottom: 10px }
-
-/* Smarter focal crop */
-@media (max-width:960px){ #fc-hero.v7{ --img-y:34% } }
-@media (min-width:960px){ #fc-hero.v7 .face-belt{ top:40%; height:22% } }
-
-/* Prefs / HCM */
 @media (prefers-reduced-motion: reduce){
   .tilt-3d, .tilt-layer, .holo-glare, #fc-hero.v7 [data-anim]{ transition:none!important; transform:none!important; opacity:1!important }
 }
-@media (prefers-reduced-transparency: reduce), (prefers-contrast: more){ #fc-hero.v7 .btn-ghost{ background:rgba(255,255,255,.14) } }
-@media (forced-colors: active){ #fc-hero.v7 .sidecard{ background:Canvas; border:1px solid CanvasText } }
+
+/* Mobile sticky donate */
+.mobile-sticky-cta{
+  position:fixed; left:50%; translate:-50% 0; bottom:14px; z-index:40;
+  display:none; padding:.68rem 1.1rem; border-radius:999px; font-weight:900; text-decoration:none;
+  background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#0b0f15; border:1px solid rgba(0,0,0,.22); box-shadow:0 14px 28px rgba(234,179,8,.25)
+}
+@media (max-width:639.98px){ .mobile-sticky-cta{ display:inline-flex } }
 </style>
 
-<!-- Local QR lib (constructor API; davidshimjs) -->
+<!-- QR lib -->
 <script {{ nonce_attr() }} defer src="{{ url_for('static', filename='js/qrcode.min.js') if url_for is defined else '/static/js/qrcode.min.js' }}"></script>
 
 <script {{ nonce_attr() }} type="module">
@@ -262,7 +271,7 @@
   const reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   try { window.fcTiltInit && window.fcTiltInit(document); } catch {}
 
-  /* Focal crop from data-* */
+  /* Focal crop via data-* */
   try{
     const hero = document.getElementById('fc-hero');
     hero?.style.setProperty('--img-x', hero?.getAttribute('data-focal-x') || '50%');
@@ -273,7 +282,7 @@
   if (!reduce){
     try{
       const io = new IntersectionObserver((ents)=>{
-        for (const ent of ents) if (ent.isIntersecting) { ent.target.classList.add('in'); io.unobserve(ent.target); }
+        for (const ent of ents) if (ent.isIntersecting){ ent.target.classList.add('in'); io.unobserve(ent.target); }
       }, { rootMargin: '-10% 0px', threshold: .2 });
       document.querySelectorAll('#fc-hero [data-anim]').forEach(el=>io.observe(el));
       addEventListener('pagehide', ()=>io.disconnect(), { once:true });
@@ -285,22 +294,24 @@
   /* Share */
   const shareBtn = document.getElementById('hero-share');
   shareBtn?.addEventListener('click', async () => {
+    const live = document.getElementById('share-live');
     try{
       const payload = JSON.parse(shareBtn.getAttribute('data-share') || '{}');
       try{ if (window.fc?.makeTrackedUrl) payload.url = window.fc.makeTrackedUrl(payload.url || location.href, { from:'hero' }); }catch{}
-      if (navigator.share){ await navigator.share(payload); return; }
+      if (navigator.share){ await navigator.share(payload); live && (live.textContent='Shared.'); return; }
       await navigator.clipboard.writeText(payload.url || location.href);
-      const t=shareBtn.textContent; shareBtn.textContent='Copied!'; setTimeout(()=>shareBtn.textContent=t,1100);
+      live && (live.textContent='Link copied to clipboard.');
+      const t=shareBtn.textContent; shareBtn.textContent='Copied!'; setTimeout(()=>{ shareBtn.textContent=t; live&&(live.textContent=''); },1100);
     }catch{}
   }, { passive:true });
 
-  /* Meter sync */
+  /* Meter logic */
   const fill = document.querySelector('#fc-hero .hm-fill');
   const raisedEl = document.querySelector('#fc-hero .hm-raised');
   const goalEl   = document.querySelector('#fc-hero .hm-goal');
   const pctEl    = document.querySelector('#fc-hero .hm-pct');
   const meter    = document.querySelector('#fc-hero .meter');
-  const fmt = (n)=>{ try{ return '$'+Number(n||0).toLocaleString(); }catch{ return '$'+n; } };
+  const fmt = n => { try{ return '$'+Number(n||0).toLocaleString(); }catch{ return '$'+n; } };
   function setProgress(raised, goal){
     goal=Math.max(1,Number(goal||0)); raised=Math.max(0,Number(raised||0));
     const pct=Math.min(100,(raised/goal)*100);
@@ -313,6 +324,19 @@
   }
   setProgress({{ RAISED|int }}, {{ GOAL|int }});
   addEventListener('fc:meter:update', e=>{ try{ const d=e.detail||{}; setProgress(d.raised,d.goal); }catch{} }, { passive:true });
+
+  /* Optional hydrate from /api/totals */
+  (async () => {
+    const controller = new AbortController();
+    addEventListener('pagehide', () => controller.abort(), { once:true });
+    try {
+      const r = await fetch('/api/totals', { cache: 'no-store', credentials: 'same-origin', signal: controller.signal });
+      if (r.ok) {
+        const { total, goal } = await r.json();
+        if (typeof total !== 'undefined') setProgress(total, goal ?? {{ GOAL|int }});
+      }
+    } catch {}
+  })();
 
   /* Image fallback */
   const img = document.getElementById('fc-hero-img');
@@ -332,7 +356,24 @@
     frame?.addEventListener('pointerleave', ()=>{ if (glare) glare.style.opacity='0'; }, { passive:true });
   }
 
-  /* QR — peer-aware; graceful fallback if lib missing */
+  /* Decorate donate links with UTM + amount */
+  function decorate(url, extra){
+    try{
+      const u=new URL(url, location.origin);
+      u.searchParams.set('utm_source','hero'); u.searchParams.set('utm_medium','cta'); u.searchParams.set('utm_campaign','fundraiser');
+      Object.entries(extra||{}).forEach(([k,v])=>{ if(v!=null&&v!=='') u.searchParams.set(k,v); });
+      return u.toString();
+    }catch{ return url; }
+  }
+  document.querySelectorAll('#fc-hero [data-payment-link]')?.forEach(a=>{
+    a.addEventListener('click', ()=>{ try{
+      const href = decorate(a.getAttribute('href')||'{{ HREF_DONATE }}', { amount:a.dataset.amount });
+      a.setAttribute('href', href);
+      window.dispatchEvent(new CustomEvent('fc:donate', { detail:{ source:'hero', amount:a.dataset.amount||null } }));
+    }catch{} }, { passive:true });
+  });
+
+  /* QR — peer-aware */
   const qrEl   = document.getElementById('qr-box');
   const linkEl = document.getElementById('qr-fallback-link');
   if (qrEl && linkEl){
@@ -345,32 +386,26 @@
         const ctx=JSON.parse(raw)||{}; return ctx.data?.peer_slug || ctx.data?.peer || null;
       }catch{ return null; }
     }
-    function decorate(url, extra){
+    function decorateQR(url, extra){
       try{
         const u=new URL(url, location.origin);
-        u.searchParams.set('utm_source','qr');
-        u.searchParams.set('utm_medium','hero');
-        u.searchParams.set('utm_campaign','fundraiser');
+        u.searchParams.set('utm_source','qr'); u.searchParams.set('utm_medium','hero'); u.searchParams.set('utm_campaign','fundraiser');
         Object.entries(extra||{}).forEach(([k,v])=>{ if(v!=null&&v!=='') u.searchParams.set(k,v); });
         return u.toString();
       }catch{ return url; }
     }
     function renderQR(){
-      const href=decorate(BASE,{ peer:getPeer() });
+      const href=decorateQR(BASE,{ peer:getPeer() });
       linkEl.href=href;
-
-      if (window.QRCode){ // davidshimjs constructor
-        qrEl.innerHTML='';
-        try { new QRCode(qrEl,{ text:href, width:128, height:128, correctLevel:QRCode.CorrectLevel.M }); return; } catch {}
-      }
-      // Fallback: accessible link + copy
       qrEl.innerHTML='';
-      const open = Object.assign(document.createElement('a'), { className:'btn btn-gold sheen', href:href, target:'_blank', rel:'noopener', textContent:'Open Donate' });
-      const copy = Object.assign(document.createElement('button'), { className:'btn btn-ghost', textContent:'Copy Link' });
+      if (window.QRCode){
+        try { new QRCode(qrEl,{ text:href, width:120, height:120, correctLevel:QRCode.CorrectLevel.M }); return; } catch {}
+      }
+      const open = Object.assign(document.createElement('a'), { className:'btn btn-micro btn-gold', href:href, target:'_blank', rel:'noopener noreferrer', textContent:'Open Donate' });
+      const copy = Object.assign(document.createElement('button'), { className:'btn btn-micro btn-ghost', textContent:'Copy Link' });
       copy.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(href); copy.textContent='Copied!'; setTimeout(()=>copy.textContent='Copy Link',900); }catch{} }, { passive:true });
-      const wrap = Object.create(document.createElement('div').constructor.prototype);
-      const d = document.createElement('div'); d.style.display='grid'; d.style.gap='.4rem'; d.append(open, copy);
-      qrEl.append(d);
+      const wrap = document.createElement('div'); wrap.style.display='grid'; wrap.style.gap='.35rem'; wrap.append(open, copy);
+      qrEl.append(wrap);
     }
     if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', renderQR); else renderQR();
     addEventListener('hashchange', renderQR, { passive:true });
@@ -378,7 +413,7 @@
     addEventListener('fc:refctx:update', renderQR, { passive:true });
   }
 
-  /* Scroll cue */
+  /* Scroll cue hides on scroll */
   const cue = document.getElementById('hero-cue');
   const hideCue = ()=> cue?.classList.add('hide');
   cue?.addEventListener('click', ()=>{

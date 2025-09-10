@@ -1,4 +1,4 @@
-{# ===================== Base Context + Helpers (SV-Elite, prod • refactor) ===================== #}
+{# ===================== Base Context + Helpers (SV‑Elite, prod • refactor) ===================== #}
 
 {# ---------- Inputs / team context ---------- #}
 {% set TEAM         = team|default(_team|default({})) %}
@@ -289,8 +289,7 @@
         {% if sri('js/bundle.min.js') %}s.integrity="{{ sri('js/bundle.min.js') }}"; s.crossOrigin="anonymous";{% endif %}
         s.src="{{ asset('js/bundle.min.js') }}";
         head.appendChild(s);
-      }catch(_){}
-    }
+      }catch(_){}}
     try{
       var esm=document.createElement('script');
       esm.type='module'; esm.defer=true;
@@ -313,8 +312,7 @@
     (function(){
       var meta=document.getElementById('meta-theme-color'); if(!meta) return;
       function setColor(){
-        try{ meta.setAttribute('content', matchMedia('(prefers-color-scheme: dark)').matches ? '#0b0b0c' : '{{ BRAND_HEX }}'); }catch(_){}
-      }
+        try{ meta.setAttribute('content', matchMedia('(prefers-color-scheme: dark)').matches ? '#0b0b0c' : '{{ BRAND_HEX }}'); }catch(_){}}
       setColor(); try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setColor); }catch{}
     })();
   </script>
@@ -347,6 +345,7 @@
     <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/lazy-img.js') }}" defer></script>
   {% endif %}
 
+  <!-- ===== Tilt core (idempotent) ===== -->
   <script {{ nonce_attr() }} type="module">
 (() => {
   if (window.fcTiltInit) return; // run once
@@ -504,8 +503,7 @@
     const nodes=document.querySelectorAll('#fc-hero');
     if(nodes.length>1){ [...nodes].slice(1).forEach(n=>n.remove()); console.warn('[fc-hero] duplicate removed'); }
   </script>
-  <!-- DEV inject: QR + SSE (remove before prod) -->
-  <!-- DEV inject: QR + meter (CSP-safe) -->
+  <!-- DEV injects (remove for prod) -->
   <script {{ nonce_attr() }} defer src="/static/js/qrcode.min.js"></script>
   <script {{ nonce_attr() }} defer src="/static/js/hero-qr-init.js"></script>
   <script {{ nonce_attr() }} defer src="/static/js/sse-meter.js"></script>

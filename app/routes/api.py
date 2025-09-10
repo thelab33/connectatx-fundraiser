@@ -552,6 +552,10 @@ class StatsResource(Resource):
             current_app.logger.error("📊 Error fetching stats", exc_info=True)
             api.abort(500, "Database error")
 
+# app/routes/api.py
+@api_bp.get("/totals")
+def totals():
+    return jsonify({"total": 12340, "goal": current_app.config.get("GOAL_USD", 50000)})
 
 @api.route("/donors")
 class DonorsResource(Resource):

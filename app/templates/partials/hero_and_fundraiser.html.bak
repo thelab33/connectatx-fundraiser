@@ -1,5 +1,6 @@
 {# ============================================================
-   HERO — SV-Elite 7.2 “Sidekick+ Fullbleed” (pro refactor)
+   HERO — SV-Elite 7.3 “Sidekick+ Fullbleed” (Starforge polish)
+   Faces-safe banding • QR (peer-aware) • CSP/a11y • smooth reveal
    ============================================================ #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
@@ -20,7 +21,7 @@
 {% set PCT    = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1)) | round(1) %}
 {% set METER_TEXT = ('$' ~ (RAISED|int)|string ~ ' raised of $' ~ (GOAL|int)|string ~ ' (' ~ PCT|string ~ '%)') %}
 
-{# ---------- Images (robust fallbacks) ---------- #}
+{# ---------- Images (robust) ---------- #}
 {% set _hero_src = (
   (hero_image_url if hero_image_url is defined and hero_image_url) or
   (team.hero_bg if team and team.hero_bg) or
@@ -35,58 +36,48 @@
 {% set hero_alt        = (hero_alt if hero_alt is defined and hero_alt) or (TEAM_NAME ~ ' team photo') %}
 
 <section id="fc-hero"
-         class="fc-hero v7 fullbleed"  {# add/remove `fullbleed` to toggle cinematic mode #}
+         class="fc-hero v7 compact"
          aria-label="Hero"
          style="--accent: {{ THEME_HEX }};"
-         data-focal-x="50%"   {# override per team (e.g. '42%') #}
-         data-focal-y="28%">
-  <!-- Ambient band -->
+         data-focal-x="50%" data-focal-y="28%">
   <i class="hero-vignette" aria-hidden="true"></i>
 
-  <div class="hero-shell tilt-3d"
-       data-tilt-max="8"
-       data-tilt-perspective="1000"
-       data-tilt-glare="1">
-
-    <!-- Media layer -->
+  <div class="hero-shell tilt-3d" data-tilt-max="8" data-tilt-perspective="1000" data-tilt-glare="1">
+    <!-- Media -->
     <picture class="hero-media tilt-layer" style="--z:20px">
       <source srcset="{{ hero_src_mobile }}" media="(max-width: 640px)">
-      <img id="fc-hero-img"
-           src="{{ hero_src }}"
-           alt="{{ hero_alt }}"
-           width="1920" height="1080"
-           sizes="100vw"
-           class="hero-img"
-           decoding="async" fetchpriority="high" loading="eager" draggable="false">
+      <img id="fc-hero-img" src="{{ hero_src }}" alt="{{ hero_alt }}"
+           width="1920" height="1080" sizes="100vw"
+           class="hero-img" decoding="async" fetchpriority="high" loading="eager" draggable="false">
     </picture>
 
-    <!-- Readability systems -->
+    <!-- Readability overlays -->
     <div class="face-belt" aria-hidden="true"></div>
     <div class="bottom-fade" aria-hidden="true"></div>
 
-    <!-- Content: headline + sidecard -->
+    <!-- Content -->
     <div class="hero-grid tilt-layer" style="--z:36px">
-      <!-- Headline block -->
       <header class="title-block" aria-labelledby="hero-title" aria-describedby="hero-desc hero-meter-desc">
         <div class="hero-badge" role="note" aria-label="{{ TEAM_NAME }}">
           <span class="dot" aria-hidden="true"></span>
           <span class="badge-text">{{ TEAM_NAME }}</span>
         </div>
+
         <h1 id="hero-title" class="hero-title" data-anim>
           <span>{{ TITLE }}</span>
           <span class="accent">{{ TITLE_2 }}</span>
         </h1>
+
         <p id="hero-desc" class="hero-sub" data-anim data-anim-delay="60">{{ SUBTITLE }}</p>
 
-        <ul class="hero-chips" aria-label="Areas your gift supports" role="list" data-anim data-anim-delay="120">
+        <ul class="hero-chips" role="list" aria-label="Areas your gift supports" data-anim data-anim-delay="120">
           <li class="chip" role="listitem">🎒 Gear</li>
           <li class="chip" role="listitem">🚌 Travel</li>
           <li class="chip" role="listitem">📚 Tutoring</li>
         </ul>
 
         <div class="hero-cta" role="group" aria-label="Primary actions" data-anim data-anim-delay="180">
-          <a href="{{ HREF_DONATE }}"
-             class="btn btn-gold sheen"
+          <a href="{{ HREF_DONATE }}" class="btn btn-gold sheen"
              data-p2p-propagate="1" data-payment-link
              data-analytics="cta_click"
              data-analytics-meta='{{ {"where":"hero"}|tojson }}'
@@ -97,29 +88,21 @@
                   aria-label="Share this fundraiser"
                   data-analytics="share_click"
                   data-analytics-meta='{{ {"where":"hero"}|tojson }}'
-                  data-share='{{ {"title":"Support " ~ TEAM_NAME,"text":"Every dollar moves a kid forward — join us!","url":(request.base_url if request is defined else "/")} | tojson }}'>
+                  data-share='{{ {"title":"Support " ~ TEAM_NAME, "text":"Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'>
             Share
           </button>
         </div>
       </header>
 
-      <!-- Sidecard: meter + QR -->
+      <!-- Sidecard -->
       <aside class="sidecard" role="complementary" aria-label="Progress and quick donate" data-anim data-anim-delay="240">
-        <div class="meter"
-             role="meter"
-             aria-valuemin="0"
-             aria-valuemax="{{ GOAL|int }}"
-             aria-valuenow="{{ RAISED|int }}"
-             aria-valuetext="{{ METER_TEXT }}"
-             aria-label="Fundraising progress">
-          <div class="hm-track" aria-hidden="true">
-            <div class="hm-fill" style="--p: {{ PCT }}%"></div>
-          </div>
+        <div class="meter" role="meter"
+             aria-valuemin="0" aria-valuemax="{{ GOAL|int }}" aria-valuenow="{{ RAISED|int }}"
+             aria-valuetext="{{ METER_TEXT }}" aria-label="Fundraising progress">
+          <div class="hm-track" aria-hidden="true"><div class="hm-fill" style="--p: {{ PCT }}%"></div></div>
           <div class="hm-stats tabular" aria-hidden="true" id="hero-meter-desc">
-            <span class="hm-raised">${{ RAISED|int }}</span>
-            <span class="hm-sep">/</span>
-            <span class="hm-goal">${{ GOAL|int }}</span>
-            <span class="hm-pct">{{ PCT }}%</span>
+            <span class="hm-raised">${{ RAISED|int }}</span><span class="hm-sep">/</span>
+            <span class="hm-goal">${{ GOAL|int }}</span><span class="hm-pct">{{ PCT }}%</span>
           </div>
         </div>
 
@@ -129,7 +112,7 @@
           <a id="qr-fallback-link" class="sr-only" href="{{ HREF_DONATE }}">Open donate link</a>
         </div>
 
-        <ul class="hero-pills" aria-label="Program highlights" role="list">
+        <ul class="hero-pills" role="list" aria-label="Program highlights">
           <li role="listitem"><span class="pill">🏅 500+ Families</span></li>
           <li role="listitem"><span class="pill">📚 3.5 Team GPA</span></li>
           <li role="listitem"><span class="pill">🏀 AAU Gold Certified</span></li>
@@ -139,7 +122,6 @@
 
     <div class="holo-glare" aria-hidden="true"></div>
 
-    <!-- Scroll cue -->
     <button id="hero-cue" class="scroll-cue" type="button" aria-label="Scroll for impact">
       <span class="dot" aria-hidden="true"></span> Scroll
     </button>
@@ -147,50 +129,42 @@
 </section>
 
 <style {{ nonce_attr() }}>
-/* ===== Core layout ===== */
-#fc-hero.v7{ --edge: clamp(14px, 2.6vw, 28px); --hero-h: clamp(520px, 66vh, 880px); --glass: rgba(255,255,255,.08); --ink: #0b0c10; --img-x: 50%; --img-y: 28% }
-#fc-hero.v7{ position:relative; isolation:isolate; scroll-margin-top: calc(var(--fc-header-h,72px) + 10px) } /* anchor jump polish */
+/* ===== Layout & ambient ===== */
+#fc-hero.v7{ --edge: clamp(14px, 2.6vw, 28px); --hero-h: clamp(520px, 66vh, 880px); --glass: rgba(255,255,255,.08); --ink:#0b0c10; --img-x:50%; --img-y:28% }
+#fc-hero.v7{ position:relative; isolation:isolate; scroll-margin-top: calc(var(--fc-header-h,72px) + 10px) }
 #fc-hero.v7 .hero-shell{ position:relative; min-height:var(--hero-h); max-width:min(1380px,98vw); margin-inline:auto; border-radius:1.25rem; overflow:hidden;
   border:1px solid rgba(255,255,255,.10); box-shadow:0 22px 60px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.06) }
 #fc-hero.v7 .hero-vignette{ position:absolute; inset:0; z-index:-1;
   background:radial-gradient(120% 80% at 50% -10%, color-mix(in srgb, var(--accent,#facc15) 22%, transparent) 0%, transparent 60%),
              linear-gradient(180deg, #0a0b0d 0%, #0b0c0f 40%, #0a0b0d 100%) }
-
-/* --- Full-bleed variant (cinematic) --- */
 #fc-hero.v7.fullbleed .hero-shell{ max-width:100vw; border-radius:0; border-left:0; border-right:0 }
 #fc-hero.v7.fullbleed{ --hero-h: clamp(560px, 76vh, 980px) }
-#fc-hero.v7.fullbleed .hero-vignette{ inset:0 } /* ensure ambient wash spans edge-to-edge */
 
-/* Media (focal via CSS vars) */
-#fc-hero.v7 .hero-img{
-  width:100%; height:100%; aspect-ratio: 16/9; object-fit:cover; object-position: var(--img-x) var(--img-y);
-  filter:saturate(1.03) contrast(1.04) brightness(.92); -webkit-user-drag:none; user-select:none
-}
+/* Media (focal via vars) */
+#fc-hero.v7 .hero-img{ width:100%; height:100%; aspect-ratio:16/9; object-fit:cover; object-position:var(--img-x) var(--img-y);
+  filter:saturate(1.03) contrast(1.04) brightness(.92); -webkit-user-drag:none; user-select:none }
 
-/* Readability */
+/* Readability belts */
 #fc-hero.v7 .face-belt{ position:absolute; inset-inline:0; top:42%; height:24%;
-  background:linear-gradient(180deg, transparent, rgba(0,0,0,.20) 40%, rgba(0,0,0,.28) 60%, transparent); pointer-events:none }
-#fc-hero.v7 .bottom-fade{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.36) 46%, rgba(0,0,0,.88)); pointer-events:none }
+  background:linear-gradient(180deg, transparent, rgba(0,0,0,.20) 40%, rgba(0,0,0,.28) 60%, transparent) }
+#fc-hero.v7 .bottom-fade{ position:absolute; inset:0; background:linear-gradient(180deg, rgba(0,0,0,.10), rgba(0,0,0,.36) 46%, rgba(0,0,0,.88)) }
 
 /* Grid */
-#fc-hero.v7 .hero-grid{ position:absolute; inset:0; display:grid; align-items:end;
-  grid-template-columns: 1fr; gap:1rem; padding: var(--edge) var(--edge) calc(var(--edge) + 6px) var(--edge) }
-@media (min-width: 960px){
-  #fc-hero.v7 .hero-grid{ grid-template-columns: 1.1fr minmax(280px, 360px); align-items:end }
-}
+#fc-hero.v7 .hero-grid{ position:absolute; inset:0; display:grid; align-items:end; grid-template-columns:1fr; gap:1rem;
+  padding: var(--edge) var(--edge) calc(var(--edge) + 6px) var(--edge) }
+@media (min-width:960px){ #fc-hero.v7 .hero-grid{ grid-template-columns: 1.1fr minmax(280px,360px) } }
 
-/* Title + chips */
+/* Title & chips */
 #fc-hero.v7 .hero-badge{ display:inline-flex; align-items:center; gap:.5rem; font-weight:900; margin-bottom:.35rem;
   padding:.28rem .64rem; border-radius:.75rem; -webkit-backdrop-filter:saturate(120%) blur(4px); backdrop-filter:saturate(120%) blur(4px);
   background:linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.06)); border:1px solid rgba(255,255,255,.22) }
 #fc-hero.v7 .hero-badge .dot{ width:.6rem; height:.6rem; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.45) }
 #fc-hero.v7 .title-block{ color:#e6ebf5; text-shadow:0 1px 0 rgba(0,0,0,.5) }
-#fc-hero.v7 .hero-title{ margin:.1rem 0 .5rem; font-weight:1000; line-height:1.02; text-wrap:balance; font-size: clamp(2rem, 1.1rem + 4.2vw, 3.7rem) }
+#fc-hero.v7 .hero-title{ margin:.1rem 0 .5rem; font-weight:1000; line-height:1.02; text-wrap:balance; font-size:clamp(2rem,1.1rem + 4.2vw,3.7rem) }
 #fc-hero.v7 .hero-title .accent{ color:var(--accent,#facc15) }
 #fc-hero.v7 .hero-sub{ max-width:70ch; color:#eaf0fa; opacity:.95 }
 #fc-hero.v7 .hero-chips{ display:flex; gap:.5rem; flex-wrap:wrap; margin:.75rem 0 .95rem; list-style:none; padding:0 }
-#fc-hero.v7 .chip{ font-size:.95rem; padding:.48rem .85rem; border-radius:.9rem; font-weight:800; background:rgba(255,255,255,.10);
-  border:1px solid rgba(255,255,255,.18); color:#eef2f8 }
+#fc-hero.v7 .chip{ font-size:.95rem; padding:.48rem .85rem; border-radius:.9rem; font-weight:800; background:rgba(255,255,255,.10); border:1px solid rgba(255,255,255,.18); color:#eef2f8 }
 
 /* CTAs + sheen */
 #fc-hero.v7 .hero-cta{ display:flex; gap:.6rem; flex-wrap:wrap }
@@ -210,21 +184,17 @@
 @media (max-width:959.98px){ #fc-hero.v7 .sidecard{ background:transparent; border:0; box-shadow:none; padding:0 } }
 
 .tabular{ font-variant-numeric: tabular-nums }
-#fc-hero.v7 .meter{ display:grid; gap:.45rem; justify-items:stretch }
+#fc-hero.v7 .meter{ display:grid; gap:.45rem }
 #fc-hero.v7 .hm-track{ width:100%; height:14px; border-radius:999px; overflow:hidden; background:rgba(255,255,255,.16); box-shadow:inset 0 0 0 1px rgba(255,255,255,.10) }
 #fc-hero.v7 .hm-fill{ height:100%; width:var(--p,0%); background:linear-gradient(90deg,#e5e7eb, color-mix(in srgb, var(--accent,#facc15) 55%, #d1d5db 45%)) }
 #fc-hero.v7 .hm-stats{ display:flex; gap:.5rem; justify-content:flex-end; align-items:baseline; font-weight:900; color:#e9eef9 }
 #fc-hero.v7 .hm-pct{ opacity:.9 } #fc-hero.v7 .hm-sep{ opacity:.7 }
 
-/* QR block + gentle pulse ring */
+/* QR */
 #fc-hero.v7 .qr-wrap{ display:inline-flex; flex-direction:column; align-items:center; gap:.35rem; align-self:center;
-  padding:.55rem .75rem; border-radius:.75rem; background:var(--glass); border:1px solid rgba(255,255,255,.16); position:relative; overflow:visible }
-#fc-hero.v7 .qr-wrap::after{ content:""; position:absolute; inset:auto auto -8px -8px; width:20px; height:20px; border-radius:999px;
-  background:color-mix(in srgb, var(--accent) 60%, #fff 40%); filter:blur(10px); opacity:.0; transition:opacity .2s ease, transform .2s ease }
+  padding:.55rem .75rem; border-radius:.75rem; background:var(--glass); border:1px solid rgba(255,255,255,.16) }
 #fc-hero.v7 .qr-title{ font-size:.8rem; font-weight:900; opacity:.9 }
-#fc-hero.v7 #qr-box canvas, #fc-hero.v7 #qr-box img{ width:100px; height:100px; image-rendering:pixelated; border-radius:.5rem;
-  box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08) }
-#fc-hero.v7 .qr-wrap:hover::after{ opacity:.35; transform:scale(1.1) }
+#fc-hero.v7 #qr-box canvas, #fc-hero.v7 #qr-box img{ width:100px; height:100px; image-rendering:pixelated; border-radius:.5rem; box-shadow:0 6px 16px rgba(0,0,0,.25), inset 0 0 0 1px rgba(255,255,255,.08) }
 @media (max-width:420px){ #fc-hero.v7 .qr-wrap{ display:none } }
 
 /* Pills */
@@ -246,26 +216,35 @@
   transition:opacity .2s ease, transform .2s ease;
 }
 #fc-hero.v7 .scroll-cue .dot{ width:6px; height:6px; border-radius:999px; background:var(--accent) }
-#fc-hero.v7 .scroll-cue:hover{ transform:translateY(-2px) }
 #fc-hero.v7 .scroll-cue.hide{ opacity:0; pointer-events:none }
 
-/* Staggered reveal */
+/* Reveal */
 #fc-hero.v7 [data-anim]{ opacity:0; transform:translateY(8px); transition:opacity .38s ease, transform .38s ease }
 #fc-hero.v7 [data-anim].in{ opacity:1; transform:none }
-#fc-hero.v7 [data-anim][data-anim-delay="60"]{ transition-delay:.06s }
+#fc-hero.v7 [data-anim][data-anim-delay="60"]{  transition-delay:.06s }
 #fc-hero.v7 [data-anim][data-anim-delay="120"]{ transition-delay:.12s }
 #fc-hero.v7 [data-anim][data-anim-delay="180"]{ transition-delay:.18s }
 #fc-hero.v7 [data-anim][data-anim-delay="240"]{ transition-delay:.24s }
 
-/* Smarter focal crop on narrow screens */
-@media (max-width: 960px){
-  #fc-hero.v7{ --img-y: 34% }
-}
+/* Compact density for full-bleed hero */
+#fc-hero.v7.compact{ --hero-h: clamp(500px, 62vh, 860px); --edge: clamp(16px, 2vw, 24px) }
 
-/* Face-belt micro-adjust on wide */
-@media (min-width: 960px){
-  #fc-hero.v7 .face-belt{ top:40%; height:22% }
+/* tighten type & spacing */
+#fc-hero.v7.compact .hero-title{
+  font-size: clamp(1.8rem, .95rem + 3.0vw, 3.2rem);
 }
+#fc-hero.v7.compact .hero-sub{ font-size: .95rem }
+#fc-hero.v7.compact .chip{ font-size: .9rem; padding: .4rem .7rem }
+#fc-hero.v7.compact .hero-cta .btn{ padding: .78rem 1.05rem }
+#fc-hero.v7.compact .sidecard{ padding: .7rem .75rem; max-width: 320px }
+#fc-hero.v7.compact .hm-track{ height: 12px }
+#fc-hero.v7.compact #qr-box canvas,
+#fc-hero.v7.compact #qr-box img{ width: 90px; height: 90px }
+#fc-hero.v7.compact .scroll-cue{ transform: translateY(0); bottom: 10px }
+
+/* Smarter focal crop */
+@media (max-width:960px){ #fc-hero.v7{ --img-y:34% } }
+@media (min-width:960px){ #fc-hero.v7 .face-belt{ top:40%; height:22% } }
 
 /* Prefs / HCM */
 @media (prefers-reduced-motion: reduce){
@@ -275,27 +254,26 @@
 @media (forced-colors: active){ #fc-hero.v7 .sidecard{ background:Canvas; border:1px solid CanvasText } }
 </style>
 
-<script {{ nonce_attr() }} src="{{ url_for('static', filename='js/qrcode.min.js') if url_for is defined else '/static/js/qrcode.min.js' }}" defer></script>
+<!-- Local QR lib (constructor API; davidshimjs) -->
+<script {{ nonce_attr() }} defer src="{{ url_for('static', filename='js/qrcode.min.js') if url_for is defined else '/static/js/qrcode.min.js' }}"></script>
 
 <script {{ nonce_attr() }} type="module">
 (() => {
   const reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
   try { window.fcTiltInit && window.fcTiltInit(document); } catch {}
 
-  /* Adaptive focal crop */
+  /* Focal crop from data-* */
   try{
     const hero = document.getElementById('fc-hero');
-    const x = hero?.getAttribute('data-focal-x') || '50%';
-    const y = hero?.getAttribute('data-focal-y') || '28%';
-    hero?.style.setProperty('--img-x', x);
-    hero?.style.setProperty('--img-y', y);
+    hero?.style.setProperty('--img-x', hero?.getAttribute('data-focal-x') || '50%');
+    hero?.style.setProperty('--img-y', hero?.getAttribute('data-focal-y') || '28%');
   }catch{}
 
-  /* Staggered reveal */
+  /* Reveal */
   if (!reduce){
     try{
       const io = new IntersectionObserver((ents)=>{
-        ents.forEach(ent=>{ if (ent.isIntersecting){ ent.target.classList.add('in'); io.unobserve(ent.target); }});
+        for (const ent of ents) if (ent.isIntersecting) { ent.target.classList.add('in'); io.unobserve(ent.target); }
       }, { rootMargin: '-10% 0px', threshold: .2 });
       document.querySelectorAll('#fc-hero [data-anim]').forEach(el=>io.observe(el));
       addEventListener('pagehide', ()=>io.disconnect(), { once:true });
@@ -327,9 +305,9 @@
     goal=Math.max(1,Number(goal||0)); raised=Math.max(0,Number(raised||0));
     const pct=Math.min(100,(raised/goal)*100);
     fill?.style.setProperty('--p', pct+'%');
-    raisedEl && (raisedEl.textContent=fmt(raised));
-    goalEl   && (goalEl.textContent=fmt(goal));
-    pctEl    && (pctEl.textContent=(Math.round(pct*10)/10)+'%');
+    if (raisedEl) raisedEl.textContent = fmt(raised);
+    if (goalEl)   goalEl.textContent   = fmt(goal);
+    if (pctEl)    pctEl.textContent    = (Math.round(pct*10)/10)+'%';
     meter?.setAttribute('aria-valuenow', String(Math.round(raised)));
     meter?.setAttribute('aria-valuetext', `${fmt(raised)} raised of ${fmt(goal)} (${(Math.round(pct*10)/10)}%)`);
   }
@@ -343,7 +321,7 @@
     if (img.src !== fallback) img.src = fallback;
   }, { passive:true });
 
-  /* Glare */
+  /* Holo glare */
   if (!reduce){
     const frame = document.querySelector('#fc-hero .hero-shell');
     const glare = document.querySelector('#fc-hero .holo-glare');
@@ -354,7 +332,7 @@
     frame?.addEventListener('pointerleave', ()=>{ if (glare) glare.style.opacity='0'; }, { passive:true });
   }
 
-  /* --- QR: peer-aware with polished fallback --- */
+  /* QR — peer-aware; graceful fallback if lib missing */
   const qrEl   = document.getElementById('qr-box');
   const linkEl = document.getElementById('qr-fallback-link');
   if (qrEl && linkEl){
@@ -381,29 +359,18 @@
       const href=decorate(BASE,{ peer:getPeer() });
       linkEl.href=href;
 
-      if (window.QRCode){
+      if (window.QRCode){ // davidshimjs constructor
         qrEl.innerHTML='';
-        new QRCode(qrEl,{ text:href, width:128, height:128, correctLevel:QRCode.CorrectLevel.M });
-        return;
+        try { new QRCode(qrEl,{ text:href, width:128, height:128, correctLevel:QRCode.CorrectLevel.M }); return; } catch {}
       }
-
-      // Graceful fallback: tidy CTA buttons
-      qrEl.innerHTML = '';
-      const open = document.createElement('a');
-      open.className = 'btn btn-gold sheen';
-      open.textContent = 'Open Donate';
-      open.href = href; open.target = '_blank'; open.rel = 'noopener noreferrer';
-
-      const copy = document.createElement('button');
-      copy.className = 'btn btn-ghost';
-      copy.textContent = 'Copy Link';
-      copy.addEventListener('click', async () => {
-        try{ await navigator.clipboard.writeText(href); copy.textContent='Copied!'; setTimeout(()=>copy.textContent='Copy Link',1000); }catch{}
-      }, { passive:true });
-
-      const wrap = document.createElement('div');
-      wrap.style.display='grid'; wrap.style.gap='.4rem'; wrap.append(open, copy);
-      qrEl.append(wrap);
+      // Fallback: accessible link + copy
+      qrEl.innerHTML='';
+      const open = Object.assign(document.createElement('a'), { className:'btn btn-gold sheen', href:href, target:'_blank', rel:'noopener', textContent:'Open Donate' });
+      const copy = Object.assign(document.createElement('button'), { className:'btn btn-ghost', textContent:'Copy Link' });
+      copy.addEventListener('click', async ()=>{ try{ await navigator.clipboard.writeText(href); copy.textContent='Copied!'; setTimeout(()=>copy.textContent='Copy Link',900); }catch{} }, { passive:true });
+      const wrap = Object.create(document.createElement('div').constructor.prototype);
+      const d = document.createElement('div'); d.style.display='grid'; d.style.gap='.4rem'; d.append(open, copy);
+      qrEl.append(d);
     }
     if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', renderQR); else renderQR();
     addEventListener('hashchange', renderQR, { passive:true });
@@ -415,13 +382,10 @@
   const cue = document.getElementById('hero-cue');
   const hideCue = ()=> cue?.classList.add('hide');
   cue?.addEventListener('click', ()=>{
-    try{
-      const next = document.querySelector('#fc-hero')?.nextElementSibling;
-      if (next?.scrollIntoView) next.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block:'start' });
-      hideCue();
-    }catch{ hideCue(); }
+    try{ const next = document.querySelector('#fc-hero')?.nextElementSibling; next?.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }); }catch{}
+    hideCue();
   }, { passive:true });
-  addEventListener('scroll', ()=>{ const y = scrollY||document.documentElement.scrollTop||0; if (y>20) hideCue(); }, { passive:true });
+  addEventListener('scroll', ()=>{ if ((scrollY||document.documentElement.scrollTop||0) > 20) hideCue(); }, { passive:true });
 })();
 </script>
 
