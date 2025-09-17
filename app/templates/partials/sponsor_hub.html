@@ -460,7 +460,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
     {% endif %}
   </section>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const root = document.getElementById('{{ sponsors_hub_id }}');
       if (!root || root.__init) return; root.__init = true;

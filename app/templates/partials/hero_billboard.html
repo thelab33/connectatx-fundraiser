@@ -150,7 +150,7 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
     </div>
   </div>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     // Highlight next milestone when meter updates
     (function () {
       const root = document.currentScript.closest("section");

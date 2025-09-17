@@ -72,7 +72,7 @@ raised_display = '{:,}'.format(_raised|int) -%} {%- set sizes = { "sm":
   </div>
 </div>
 {%- endmacro %}
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} nonce="{{ NONCE }}">
   window.addEventListener("fc:funds:update", (e) => {
     const { raised, goal, pct } = e.detail;
     // Example: update header mini meter

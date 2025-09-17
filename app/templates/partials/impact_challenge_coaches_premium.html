@@ -259,7 +259,7 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
 </section>
 
 {% if script_open is defined %}{{ script_open() }}{% else %}
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   {% endif %}
   (() => {
     const root = document.getElementById('impact-challenge-coaches'); if (!root || root.__init) return; root.__init = true;

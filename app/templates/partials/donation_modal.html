@@ -327,7 +327,7 @@ safe_url_for('api.capture_paypal_order') ) or '/api/payments/paypal/capture' %}
   }
 </style>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const dlg = document.getElementById('donation-modal');
     if (!dlg || dlg.__init) return; dlg.__init = true;

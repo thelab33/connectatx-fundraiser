@@ -148,7 +148,7 @@
     @media (max-width:640px){ #ai-concierge-btn{right:1rem;bottom:5.5rem}}
   </style>
 
-  {% if script_open is defined %}{{ script_open() }}{% else %}<script nonce="{{ NONCE }}">{% endif %}
+  {% if script_open is defined %}{{ script_open() }}{% else %}<script {{ nonce_attr() }} nonce="{{ NONCE }}">{% endif %}
   (() => {
     if (window.__aiConciergeBound) return; window.__aiConciergeBound = true;
 

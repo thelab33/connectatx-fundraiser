@@ -1,4 +1,4 @@
-{# ================== Header — SV-Elite 4.8 Ultra Pro (full-bleed, CSP/a11y) ================== #}
+{# ================== Header — SV-Elite 5.1 “Halo” (full-bleed, CSP/a11y) ================== #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
 {% set HAS_ENDPOINT = has_endpoint is defined %}
 {% set _sf = safe_url_for is defined and safe_url_for %}
@@ -12,12 +12,12 @@
 
 <a href="#main" class="skip-link">Skip to content</a>
 
-<header id="site-header" class="hdr hdr--ultra" role="banner" aria-label="Site header"
+<header id="site-header" class="hdr hdr--halo" role="banner" aria-label="Site header"
         data-accent="{{ accent_hex }}" style="--accent: {{ accent_hex }};">
-  <!-- Ambient full-bleed band -->
+  <!-- ambient band -->
   <div class="hdr-band" aria-hidden="true"></div>
 
-  <!-- Interior frame -->
+  <!-- frame -->
   <div class="frame glass rounded-2xl">
     <div class="row">
       <!-- Brand -->
@@ -47,7 +47,7 @@
 
       <!-- Actions -->
       <div class="actions">
-        <!-- Mobile: menu toggle -->
+        <!-- Mobile menu toggle -->
         <button id="menu-toggle" type="button"
                 class="btn btn-lite btn-sm lg:hidden"
                 aria-controls="site-menu" aria-expanded="false" aria-haspopup="dialog"
@@ -70,6 +70,14 @@
              data-analytics-meta='{{ {"where":"header","surface":"desktop"}|tojson }}'>
             Donate
           </a>
+          
+          <span id="hdr-total-pill"
+      class="pill hide-sm"
+      aria-live="polite"
+      aria-atomic="true"
+      title="Raised so far">
+      $0
+      </span>
 
           <span class="secure-pill hide-sm" aria-label="Payments are secured by Stripe">
             <span class="dot"></span> Stripe Secure
@@ -90,90 +98,216 @@
 </header>
 
 <style {{ nonce_attr() }}>
-/* ===== Layout & frame ===== */
+/* ==========================================================================
+   FundChamps — Header + Hero Overlay (Prod-Ready)
+   - Scopes header styles to #site-header to avoid collisions
+   - Uses logical props + tokens; safe for CSP/nonced usage
+   - A11y: focus-visible, reduced motion, forced colors, high-contrast
+   - Hero overlay lift via CSS variables (no HTML/JS changes)
+   ========================================================================== */
+
+/* ----- Global tokens & utilities --------------------------------------- */
 :root{
-  scroll-padding-top: var(--fc-header-h, var(--hdr-h, 72px));
+  /* layout */
   --frame-max: 1340px;
   --frame-gutter: clamp(16px, 3vw, 28px);
+
+  /* header height used by skip/anchors */
+  --hdr-h: 72px;
+  --fc-header-h: var(--hdr-h);
 }
-.skip-link{position:absolute;inset-inline:0;top:-40px;background:#111318;color:#fff;padding:.6rem 1rem;border-radius:0 0 .6rem .6rem;z-index:9999}
-.skip-link:focus{top:0}
-.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,1px,1px)!important;white-space:nowrap!important;border:0!important}
+html{ scroll-padding-top: var(--fc-header-h) }
 
-.hdr{position:sticky; top:env(safe-area-inset-top,0px); z-index:70; isolation:isolate}
-.hdr-band{position:absolute; inset:0 0 auto 0; height:64px; background:
-  radial-gradient(120% 160% at 50% -60%, color-mix(in srgb, var(--accent) 16%, transparent) 0%, transparent 65%),
-  linear-gradient(180deg, rgba(18,20,26,.92), rgba(12,14,18,.78)); pointer-events:none}
-.frame{max-width:var(--frame-max); margin-inline:auto; padding-inline:var(--frame-gutter)}
-.glass{--g1:rgba(18,20,26,.82);--g2:rgba(12,14,18,.62); background:linear-gradient(180deg,var(--g1),var(--g2));
-  border:1px solid rgba(255,255,255,.10); -webkit-backdrop-filter:saturate(130%) blur(12px); backdrop-filter:saturate(130%) blur(12px);
-  box-shadow:0 14px 36px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06)}
-.rounded-2xl{border-radius:1rem}
-.row{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:clamp(.5rem,1.2vw,1rem); padding-block: clamp(10px, 1vw, 16px) }
+.skip-link{
+  position:absolute; inset-inline:0; top:-40px; z-index:9999;
+  background:#111318; color:#fff; padding:.6rem 1rem; border-radius:0 0 .6rem .6rem;
+}
+.skip-link:focus{ top:0 }
+.sr-only{ position:absolute !important; width:1px !important; height:1px !important;
+  padding:0 !important; margin:-1px !important; overflow:hidden !important;
+  clip:rect(0,0,1px,1px) !important; white-space:nowrap !important; border:0 !important;
+}
 
-.hdr.is-scrolled .glass{ box-shadow:0 18px 50px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.04) }
-.hdr.is-hidden{ transform:translateY(-112%); transition:transform .26s cubic-bezier(.2,.8,.2,1) }
-@media (prefers-reduced-motion:reduce){ .hdr.is-hidden{ transform:none } }
+/* ----- Header shell ----------------------------------------------------- */
+#site-header.hdr{ position:sticky; top:env(safe-area-inset-top,0px); z-index:70; isolation:isolate }
+#site-header .hdr-band{
+  position:absolute; inset:0 0 auto 0; height:64px; pointer-events:none;
+  background:
+    radial-gradient(120% 160% at 50% -60%, color-mix(in srgb, var(--accent, #facc15) 16%, transparent) 0%, transparent 65%),
+    linear-gradient(180deg, rgba(18,20,26,.92), rgba(12,14,18,.78));
+}
+#site-header .frame{ max-width:var(--frame-max); margin-inline:auto; padding-inline:var(--frame-gutter) }
+#site-header .glass{
+  --g1:rgba(18,20,26,.82); --g2:rgba(12,14,18,.62);
+  background:linear-gradient(180deg,var(--g1),var(--g2));
+  border:1px solid rgba(255,255,255,.10);
+  -webkit-backdrop-filter:saturate(130%) blur(12px); backdrop-filter:saturate(130%) blur(12px);
+  box-shadow:0 14px 36px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
+  border-radius:1rem;
+}
+#site-header .row{
+  display:grid; grid-template-columns:auto 1fr auto; align-items:center;
+  gap:clamp(.5rem,1.2vw,1rem); padding-block: clamp(10px, 1vw, 16px);
+}
+#site-header.hdr.is-scrolled .glass{
+  box-shadow:0 18px 50px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.04);
+}
+#site-header.hdr.is-hidden{ transform:translateY(-112%); transition:transform .26s cubic-bezier(.2,.8,.2,1) }
+@media (prefers-reduced-motion:reduce){ #site-header.hdr.is-hidden{ transform:none } }
 
-/* ===== Brand ===== */
-.brand{display:inline-flex;align-items:center;gap:.72rem;text-decoration:none}
-.crest{inline-size:clamp(38px, 4.2vw, 44px); block-size:clamp(38px, 4.2vw, 44px); border-radius:12px; background-size:cover; background-position:center;
-  box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12); background-color:rgba(255,255,255,.08); color:var(--accent)}
-.brand-text{display:flex;flex-direction:column;line-height:1}
-.brand-name{font-weight:1000;letter-spacing:-.01em;font-size:clamp(1.08rem,.9rem + 1.1vw,1.65rem);color:#e5e7eb}
-.brand-sub{opacity:.92;color:#cbd5e1;font-size:clamp(.66rem,.6rem + .32vw,.9rem);font-weight:800}
+/* ----- Brand ------------------------------------------------------------ */
+#site-header .brand{ display:inline-flex; align-items:center; gap:.72rem; text-decoration:none }
+#site-header .crest{
+  inline-size:clamp(38px, 4.2vw, 44px); block-size:clamp(38px, 4.2vw, 44px);
+  border-radius:12px; background-size:cover; background-position:center; background-color:rgba(255,255,255,.08);
+  color:var(--accent,#facc15);
+  box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+}
+#site-header .brand-text{ display:flex; flex-direction:column; line-height:1 }
+#site-header .brand-name{ font-weight:1000; letter-spacing:-.01em; font-size:clamp(1.08rem,.9rem + 1.1vw,1.65rem); color:#e5e7eb }
+#site-header .brand-sub{ opacity:.92; color:#cbd5e1; font-size:clamp(.66rem,.6rem + .32vw,.9rem); font-weight:800 }
 
-/* ===== Nav ===== */
-.primary .nav-list{display:flex;align-items:center;gap:clamp(.6rem,1.1vw,1.1rem)}
-.nav-link{position:relative;color:#e5e7eb;font-weight:900;opacity:.96;text-decoration:none;font-size:clamp(.92rem,.85rem + .22vw,1.05rem);padding:.25rem .2rem;border-radius:.35rem;transition:color .15s ease,opacity .15s ease,outline-color .15s ease}
-.nav-link:hover{color:#fff;opacity:1}
-.nav-link:focus-visible{outline:2px solid color-mix(in srgb, var(--accent) 70%, #ffffff 30%); outline-offset:3px}
-.nav-link::after{content:"";position:absolute;left:.2rem;right:.2rem;bottom:-4px;height:2px;border-radius:2px;background:linear-gradient(90deg,var(--accent),#fff7cc);transform:scaleX(0);transform-origin:left;transition:transform .18s ease}
-.nav-link:hover::after{transform:scaleX(1)}
-.nav-link.active{color:var(--accent)}
-.nav-link.active::after{transform:scaleX(1)}
+/* ----- Primary nav ------------------------------------------------------ */
+#site-header .primary .nav-list{ display:flex; align-items:center; gap:clamp(.6rem,1.1vw,1.1rem) }
+#site-header .nav-link{
+  position:relative; color:#e5e7eb; font-weight:900; opacity:.96; text-decoration:none;
+  font-size:clamp(.92rem,.85rem + .22vw,1.05rem); padding:.25rem .2rem; border-radius:.35rem;
+  transition:color .15s ease, opacity .15s ease, outline-color .15s ease;
+}
+#site-header .nav-link:hover{ color:#fff; opacity:1 }
+#site-header .nav-link:focus-visible{
+  outline:2px solid color-mix(in srgb, var(--accent,#facc15) 70%, #ffffff 30%); outline-offset:3px;
+}
+#site-header .nav-link::after{
+  content:""; position:absolute; left:.2rem; right:.2rem; bottom:-4px; height:2px; border-radius:2px;
+  background:linear-gradient(90deg,var(--accent,#facc15),#fff7cc); transform:scaleX(0); transform-origin:left;
+  transition:transform .18s ease;
+}
+#site-header .nav-link:hover::after{ transform:scaleX(1) }
+#site-header .nav-link.active{ color:var(--accent,#facc15) }
+#site-header .nav-link.active::after{ transform:scaleX(1) }
 
-/* ===== Buttons / Actions ===== */
-.actions{display:flex;align-items:center;gap:.5rem}
-.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;font-weight:900;line-height:1;gap:.45rem}
-.btn-sm{font-size:.92rem;padding:.56rem .88rem}
-.btn-primary{background:linear-gradient(180deg,#fffbe6,var(--accent));color:#111;border:1px solid rgba(0,0,0,.25);box-shadow:0 10px 24px rgba(250,204,21,.25)}
-.btn-ghost{background:transparent;color:#e5e7eb;border:1px solid rgba(255,255,255,.18)}
-.btn-lite{background:rgba(255,255,255,.06);color:#e5e7eb;border:1px solid rgba(255,255,255,.14)}
-.btn:hover{filter:brightness(1.07)}
-.btn:focus-visible{outline:2px solid color-mix(in srgb, var(--accent) 60%, #ffffff 40%); outline-offset:3px}
-.cta{ position:relative; overflow:hidden }
-.cta::before{content:""; position:absolute; inset:-2px; border-radius:inherit; background:conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--accent) 75%, #fff 25%) 30%, transparent 60%); filter:blur(12px); opacity:.35; transition:transform .8s ease}
-.cta:hover::before{ transform:rotate(180deg) }
+/* ----- Actions / buttons ------------------------------------------------ */
+#site-header .actions{ display:flex; align-items:center; gap:.5rem }
+#site-header .btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+  border-radius:999px; font-weight:900; line-height:1; text-decoration:none;
+}
+#site-header .btn-sm{ font-size:.92rem; padding:.56rem .88rem }
+#site-header .btn-primary{
+  background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#111;
+  border:1px solid rgba(0,0,0,.25); box-shadow:0 10px 24px rgba(250,204,21,.25);
+}
+#site-header .btn-ghost{ background:transparent; color:#e5e7eb; border:1px solid rgba(255,255,255,.18) }
+#site-header .btn-lite{  background:rgba(255,255,255,.06); color:#e5e7eb; border:1px solid rgba(255,255,255,.14) }
+#site-header .btn:hover{ filter:brightness(1.07) }
+#site-header .btn:focus-visible{
+  outline:2px solid color-mix(in srgb, var(--accent,#facc15) 60%, #ffffff 40%); outline-offset:3px;
+}
+#site-header .cta{ position:relative; overflow:hidden }
+#site-header .cta::before{
+  content:""; position:absolute; inset:-2px; border-radius:inherit;
+  background:conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--accent,#facc15) 75%, #fff 25%) 30%, transparent 60%);
+  filter:blur(12px); opacity:.35; transition:transform .8s ease;
+}
+#site-header .cta:hover::before{ transform:rotate(180deg) }
 
-/* Toggle icon state via aria-expanded */
+/* Mobile burger icon state */
 #menu-toggle[aria-expanded="true"] .ham { opacity:0; transition:opacity .15s ease }
 #menu-toggle[aria-expanded="true"] .close { opacity:1 !important; transition:opacity .15s ease }
 
-/* ===== Extras ===== */
-.secure-pill{display:inline-flex;align-items:center;gap:.45rem;padding:.35rem .6rem;border-radius:999px;font-weight:900;font-size:.78rem;color:#e8ecf3;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04))}
-.secure-pill .dot{width:6px;height:6px;border-radius:999px;background:var(--accent);box-shadow:0 0 0 2px rgba(0,0,0,.4)}
+/* ----- Security / totals pills ----------------------------------------- */
+#site-header .secure-pill{
+  display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .6rem; border-radius:999px;
+  font-weight:900; font-size:.78rem; color:#e8ecf3;
+  border:1px solid rgba(255,255,255,.14); background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
+}
+#site-header .secure-pill .dot{ inline-size:6px; block-size:6px; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.4) }
 
-/* ===== Mobile sheet menu ===== */
-#site-menu.sheet{position:fixed;inset:auto var(--frame-gutter) max(.75rem, env(safe-area-inset-bottom,0px)) var(--frame-gutter);z-index:90;display:grid;gap:.6rem;background:linear-gradient(180deg, rgba(16,18,24,.96), rgba(10,12,16,.94));color:#e5e7eb;color-scheme:dark;-webkit-backdrop-filter:saturate(120%) blur(10px);backdrop-filter:saturate(120%) blur(10px);border:1px solid rgba(255,255,255,.10);border-radius:1rem;padding:.9rem;transform:translateY(8px);opacity:0;pointer-events:none;transition:transform .18s ease, opacity .18s ease}
-#site-menu.sheet.open{ transform:none; opacity:1; pointer-events:auto }
-#site-menu a{ text-decoration:none; font-weight:900; font-size:1rem; padding:.6rem .7rem; border-radius:.6rem; color:inherit }
-#site-menu a:hover{ background:rgba(255,255,255,.06) }
+#site-header .pill{
+  display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .55rem; border-radius:999px;
+  font-weight:900; font-variant-numeric:tabular-nums; color:#eaf0fa;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+}
+#site-header .pill::before{ content:""; inline-size:6px; block-size:6px; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.35) }
+@media (max-width:680px){ #site-header .pill{ display:none } } /* keep mobile clean */
 
-/* ===== Utility / responsive toggles ===== */
-.hidden{display:none}.lg\:hidden{display:none}
+/* ----- Mobile sheet menu ----------------------------------------------- */
+#site-header #site-menu.sheet{
+  position:fixed; inset:auto var(--frame-gutter) max(.75rem, env(safe-area-inset-bottom,0px)) var(--frame-gutter);
+  z-index:90; display:grid; gap:.6rem; padding:.9rem; border-radius:1rem; color:#e5e7eb; color-scheme:dark;
+  background:linear-gradient(180deg, rgba(16,18,24,.96), rgba(10,12,16,.94));
+  -webkit-backdrop-filter:saturate(120%) blur(10px); backdrop-filter:saturate(120%) blur(10px);
+  border:1px solid rgba(255,255,255,.10);
+  transform:translateY(8px); opacity:0; pointer-events:none; transition:transform .18s ease, opacity .18s ease;
+}
+#site-header #site-menu.sheet.open{ transform:none; opacity:1; pointer-events:auto }
+#site-header #site-menu a{
+  text-decoration:none; font-weight:900; font-size:1rem; padding:.6rem .7rem; border-radius:.6rem; color:inherit;
+}
+#site-header #site-menu a:hover{ background:rgba(255,255,255,.06) }
+
+/* ----- Responsive toggles ---------------------------------------------- */
+.hidden{display:none}
+.lg\:hidden{display:none}
 .lg\:flex{display:flex}
-@media (max-width:980px){.lg\:flex{display:none}.lg\:hidden{display:inline-flex}}
+@media (max-width:980px){ .lg\:flex{display:none} .lg\:hidden{display:inline-flex} }
 .hide-sm{display:inline-flex}
-@media (max-width:680px){.hide-sm{display:none}}
+@media (max-width:680px){ .hide-sm{display:none} }
 .hide-md{display:inline-flex}
-@media (max-width:880px){.hide-md{display:none}}
+@media (max-width:880px){ .hide-md{display:none} }
 
-/* Legacy menus (force off) */
-#menu,.mobile-menu,[data-legacy-menu]{display:none!important}
+/* legacy menus (force off) */
+#menu, .mobile-menu, [data-legacy-menu]{ display:none !important }
 
-/* Hero seam */
-#hero,[data-hero]{scroll-margin-top:var(--fc-header-h, 72px); margin-top: clamp(8px, 1.2vh, 16px)}
+/* ----- Hero anchor seam ------------------------------------------------- */
+#hero,[data-hero]{ scroll-margin-top: var(--fc-header-h); margin-top: clamp(8px, 1.2vh, 16px) }
+
+/* ==========================================================================
+   HERO OVERLAY LIFT (title on the photograph)
+   - Controls live via CSS variables (no JS/HTML changes)
+   - Desktop lift: 12% (tweak one number)
+   - Clears QR coin on very wide layouts
+   ========================================================================== */
+#{{ IDP }} .overlay{
+  /* previously: inset:auto 0 0 0 */
+  inset: auto 0 var(--overlay-bottom, 0) 0;
+}
+@media (min-width: 980px){
+  /* Raise overlay by ~12% of media height on desktop */
+  #{{ IDP }} .media{ --overlay-bottom: 12%; }
+}
+@media (min-width: 1200px){
+  /* Ensure we clear the QR coin on wide viewports */
+  #{{ IDP }} .overlay{ bottom: max(88px, var(--overlay-bottom, 12%)); }
+}
+/* Fine-tune the line to visually sit higher without excessive lift */
+#{{ IDP }} .overlay .tagline{ line-height:.95; letter-spacing:-.01em }
+/* Optional slight lift on small screens; keep readability prioritized */
+@media (max-width: 520px){
+  #{{ IDP }} .media{ --overlay-bottom: 6%; }
+}
+
+/* ----- Accessibility prefs --------------------------------------------- */
+@media (prefers-contrast: more){
+  #site-header .glass, #site-header .btn, #site-header .btn-primary, #site-header .btn-lite, #site-header .btn-ghost,
+  #site-header .secure-pill, #site-header .pill{ box-shadow:none }
+  #site-header .nav-link::after{ background:currentColor }
+}
+@media (forced-colors: active){
+  #site-header *{ forced-color-adjust:auto }
+  #site-header .glass, #site-header .btn, #site-header .btn-primary, #site-header .btn-lite, #site-header .btn-ghost,
+  #site-header .secure-pill, #site-header .pill{
+    background:Canvas !important; color:CanvasText !important; border:1px solid CanvasText !important; box-shadow:none !important;
+  }
+}
+</style>
+
+<style {{ nonce_attr() }}>
+/* header total pill polish (safe to add even if you kept earlier CSS) */
+#site-header .cta-row{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap }
+#hdr-total-pill.pill{ white-space:nowrap; min-inline-size:72px; }
+@media (max-width:680px){ #hdr-total-pill{ display:none } } /* keep mobile clean */
 </style>
 
 <script {{ nonce_attr() }} type="module">
@@ -188,7 +322,7 @@
   const shareBtn = document.getElementById("hdr-share");
   const saveData = !!(navigator.connection && 'saveData' in navigator.connection && navigator.connection.saveData);
 
-  /* Accent → CSS var (fallback safe) */
+  /* Accent → CSS var */
   try { header.style.setProperty("--accent", header.getAttribute("data-accent") || "#facc15"); } catch {}
 
   /* Smart sticky show/hide + scrolled state */
@@ -324,14 +458,116 @@
     setHdrVars();
     try { new ResizeObserver(setHdrVars).observe(header); } catch { addEventListener("resize", setHdrVars, { passive: true }); }
   })();
+  
+    /* ===== Live total pill ===== */
+  (function(){
+    const pill = document.getElementById('hdr-total-pill');
+    if (!pill) return;
 
-  /* Donate prefetch (save-data aware) */
+    // prefer compact format on wide numbers; switch to "full" by changing this flag
+    const useCompact = true;
+    const fmt = (n) => new Intl.NumberFormat(undefined, {
+      style:'currency', currency:'USD',
+      maximumFractionDigits:0,
+      notation: useCompact && n >= 10000 ? 'compact' : 'standard',
+      compactDisplay: 'short'
+    }).format(n);
+
+    let last = 0;
+    const setValue = (n) => {
+      last = n;
+      pill.textContent = `${fmt(n)} raised`;
+      pill.setAttribute('aria-label', `${fmt(n)} raised`);
+    };
+
+    // progressive enhancement: show whatever is on the hero if present
+    try {
+      const hero = document.querySelector('[data-hero],[id="fundraiser-hero"]') || document.getElementById('fundraiser-hero');
+      const raisedAttr = document.querySelector('[data-raised]')?.getAttribute('data-raised');
+      const seed = Number(raisedAttr || 0);
+      if (!Number.isNaN(seed) && seed > 0) setValue(seed);
+    } catch {}
+
+    async function hydrateOnce(signal){
+      try{
+        const res = await fetch('/api/totals', { headers:{'Accept':'application/json'}, signal });
+        if(!res.ok) return;
+        const j = await res.json();
+        const raised = Number(j?.raised ?? j?.total ?? 0);
+        if (!Number.isFinite(raised)) return;
+        // tiny ease if value increased (no fancy animation for CSP/A11Y calm)
+        if (raised !== last) setValue(raised);
+      }catch{/* offline or aborted is fine */}
+    }
+
+    const controller = new AbortController();
+    hydrateOnce(controller.signal);
+    // refresh every 60s, light touch
+    const iv = setInterval(()=>hydrateOnce(controller.signal), 60_000);
+
+    addEventListener('pagehide', ()=>{
+      controller.abort();
+      clearInterval(iv);
+    }, { once:true });
+  })();
+
+  /* Donate prefetch & payments preconnect (save-data aware) */
   try{
     if (donate && !saveData) donate.addEventListener('pointerenter', ()=>{
+      const add = (rel, href) => { const l=document.createElement('link'); l.rel=rel; l.href=href; l.crossOrigin='anonymous'; document.head.appendChild(l); };
+      add('dns-prefetch','//checkout.stripe.com'); add('preconnect','https://checkout.stripe.com'); add('preconnect','https://js.stripe.com');
+      add('dns-prefetch','//www.paypal.com');       add('preconnect','https://www.paypal.com');
       let l = document.querySelector('link[data-prefetch="donate"]');
       if (!l){ l = document.createElement('link'); l.rel='prefetch'; l.href='{{ href_donate }}'; l.as='document'; l.setAttribute('data-prefetch','donate'); document.head.appendChild(l); }
     }, { passive:true });
   }catch{}
+})();
+</script>
+
+<script {{ nonce_attr() }} type="module">
+(() => {
+  const pill = document.getElementById('hdr-total-pill');
+  if (!pill) return;
+
+  // Respect user’s data saver
+  const saveData = !!(navigator.connection && 'saveData' in navigator.connection && navigator.connection.saveData);
+
+  // Fmt: $12,340 → under 10k full; else $12.3K / $1.2M / $1.2B
+  const usdCompact = (n) => {
+    const abs = Math.abs(n);
+    if (abs < 10_000) return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
+    const units = [[1e9,'B'],[1e6,'M'],[1e3,'K']];
+    for (const [m,s] of units){ if (abs >= m) return `$${(n/m).toFixed(abs >= 100*m ? 0 : 1)}${s}`; }
+    return `$${n.toFixed(0)}`;
+  };
+
+  // 1) immediate best-effort from hero dataset (no network)
+  try{
+    const seed = document.querySelector('[data-raised]');
+    const r = Number(seed?.getAttribute('data-raised') || 0);
+    if (r > 0) { pill.textContent = `${usdCompact(r)} raised`; pill.title = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(r) + ' raised'; }
+  }catch{}
+
+  // 2) hydrate from API
+  async function hydrate() {
+    try{
+      const res = await fetch('/api/totals', { headers:{ 'Accept':'application/json' } });
+      if (!res.ok) return;
+      const j = await res.json();
+      const raised = Number(j?.raised ?? j?.total ?? 0);
+      if (!(raised >= 0)) return;
+      pill.textContent = `${usdCompact(raised)} raised`;
+      pill.title = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(raised) + ' raised';
+      pill.setAttribute('aria-label', pill.textContent);
+    }catch{/* ignore offline */}
+  }
+
+  hydrate();
+
+  // 3) gentle polling (pauses when tab hidden, slows if Save-Data)
+  const intervalMs = saveData ? 120_000 : 45_000;
+  let timer = setInterval(() => { if (document.visibilityState === 'visible') hydrate(); }, intervalMs);
+  addEventListener('pagehide', () => clearInterval(timer), { once:true });
 })();
 </script>
 

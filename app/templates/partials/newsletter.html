@@ -1,381 +1,270 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set TEAM_NAME = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set BRAND = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set NEWSLETTER_ACTION = newsletter_action if newsletter_action is defined and newsletter_action else None %}
+// widgets/newsletter.js — Enterprise hydrator (ESM, CSP-safe)
+// Features: timed, exit-intent, scroll%, hash, cooldowns (session + N-day),
+// honeypot + min dwell, offline queue + retry, SHA-256 email hash, a11y focus trap.
 
-<dialog
-  id="newsletter-modal"
-  class="fixed inset-0 z-[12000] hidden items-center justify-center bg-black/75 backdrop-blur-md opacity-0 pointer-events-none transition-opacity duration-200"
-  role="dialog"
-  aria-modal="true"
-  aria-labelledby="newsletter-title"
-  aria-describedby="newsletter-desc"
-  tabindex="-1"
-  data-action="{{ NEWSLETTER_ACTION or '' }}"
-  data-delay="10"
-  data-cooldown-days="7"
-  data-min-dwell-ms="2500"
-  style="--fc-brand: {{ BRAND }};"
->
-  <div
-    id="newsletter-box"
-    class="relative w-[min(92vw,28rem)] rounded-2xl bg-zinc-950/95 p-6 sm:p-7 text-center text-yellow-100 shadow-2xl ring-1 ring-white/10 opacity-0 scale-[.98] transition-transform duration-150 ease-out"
-    role="document"
-    tabindex="0"
-  >
-    <!-- Close -->
-    <button
-      id="newsletter-close"
-      type="button"
-      data-newsletter-close
-      class="absolute top-3 right-3 inline-flex h-9 w-9 items-center justify-center rounded-full bg-black/40 text-yellow-200 hover:bg-black/60 focus:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--fc-brand)]"
-      aria-label="Close newsletter signup"
-    >
-      <span aria-hidden="true" class="text-xl select-none">&times;</span>
-    </button>
-
-    <!-- Headline -->
-    <h2 id="newsletter-title" class="mb-2 text-2xl font-extrabold tracking-tight text-yellow-300">
-      Get Updates from <span class="text-amber-400">{{ TEAM_NAME }}</span>
-    </h2>
-    <p id="newsletter-desc" class="mx-auto mb-5 max-w-[90%] text-base text-yellow-50/90">
-      A short monthly email with game invites, milestones, and ways to help. No spam.
-    </p>
-
-    <!-- Form -->
-    <form
-      id="newsletter-form"
-      novalidate
-      {% if NEWSLETTER_ACTION %}action="{{ NEWSLETTER_ACTION }}"{% endif %}
-      method="post"
-      role="form"
-      aria-live="polite"
-      aria-atomic="true"
-    >
-      <!-- Honeypot -->
-      <div class="sr-only" aria-hidden="true">
-        <label for="newsletter-company">Company</label>
-        <input id="newsletter-company" name="company" type="text" tabindex="-1" autocomplete="off" />
-      </div>
-
-      <div class="mx-auto w-[90%]">
-        <label for="newsletter-email" class="sr-only">Email</label>
-        <input
-          id="newsletter-email"
-          name="email"
-          type="email"
-          required
-          autocomplete="email"
-          inputmode="email"
-          placeholder="your@email.com"
-          class="w-full rounded-full bg-yellow-50 py-3 px-5 text-zinc-900 shadow-sm outline-none focus:ring-2 focus:ring-[color:var(--fc-brand)]"
-          aria-describedby="email-error email-suggestion"
-          aria-required="true"
-          aria-invalid="false"
-        />
-        <p id="email-suggestion" class="mt-2 min-h-[1.25rem] text-sm text-yellow-200/90"></p>
-      </div>
-
-      <!-- Hidden context -->
-      <input type="hidden" name="source_url" id="nl-source-url" />
-      <input type="hidden" name="referrer" id="nl-referrer" />
-      <input type="hidden" name="utm" id="nl-utm" />
-
-      <!-- Error -->
-      <p id="email-error" class="mt-2 min-h-[1.25rem] text-sm font-semibold text-red-500 sr-only" role="alert" aria-live="assertive"></p>
-
-      <!-- Submit -->
-      <button
-        id="newsletter-submit"
-        type="submit"
-        class="mt-5 inline-flex items-center justify-center rounded-full bg-[color:var(--fc-brand)] px-8 py-3 font-bold text-zinc-900 shadow-lg transition active:scale-95 focus-visible:ring-2 focus-visible:ring-[color:var(--fc-brand)]"
-        data-label="Subscribe"
-        data-busy="Subscribing…"
-      >
-        Subscribe
-      </button>
-
-      <!-- Thank you -->
-      <p id="newsletter-thankyou" class="mt-5 hidden select-none text-lg font-semibold tracking-wide text-emerald-300">
-        Thanks! You’re on the list. 💛
-      </p>
-
-      <!-- Opt-out -->
-      <button
-        id="newsletter-nothanks"
-        type="button"
-        class="mt-4 mx-auto block text-sm text-yellow-300/90 hover:underline focus:underline focus:outline-none"
-        data-newsletter-close
-      >
-        No thanks
-      </button>
-
-      <p class="mt-3 text-[11px] text-zinc-400/80">
-        By subscribing you agree to receive a monthly email from {{ TEAM_NAME }}. Unsubscribe anytime.
-      </p>
-    </form>
-  </div>
-</dialog>
-
-<style {{ nonce_attr() }}nonce="{{ NONCE }}">
-  #newsletter-modal::backdrop{ background: transparent; }
-  #newsletter-modal:not(.hidden){ opacity:1; pointer-events:auto; }
-  @media (prefers-reduced-motion: reduce){ #newsletter-modal, #newsletter-box{ transition: none !important; } }
-  @media (forced-colors: active){
-    #newsletter-box{ border:2px solid CanvasText; }
-    #newsletter-submit{ background:CanvasText !important; color:Canvas !important; }
-  }
-  .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
-</style>
-
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
-(() => {
-  const modal = document.getElementById("newsletter-modal");
-  const box = document.getElementById("newsletter-box");
-  const form = document.getElementById("newsletter-form");
-  const email = document.getElementById("newsletter-email");
-  const errEl = document.getElementById("email-error");
-  const suggest = document.getElementById("email-suggestion");
-  const thanks = document.getElementById("newsletter-thankyou");
-  const submitB = document.getElementById("newsletter-submit");
-  const hp = document.getElementById("newsletter-company");
+export function initNewsletterModal(root = document) {
+  const modal = root.querySelector('#newsletter-modal[data-widget="newsletter"]');
   if (!modal || modal.__init) return;
   modal.__init = true;
 
-  const fc = window.fc || window.FC || null;
+  // Nodes
+  const box     = modal.querySelector('#newsletter-box');
+  const form    = modal.querySelector('#newsletter-form');
+  const email   = modal.querySelector('#newsletter-email');
+  const invite  = modal.querySelector('#newsletter-invite');
+  const errEl   = modal.querySelector('#email-error');
+  const hintEl  = modal.querySelector('#email-suggestion');
+  const thanks  = modal.querySelector('#newsletter-thankyou');
+  const submitB = modal.querySelector('#newsletter-submit');
+  const confFx  = modal.querySelector('#swish-confetti');
+  const hp      = modal.querySelector('#newsletter-company');
 
-  const action = (modal.dataset.action || "").trim();
-  const DELAY_SEC = parseInt(modal.dataset.delay || "0", 10);
-  const COOLDOWN_DAYS = parseInt(modal.dataset.cooldownDays || "7", 10);
-  const MIN_DWELL_MS = parseInt(modal.dataset.minDwellMs || "2500", 10);
+  // Options
+  const action       = (modal.dataset.action || '').trim();
+  const DELAY_SEC    = parseInt(modal.dataset.delay || '0', 10);
+  const SCROLL_PCT   = parseInt(modal.dataset.scroll || '0', 10);
+  const EXIT_INTENT  = (modal.dataset.exitIntent || modal.dataset.exit_intent || modal.dataset['exit-intent'] || '0') === '1';
+  const COOLDOWN_D   = parseInt(modal.dataset.cooldownDays || '7', 10);
+  const MIN_DWELL_MS = parseInt(modal.dataset.minDwellMs || '2500', 10);
+  const SCOPE        = (modal.dataset.scope || 'global') + '';
 
-  const coolKey = "fc_nl_last",
-        optKey  = "fc_nl_optout",
-        subKey  = "fc_nl_subscribed",
-        seenKey = "fc_nl_shown_session";
+  // Storage keys (scoped)
+  const K = (k) => `fc_nl_${k}:${SCOPE}`;
   const now = () => Date.now();
-  const startedAt = now();
-  let openedAt = 0, lastFocus = null, untrap = () => {};
+  const start = now();
+  let openedAt = 0, lastFocus = null, debounceId = null;
 
-  /* Utils */
-  const isEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v || "").trim());
+  // Helpers: email + domain suggestion
+  const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim());
   const COMMON = ["gmail.com","yahoo.com","outlook.com","hotmail.com","icloud.com","aol.com","live.com","msn.com","proton.me","protonmail.com"];
-  const ldist = (a,b)=>{ a=String(a||""); b=String(b||""); const m=a.length, n=b.length, d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]); for(let j=1;j<=n;j++) d[0][j]=j; for(let i=1;i<=m;i++){ for(let j=1;j<=n;j++){ d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); } } return d[m][n]; };
+  const ldist = (a,b)=>{ a=String(a||""); b=String(b||""); const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]); for(let j=1;j<=n;j++) d[0][j]=j; for(let i=1;i<=m;i++){ for(let j=1;j<=n;j++){ d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); } } return d[m][n]; };
   const suggestDomain = (addr) => {
-    const parts = String(addr || "").split("@"); if (parts.length !== 2) return null;
+    const parts = String(addr||"").split("@"); if (parts.length!==2) return null;
     const dom = parts[1].toLowerCase().replace(/\s+/g,"").replace(/\.con\b/,".com").replace(/\.cpm\b/,".com");
     let best=null, dmin=9; for (const c of COMMON){ const d=ldist(dom,c); if (d<dmin){ dmin=d; best=c; } }
-    return best && dmin>0 && dmin<=2 ? parts[0] + "@" + best : null;
+    return best && dmin>0 && dmin<=2 ? `${parts[0]}@${best}` : null;
   };
 
-  /* Context fields */
+  // Context hidden fields
   try {
-    document.getElementById("nl-source-url").value = location.href;
-    document.getElementById("nl-referrer").value   = document.referrer || "";
-    const p = new URLSearchParams(location.search), utm = {};
-    ["utm_source","utm_medium","utm_campaign","utm_content","utm_term"].forEach(k => { if (p.get(k)) utm[k]=p.get(k); });
-    document.getElementById("nl-utm").value = JSON.stringify(utm);
+    modal.querySelector('#nl-source-url').value = location.href;
+    modal.querySelector('#nl-referrer').value   = document.referrer || '';
+    const p = new URLSearchParams(location.search), utm={};
+    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ const v=p.get(k); if(v) utm[k]=v; });
+    modal.querySelector('#nl-utm').value = JSON.stringify(utm);
   } catch {}
 
-  /* Programmatic API */
-  const API = { open(){ openModal(true); }, close(){ closeModal(); } };
-  try { window.fcNewsletter = Object.assign({}, window.fcNewsletter || {}, API); } catch {}
-
-  /* Eligibility */
-  function eligible() {
+  // Eligibility
+  function eligible(){
     try {
-      if (localStorage.getItem(subKey) === "1") return false;
-      if (sessionStorage.getItem(seenKey) === "1") return false;
-      if (localStorage.getItem(optKey) === "1") return false;
-      const last = parseInt(localStorage.getItem(coolKey) || "0", 10);
-      if (last && now() - last < COOLDOWN_DAYS * 86400000) return false;
+      if (localStorage.getItem(K('subscribed')) === '1') return false;
+      if (sessionStorage.getItem(K('shown_session')) === '1') return false;
+      if (localStorage.getItem(K('optout')) === '1') return false;
+      const last = parseInt(localStorage.getItem(K('last')) || '0', 10);
+      if (last && (now() - last) < COOLDOWN_D * 86400000) return false;
     } catch {}
     return true;
   }
 
-  /* Open / Close */
-  function openModal(manual = false) {
-    if (modal.classList.contains("flex")) return;
-    // Respect dwell for auto-open to avoid “instant pop”
-    if (!manual && now() - startedAt < MIN_DWELL_MS) return;
+  // Open/Close
+  function openModal(manual=false){
+    if (modal.classList.contains('flex')) return;
+    if (!manual && now() - start < MIN_DWELL_MS) return; // don't open too fast
 
     lastFocus = document.activeElement;
-    modal.classList.remove("hidden");
+    modal.classList.remove('hidden');
     modal.showModal?.();
-    requestAnimationFrame(() => {
-      modal.classList.add("flex"); modal.style.opacity = "1";
-      box.style.opacity = "1"; box.style.transform = "scale(1)";
-    });
-    document.documentElement.style.overflow = "hidden";
-    try { untrap = (fc && fc.trapFocus) ? fc.trapFocus(modal) : (() => {}) } catch {}
+    requestAnimationFrame(()=>{ modal.classList.add('flex'); modal.style.opacity='1'; box.style.opacity='1'; box.style.transform='scale(1)'; });
+    document.documentElement.style.overflow='hidden';
     email?.focus();
-    modal.setAttribute("aria-hidden","false");
+    modal.setAttribute('aria-hidden','false');
     openedAt = now();
-    try { sessionStorage.setItem(seenKey,"1"); localStorage.setItem(coolKey, String(now())); } catch {}
-    try { (window.dataLayer = window.dataLayer || []).push({ event: "newsletter_open" }); } catch {}
+    try { sessionStorage.setItem(K('shown_session'),'1'); localStorage.setItem(K('last'), String(now())); } catch {}
+    try { (window.dataLayer = window.dataLayer || []).push({ event:'newsletter_open', scope:SCOPE }); } catch {}
   }
-  function closeModal() {
-    box.style.opacity = "0"; box.style.transform = "scale(.98)"; modal.style.opacity = "0";
-    setTimeout(() => {
-      try { modal.close?.(); } catch {}
-      modal.classList.add("hidden"); modal.classList.remove("flex");
-      document.documentElement.style.overflow = "";
-      try { untrap(); } catch {}
-      form?.reset(); thanks?.classList.add("hidden");
-      errEl.textContent = ""; errEl.classList.add("sr-only");
-      email?.setAttribute("aria-invalid","false");
-      modal.setAttribute("aria-hidden","true");
-      try { (window.dataLayer = window.dataLayer || []).push({ event: "newsletter_close" }); } catch {}
+  function closeModal(){
+    box.style.opacity='0'; box.style.transform='scale(.98)'; modal.style.opacity='0';
+    setTimeout(()=>{
+      modal.close?.(); modal.classList.add('hidden'); modal.classList.remove('flex');
+      document.documentElement.style.overflow='';
+      form?.reset(); thanks?.classList.add('hidden');
+      if (errEl){ errEl.textContent=''; errEl.classList.add('sr-only'); }
+      email?.setAttribute('aria-invalid','false');
+      modal.setAttribute('aria-hidden','true');
       lastFocus?.focus?.();
-    }, 140);
+      try { (window.dataLayer = window.dataLayer || []).push({ event:'newsletter_close', scope:SCOPE }); } catch {}
+    }, 160);
   }
 
-  /* Timed trigger */
-  if (DELAY_SEC > 0 && eligible()) {
-    setTimeout(() => { if (eligible()) openModal(false); }, DELAY_SEC * 1000);
+  // Triggers
+  if (DELAY_SEC>0 && eligible()) setTimeout(()=>{ if(eligible()) openModal(false); }, DELAY_SEC*1000);
+  const tryHash = ()=>{ if ((location.hash||'').replace(/^#/,'')==='newsletter') openModal(true); };
+  addEventListener('hashchange', tryHash, { passive:true }); tryHash();
+
+  // Delegated open/close
+  root.addEventListener('click', (e)=>{
+    const o = e.target.closest?.('[data-open-newsletter]');
+    const c = e.target.closest?.('[data-newsletter-close]');
+    if (o){ e.preventDefault(); openModal(true); }
+    if (c){ e.preventDefault(); try{ localStorage.setItem(K('optout'),'1'); }catch{} closeModal(); }
+  }, { passive:false });
+
+  // Scroll %
+  if (SCROLL_PCT>0){
+    const onScroll=()=>{
+      const pct = (scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight)) * 100;
+      if (pct >= SCROLL_PCT && eligible()){ openModal(false); removeEventListener('scroll', onScroll); }
+    };
+    addEventListener('scroll', onScroll, { passive:true });
   }
 
-  /* Hash trigger & buttons */
-  const tryHash = () => { if (location.hash.replace("#","") === "newsletter") openModal(true); };
-  addEventListener("hashchange", tryHash, { passive: true }); tryHash();
+  // Exit intent
+  if (EXIT_INTENT){
+    const onLeave=(e)=>{ if (e.clientY <= 0 && eligible()){ openModal(false); removeEventListener('mouseout', onLeave); } };
+    addEventListener('mouseout', onLeave, { passive:true });
+  }
 
-  addEventListener("click", (e) => {
-    const openEl  = e.target.closest?.("[data-open-newsletter]");
-    const closeEl = e.target.closest?.("[data-newsletter-close]");
-    if (openEl) { e.preventDefault(); openModal(true); }
-    if (closeEl) {
-      e.preventDefault();
-      try { localStorage.setItem(optKey,"1"); } catch {}
-      closeModal();
-    }
-  }, { passive: false });
+  // Backdrop + Esc
+  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); }, { passive:true });
+  addEventListener('keydown', e => { if (e.key==='Escape' && !modal.classList.contains('hidden')) closeModal(); });
 
-  /* Backdrop & Esc */
-  modal.addEventListener("click", (e) => { if (e.target === modal) closeModal(); });
-  addEventListener("keydown", (e) => { if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal(); });
-
-  /* Fallback focus trap (if fc.trapFocus not available) */
-  modal.addEventListener("keydown", (e) => {
-    if (fc && fc.trapFocus) return; // fc handles it
-    if (e.key !== "Tab") return;
+  // Focus trap
+  modal.addEventListener('keydown', e=>{
+    if (e.key!=='Tab') return;
     const f = modal.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])');
     if (!f.length) return;
-    const first = f[0], last = f[f.length - 1];
-    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    const first = f[0], last = f[f.length-1];
+    if (e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
   });
 
-  /* Validation + domain suggestion */
-  let t = null;
-  email.addEventListener("input", () => {
-    clearTimeout(t);
-    t = setTimeout(() => {
+  // Live validation + suggestion
+  email?.addEventListener('input', ()=>{
+    clearTimeout(debounceId);
+    debounceId = setTimeout(()=>{
       const v = email.value.trim();
       const hint = suggestDomain(v);
-      suggest.textContent = (hint && isEmail(hint)) ? `Did you mean ${hint}?` : "";
-      suggest.onclick = hint ? () => { email.value = hint; suggest.textContent = ""; email.dispatchEvent(new Event("input")); } : null;
-
-      if (!v) { errEl.textContent = ""; errEl.classList.add("sr-only"); email.setAttribute("aria-invalid","false"); return; }
-      if (!isEmail(v)) { errEl.textContent = "Please enter a valid email address."; errEl.classList.remove("sr-only"); email.setAttribute("aria-invalid","true"); }
-      else { errEl.textContent = ""; errEl.classList.add("sr-only"); email.setAttribute("aria-invalid","false"); }
-    }, 140);
+      if (hintEl){
+        hintEl.textContent = (hint && isEmail(hint)) ? `Did you mean ${hint}?` : '';
+        hintEl.style.cursor = hint ? 'pointer' : '';
+        if (hint && !hintEl.__bound){
+          hintEl.addEventListener('click', ()=>{ email.value = hint; hintEl.textContent=''; email.dispatchEvent(new Event('input')); });
+          hintEl.__bound = true;
+        }
+      }
+      if (!v){ if (errEl){errEl.textContent=''; errEl.classList.add('sr-only');} email.setAttribute('aria-invalid','false'); return; }
+      if (!isEmail(v)){ if (errEl){ errEl.textContent='Please enter a valid email address.'; errEl.classList.remove('sr-only'); } email.setAttribute('aria-invalid','true'); }
+      else { if (errEl){ errEl.textContent=''; errEl.classList.add('sr-only'); } email.setAttribute('aria-invalid','false'); }
+    }, 160);
   });
 
-  /* Offline queue */
-  const qkey = "fcNewsletterQueue";
-  const enqueue = (obj) => {
-    if (!action) return;
-    try { const q = JSON.parse(localStorage.getItem(qkey) || "[]"); q.push(obj); localStorage.setItem(qkey, JSON.stringify(q)); } catch {}
-  };
-  const flushQueue = async () => {
-    if (!action) return;
-    try {
-      const q = JSON.parse(localStorage.getItem(qkey) || "[]");
-      if (!q.length) return;
-      const next = q.shift();
-      const ok = await postJSON(next);
-      if (ok) { localStorage.setItem(qkey, JSON.stringify(q)); if (q.length) setTimeout(flushQueue, 500); }
-    } catch {}
-  };
-  addEventListener("online", flushQueue, { passive: true });
-
-  /* Posting (uses fc.postJSON when available for CSRF/headers) */
-  async function postJSON(payload) {
+  // Offline queue
+  const qkey = K('queue');
+  const enqueue = (obj)=>{ try{ const q=JSON.parse(localStorage.getItem(qkey)||'[]'); q.push(obj); localStorage.setItem(qkey, JSON.stringify(q)); }catch{} };
+  async function postJSON(payload, timeout=7000){
     if (!action) return false;
-    if (fc && typeof fc.postJSON === "function") {
-      try { await fc.postJSON(action, payload, {}, { timeout: 10000 }); return true; } catch { return false; }
-    }
-    try {
+    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), timeout);
+    try{
       const res = await fetch(action, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify(payload),
-        credentials: "same-origin",
+        method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
+        body:JSON.stringify(payload), credentials:'same-origin', signal:ctl.signal
       });
-      return res.ok;
-    } catch { return false; }
+      clearTimeout(t); return res.ok;
+    }catch{ clearTimeout(t); return false; }
+  }
+  async function flushQueue(){
+    try{
+      const q = JSON.parse(localStorage.getItem(qkey)||'[]'); if(!q.length) return;
+      const next = q.shift(); const ok = await postJSON(next);
+      if (ok){ localStorage.setItem(qkey, JSON.stringify(q)); if (q.length) setTimeout(flushQueue, 500); }
+    }catch{}
+  }
+  addEventListener('online', flushQueue, { passive:true });
+
+  // Hash email (SHA-256 when available)
+  async function hashEmail(v){
+    try{
+      if (crypto?.subtle){
+        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(v)));
+        return 'sha256_' + Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      }
+    }catch{}
+    // tiny fallback
+    let h=0; for (let i=0;i<String(v).length;i++) h=(h*31 + v.charCodeAt(i))>>>0;
+    return 'h' + h.toString(16);
   }
 
-  const hashEmail = (eVal) => {
-    try { let h=0; for (let i=0;i<eVal.length;i++){ h=(h*31 + eVal.charCodeAt(i))>>>0; } return "h"+h.toString(16); }
-    catch { return "h0"; }
-  };
-
-  /* Submit */
-  form.addEventListener("submit", async (e) => {
+  // Submit
+  form?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const dwell = now() - startedAt;
-    if (hp && hp.value) { return closeModal(); } // honeypot
-    if (dwell < MIN_DWELL_MS) { errEl.textContent = "Please take a moment and try again."; errEl.classList.remove("sr-only"); return; }
 
-    const eVal = email.value.trim();
-    if (!isEmail(eVal)) {
-      errEl.textContent = "Please enter a valid email address."; errEl.classList.remove("sr-only"); email.setAttribute("aria-invalid","true"); return;
+    const dwell = now() - start;
+    const eVal = (email?.value || '').trim();
+    const iVal = (invite?.value || '').trim();
+
+    if (hp && hp.value) { closeModal(); return; }
+    if (dwell < MIN_DWELL_MS){
+      if (errEl){ errEl.textContent='Please take a moment and try again.'; errEl.classList.remove('sr-only'); }
+      return;
     }
-    errEl.textContent = ""; errEl.classList.add("sr-only"); email.setAttribute("aria-invalid","false");
+    if (!isEmail(eVal)){
+      if (errEl){ errEl.textContent='Please enter a valid email address.'; errEl.classList.remove('sr-only'); }
+      email?.setAttribute('aria-invalid','true'); return;
+    }
 
-    // Busy state
-    submitB.disabled = true; submitB.classList.add("opacity-60","pointer-events-none");
-    const orig = submitB.getAttribute("data-label") || submitB.textContent; submitB.textContent = submitB.getAttribute("data-busy") || "Subscribing…";
+    if (errEl){ errEl.textContent=''; errEl.classList.add('sr-only'); }
+    email?.setAttribute('aria-invalid','false');
+
+    const orig = submitB?.getAttribute('data-label') || submitB?.textContent || '';
+    if (submitB){ submitB.disabled=true; submitB.classList.add('opacity-60','pointer-events-none'); submitB.textContent=submitB.getAttribute('data-busy')||'Subscribing…'; }
+    email && (email.disabled = true); invite && (invite.disabled = true);
 
     const payload = {
-      email: eVal,
-      source_url: document.getElementById("nl-source-url")?.value || "",
-      referrer: document.getElementById("nl-referrer")?.value || "",
-      utm: (() => { try { return JSON.parse(document.getElementById("nl-utm").value || "{}"); } catch { return {}; } })(),
-      t_opened: openedAt || null,
-      t_submitted: now(),
+      email: eVal, invite: iVal || undefined,
+      source_url: modal.querySelector('#nl-source-url')?.value || '',
+      referrer:   modal.querySelector('#nl-referrer')?.value || '',
+      utm: (()=>{ try{ return JSON.parse(modal.querySelector('#nl-utm')?.value || '{}'); }catch{ return {}; } })(),
+      t_opened: openedAt || null, t_submitted: now()
     };
 
-    let ok = false;
+    let ok=false;
     if (navigator.onLine) {
       ok = await postJSON(payload);
-      if (!ok && !action) {
-        try { location.href = `mailto:news@connectatx.org?subject=Newsletter%20Subscribe&body=${encodeURIComponent(eVal)}`; ok = true; } catch {}
+      if (!ok && !action){
+        try{
+          location.href = `mailto:news@example.org?subject=Newsletter%20Subscribe&body=${encodeURIComponent(eVal)}${iVal? '%0AInvite:%20'+encodeURIComponent(iVal):''}`;
+          ok = true;
+        }catch{}
       }
     } else {
       enqueue(payload); ok = true;
     }
 
-    if (ok) {
-      thanks.classList.remove("hidden");
-      try { localStorage.setItem(subKey,"1"); } catch {}
+    if (ok){
+      thanks?.classList.remove('hidden');
+      confFx && (confFx.style.opacity = 1, setTimeout(()=> confFx.style.opacity = 0, 900));
+      try { localStorage.setItem(K('subscribed'),'1'); } catch {}
       try {
-        (window.dataLayer = window.dataLayer || []).push({ event:"newsletter_subscribed", email_hash: hashEmail(eVal) });
+        const h = await hashEmail(eVal);
+        (window.dataLayer = window.dataLayer || []).push({ event:'newsletter_subscribed', scope:SCOPE, email_hash:h });
       } catch {}
-      setTimeout(closeModal, 1100);
+      setTimeout(closeModal, 1200);
     } else {
-      errEl.textContent = "Something went wrong. Please try again soon.";
-      errEl.classList.remove("sr-only");
-      submitB.disabled = false; submitB.classList.remove("opacity-60","pointer-events-none"); submitB.textContent = orig;
+      if (errEl){ errEl.textContent='Something went wrong. Please try again soon.'; errEl.classList.remove('sr-only'); }
+      if (submitB){ submitB.disabled=false; submitB.classList.remove('opacity-60','pointer-events-none'); submitB.textContent=orig; }
+      email && (email.disabled = false); invite && (invite.disabled = false);
     }
   });
 
-  /* Backdrop animation hooks */
-  modal.addEventListener("close", () => { box.style.opacity="0"; box.style.transform="scale(.98)"; });
-
-  /* Kick off any queued posts */
+  // Kick queued sends (if any)
   flushQueue().catch(()=>{});
-})();
-</script>
+}
+
+// Optional auto-init (safe to include multiple times)
+if (typeof document !== 'undefined') {
+  const boot = () => initNewsletterModal();
+  document.readyState !== 'loading'
+    ? boot()
+    : document.addEventListener('DOMContentLoaded', boot, { once:true });
+}
 

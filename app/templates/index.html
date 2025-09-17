@@ -1,9 +1,9 @@
-{# =====================================================================
-   index.html — Premium Compact (CSP-safe, a11y, less-scroll)
-   - No duplicate section wrappers/IDs
-   - Forces 3-up squares for tiers
-   - Collapsible Impact & About to reduce scroll
-   ===================================================================== #}
+{# ============================================================================
+   index.html — Premium Compact (CSP-safe, a11y, less-scroll, enterprise refactor)
+   - No duplicate wrappers/IDs
+   - 3-up square tiers (stable on XL)
+   - Collapsible Impact & About (state persists; anchor-aware)
+   ========================================================================== #}
 {% extends "base.html" %}
 
 {# ---------------- Flags (query-string overridable) ---------------- #}
@@ -15,9 +15,11 @@
 
 {# ---------------- Nonce helper passthrough ---------------- #}
 {% if NONCE is not defined %}{% set NONCE = csp_nonce() if csp_nonce is defined else '' %}{% endif %}
-{% if nonce_attr is not defined %}
-  {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
-{% endif %}
+{% if nonce_attr is not defined %}{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}{% endif %}
+
+{# ---------------- Page identity & hero ID hook ---------------- #}
+{% set PAGE_ID = 'home-compact' %}
+{% set HERO_ID = IDP|default('fundraiser-hero') %}
 
 {% block title %}{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}{% endblock %}
 {% block h1 %}{% endblock %}
@@ -26,35 +28,30 @@
   {{ super() }}
   <meta name="description" content="{{ meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' }}">
 
-  {# ===== Premium Compact overrides (after Tailwind/app.css) ===== #}
+  {# ===== Premium Compact overrides (after app.css) ===== #}
   <style {{ nonce_attr() }}>
-    /* Layout tighten */
+    /* ——— Layout tighten ——— */
     .section{ padding-block: clamp(0.9rem, 1.8vw, 1.6rem) }
     .section.section--tight{ padding-block: clamp(0.7rem, 1.2vw, 1.1rem) }
     .section + .section{ padding-top: clamp(0.6rem, 1.2vw, 1rem) }
-    .container{ max-width: 1200px; }
+    .container{ max-width: 1200px }
 
-    /* Hero: shorter band */
+    /* ——— Hero: compact height + lifted overlay text ——— */
     #fc-hero{ --hero-min-h: clamp(420px, 55vh, 680px) }
+    /* if your hero partial exposes #{{ HERO_ID }} and --hero-overlay-lift, lift the caption */
+    #{{ HERO_ID }}{ --hero-overlay-lift: clamp(28px, 12vh, 120px) }
+    @media (max-width:680px){ #{{ HERO_ID }}{ --hero-overlay-lift: clamp(16px, 4vh, 72px) } }
 
-    /* ===== Tiers: force “trio-squares” without changing the partial ===== */
-    /* Grid: 1 → 2 → 3 tiles */
+    /* ——— Tiers: force 1→2→3 squares on all widths ≥ 980px ——— */
     #tiers .grid{
       display:grid !important;
       gap:.7rem !important;
-      grid-template-columns: 1fr !important; /* phones */
+      grid-template-columns: 1fr !important;
       align-items:stretch;
     }
-    @media (min-width:700px){
-      #tiers .grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important; }
-    }
-    @media (min-width:980px){
-      #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
-    }
-    /* Keep 3-up on XL for compactness */
-    @media (min-width:1280px){
-      #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important; }
-    }
+    @media (min-width:700px){  #tiers .grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important } }
+    @media (min-width:980px){  #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important } }
+    @media (min-width:1280px){ #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important } } /* stay 3-up on XL */
 
     /* Square-ish cards, denser internals */
     #tiers .flip-card{ aspect-ratio: 1 / 1.05; min-height:0 }
@@ -65,10 +62,8 @@
     #tiers .text-sm{ font-size:.84rem }
     #tiers .slots{ height:6px; margin-top:.5rem }
 
-    /* Perks -> chips (save vertical space) */
-    #tiers .tier-perks{
-      display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem;
-    }
+    /* Perks → compact chips */
+    #tiers .tier-perks{ display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem }
     #tiers .tier-perks li{
       display:inline-flex; align-items:center; gap:.3rem;
       padding:.24rem .44rem; border-radius:.55rem;
@@ -84,14 +79,13 @@
     #tiers [data-share]{ padding:.42rem .62rem; border-radius:.6rem; font-size:.82rem }
 
     /* Ribbon → micro tag */
-    #tiers .ribbon{
-      top:10px; right:10px; transform:none;
-      font-size:10px; padding:.18rem .44rem; border-radius:.45rem;
-    }
+    #tiers .ribbon{ top:10px; right:10px; font-size:10px; padding:.18rem .44rem; border-radius:.45rem }
 
-    /* Collapsible sections (Impact/About) – elegant disclosure */
-    details.fc-fold{ background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.12); border-radius:1rem; overflow:hidden }
+    /* ——— Collapsible Impact/About — elegant disclosure ——— */
+    details.fc-fold{
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+      border:1px solid rgba(255,255,255,.12); border-radius:1rem; overflow:hidden
+    }
     details.fc-fold + details.fc-fold{ margin-top:.8rem }
     .fc-fold > summary{
       cursor:pointer; list-style:none; padding:.8rem 1rem; font-weight:1000;
@@ -100,10 +94,10 @@
     }
     .fc-fold > summary::-webkit-details-marker{ display:none }
     .fc-fold[open] > summary{ border-bottom:1px solid rgba(255,255,255,.10) }
-    .fc-fold .fold-body{ padding: .9rem 1rem; }
+    .fc-fold .fold-body{ padding:.9rem 1rem }
     .fold-kbd{ font-size:.8rem; padding:.14rem .4rem; border:1px solid rgba(255,255,255,.18); border-radius:.4rem; background:rgba(255,255,255,.06) }
 
-    /* Minor: tighten hero meter, sponsor ticker seam */
+    /* Minor seams */
     #fc-hero .hm-track{ height:12px }
     #sponsor-leaderboard{ min-height:0.001px }
   </style>
@@ -111,21 +105,21 @@
 
 {% block content %}
 
-  {# ===== 0) Sponsor Leaderboard (no extra wrapper to avoid duplicate IDs) ===== #}
+  {# 0) Sponsor Leaderboard (no extra wrapper) #}
   {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
 
-  {# ===== 1) Hero (compact) ===== #}
+  {# 1) Hero (compact) #}
   {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
 
-  {# ===== 2) Tiers (3-up squares) ===== #}
+  {# 2) Tiers (3-up squares) #}
   {% if SHOW_TIERS %}
     {% include "partials/tiers.html" ignore missing with context %}
   {% endif %}
 
-  {# ===== 3) Impact (collapsible to reduce scroll) ===== #}
+  {# 3) Impact (collapsible) #}
   {% if SHOW_IMPACT %}
     <section class="section section--tight container">
-      <details class="fc-fold" open>
+      <details class="fc-fold" id="fold-impact" open>
         <summary>
           <span>Impact Buckets</span>
           <span class="fold-kbd">less scroll</span>
@@ -137,13 +131,11 @@
     </section>
   {% endif %}
 
-  {# ===== 4) About (collapsible) ===== #}
+  {# 4) About (collapsible) #}
   {% if SHOW_ABOUT %}
     <section class="section section--tight container">
-      <details class="fc-fold">
-        <summary>
-          <span>About Our Program</span>
-        </summary>
+      <details class="fc-fold" id="fold-about">
+        <summary><span>About Our Program</span></summary>
         <div class="fold-body">
           {% include "partials/about_section.html" ignore missing with context %}
         </div>
@@ -156,12 +148,28 @@
 {% block body_scripts %}
   {{ super() }}
   <script {{ nonce_attr() }}>
-    /* Optional: ensure section reveal animation class exists */
-    try{
-      const io=new IntersectionObserver((es)=>es.forEach(x=>x.isIntersecting&&x.target.classList.add('is-visible')), { rootMargin:"-10% 0px -5% 0px" });
-      document.querySelectorAll('.section').forEach(s=>io.observe(s));
-      addEventListener('pagehide',()=>io.disconnect(),{once:true});
-    }catch{}
+    /* Collapsible state persistence + anchor-aware opening (CSP-safe, tiny) */
+    (function(){
+      const key = (id)=>`fc_fold_${id}`;
+      document.querySelectorAll('details.fc-fold[id]').forEach(d=>{
+        const k = key(d.id);
+        try{
+          const saved = localStorage.getItem(k);
+          if (saved === '0') d.removeAttribute('open');
+          if (saved === '1') d.setAttribute('open','');
+        }catch{}
+        d.addEventListener('toggle', ()=>{ try{ localStorage.setItem(k, d.open ? '1' : '0'); }catch{} }, {passive:true});
+      });
+
+      /* If URL hash points inside a fold, open its parent */
+      try{
+        if (location.hash){
+          const target = document.getElementById(location.hash.slice(1));
+          const fold = target && target.closest && target.closest('details.fc-fold');
+          if (fold && !fold.open){ fold.open = true; }
+        }
+      }catch{}
+    })();
   </script>
 {% endblock %}
 

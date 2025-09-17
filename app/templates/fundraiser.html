@@ -95,7 +95,7 @@
   {{ super() }}
 
   {# Tiny nonce’d boot blob (server → JS, CSP-safe) #}
-  <script {{ nonce_attr() }}{{ nonce_attr() }}>
+  <script {{ nonce_attr() }} {{ nonce_attr() }} {{ nonce_attr() }}{{ nonce_attr() }}>
     window.__FC_INIT__ = {
       raised: {{ (funds_raised or 0)|round(0) }},
       goal:   {{ (fundraising_goal or 0)|round(0) }}
@@ -103,10 +103,10 @@
   </script>
 
   {# Page JS (externalized) #}
-  <script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='ux/page-fundraiser.js') if url_for is defined else '/static/ux/page-fundraiser.js' }}"></script>
+  <script {{ nonce_attr() }} {{ nonce_attr() }} {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='ux/page-fundraiser.js') if url_for is defined else '/static/ux/page-fundraiser.js' }}"></script>
 
   {# Optional Starforge boot (module, safe if missing) #}
-  <script {{ nonce_attr() }}{{ nonce_attr() }} type="module">
+  <script {{ nonce_attr() }} {{ nonce_attr() }} {{ nonce_attr() }}{{ nonce_attr() }} type="module">
     try { import("{{ url_for('static', filename='starforge/enable-brand-spine.js') if url_for is defined else '/static/starforge/enable-brand-spine.js' }}").catch(()=>{}); } catch (_){}
   </script>
 {% endblock %}

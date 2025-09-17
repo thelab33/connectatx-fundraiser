@@ -40,7 +40,7 @@ defined else '') %} {% set _items = items if items is defined else [] %}
   </div>
 </section>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   document.addEventListener("DOMContentLoaded", function () {
     const list = document.querySelector("#donation-ticker");
     const track = list?.parentElement?.nextElementSibling;

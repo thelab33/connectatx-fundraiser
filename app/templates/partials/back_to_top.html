@@ -18,7 +18,7 @@
   <span id="btt-sr" class="sr-only" aria-live="polite"></span>
 </a>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const btn = document.getElementById("back-to-top");
     if (!btn || btn.__init) return;

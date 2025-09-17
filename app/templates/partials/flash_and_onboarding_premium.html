@@ -172,7 +172,7 @@
     {% endfor %} {% endif %}
   </div>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const host = document.getElementById("fc-flash");
       if (!host) return;
@@ -469,7 +469,7 @@
     </div>
   </div>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const pop = document.getElementById("fc-onboarding");
       if (!pop) return;

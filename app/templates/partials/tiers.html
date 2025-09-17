@@ -1,91 +1,185 @@
-<!-- Tiers (5-up polished grid) -->
-<section id="tiers" class="section tiers-v2" aria-labelledby="tiers-heading" data-where="tiers">
+<!-- Tiers (v3 — polished, container-aware; matches hero panel width) -->
+<section id="tiers" class="section tiers-v3 tiers-match" aria-labelledby="tiers-heading" data-where="tiers">
   <div class="shell">
     <header class="head">
       <h2 id="tiers-heading" class="title">Sponsorship <span class="accent">Tiers</span></h2>
-      <p class="sub">Choose a level and fuel the season. Every tier gets shout‑outs and a thank‑you certificate.</p>
+      <p class="sub">Choose a level and fuel the season. Every tier gets shout-outs and a thank-you certificate.</p>
     </header>
 
     <div class="grid" role="list">
-      <!-- Repeat 5 cards to fill row -->
+      <!-- Platinum -->
       <article class="card" role="listitem" data-tier="Platinum">
-        <span class="ribbon">VIP</span>
-        <div class="hdr"><span class="emoji">🏆</span><h3 class="h">Platinum</h3><span class="badge">2 left</span></div>
-        <p class="price">$5,000+</p>
+        <span class="ribbon" aria-hidden="true">VIP</span>
+        <div class="hdr">
+          <span class="emoji" aria-hidden="true">🏆</span>
+          <h3 class="h">Platinum</h3>
+          <span class="badge" aria-label="2 sponsorships available">2 left</span>
+        </div>
+        <p class="price"><span class="cur" aria-hidden="true">$</span>5,000<span class="plus" aria-hidden="true">+</span><span class="sr-only"> or more</span></p>
         <ul class="perks">
           <li>Logo on jerseys</li><li>VIP invites</li><li>Social features</li>
         </ul>
-        <a href="/donate?tier=Platinum" class="btn btn-gold">Sponsor Platinum</a>
+        <a href="{{ (stripe_payment_link or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) }}?tier=Platinum"
+           class="btn btn-gold" data-payment-link data-tier="Platinum" aria-label="Sponsor Platinum">Sponsor Platinum</a>
       </article>
 
+      <!-- Gold (popular) -->
       <article class="card popular" role="listitem" data-tier="Gold">
-        <span class="ribbon">Popular</span>
-        <div class="hdr"><span class="emoji">🥇</span><h3 class="h">Gold</h3><span class="badge">4 left</span></div>
-        <p class="price">$2,500</p>
+        <span class="ribbon" aria-hidden="true">Popular</span>
+        <div class="hdr">
+          <span class="emoji" aria-hidden="true">🥇</span>
+          <h3 class="h">Gold</h3>
+          <span class="badge" aria-label="4 sponsorships available">4 left</span>
+        </div>
+        <p class="price"><span class="cur" aria-hidden="true">$</span>2,500</p>
         <ul class="perks">
-          <li>Warm‑ups logo</li><li>Social features</li><li>Appreciation invites</li>
+          <li>Warm-ups logo</li><li>Social features</li><li>Appreciation invites</li>
         </ul>
-        <a href="/donate?tier=Gold" class="btn btn-gold">Sponsor Gold</a>
+        <a href="{{ (stripe_payment_link or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) }}?tier=Gold"
+           class="btn btn-gold" data-payment-link data-tier="Gold" aria-label="Sponsor Gold">Sponsor Gold</a>
       </article>
 
+      <!-- Silver -->
       <article class="card" role="listitem" data-tier="Silver">
-        <div class="hdr"><span class="emoji">🥈</span><h3 class="h">Silver</h3><span class="badge">8 left</span></div>
-        <p class="price">$1,000</p>
+        <div class="hdr">
+          <span class="emoji" aria-hidden="true">🥈</span>
+          <h3 class="h">Silver</h3>
+          <span class="badge" aria-label="8 sponsorships available">8 left</span>
+        </div>
+        <p class="price"><span class="cur" aria-hidden="true">$</span>1,000</p>
         <ul class="perks">
-          <li>Shout‑outs</li><li>Thank‑you certificate</li><li>Board listing</li>
+          <li>Shout-outs</li><li>Thank-you certificate</li><li>Board listing</li>
         </ul>
-        <a href="/donate?tier=Silver" class="btn btn-ghost">Sponsor Silver</a>
+        <a href="{{ (stripe_payment_link or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) }}?tier=Silver"
+           class="btn btn-ghost" data-payment-link data-tier="Silver" aria-label="Sponsor Silver">Sponsor Silver</a>
       </article>
 
+      <!-- Bronze -->
       <article class="card" role="listitem" data-tier="Bronze">
-        <div class="hdr"><span class="emoji">🥉</span><h3 class="h">Bronze</h3><span class="badge">12 left</span></div>
-        <p class="price">$500</p>
+        <div class="hdr">
+          <span class="emoji" aria-hidden="true">🥉</span>
+          <h3 class="h">Bronze</h3>
+          <span class="badge" aria-label="12 sponsorships available">12 left</span>
+        </div>
+        <p class="price"><span class="cur" aria-hidden="true">$</span>500</p>
         <ul class="perks">
-          <li>Public thank‑you</li><li>Board listing</li>
+          <li>Public thank-you</li><li>Board listing</li>
         </ul>
-        <a href="/donate?tier=Bronze" class="btn btn-ghost">Sponsor Bronze</a>
+        <a href="{{ (stripe_payment_link or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) }}?tier=Bronze"
+           class="btn btn-ghost" data-payment-link data-tier="Bronze" aria-label="Sponsor Bronze">Sponsor Bronze</a>
       </article>
 
+      <!-- Custom -->
       <article class="card" role="listitem" data-tier="Custom">
-        <div class="hdr"><span class="emoji">✨</span><h3 class="h">Custom</h3><span class="badge">Open</span></div>
+        <div class="hdr">
+          <span class="emoji" aria-hidden="true">✨</span>
+          <h3 class="h">Custom</h3>
+          <span class="badge" aria-label="Open">Open</span>
+        </div>
         <p class="price">Custom</p>
         <ul class="perks">
           <li>Tailored benefits</li><li>Personalized impact</li>
         </ul>
-        <a href="/donate?tier=Custom" class="btn btn-ghost">Build a Package</a>
+        <a href="{{ (stripe_payment_link or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')) }}?tier=Custom"
+           class="btn btn-ghost" data-payment-link data-tier="Custom" aria-label="Build a custom package">Build a Package</a>
       </article>
     </div>
   </div>
 </section>
 
-<style>
-/* Tiers v2 — self-contained; 5-up desktop */
-.section.tiers-v2{ --accent:#facc15; color:#e9eef9 }
-.section.tiers-v2 .shell{ max-width:min(1380px,98vw); margin-inline:auto; padding-inline:clamp(14px,2.6vw,28px); padding-block:clamp(26px,4vw,48px) }
-.section.tiers-v2 .head{ display:grid; gap:.4rem; margin-bottom:.6rem }
-.section.tiers-v2 .title{ font-size:clamp(1.4rem,1rem + 1.8vw,2.1rem); font-weight:1000 }
-.section.tiers-v2 .title .accent{ color:var(--accent) }
-.section.tiers-v2 .sub{ color:#cdd6e3 }
+<style nonce="{{ NONCE }}">
+/* ===== Tiers v3 (self-contained) ===== */
+:root{ --hero-panel-max:560px; }       /* keep in sync with hero right column */
+.section.tiers-v3{ --accent:#facc15; color:#e9eef9; container-type:inline-size; }
+.section.tiers-v3.tiers-match .shell{  /* match the hero card width + align under it */
+  max-inline-size:var(--hero-panel-max);
+  margin-inline:auto;
+}
+@media (min-width:981px){
+  .section.tiers-v3.tiers-match .shell{ margin-left:auto; margin-right:0; }
+}
 
-.section.tiers-v2 .grid{ display:grid; gap:clamp(16px,1.6vw,22px); grid-template-columns:repeat(5,minmax(220px,1fr)); align-items:stretch }
-@media (max-width:1280px){ .section.tiers-v2 .grid{ grid-template-columns:repeat(4,minmax(220px,1fr)) } }
-@media (max-width:1024px){ .section.tiers-v2 .grid{ grid-template-columns:repeat(3,minmax(220px,1fr)) } }
-@media (max-width:768px){ .section.tiers-v2 .grid{ grid-template-columns:repeat(2,minmax(220px,1fr)) } }
-@media (max-width:520px){ .section.tiers-v2 .grid{ grid-template-columns:1fr } }
+.section.tiers-v3 .shell{
+  max-width:min(1380px,98vw);
+  margin-inline:auto;
+  padding-inline:clamp(14px,2.6vw,28px);
+  padding-block:clamp(26px,4vw,48px);
+}
+.section.tiers-v3 .head{ display:grid; gap:.4rem; margin-bottom:.7rem }
+.section.tiers-v3 .title{ font-size:clamp(1.4rem,1rem + 1.8vw,2.1rem); font-weight:1000 }
+.section.tiers-v3 .title .accent{ color:var(--accent) }
+.section.tiers-v3 .sub{ color:#cdd6e3 }
 
-.section.tiers-v2 .card{ position:relative; display:grid; gap:.6rem; border:1px solid rgba(255,255,255,.12); background:linear-gradient(180deg,rgba(17,17,17,.62),rgba(17,17,17,.48)); border-radius:.9rem; padding:1rem; box-shadow:0 8px 28px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.06) }
-.section.tiers-v2 .card.popular{ outline:2px solid color-mix(in srgb, var(--accent) 45%, transparent) }
-.section.tiers-v2 .ribbon{ position:absolute; top:8px; right:8px; background:linear-gradient(90deg,#eab308,#fde68a); color:#111; font-weight:900; font-size:10px; padding:.18rem .44rem; border-radius:.45rem }
-.section.tiers-v2 .hdr{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.45rem }
-.section.tiers-v2 .emoji{ font-size:1.15rem }
-.section.tiers-v2 .h{ font-weight:1000; color:#fef3c7; line-height:1; font-size:1rem }
-.section.tiers-v2 .badge{ border:1px solid color-mix(in srgb, var(--accent) 20%, transparent); background:rgba(250,204,21,.10); padding:.1rem .35rem; border-radius:.5rem; font-size:.65rem; color:#fde68a }
+/* Grid uses CONTAINER queries so it wraps by the section width (not viewport) */
+.section.tiers-v3 .grid{
+  display:grid; gap:clamp(16px,1.6vw,22px);
+  grid-template-columns:repeat(5,minmax(220px,1fr));
+  align-items:stretch;
+}
+@container (max-width:1280px){ .section.tiers-v3 .grid{ grid-template-columns:repeat(4,minmax(220px,1fr)); } }
+@container (max-width:1024px){ .section.tiers-v3 .grid{ grid-template-columns:repeat(3,minmax(220px,1fr)); } }
+@container (max-width:768px) { .section.tiers-v3 .grid{ grid-template-columns:repeat(2,minmax(220px,1fr)); } }
+@container (max-width:520px) { .section.tiers-v3 .grid{ grid-template-columns:1fr; } }
 
-.section.tiers-v2 .price{ font-variant-numeric:tabular-nums; font-weight:900; color:#fde68a; font-size:1rem }
-.section.tiers-v2 .perks{ display:flex; flex-wrap:wrap; gap:.35rem; margin:.2rem 0 .1rem; list-style:none; padding:0 }
-.section.tiers-v2 .perks li{ display:inline-flex; align-items:center; gap:.3rem; padding:.24rem .44rem; font-size:.78rem; font-weight:800; border-radius:.55rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e5e7eb }
+.section.tiers-v3 .card{
+  position:relative; display:grid; gap:.65rem;
+  border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg,rgba(17,17,17,.62),rgba(17,17,17,.48));
+  border-radius:.95rem; padding:1rem;
+  box-shadow:0 8px 28px rgba(0,0,0,.28), inset 0 0 0 1px rgba(255,255,255,.06);
+  transition:transform .15s ease, box-shadow .25s ease, filter .2s ease;
+}
+.section.tiers-v3 .card:hover{ transform:translateY(-2px); filter:saturate(1.04); box-shadow:0 14px 40px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,255,255,.08) }
+.section.tiers-v3 .card.popular{ outline:2px solid color-mix(in srgb, var(--accent) 45%, transparent) }
 
-.section.tiers-v2 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:.7rem; font-weight:900; padding:.62rem .9rem; text-decoration:none }
-.section.tiers-v2 .btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#111; border:1px solid rgba(0,0,0,.18) }
-.section.tiers-v2 .btn-ghost{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e5e7eb }
+.section.tiers-v3 .ribbon{
+  position:absolute; top:8px; right:8px;
+  background:linear-gradient(90deg,#eab308,#fde68a);
+  color:#111; font-weight:900; font-size:10px; padding:.18rem .44rem; border-radius:.45rem;
+}
+
+.section.tiers-v3 .hdr{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.5rem }
+.section.tiers-v3 .emoji{ font-size:1.15rem }
+.section.tiers-v3 .h{ font-weight:1000; color:#fef3c7; line-height:1; font-size:1rem }
+.section.tiers-v3 .badge{
+  border:1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  background:rgba(250,204,21,.10);
+  padding:.1rem .35rem; border-radius:.5rem; font-size:.65rem; color:#fde68a;
+}
+
+.section.tiers-v3 .price{
+  font-variant-numeric:tabular-nums; font-weight:1000; color:#fde68a; font-size:1.02rem; display:flex; align-items:baseline; gap:.05rem;
+}
+.section.tiers-v3 .price .cur{ opacity:.9 }
+.section.tiers-v3 .price .plus{ opacity:.85 }
+
+.section.tiers-v3 .perks{ display:flex; flex-wrap:wrap; gap:.35rem; margin:.1rem 0 .1rem; list-style:none; padding:0 }
+.section.tiers-v3 .perks li{
+  display:inline-flex; align-items:center; gap:.3rem;
+  padding:.26rem .48rem; font-size:.8rem; font-weight:800; border-radius:.6rem;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#e5e7eb;
+}
+
+/* Buttons */
+.section.tiers-v3 .btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  border-radius:.8rem; font-weight:900; padding:.66rem 1rem; text-decoration:none;
+  transition:filter .15s ease, transform .08s ease;
+}
+.section.tiers-v3 .btn:active{ transform:translateY(1px) }
+.section.tiers-v3 .btn-gold{
+  background:linear-gradient(180deg,#fffbe6,var(--accent));
+  color:#111; border:1px solid rgba(0,0,0,.18); box-shadow:0 10px 22px rgba(234,179,8,.18);
+}
+.section.tiers-v3 .btn-ghost{
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#eaf0fa;
+}
+
+/* Focus visibility */
+.section.tiers-v3 :where(a,button).btn:focus-visible,
+.section.tiers-v3 a:focus-visible{
+  outline:2px solid color-mix(in srgb, var(--accent) 70%, #fff 30%);
+  outline-offset:2px;
+}
 </style>
+

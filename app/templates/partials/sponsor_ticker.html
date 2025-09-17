@@ -188,7 +188,7 @@ defined else '') %}
     </div>
   </div>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const root = document.getElementById("sponsor-ticker");
       if (!root || root.__init) return;

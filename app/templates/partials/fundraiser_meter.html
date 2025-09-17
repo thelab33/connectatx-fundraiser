@@ -515,7 +515,7 @@ stripe_payment_link else '') %}
   }
 </style>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     if (window.__fpPanel) return; window.__fpPanel = true;
     const $ = (s, r=document) => r.querySelector(s);

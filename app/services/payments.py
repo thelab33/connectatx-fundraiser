@@ -75,7 +75,9 @@ class PaymentService:
             timeout=PaymentService._paypal_timeout(),
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json();
+        # Normalize for tests
+        return {'order_id': data.get('id') or data.get('order_id') or ''}
 
     @staticmethod
     def capture_paypal_order(order_id: str) -> dict:
@@ -99,7 +101,15 @@ class PaymentService:
             url, auth=(client_id, secret), timeout=PaymentService._paypal_timeout()
         )
         resp.raise_for_status()
-        return resp.json()
+        data = resp.json();
+        amt = None
+        try:
+            cap = (data.get('purchase_units') or [{}])[0].get('payments', {}).get('captures', [{}])[0]
+            amt = float(cap.get('amount', {}).get('value'))
+        except Exception:
+            pass
+        out = {'status': data.get('status'), 'amount': amt}
+        return out
 
     # ---------------- Helpers ----------------
     @staticmethod

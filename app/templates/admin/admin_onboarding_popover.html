@@ -169,7 +169,7 @@ session.get('onboarded') %}
 </style>
 
 {% if script_open is defined %}{{ script_open() }}{% else %}
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} nonce="{{ NONCE }}">
   {% endif %}
   (() => {
     const root = document.getElementById('admin-onboarding');

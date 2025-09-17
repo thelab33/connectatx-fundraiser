@@ -5,7 +5,7 @@ ATX Elite') %} {% set PAGE_URL = (request.url if request is defined else '') %}
 {% set LOGO_URL = (url_for('static', filename='images/logo.avif',
 _external=True) if url_for is defined else '') %}
 
-<script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
   {
     "@context": "https://schema.org",
     "@type": "DonateAction",

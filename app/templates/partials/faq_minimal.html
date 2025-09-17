@@ -98,7 +98,7 @@ us at {{ contact_email }} and we’ll make it right."} ] %}
     }
   </style>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       if (window.__faqInit) return;
       window.__faqInit = true;
@@ -176,7 +176,7 @@ us at {{ contact_email }} and we’ll make it right."} ] %}
   </script>
 
   
-  <script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
     {
       "@context": "https://schema.org",
       "@type": "FAQPage",

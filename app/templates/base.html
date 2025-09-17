@@ -1,20 +1,44 @@
-{# ===================== Base Context + Helpers (SV‑Elite, prod • refactor) ===================== #}
+{# ================= Base Context + Helpers — SV-Elite (enterprise refactor) ================ #}
+{# ---------- Core helpers (declare first so we can use them below) ---------- #}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+{% macro sri(path)   -%}{{ SRI.get(path) if SRI else None }}{%- endmacro %}
+{% macro asset(path) -%}
+  {%- if path -%}
+    {%- if url_for is defined -%}{{ url_for('static', filename=path, v=VER if VER else None) }}
+    {%- else -%}/static/{{ path.lstrip('/') }}{% endif -%}
+  {%- endif -%}
+{%- endmacro %}
+{% macro asset_abs(path) -%}
+  {%- set rel = asset(path) -%}
+  {%- if not rel -%}{% set _ = None %}{{ '' }}
+  {%- elif rel.startswith('http') or rel.startswith('//') -%}{{ rel }}
+  {%- elif request is defined -%}{{ request.url_root ~ rel.lstrip('/') }}
+  {%- else -%}{{ rel }}{% endif -%}
+{%- endmacro %}
+{% macro script_tag(src, module=false, defer=true, async=false, sri_key=None) -%}
+  <script {{ nonce_attr() }}{% if module %} type="module"{% endif %}{% if async %} async{% endif %}{% if defer %} defer{% endif %}
+          src="{{ src }}"{% if sri(sri_key) %} integrity="{{ sri(sri_key) }}" crossorigin="anonymous"{% endif %}></script>
+{%- endmacro %}
+{% macro link_css(href, sri_key=None) -%}
+  <link rel="stylesheet" href="{{ href }}"{% if sri(sri_key) %} integrity="{{ sri(sri_key) }}" crossorigin="anonymous"{% endif %}>
+{%- endmacro %}
 
 {# ---------- Inputs / team context ---------- #}
 {% set TEAM         = team|default(_team|default({})) %}
 {% set BRAND_HEX    = TEAM.theme_color|default('#f2c94c') %}
 {% set BRAND_NAME   = TEAM.team_name|default('Connect ATX Elite') %}
-{% set BRAND_SLUG   = (TEAM.team_slug|default(BRAND_NAME))|string|lower|replace(' ', '-')|replace('_', '-')|replace('--','-')|trim('-') %}
+{% set BRAND_SLUG   = (TEAM.team_slug or BRAND_NAME)|string|lower|replace(' ', '-')|replace('_','-')|replace('--','-')|trim('-') %}
 
 {# ---------- Runtime / environment ---------- #}
 {% set LOCALE       = LOCALE|default('en_US') %}
 {% set ROUTE        = request.endpoint if request is defined else '' %}
-{% set IS_DONATE    = (ROUTE == 'main.donate') %}
+{% set IS_DONATE    = ROUTE == 'main.donate' %}
 {% set VER          = ASSET_VER|default(ASSET_VERSION|default(VERSION|default(None))) %}
-{% set SRI          = SRI|default({}) %}
 {% set NONCE        = NONCE|default(csp_nonce() if csp_nonce is defined else '') %}
+{% set SRI          = SRI|default({}) %}
 {% set SKIN         = SKIN|default('default') %}
 {% set USE_SOCKETIO = USE_SOCKETIO|default(false) %}
+{% set DEBUG        = DEBUG|default(false) %}
 {% set GA_ID        = GA_ID|default(None) %}
 {% set POSTHOG_KEY  = POSTHOG_KEY|default(None) %}
 {% set POSTHOG_HOST = POSTHOG_HOST|default('https://app.posthog.com') %}
@@ -32,51 +56,25 @@
 {% set PEER_IMG     = PEER.og_image|default(PEER.avatar_url|default(PEER.photo_url|default(None))) %}
 {% set CAMP_TITLE   = CAMPAIGN.title|default(None) %}
 {% set CAMP_IMG     = CAMPAIGN.og_image|default(CAMPAIGN.cover_image|default(None)) %}
-{% set IS_P2P       = (PEER_NAME or CAMP_TITLE) and true or false %}
+{% set IS_P2P       = PEER_NAME or CAMP_TITLE %}
 
-{# ---------- Title/description/OG ---------- #}
+{# ---------- Title / description / OG ---------- #}
 {% set DESC_DEFAULT = 'Fuel the season. Fund the future.' %}
-{% set BASE_TITLE   = (IS_DONATE and TEAM.og_title_donate) or TEAM.og_title
-                      or (IS_DONATE and (BRAND_NAME ~ ' — Donate'))
-                      or (BRAND_NAME ~ ' — Fundraiser') %}
-{% set P2P_TITLE    = (PEER_NAME and (PEER_NAME ~ ' — ' ~ BRAND_NAME))
-                      or (CAMP_TITLE and (CAMP_TITLE ~ ' — ' ~ BRAND_NAME))
-                      or None %}
+{% set BASE_TITLE   = TEAM.og_title_donate if IS_DONATE else TEAM.og_title %}
+{% set BASE_TITLE   = BASE_TITLE or (BRAND_NAME ~ (IS_DONATE and ' — Donate' or ' — Fundraiser')) %}
+{% set P2P_TITLE    = (PEER_NAME and (PEER_NAME ~ ' — ' ~ BRAND_NAME)) or (CAMP_TITLE and (CAMP_TITLE ~ ' — ' ~ BRAND_NAME)) %}
 {% set PAGE_TITLE   = P2P_TITLE or BASE_TITLE %}
 {% set BASE_DESC    = (IS_DONATE and TEAM.og_description_donate) or TEAM.og_description or DESC_DEFAULT %}
-{% set P2P_DESC     = PEER.tagline|default(PEER.bio|default(None))
-                      or CAMPAIGN.tagline|default(CAMPAIGN.summary|default(None))
-                      or None %}
+{% set P2P_DESC     = PEER.tagline|default(PEER.bio|default(CAMPAIGN.tagline|default(CAMPAIGN.summary|default(None)))) %}
 {% set PAGE_DESC    = P2P_DESC or BASE_DESC %}
-
 {% set OG_BRAND_IMG = TEAM.og_image|default('images/og_default.jpg') %}
 {% set OG_IMG       = PEER_IMG or CAMP_IMG or OG_BRAND_IMG %}
 
-{# ---------------- Macros ---------------- #}
-{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
-{% macro sri(path)   -%}{{ SRI.get(path) if SRI else None }}{%- endmacro %}
-{% macro asset(path) -%}
-  {%- if path and path|length -%}
-    {%- if url_for is defined -%}
-      {{ url_for('static', filename=path, v=VER if VER else None) }}
-    {%- else -%}
-      {{ '/static/' ~ path }}
-    {%- endif -%}
-  {%- endif -%}
-{%- endmacro %}
-{% macro asset_abs(path) -%}
-  {% set rel = asset(path) %}
-  {% if rel and (rel[:4]=='http' or rel[:2]=='//') %}{{ rel }}
-  {% elif request is defined and rel %}{{ request.url_root ~ rel.lstrip('/') }}
-  {% else %}{{ rel or '' }}{% endif %}
-{%- endmacro %}
-
 <!doctype html>
-<html lang="en"
-      class="h-full antialiased selection:bg-white/20"
+<html lang="en" class="h-full antialiased selection:bg-white/20"
       data-theme="dark" data-brand="{{ BRAND_SLUG }}" data-route="{{ ROUTE|default('') }}" data-skin="{{ SKIN }}">
 <head>
-  <!-- ===================== Meta / Canonical ===================== -->
+  <!-- Meta / Canonical -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="color-scheme" content="dark light">
@@ -94,6 +92,8 @@
 
   <title>{% block title %}{{ PAGE_TITLE }}{% endblock %}</title>
   <meta name="description" content="{{ PAGE_DESC }}">
+
+  <!-- Open Graph / Twitter -->
   <meta property="og:type" content="{{ IS_P2P and 'profile' or 'website' }}">
   <meta property="og:site_name" content="{{ BRAND_NAME }}">
   <meta property="og:title" content="{{ PAGE_TITLE }}">
@@ -108,7 +108,7 @@
   <meta name="twitter:image:alt" content="{{ BRAND_NAME }}">
   {% if TEAM.twitter %}<meta name="twitter:site" content="{{ TEAM.twitter }}">{% endif %}
 
-  <!-- ===================== Icons / Manifest ===================== -->
+  <!-- Icons / Manifest -->
   <link rel="icon" type="image/svg+xml" href="{{ asset(FAVICON) }}">
   <link rel="alternate icon" type="image/png" href="{{ asset('images/favicon.png') }}">
   <link rel="apple-touch-icon" href="{{ asset(APPLE_ICON) }}">
@@ -120,18 +120,16 @@
     <meta name="apple-mobile-web-app-status-bar" content="black-translucent">
   {% endif %}
 
-  <!-- ===================== Hints ===================== -->
-  <link rel="dns-prefetch" href="https://js.stripe.com">
-  <link rel="dns-prefetch" href="https://checkout.stripe.com">
-  <link rel="preconnect" href="https://js.stripe.com" crossorigin>
-  <link rel="preconnect" href="https://checkout.stripe.com" crossorigin>
-  <link rel="preconnect" href="https://api.stripe.com" crossorigin>
+  <!-- Hints -->
+  {% for h in ['https://js.stripe.com','https://checkout.stripe.com','https://api.stripe.com'] %}
+    <link rel="dns-prefetch" href="{{ h }}"><link rel="preconnect" href="{{ h }}" crossorigin>
+  {% endfor %}
   {% if POSTHOG_KEY %}<link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>{% endif %}
   {% if USE_SOCKETIO %}<link rel="preconnect" href="/socket.io/" crossorigin>{% endif %}
   {% if request is defined %}<link rel="preconnect" href="{{ request.url_root }}">{% endif %}
 
-  <!-- ===================== Preload hero image ===================== -->
-  {% if hero_image_url is defined and hero_image_url %}
+  <!-- Preload hero (if provided) -->
+  {% if hero_image_url %}
     <link rel="preload" as="image" href="{{ hero_image_url }}" fetchpriority="high">
   {% else %}
     <link rel="preload" as="image"
@@ -141,27 +139,23 @@
           fetchpriority="high">
   {% endif %}
 
-  <!-- ===================== CSS ===================== -->
-  <link rel="stylesheet" href="{{ asset('css/app.min.css') }}"
-        {% if sri('css/app.min.css') %}integrity="{{ sri('css/app.min.css') }}" crossorigin="anonymous"{% endif %}>
-  {% if SKIN == 'shopify' %}
-    {% include "partials/_shopify_head_include.html" ignore missing %}
-  {% endif %}
+  <!-- CSS -->
+  {{ link_css(asset('css/app.min.css'), 'css/app.min.css') }}
+  {% if SKIN == 'shopify' %}{% include "partials/_shopify_head_include.html" ignore missing %}{% endif %}
   <link rel="stylesheet" href="{{ asset('starforge/brand-spine.css') }}">
   <link rel="modulepreload" href="{{ asset('starforge/enable-brand-spine.js') }}">
 
+  <!-- Design tokens / base utilities -->
   <style {{ nonce_attr() }}>
     :root{
       --fc-brand: {{ BRAND_HEX }}; --fc-gold: var(--fc-brand);
       --fc-ink:#0B0B10; --fc-ash:#1B1E26; --fc-coal:#111318;
       --container-max: 1200px; --container-reading: 72ch;
-      --radius-xl: 1.25rem;
-      --gutter: clamp(16px, 3vw, 28px);
+      --radius-xl: 1.25rem; --gutter: clamp(16px, 3vw, 28px);
       --section-y: clamp(1.6rem, 3.6vw, 3.2rem);
       --section-y-tight: calc(var(--section-y) * .65);
       --fc-header-h: 72px; --sticky-offset: var(--fc-header-h);
-      --safe-top: env(safe-area-inset-top, 0px);
-      --safe-bottom: env(safe-area-inset-bottom, 0px);
+      --safe-top: env(safe-area-inset-top, 0px); --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
     html{ scroll-padding-top: var(--fc-header-h) }
     .container{ max-width:var(--container-max); margin-inline:auto; padding-inline:var(--gutter) }
@@ -175,20 +169,16 @@
     .seam-after-hero{ padding-top: calc(var(--section-y-tight) * .5) }
     .section + .section{ padding-top: var(--section-y-tight) }
     section[aria-labelledby], section[id]{ scroll-margin-top: var(--sticky-offset) }
-    .stack > * + *{ margin-top: clamp(.6rem, .7vw, .9rem) }
-    .tight > * + *{ margin-top: .55rem }
+    .stack > * + *{ margin-top: clamp(.6rem, .7vw, .9rem) } .tight > * + *{ margin-top:.55rem }
     html, body{ overflow-x:hidden }
     .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
     @media (prefers-reduced-motion: reduce){
       *{ animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important }
     }
-    @media print{
-      header, footer, [role="dialog"]{ display:none !important }
-      .section{ padding-block:1rem }
-    }
+    @media print{ header, footer, [role="dialog"]{ display:none !important } .section{ padding-block:1rem } }
   </style>
 
-  <!-- ===================== JSON-LD ===================== -->
+  <!-- JSON-LD -->
   <script {{ nonce_attr() }} type="application/ld+json">
   {
     "@context":"https://schema.org",
@@ -220,31 +210,26 @@
   }
   </script>
 
-  <!-- ===================== Analytics bootstrap ===================== -->
+  <!-- Analytics bootstrap -->
   <script {{ nonce_attr() }}>
     window.dataLayer = window.dataLayer || [];
     window.fcTrack = function(event, props){
       try{ window.dataLayer.push({event, ...(props||{})}); }catch{}
-      try{ window.posthog?.capture && window.posthog.capture(event, props||{}); }catch{}
+      try{ window.posthog?.capture?.(event, props||{}); }catch{}
     };
   </script>
-
   {% if GA_ID %}
     <script {{ nonce_attr() }} async src="https://www.googletagmanager.com/gtag/js?id={{ GA_ID }}"></script>
     <script {{ nonce_attr() }}>
-      function gtag(){ (window.dataLayer = window.dataLayer || []).push(arguments); }
-      gtag('js', new Date());
-      gtag('config', '{{ GA_ID }}', { anonymize_ip:true, send_page_view:true });
+      function gtag(){(window.dataLayer=window.dataLayer||[]).push(arguments)}
+      gtag('js', new Date()); gtag('config','{{ GA_ID }}',{ anonymize_ip:true, send_page_view:true });
     </script>
   {% endif %}
   {% if POSTHOG_KEY %}
-    <link rel="preconnect" href="{{ POSTHOG_HOST }}" crossorigin>
     <script {{ nonce_attr() }}>
-      !function(d,w){var p=w.posthog||(w.posthog=[]),s=d.createElement("script");
-        s.async=true; s.src=("{{ POSTHOG_HOST }}".replace(/\/$/,"")||"https://app.posthog.com")+"/static/array.js";
-        var x=d.getElementsByTagName("script")[0]; x.parentNode.insertBefore(s,x);
-        p.init && p.init('{{ POSTHOG_KEY }}', { api_host:'{{ POSTHOG_HOST }}' });
-      }(document, window);
+      !function(d,w){var ph=w.posthog||(w.posthog=[]),s=d.createElement('script');
+        s.async=1;s.src=('{{ POSTHOG_HOST }}'.replace(/\/$/,'')||'https://app.posthog.com')+'/static/array.js';
+        d.head.appendChild(s); ph.init&&ph.init('{{ POSTHOG_KEY }}',{api_host:'{{ POSTHOG_HOST }}'});} (document,window);
     </script>
   {% endif %}
 
@@ -274,240 +259,99 @@
   {% block below_main %}{% endblock %}
   {% block footer %}{% include "partials/footer.html" ignore missing with context %}{% endblock %}
 
-  <!-- ===================== JS boot / fallbacks ===================== -->
+  <!-- JS boot with ESM + SRI fallback -->
   <link rel="modulepreload" href="{{ asset('js/main.js') }}">
-  <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}"
-        {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}>
-
+  <link rel="preload" as="script" href="{{ asset('js/bundle.min.js') }}" {% if sri('js/bundle.min.js') %}crossorigin="anonymous" integrity="{{ sri('js/bundle.min.js') }}"{% endif %}>
   <script {{ nonce_attr() }}>
-  (function(){
-    var head=document.head;
-    function addFallback(){
+    (function(){
+      var head=document.head;
+      function fallback(){
+        var s=document.createElement('script'); s.defer=true;
+        {% if sri('js/bundle.min.js') %}s.integrity="{{ sri('js/bundle.min.js') }}"; s.crossOrigin='anonymous';{% endif %}
+        s.src="{{ asset('js/bundle.min.js') }}"; head.appendChild(s);
+      }
       try{
-        var s=document.createElement('script');
-        s.defer=true;
-        {% if sri('js/bundle.min.js') %}s.integrity="{{ sri('js/bundle.min.js') }}"; s.crossOrigin="anonymous";{% endif %}
-        s.src="{{ asset('js/bundle.min.js') }}";
-        head.appendChild(s);
-      }catch(_){}}
-    try{
-      var esm=document.createElement('script');
-      esm.type='module'; esm.defer=true;
-      {% if NONCE %}esm.setAttribute('nonce','{{ NONCE }}');{% endif %}
-      esm.src="{{ asset('js/main.js') }}";
-      esm.onerror=addFallback;
-      head.appendChild(esm);
-    }catch(_){ addFallback(); }
-  })();
+        var m=document.createElement('script'); m.type='module'; m.defer=true;
+        {% if NONCE %}m.setAttribute('nonce','{{ NONCE }}');{% endif %}
+        m.src="{{ asset('js/main.js') }}"; m.onerror=fallback; head.appendChild(m);
+      }catch(_){ fallback(); }
+    })();
   </script>
 
-  {% if IS_DONATE %}
-    <script {{ nonce_attr() }} id="fc-donate" src="{{ asset('js/donate.min.js') }}" defer
-            {% if sri('js/donate.min.js') %}integrity="{{ sri('js/donate.min.js') }}" crossorigin="anonymous"{% endif %}></script>
-  {% endif %}
+  {% if IS_DONATE %}{{ script_tag(asset('js/donate.min.js'), defer=true, sri_key='js/donate.min.js') }}{% endif %}
   {% if USE_SOCKETIO %}<script {{ nonce_attr() }} src="/socket.io/socket.io.js" defer></script>{% endif %}
 
+  <!-- Dynamic theme meta color -->
   <script {{ nonce_attr() }}>
-    window.FC_CFG = { donorsURL: "/api/donors?limit=20" };
     (function(){
       var meta=document.getElementById('meta-theme-color'); if(!meta) return;
-      function setColor(){
-        try{ meta.setAttribute('content', matchMedia('(prefers-color-scheme: dark)').matches ? '#0b0b0c' : '{{ BRAND_HEX }}'); }catch(_){}}
-      setColor(); try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setColor); }catch{}
+      function setColor(){ meta.setAttribute('content', matchMedia('(prefers-color-scheme: dark)').matches ? '#0b0b0c' : '{{ BRAND_HEX }}'); }
+      setColor(); try{ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', setColor);}catch{}
     })();
   </script>
 
-  {% if SKIN == 'shopify' %}
-    {% include "partials/_shopify_body_include.html" ignore missing %}
-  {% endif %}
-
-  <!-- Sticky seam calc (minimal) -->
+  <!-- Sticky seam calc -->
   <script {{ nonce_attr() }}>
-  (() => {
-    if (window.__fcSeam) return; window.__fcSeam = true;
-    const root=document.documentElement;
-    const header=document.getElementById('site-header');
-    const ticker=document.getElementById('sponsor-leaderboard');
-    const calc=()=>{ const h=(header?.offsetHeight||0)+(ticker?.offsetHeight||0);
-      if(h>0){ root.style.setProperty('--fc-header-h', h+'px'); root.style.setProperty('--sticky-offset', h+'px'); }
-    };
-    const raf=()=>requestAnimationFrame(calc); raf();
-    if('ResizeObserver'in window){ const ro=new ResizeObserver(raf); header&&ro.observe(header); ticker&&ro.observe(ticker); }
-    addEventListener('resize', raf, { passive:true }); addEventListener('load', raf, { once:true });
-    document.addEventListener?.('htmx:afterSettle', raf);
-  })();
+    (() => {
+      if (window.__fcSeam) return; window.__fcSeam = true;
+      const root=document.documentElement, header=document.getElementById('site-header'), ticker=document.getElementById('sponsor-leaderboard');
+      const calc=()=>{ const h=(header?.offsetHeight||0)+(ticker?.offsetHeight||0);
+        if(h){ root.style.setProperty('--fc-header-h', h+'px'); root.style.setProperty('--sticky-offset', h+'px'); }
+      };
+      const raf=()=>requestAnimationFrame(calc); raf();
+      if('ResizeObserver' in window){ const ro=new ResizeObserver(raf); header&&ro.observe(header); ticker&&ro.observe(ticker); }
+      addEventListener('resize', raf, { passive:true }); addEventListener('load', raf, { once:true });
+      document.addEventListener?.('htmx:afterSettle', raf);
+    })();
   </script>
 
-  <script {{ nonce_attr() }} src="{{ asset('js/fc_elite.js') }}" defer
-          {% if sri('js/fc_elite.js') %}integrity="{{ sri('js/fc_elite.js') }}" crossorigin="anonymous"{% endif %}></script>
-  {% if url_for is defined %}
-    <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/ux.js') }}" defer></script>
-    <script {{ nonce_attr() }} src="{{ url_for('static', filename='js/lazy-img.js') }}" defer></script>
-  {% endif %}
-
-  <!-- ===== Tilt core (idempotent) ===== -->
-  <script {{ nonce_attr() }} type="module">
-(() => {
-  if (window.fcTiltInit) return; // run once
-  window.fcTiltInit = function(root=document){
-    const reduce = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (reduce) return;
-    root.querySelectorAll('.tilt-3d:not([data-tilt-bound])').forEach((node)=>{
-      node.dataset.tiltBound = "1";
-      const max  = +(node.getAttribute('data-tilt-max')||10);
-      const persp= +(node.getAttribute('data-tilt-perspective')||900);
-      const glare= node.getAttribute('data-tilt-glare')==='1';
-      const par  = node.getAttribute('data-tilt-parallax')==='1';
-      node.style.setProperty('--tilt-persp', persp + 'px');
-      const glareEl = node.querySelector('.holo-glare') || (()=>{ const g=document.createElement('div'); g.className='holo-glare'; g.setAttribute('aria-hidden','true'); node.appendChild(g); return g; })();
-
-      let raf=0,b=null,over=false,x=0,y=0;
-      const q = sel=>node.querySelectorAll(sel);
-      function setFromPointer(cx,cy){
-        if(!b) b=node.getBoundingClientRect();
-        const dx=(cx-(b.left+b.width/2))/(b.width/2);
-        const dy=(cy-(b.top+b.height/2))/(b.height/2);
-        x=Math.max(-1,Math.min(1,dx)); y=Math.max(-1,Math.min(1,dy));
-        if(!raf) raf=requestAnimationFrame(apply);
-      }
-      function apply(){
-        raf=0;
-        node.style.transform=`perspective(${persp}px) rotateX(${(-y*max).toFixed(2)}deg) rotateY(${(x*max).toFixed(2)}deg)`;
-        if(par){
-          q('.tilt-layer').forEach(el=>{
-            const dz=parseFloat(getComputedStyle(el).getPropertyValue('--z'))||0;
-            el.style.transform=`translateZ(${dz}px) translate(${(-x*dz/30).toFixed(1)}px, ${(y*dz/30).toFixed(1)}px)`;
-          });
-        }
-        if(glare && glareEl){
-          const gx=((x+1)/2)*100, gy=((y+1)/2)*100;
-          glareEl.style.setProperty('--gx',gx+'%');
-          glareEl.style.setProperty('--gy',gy+'%');
-          glareEl.style.opacity = over ? '.28' : '0';
-        }
-      }
-      function reset(){
-        node.style.transform=`perspective(${persp}px) rotateX(0) rotateY(0)`;
-        q('.tilt-layer').forEach(el=>{ el.style.transform=`translateZ(${getComputedStyle(el).getPropertyValue('--z')||'0px'})`; });
-        glareEl.style.opacity='0';
-      }
-      node.addEventListener('pointerenter',()=>{ over=true; },{passive:true});
-      node.addEventListener('pointermove',e=>setFromPointer(e.clientX,e.clientY),{passive:true});
-      node.addEventListener('pointerleave',()=>{ over=false; reset(); },{passive:true});
-      node.addEventListener('touchmove',e=>{ const t=e.touches?.[0]; if(t) setFromPointer(t.clientX,t.clientY); },{passive:true});
-    });
-  };
-
-  // base styles if hero isn’t present
-  const need = !document.querySelector('style[data-tilt-base]');
-  if (need){
-    const css = `
-      .tilt-3d{transform-style:preserve-3d; perspective:var(--tilt-persp,900px); will-change:transform}
-      .tilt-layer{ transform: translateZ(var(--z,0)) }
-      .holo-glare{ position:absolute; inset:-20%; pointer-events:none; opacity:0; mix-blend-mode:screen;
-        background:radial-gradient(120% 60% at var(--gx,50%) var(--gy,30%), rgba(255,255,255,.26), transparent 45%);
-        transition:opacity .18s ease; }
-      @media (prefers-reduced-motion:reduce){ .tilt-3d{transform:none} .holo-glare{opacity:.06} }
-    `.trim();
-    const el = document.createElement('style'); el.setAttribute('data-tilt-base','1'); el.textContent = css; document.head.appendChild(el);
-  }
-
-  // init anything already on the page
-  window.fcTiltInit();
-})();
-</script>
-
-  <!-- Section reveal + misc -->
+  <!-- P2P / UTM propagation -->
   <script {{ nonce_attr() }}>
-    (function(){
+    (() => {
+      const qs = new URLSearchParams(location.search);
+      const KEYS = ["ref","ref_id","peer","peer_id","peer_slug","campaign","campaign_id"];
       try{
-        const io=new IntersectionObserver((es)=>es.forEach(x=>x.isIntersecting&&x.target.classList.add('is-visible')), { rootMargin:"-10% 0px -5% 0px" });
-        document.querySelectorAll('.section').forEach(s=>io.observe(s));
+        const incoming = Object.fromEntries(KEYS.map(k=>[k, qs.get(k)]).filter(([,v])=>v));
+        if(Object.keys(incoming).length){
+          localStorage.setItem("fc_ref_ctx", JSON.stringify({v:1, ttl: Date.now()+30*24*3600*1000, data: incoming}));
+        }
       }catch{}
+      const merged = (()=>{ const out={}; KEYS.forEach(k=>{ const v=qs.get(k); if(v) out[k]=v; });
+        try{ const raw=localStorage.getItem('fc_ref_ctx'); if(raw){ const o=JSON.parse(raw); if(o?.ttl && Date.now()<=o.ttl && o.data){ for(const[k,v]of Object.entries(o.data)) if(v && !out[k]) out[k]=v; } } }catch{} return out; })();
+      const addParams = (url, extra={}) => {
+        try{ const u=new URL(url, location.origin); Object.entries({...merged, ...extra}).forEach(([k,v])=>{ if(v!=null&&v!=="") u.searchParams.set(k,v); }); return u.toString(); }
+        catch{ const sep=url.includes('?')?'&':'?'; return url + sep + new URLSearchParams({...merged, ...extra}).toString(); }
+      };
+      const decorate = (root=document) => {
+        root.querySelectorAll('a[href*="donate"], a[href*="sponsor"], a[data-p2p-propagate="1"]').forEach(a=>{
+          const where = a.getAttribute('data-analytics-meta') || '{}';
+          let medium = 'cta'; try{ const m=JSON.parse(where); if(m.where) medium = m.where; }catch{}
+          a.href = addParams(a.getAttribute('href')||'#', {utm_source:"site", utm_medium: medium, utm_campaign:"fundraiser"});
+          if (a.hasAttribute('data-payment-link') && !a.hasAttribute('target')) { a.target="_blank"; a.rel="nofollow noopener noreferrer"; }
+        });
+        root.querySelectorAll('[data-share]').forEach(btn=>{
+          try{ const area = btn.closest('#site-header,#fc-hero,#footer')?.id || 'body';
+            const p = JSON.parse(btn.getAttribute('data-share')||'{}');
+            p.url = addParams(p.url || location.href, {utm_source:"share",utm_medium:area.replace('fc-',''),utm_campaign:"fan_share"});
+            btn.setAttribute('data-share', JSON.stringify(p));
+          }catch{}
+        });
+      };
+      if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', decorate); else decorate();
     })();
   </script>
 
-  <!-- ==== P2P/UTM propagation (sandboxed, CSP-safe) ==== -->
-  <script {{ nonce_attr() }}>
-  (() => {
-    "use strict";
-    const qs = new URLSearchParams(location.search);
-    const KEYS = ["ref","ref_id","peer","peer_id","peer_slug","campaign","campaign_id"];
-    // Persist 30d TTL
-    try {
-      const incoming = Object.fromEntries(KEYS.map(k=>[k, qs.get(k)]).filter(([_,v])=>v));
-      if (Object.keys(incoming).length){
-        localStorage.setItem("fc_ref_ctx", JSON.stringify({v:1, ttl: Date.now()+30*24*3600*1000, data: incoming}));
-      }
-    } catch {}
-    // Merge (URL > stored)
-    const merged = (() => {
-      const out = {};
-      KEYS.forEach(k => { const v = qs.get(k); if (v) out[k]=v; });
-      try {
-        const raw = localStorage.getItem("fc_ref_ctx");
-        if (raw){
-          const obj = JSON.parse(raw);
-          if (obj?.ttl && Date.now() <= obj.ttl && obj.data){
-            for (const [k,v] of Object.entries(obj.data)) if (v && !out[k]) out[k]=v;
-          }
-        }
-      } catch {}
-      return out;
-    })();
-    const addParams = (url, extra={}) => {
-      try {
-        const u = new URL(url, location.origin);
-        Object.entries(merged).forEach(([k,v]) => { if(v!=null&&v!=="") u.searchParams.set(k,v); });
-        Object.entries(extra).forEach(([k,v]) => { if(v!=null&&v!=="") u.searchParams.set(k,v); });
-        return u.toString();
-      } catch {
-        const sep = url.includes("?") ? "&" : "?";
-        const p = new URLSearchParams({...merged, ...extra}).toString();
-        return url + sep + p;
-      }
-    };
-    const decorate = (root=document) => {
-      root.querySelectorAll('a[href*="donate"], a[href*="sponsor"], a[data-p2p-propagate="1"]').forEach(a=>{
-        const meta = a.getAttribute("data-analytics-meta");
-        let medium = "cta";
-        try{ const m=JSON.parse(meta||"{}"); if (m.where) medium=m.where; }catch{}
-        a.href = addParams(a.getAttribute("href")||"#", {utm_source:"site",utm_medium:medium,utm_campaign:"fundraiser"});
-        if (a.hasAttribute("data-payment-link") && !a.hasAttribute("target")) {
-          a.setAttribute("target","_blank"); a.setAttribute("rel","nofollow noopener noreferrer");
-        }
-      });
-      root.querySelectorAll('#hdr-share, #hero-share, [data-share]').forEach(btn=>{
-        try{
-          const area = btn.closest('#fc-hero,#site-header,#footer')?.id?.replace('fc-','') || 'body';
-          const payload = JSON.parse(btn.getAttribute('data-share')||'{}');
-          payload.url = addParams(payload.url || location.href, {utm_source:"share",utm_medium:area,utm_campaign:"fan_share"});
-          btn.setAttribute('data-share', JSON.stringify(payload));
-        }catch{}
-      });
-    };
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", decorate);
-    else decorate();
-  })();
-  </script>
-
-  <div class="mobile-cta"><a class="btn" href="#tiers" aria-label="Donate">Donate&nbsp;Now</a></div>
-
-  {% block body_scripts %}
-    {% include "partials/starforge_patch_include.html" ignore missing with context %}
-  {% endblock %}
+  {% if SKIN == 'shopify' %}{% include "partials/_shopify_body_include.html" ignore missing %}{% endif %}
+  {% block body_scripts %}{% include "partials/starforge_patch_include.html" ignore missing with context %}{% endblock %}
   {% block extra_js %}{% endblock %}
 
-  <!-- Avoid duplicate heroes -->
-  <script {{ nonce_attr() }} type="module">
-    const nodes=document.querySelectorAll('#fc-hero');
-    if(nodes.length>1){ [...nodes].slice(1).forEach(n=>n.remove()); console.warn('[fc-hero] duplicate removed'); }
-  </script>
-  <!-- DEV injects (remove for prod) -->
-  <script {{ nonce_attr() }} defer src="/static/js/qrcode.min.js"></script>
-  <script {{ nonce_attr() }} defer src="/static/js/hero-qr-init.js"></script>
-  <script {{ nonce_attr() }} defer src="/static/js/sse-meter.js"></script>
-  <script defer src="/static/js/qr-init-shim.js"></script>
+  {% if DEBUG %}
+    <!-- DEV helpers (strip in prod) -->
+    <script {{ nonce_attr() }} defer src="/static/js/qrcode.min.js"></script>
+    <script {{ nonce_attr() }} defer src="/static/js/hero-qr-init.js"></script>
+    <script {{ nonce_attr() }} defer src="/static/js/sse-meter.js"></script>
+    <script {{ nonce_attr() }} defer src="/static/js/qr-init-shim.js"></script>
+  {% endif %}
 </body>
 </html>
 

@@ -472,7 +472,7 @@ wall_list + [_s] %} {% endif %} {% endfor %}
     {% endif %}
   </section>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       const id = {{ sponsors_hub_id|tojson }};
       const root = document.getElementById(id); if (!root || root.__boot) return; root.__boot = true;

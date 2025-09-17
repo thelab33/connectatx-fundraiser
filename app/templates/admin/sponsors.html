@@ -32,7 +32,7 @@
     </form>
 
     
-    <script nonce="{{ NONCE }}">
+    <script {{ nonce_attr() }} nonce="{{ NONCE }}">
       document.addEventListener("DOMContentLoaded", function(){
         const searchInput = document.querySelector('input[name="q"]');
         const statusSelect = document.querySelector('select[name="status"]');

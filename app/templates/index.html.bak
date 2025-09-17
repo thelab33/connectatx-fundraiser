@@ -1,0 +1,345 @@
+{# =====================================================================
+index.html — Enterprise Minimal 2.2 (CSP-safe, a11y, sticky section dock)
+===================================================================== #}
+{% extends "base.html" %}
+{% set PAGE_HAS_HERO = true %}
+
+{# -------- Flags (URL-overridable) -------- #}
+{% set _q = request.args if request is defined else {} %}
+{% set _OFF = ['0','false','off','no','disable'] %}
+{% set SHOW_TIERS  = (show_tiers  if show_tiers  is defined else (_q.get('tiers','1')  |lower not in _OFF)) %}
+{% set SHOW_IMPACT = (show_impact if show_impact is defined else (_q.get('impact','1') |lower not in _OFF)) %}
+{% set SHOW_ABOUT  = (show_about  if show_about  is defined else (_q.get('about','1')  |lower not in _OFF)) %}
+
+{# -------- Nonce passthrough -------- #}
+{% if NONCE is not defined %}{% set NONCE = csp_nonce() if csp_nonce is defined else '' %}{% endif %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+
+{# -------- OG image fallback (absolute URL) -------- #}
+{% set _og_raw = (
+  (hero_image_url if hero_image_url is defined and hero_image_url) or
+  (team.hero_bg if team and team.hero_bg) or
+  (team.hero_image if team and team.hero_image) or
+  (team.team_photo if team and team.team_photo) or
+  (team.photo_url if team and team.photo_url) or ''
+) %}
+{% set OG_IMAGE = (
+  _og_raw if '://' in _og_raw else (url_for('static', filename=_og_raw.lstrip('/'), _external=True) if (url_for is defined and _og_raw) else _og_raw)
+) %}
+{% set THEME_HEX  = theme_hex|default('#facc15') %}
+{% set META_DESC  = meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set TEAM_NAME  = team.name if team and team.name else (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+
+{% block title %}{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}{% endblock %}
+{% block h1 %}{% endblock %}
+
+{% block extra_head %}
+{{ super() }}
+{# --- SEO --- #}
+<meta name="description" content="{{ META_DESC }}" />
+{% if request is defined %}<link rel="canonical" href="{{ request.base_url }}"/>{% endif %}
+
+{# --- Open Graph / Twitter Cards --- #}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="FundChamps" />
+<meta property="og:title" content="{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}" />
+<meta property="og:description" content="{{ META_DESC }}" />
+{% if request is defined %}<meta property="og:url" content="{{ request.base_url }}" />{% endif %}
+{% if OG_IMAGE %}<meta property="og:image" content="{{ OG_IMAGE }}" />{% endif %}
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="{{ fundraiser_title or 'Fuel the Season — Fund the Future' }}" />
+<meta name="twitter:description" content="{{ META_DESC }}" />
+{% if OG_IMAGE %}<meta name="twitter:image" content="{{ OG_IMAGE }}" />{% endif %}
+
+{# --- Theming (browser UI) --- #}
+<meta name="theme-color" content="{{ THEME_HEX }}" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+{# --- Perf hints --- #}
+<link rel="dns-prefetch" href="//checkout.stripe.com" />
+<link rel="dns-prefetch" href="//js.stripe.com" />
+<link rel="dns-prefetch" href="//www.paypal.com" />
+<link rel="preconnect" href="https://checkout.stripe.com" crossorigin />
+<link rel="preconnect" href="https://js.stripe.com" crossorigin />
+<link rel="preconnect" href="https://www.paypal.com" crossorigin />
+
+{# --- Structured data --- #}
+<script {{ nonce_attr() }} type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"WebPage",
+  "name": {{ (fundraiser_title or 'Fuel the Season — Fund the Future') | tojson }},
+  "description": {{ META_DESC | tojson }},
+  {% if request is defined %}"url": {{ request.base_url | tojson }},{% endif %}
+  "isPartOf": {
+    "@type": "Organization",
+    "name": {{ TEAM_NAME | tojson }},
+    {% if team and (team.logo_url or team.logo) %}"logo": {{ (team.logo_url or team.logo) | tojson }},{% endif %}
+    "url": {{ (request.base_url if request is defined else '/') | tojson }}
+  }
+}
+</script>
+
+{# --- Layout polish + Sticky Section Dock --- #}
+<style {{ nonce_attr() }}>
+  :root{ --dock-h: 0px; }
+
+  .container{ inline-size:min(1280px,96vw); } /* 2-up hero breathing room */
+
+  .section{ padding-block:clamp(0.9rem,2.2vw,1.8rem); scroll-margin-top: calc(var(--sticky-offset,72px) + var(--dock-h,0px) + 12px); }
+  .section--tight{ padding-block:clamp(0.7rem,1.6vw,1.1rem); }
+
+  /* Skip link */
+  .skip-link{ position:absolute; inset-inline-start:-9999px; block-size:1px; inline-size:1px; overflow:hidden; }
+  .skip-link:focus{ position:fixed; z-index:50; inset:12px auto auto 12px; padding:.55rem .8rem; background:#111; color:#fff; border-radius:.55rem; outline:2px solid #fff; }
+
+  /* Section reveal (motion-safe) */
+  .section{ opacity:.001; translate:0 8px; transition:opacity .45s ease, translate .45s ease; }
+  .section.is-visible{ opacity:1; translate:0 0; }
+  @media (prefers-reduced-motion:reduce){
+    .section{ opacity:1 !important; translate:none !important; transition:none !important; }
+  }
+
+  /* Tiers grid (1→2→3) without touching partial */
+  #tiers .grid{ display:grid!important; gap:.7rem!important; grid-template-columns:1fr!important; }
+  @media (min-width:700px){ #tiers .grid{ grid-template-columns:repeat(2,minmax(0,1fr))!important; } }
+  @media (min-width:980px){ #tiers .grid{ grid-template-columns:repeat(3,minmax(0,1fr))!important; } }
+  #tiers .flip-card{ aspect-ratio:1/1.05; overflow:visible; }
+  #tiers .flip-face.front{ padding:.9rem; }
+  #tiers .flip-back{ padding:1rem; }
+
+  /* Collapsibles */
+  details.fc-fold{ background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); border-radius:1rem; overflow:hidden; }
+  .fc-fold>summary{ cursor:pointer; list-style:none; padding:.9rem 1rem; font-weight:1000; display:flex; align-items:center; gap:.6rem; background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.06)); position:relative; }
+  .fc-fold>summary::-webkit-details-marker{ display:none; }
+  .fc-fold>summary::after{ content:""; inline-size:.6rem; block-size:.6rem; border-inline-end:2px solid currentColor; border-block-end:2px solid currentColor; transform:rotate(-45deg); margin-inline-start:auto; opacity:.8; transition:transform .25s ease; }
+  .fc-fold[open]>summary::after{ transform:rotate(45deg); }
+  .fc-fold[open]>summary{ border-bottom:1px solid rgba(255,255,255,.1); }
+  .fc-fold .fold-body{ padding:1rem; }
+
+  /* ===== Sticky Section Dock (appears after hero) ===== */
+  #section-dock{
+    position:sticky; top:calc(var(--sticky-offset,64px)); z-index:45;
+    translate:0 calc(-1 * var(--dock-h,0px)); /* prevents push when hidden */
+    border-block:1px solid rgba(255,255,255,.08);
+    background:linear-gradient(180deg,rgba(10,11,14,.88),rgba(10,11,14,.66));
+    backdrop-filter:blur(8px) saturate(140%);
+    transition:opacity .24s ease, transform .24s ease;
+    opacity:0; transform:translateY(-8px);
+  }
+  #section-dock.is-on{ opacity:1; transform:translateY(0); }
+  #section-dock .dock-inner{
+    inline-size:var(--fc-container,min(1152px,94vw));
+    margin-inline:auto; padding:.5rem .6rem;
+    display:flex; align-items:center; gap:.6rem;
+  }
+  .dock-chip{
+    display:inline-flex; align-items:center; gap:.4rem;
+    padding:.44rem .7rem; border-radius:.7rem; font-weight:900;
+    color:#e9eef7; text-decoration:none;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
+  }
+  .dock-chip[aria-current="page"]{ background:rgba(255,255,255,.14); color:#fff; }
+  .dock-spacer{ flex:1 1 auto; }
+  .dock-progress{ display:flex; align-items:center; gap:.45rem; font-weight:1000; color:#eef2f8; }
+  .dock-bar{ inline-size:120px; block-size:8px; border-radius:999px; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.12); overflow:hidden; }
+  .dock-bar i{ display:block; inline-size:var(--pct,0%); block-size:100%; background:linear-gradient(90deg,#fffbe6,var(--fc-accent,#facc15)); }
+  .dock-donate{ background:linear-gradient(180deg,#fffbe6,var(--fc-accent,#facc15)); color:#0b0f15; border:1px solid rgba(0,0,0,.22); padding:.56rem .9rem; border-radius:999px; font-weight:1000; box-shadow:0 8px 18px rgba(234,179,8,.22); text-decoration:none; }
+  @media (max-width:760px){
+    .dock-chip.hide-sm{ display:none; }
+    .dock-bar{ inline-size:88px; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# 1) HERO — partial owns its CSS/JS (incl. rail/meters) #}
+{% include "partials/hero_and_fundraiser.html" ignore missing with context %}
+
+{# 1.5) Sticky Section Dock (lives outside hero) #}
+<nav id="section-dock" class="print:hidden" aria-label="Section navigation" hidden>
+  <div class="dock-inner">
+    <a class="dock-chip" href="#tiers"  data-nav="#tiers">Tiers</a>
+    <a class="dock-chip" href="#impact" data-nav="#impact">Impact</a>
+    <a class="dock-chip" href="#about"  data-nav="#about">About</a>
+    <span class="dock-spacer" aria-hidden="true"></span>
+    <div class="dock-progress" aria-live="polite">
+      <span class="dock-pct">0%</span>
+      <span class="dock-bar" aria-hidden="true"><i id="dock-bar" style="--pct:0%"></i></span>
+    </div>
+    <a id="dock-donate" class="dock-donate" href="/donate" data-payment-link data-medium="dock_donate" aria-label="Donate">Donate</a>
+  </div>
+</nav>
+
+<main id="main" tabindex="-1">
+  {# Optional mid-ribbon if you want a punch after hero; harmless if missing #}
+  {% include "partials/mid_cta_ribbon.html" ignore missing with context %}
+
+  {# 2) TIERS #}
+  {% if SHOW_TIERS %}
+  {% include "partials/tiers.html" ignore missing with context %}
+  {% endif %}
+
+  {# 3) IMPACT (module + collapsible) #}
+  {% if SHOW_IMPACT %}
+  <section id="impact" class="section section--tight">
+    <div class="container">
+      <details class="fc-fold" data-fold="impact" open>
+        <summary id="impact-h2" class="module-head" role="button" aria-controls="impact-body" aria-expanded="true">
+          <h2 class="fc-h2">Your Impact</h2>
+          <span class="fold-kbd">less scroll</span>
+        </summary>
+        <div id="impact-body" class="fold-body module-body">
+          {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+        </div>
+      </details>
+    </div>
+  </section>
+  {% endif %}
+
+  {# 4) ABOUT (module + collapsible) #}
+  {% if SHOW_ABOUT %}
+  <section id="about" class="section section--tight">
+    <div class="container">
+      <details class="fc-fold" data-fold="about">
+        <summary id="about-h2" class="module-head" role="button" aria-controls="about-body" aria-expanded="false">
+          <h2 class="fc-h2">About {{ team.team_name or 'Our Program' }}</h2>
+        </summary>
+        <div id="about-body" class="fold-body module-body">
+          {% include "partials/about_section.html" ignore missing with context %}
+        </div>
+      </details>
+    </div>
+  </section>
+  {% endif %}
+</main>
+
+{% endblock %}
+
+{% block body_scripts %}
+{{ super() }}
+
+<script {{ nonce_attr() }}>
+(() => {
+  "use strict";
+  const $ = (s, r=document) => r.querySelector(s);
+  const $$ = (s, r=document) => Array.from(r.querySelectorAll(s));
+
+  /* Motion-safe reveal */
+  try{
+    const rm = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(!rm){
+      const io = new IntersectionObserver((es)=>es.forEach(x=>x.isIntersecting && x.target.classList.add('is-visible')),
+        { rootMargin:'-10% 0px -5% 0px', threshold:[0,0.15,0.35,1] });
+      $$('.section').forEach(s=>io.observe(s));
+      addEventListener('pagehide', ()=>io.disconnect(), { once:true });
+    }else{ $$('.section').forEach(s=>s.classList.add('is-visible')); }
+  }catch{}
+
+  /* Persist <details> state */
+  try{
+    const key = id => `fold:${id}`;
+    $$('details.fc-fold[data-fold]').forEach(d=>{
+      const id = d.getAttribute('data-fold'); const saved = localStorage.getItem(key(id));
+      if(saved==='open') d.setAttribute('open',''); if(saved==='closed') d.removeAttribute('open');
+      const sum = d.querySelector('summary'); const bodyId = sum?.getAttribute('aria-controls');
+      const sync = ()=>{
+        const open = d.hasAttribute('open'); sum?.setAttribute('aria-expanded', open?'true':'false');
+        if(bodyId){ const b = document.getElementById(bodyId); if(b) b.hidden = false; }
+        try{ localStorage.setItem(key(id), open?'open':'closed'); }catch{}
+      };
+      d.addEventListener('toggle', sync); sync();
+    });
+  }catch{}
+
+  /* Hash → open fold & smooth jump */
+  try{
+    const openAndJump = (id)=>{
+      const d = document.querySelector(`details.fc-fold[data-fold="${id}"]`); if(!d) return;
+      if(!d.open) d.open = true;
+      (d.querySelector('.fold-body') || d).scrollIntoView({ behavior: 'smooth', block:'start' });
+    };
+    const sync = ()=>{
+      const h = (location.hash||'').toLowerCase();
+      if(h==='#impact') openAndJump('impact');
+      if(h==='#about')  openAndJump('about');
+    };
+    sync(); addEventListener('hashchange', sync, { passive:true });
+  }catch{}
+
+  /* ===== Sticky Section Dock ===== */
+  (()=>{
+    const dock = document.getElementById('section-dock'); if(!dock) return;
+    const pctEl = dock.querySelector('.dock-pct'); const bar = document.getElementById('dock-bar');
+    const donate = document.getElementById('dock-donate');
+    dock.hidden = false;
+
+    // Measure dock once visible; expose height so sections can offset correctly
+    const syncDockH = ()=>{ document.documentElement.style.setProperty('--dock-h', dock.offsetHeight+'px'); };
+    const show = ()=>{ dock.classList.add('is-on'); syncDockH(); };
+    const hide = ()=>{ dock.classList.remove('is-on'); syncDockH(); };
+
+    // Appears when hero is mostly out of view
+    try{
+      const hero = document.getElementById('fc-hero') || document.querySelector('[data-theme="athletic"]');
+      if(hero && 'IntersectionObserver' in window){
+        const io = new IntersectionObserver((es)=>{
+          const e = es[0]; if(!e) return;
+          if(e.intersectionRatio < 0.25) show(); else hide();
+        }, { threshold:[0, .25, .5, 1] });
+        io.observe(hero);
+        addEventListener('pagehide', ()=>io.disconnect(), { once:true });
+      } else { show(); }
+    }catch{ show(); }
+
+    // Pull goal/raised from header (keeps a single source of truth)
+    try{
+      const hdr = document.getElementById('site-header');
+      const fmtPct = (p)=> (Math.round(p*10)/10).toString().replace(/\.0$/,'') + '%';
+      const update = (raised, goal)=>{
+        goal = Math.max(1, Number(goal||0));
+        raised = Math.max(0, Number(raised||0));
+        const pct = Math.min(100, (raised/goal)*100);
+        pctEl.textContent = fmtPct(pct);
+        bar && bar.style.setProperty('--pct', pct.toFixed(1)+'%');
+      };
+      const init = ()=> update(hdr?.dataset.raised, hdr?.dataset.goal);
+      init();
+
+      // Listen for hero progress events if present
+      addEventListener('fc:progress', (e)=> update(e.detail?.raised, e.detail?.goal), { passive:true });
+      // Header SSE/poll doesn’t dispatch, so also poll the dataset occasionally
+      setInterval(init, 15000);
+
+      // Align donate link with current payment context (header already handles UTM/preconnect)
+      const hdrDonate = document.getElementById('hdr-donate');
+      if(hdrDonate && donate){ donate.href = hdrDonate.getAttribute('href') || donate.href; }
+    }catch{}
+
+    // Active section highlighting
+    try{
+      const chips = Array.from(dock.querySelectorAll('.dock-chip[data-nav]'));
+      const sections = chips.map(a => document.querySelector(a.dataset.nav || a.getAttribute('href')));
+      const io = new IntersectionObserver((es)=>{
+        const vis = es.filter(x=>x.isIntersecting).sort((a,b)=>b.intersectionRatio - a.intersectionRatio)[0];
+        if(!vis) return;
+        const idx = sections.indexOf(vis.target);
+        chips.forEach((a,i)=> i===idx ? a.setAttribute('aria-current','page') : a.removeAttribute('aria-current'));
+      }, { rootMargin:'-45% 0px -45% 0px', threshold:[0, .2, .6, 1] });
+      sections.forEach(s=> s && io.observe(s));
+      addEventListener('pagehide', ()=>io.disconnect(), { once:true });
+      // Smooth local nav (respects reduced motion)
+      const rm = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+      chips.forEach(a=>{
+        a.addEventListener('click', (e)=>{
+          const href = a.getAttribute('href')||'';
+          if(href.startsWith('#')){ e.preventDefault(); const t = document.querySelector(href); if(t){ t.scrollIntoView({ behavior: rm?'auto':'smooth', block:'start' }); history.replaceState(null,'',href); } }
+        }, { passive:false });
+      });
+    }catch{}
+  })();
+})();
+</script>
+{% endblock %}
+

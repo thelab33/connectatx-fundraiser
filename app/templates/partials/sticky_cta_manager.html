@@ -52,7 +52,7 @@ missing with context %} {% set NONCE = NONCE if NONCE is defined else
     }
   </style>
 
-  <script {{ nonce_attr() }}nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
     (() => {
       if (window.__fcStickyMgr) return;
       window.__fcStickyMgr = true;

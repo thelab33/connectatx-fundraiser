@@ -362,7 +362,7 @@ sponsor_key(s) -%} {{- (s.id|string if s.id is defined and s.id is not none else
 
 <div id="sponsor-modal-root"></div>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     if (window.__fcSponsorWallInit) return; window.__fcSponsorWallInit = true;
 

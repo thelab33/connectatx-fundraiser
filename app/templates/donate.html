@@ -71,7 +71,7 @@ content %}
 </section>
 
  
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   window.requestAnimationFrame(() => {
     if (typeof window.openDonationModal === "function")
       window.openDonationModal();

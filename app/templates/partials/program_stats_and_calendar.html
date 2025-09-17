@@ -243,7 +243,7 @@
   </div>
 </section>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
 (() => {
   if (window.__tiersBound) return; window.__tiersBound = true;
 
@@ -491,7 +491,7 @@
 })();
 </script>
 
-<script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
 {
   "@context": "https://schema.org",
   "@type": "OfferCatalog",

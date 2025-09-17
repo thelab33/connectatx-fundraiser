@@ -10,7 +10,7 @@ defined else '') %}
 
 {% macro launch_confetti( sound="yes", particle_count=120, spread=80,
 duration=3, audio_file="cheer.mp3" ) %}
-<script nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} nonce="{{ NONCE }}">
   window.launchConfetti = function() {
     // Confetti.js (canvas-confetti) integration
     if (window.confetti) {

@@ -136,7 +136,7 @@
 
 
 {% if include_faq_jsonld and faqs and faqs|length > 0 %}
-  <script {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
+  <script {{ nonce_attr() }} {{ nonce_attr() }}type="application/ld+json" nonce="{{ NONCE }}">
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -161,7 +161,7 @@
   @media (max-width:640px){ #ai-concierge-btn{right:1rem;bottom:5.5rem}}
 </style>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
 (() => {
   if (window.__aiConciergeBound) return; window.__aiConciergeBound = true;
 

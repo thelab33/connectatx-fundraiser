@@ -50,7 +50,7 @@ make an impact.\"" ] %}
   </div>
 </div>
 
-<script {{ nonce_attr() }}nonce="{{ NONCE }}">
+<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
   (() => {
     const bar = document.getElementById("fc-testimonial-scrollbar");
     if (!bar || bar.__init) return;
