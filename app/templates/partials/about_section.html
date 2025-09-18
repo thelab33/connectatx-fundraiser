@@ -3,16 +3,27 @@
   <div class="shell">
     <header class="head">
       <h2 class="title">About <span class="accent">Connect ATX Elite</span></h2>
-      <p class="sub">We build confident student‑athletes through competitive play, academic support, and community service.</p>
+      <p class="sub">
+        We build confident student‑athletes through competitive play, academic
+        support, and community service.
+      </p>
     </header>
 
     <div class="grid">
       <figure class="photo">
-        <img src="/static/images/about/locker-room.jpg" alt="Team in the locker room" loading="lazy" decoding="async">
+        <img
+          src="/static/images/about/locker-room.jpg"
+          alt="Team in the locker room"
+          loading="lazy"
+          decoding="async"
+        />
       </figure>
 
       <div class="story">
-        <p class="lede">Every dollar you give fuels gear, travel, and tutoring so our kids can compete hard and study harder. We keep overhead low and impact high.</p>
+        <p class="lede">
+          Every dollar you give fuels gear, travel, and tutoring so our kids can
+          compete hard and study harder. We keep overhead low and impact high.
+        </p>
 
         <ul class="bullets" role="list">
           <li>✅ Academic support & after‑practice study hall</li>
@@ -21,16 +32,27 @@
         </ul>
 
         <details class="more">
-          <summary class="more-btn" role="button" aria-controls="about-body">Read our full story</summary>
+          <summary class="more-btn" role="button" aria-controls="about-body">
+            Read our full story
+          </summary>
           <div id="about-body" class="more-body">
-            <p>Founded by local educators and coaches, Connect ATX Elite partners with families to open doors on and off the court. Our program is built around three pillars: <strong>character</strong>, <strong>classroom</strong>, and <strong>competition</strong>.</p>
-            <p>Thanks to donors like you we maintain a <strong>3.5 team GPA</strong>, travel to national qualifiers, and provide mentorship that lasts long after the final buzzer.</p>
+            <p>
+              Founded by local educators and coaches, Connect ATX Elite partners
+              with families to open doors on and off the court. Our program is
+              built around three pillars: <strong>character</strong>,
+              <strong>classroom</strong>, and <strong>competition</strong>.
+            </p>
+            <p>
+              Thanks to donors like you we maintain a
+              <strong>3.5 team GPA</strong>, travel to national qualifiers, and
+              provide mentorship that lasts long after the final buzzer.
+            </p>
           </div>
         </details>
 
         <div class="cta-row">
           <a href="/donate" class="btn btn-gold">Donate Now →</a>
-          <a href="#impact" class="btn btn-ghost">See Impact</a>
+          <a href="#impact-v2" class="btn btn-ghost">See Impact</a>
         </div>
       </div>
     </div>
@@ -38,30 +60,131 @@
 </section>
 
 <style>
-/* About v2 — self-contained */
-.section.about-v2{ --accent:#facc15; --ink:#0b0c10; color:#e9eef9; background:transparent }
-.section.about-v2 .shell{ max-width:min(1380px,98vw); margin-inline:auto; padding-inline:clamp(14px,2.6vw,28px); padding-block:clamp(24px,4vw,44px) }
-.section.about-v2 .head{ display:grid; gap:.4rem; margin-bottom:clamp(14px,2vw,18px) }
-.section.about-v2 .title{ font-size:clamp(1.4rem,1rem + 1.8vw,2.1rem); font-weight:1000; letter-spacing:-.02em }
-.section.about-v2 .title .accent{ color:var(--accent) }
-.section.about-v2 .sub{ color:#cdd6e3; max-width:70ch }
+  /* About v2 — self-contained */
+  .section.about-v2 {
+    --accent: #facc15;
+    --ink: #0b0c10;
+    color: #e9eef9;
+    background: transparent;
+  }
+  .section.about-v2 .shell {
+    max-width: min(1380px, 98vw);
+    margin-inline: auto;
+    padding-inline: clamp(14px, 2.6vw, 28px);
+    padding-block: clamp(24px, 4vw, 44px);
+  }
+  .section.about-v2 .head {
+    display: grid;
+    gap: 0.4rem;
+    margin-bottom: clamp(14px, 2vw, 18px);
+  }
+  .section.about-v2 .title {
+    font-size: clamp(1.4rem, 1rem + 1.8vw, 2.1rem);
+    font-weight: 1000;
+    letter-spacing: -0.02em;
+  }
+  .section.about-v2 .title .accent {
+    color: var(--accent);
+  }
+  .section.about-v2 .sub {
+    color: #cdd6e3;
+    max-width: 70ch;
+  }
 
-.section.about-v2 .grid{ display:grid; gap:clamp(14px,2vw,22px) }
-@media (min-width:960px){ .section.about-v2 .grid{ grid-template-columns: 1.1fr 1fr; align-items:center } }
+  .section.about-v2 .grid {
+    display: grid;
+    gap: clamp(14px, 2vw, 22px);
+  }
+  @media (min-width: 960px) {
+    .section.about-v2 .grid {
+      grid-template-columns: 1.1fr 1fr;
+      align-items: center;
+    }
+  }
 
-.section.about-v2 .photo{ border-radius:1rem; overflow:hidden; margin:0; background:linear-gradient(180deg,rgba(17,17,17,.62),rgba(17,17,17,.48)); border:1px solid rgba(255,255,255,.12) }
-.section.about-v2 .photo img{ width:100%; height:100%; object-fit:cover; aspect-ratio:16/10; display:block; filter:saturate(1.02) contrast(1.03) brightness(.96) }
+  .section.about-v2 .photo {
+    border-radius: 1rem;
+    overflow: hidden;
+    margin: 0;
+    background: linear-gradient(
+      180deg,
+      rgba(17, 17, 17, 0.62),
+      rgba(17, 17, 17, 0.48)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.12);
+  }
+  .section.about-v2 .photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    aspect-ratio: 16/10;
+    display: block;
+    filter: saturate(1.02) contrast(1.03) brightness(0.96);
+  }
 
-.section.about-v2 .story .lede{ font-size:1.05rem; color:#eaf0fa }
-.section.about-v2 .bullets{ display:grid; gap:.45rem; margin:.9rem 0 1.1rem; padding-left:0; list-style:none }
-.section.about-v2 .bullets li{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); padding:.55rem .7rem; border-radius:.7rem; font-weight:900; color:#e9eef9 }
+  .section.about-v2 .story .lede {
+    font-size: 1.05rem;
+    color: #eaf0fa;
+  }
+  .section.about-v2 .bullets {
+    display: grid;
+    gap: 0.45rem;
+    margin: 0.9rem 0 1.1rem;
+    padding-left: 0;
+    list-style: none;
+  }
+  .section.about-v2 .bullets li {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 0.55rem 0.7rem;
+    border-radius: 0.7rem;
+    font-weight: 900;
+    color: #e9eef9;
+  }
 
-.section.about-v2 .more{ margin-top:.2rem }
-.section.about-v2 .more-btn{ display:inline-flex; align-items:center; gap:.45rem; padding:.5rem .75rem; border-radius:.7rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); font-weight:900; cursor:pointer }
-.section.about-v2 .more-body{ margin-top:.65rem; color:#dfe6f3 }
+  .section.about-v2 .more {
+    margin-top: 0.2rem;
+  }
+  .section.about-v2 .more-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.7rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    font-weight: 900;
+    cursor: pointer;
+  }
+  .section.about-v2 .more-body {
+    margin-top: 0.65rem;
+    color: #dfe6f3;
+  }
 
-.section.about-v2 .cta-row{ display:flex; gap:.55rem; flex-wrap:wrap; margin-top:1rem }
-.section.about-v2 .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.5rem; border-radius:999px; font-weight:900; padding:.82rem 1.15rem; text-decoration:none }
-.section.about-v2 .btn-gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#111; border:1px solid rgba(0,0,0,.18) }
-.section.about-v2 .btn-ghost{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.16); color:#e5e7eb }
+  .section.about-v2 .cta-row {
+    display: flex;
+    gap: 0.55rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+  .section.about-v2 .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    font-weight: 900;
+    padding: 0.82rem 1.15rem;
+    text-decoration: none;
+  }
+  .section.about-v2 .btn-gold {
+    background: linear-gradient(180deg, #fffbe6, var(--accent));
+    color: #111;
+    border: 1px solid rgba(0, 0, 0, 0.18);
+  }
+  .section.about-v2 .btn-ghost {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #e5e7eb;
+  }
 </style>

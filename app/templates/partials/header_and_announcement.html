@@ -1,19 +1,27 @@
-{# ================== Header — SV-Elite 5.1 “Halo” (full-bleed, CSP/a11y) ================== #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% set HAS_ENDPOINT = has_endpoint is defined %}
-{% set _sf = safe_url_for is defined and safe_url_for %}
-{% set href_home   = (_sf and HAS_ENDPOINT and has_endpoint('main.home')   and safe_url_for('main.home'))   or '/' %}
-{% set href_donate = (_sf and HAS_ENDPOINT and has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate' %}
-{% set BRAND_NAME  = (BRAND_NAME if BRAND_NAME is defined and BRAND_NAME) or 'FundChamps' %}
-{% set team_name   = (team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set crest       = (team.logo_url or team.logo or team.favicon if team else None) %}
-{% set accent_hex  = theme_hex|default('#facc15') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{# ================== Header — SV-Elite 5.1 “Halo” (full-bleed, CSP/a11y)
+================== #} {% set NONCE = NONCE if NONCE is defined else (csp_nonce()
+if csp_nonce is defined else '') %} {% set HAS_ENDPOINT = has_endpoint is
+defined %} {% set _sf = safe_url_for is defined and safe_url_for %} {% set
+href_home = (_sf and HAS_ENDPOINT and has_endpoint('main.home') and
+safe_url_for('main.home')) or '/' %} {% set href_donate = (_sf and HAS_ENDPOINT
+and has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate' %}
+{% set BRAND_NAME = (BRAND_NAME if BRAND_NAME is defined and BRAND_NAME) or
+'FundChamps' %} {% set team_name = (team.team_name if team and team.team_name
+else 'Connect ATX Elite') %} {% set crest = (team.logo_url or team.logo or
+team.favicon if team else None) %} {% set accent_hex =
+theme_hex|default('#facc15') %} {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%-
+endmacro %}
 
 <a href="#main" class="skip-link">Skip to content</a>
 
-<header id="site-header" class="hdr hdr--halo" role="banner" aria-label="Site header"
-        data-accent="{{ accent_hex }}" style="--accent: {{ accent_hex }};">
+<header
+  id="site-header"
+  class="hdr hdr--halo"
+  role="banner"
+  aria-label="Site header"
+  data-accent="{{ accent_hex }}"
+  style="--accent: {{ accent_hex }};"
+>
   <!-- ambient band -->
   <div class="hdr-band" aria-hidden="true"></div>
 
@@ -21,14 +29,26 @@
   <div class="frame glass rounded-2xl">
     <div class="row">
       <!-- Brand -->
-      <a href="{{ href_home }}" class="brand" aria-label="{{ team_name }} — Home" data-analytics="nav:home">
-        {% if crest %}
-          {% set crest_src = crest if '://' in crest else (url_for('static', filename=crest.lstrip('/')) if url_for is defined else '/static/' ~ crest.lstrip('/')) %}
-          <span class="crest" style="background-image:url('{{ crest_src }}')" aria-hidden="true"></span>
+      <a
+        href="{{ href_home }}"
+        class="brand"
+        aria-label="{{ team_name }} — Home"
+        data-analytics="nav:home"
+      >
+        {% if crest %} {% set crest_src = crest if '://' in crest else
+        (url_for('static', filename=crest.lstrip('/')) if url_for is defined
+        else '/static/' ~ crest.lstrip('/')) %}
+        <span
+          class="crest"
+          style="background-image:url('{{ crest_src }}')"
+          aria-hidden="true"
+        ></span>
         {% else %}
-          <span class="crest alt" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/></svg>
-          </span>
+        <span class="crest alt" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" fill="currentColor" />
+          </svg>
+        </span>
         {% endif %}
         <span class="brand-text">
           <span class="brand-name">{{ BRAND_NAME }}</span>
@@ -39,22 +59,46 @@
       <!-- Primary nav (desktop) -->
       <nav id="site-nav" class="primary lg:flex hidden" aria-label="Primary">
         <ul class="nav-list" role="list">
-          <li><a href="#tiers"  class="nav-link">Tiers</a></li>
-          <li><a href="#impact" class="nav-link">Impact</a></li>
-          <li><a href="#about"  class="nav-link">About</a></li>
+          <li><a href="#tiers" class="nav-link">Tiers</a></li>
+          <li><a href="#impact-v2" class="nav-link">Impact</a></li>
+          <li><a href="#about" class="nav-link">About</a></li>
         </ul>
       </nav>
 
       <!-- Actions -->
       <div class="actions">
         <!-- Mobile menu toggle -->
-        <button id="menu-toggle" type="button"
-                class="btn btn-lite btn-sm lg:hidden"
-                aria-controls="site-menu" aria-expanded="false" aria-haspopup="dialog"
-                aria-label="Open menu">
-          <svg class="ico" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-            <path class="ham"   d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            <path class="close" d="M6 6l12 12M18 6l-12 12"  stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:0"/>
+        <button
+          id="menu-toggle"
+          type="button"
+          class="btn btn-lite btn-sm lg:hidden"
+          aria-controls="site-menu"
+          aria-expanded="false"
+          aria-haspopup="dialog"
+          aria-label="Open menu"
+        >
+          <svg
+            class="ico"
+            viewBox="0 0 24 24"
+            width="18"
+            height="18"
+            aria-hidden="true"
+          >
+            <path
+              class="ham"
+              d="M4 6h16M4 12h16M4 18h16"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            />
+            <path
+              class="close"
+              d="M6 6l12 12M18 6l-12 12"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              style="opacity: 0"
+            />
           </svg>
           <span class="sr-only">Toggle navigation</span>
         </button>
@@ -63,32 +107,43 @@
         <div class="cta-row">
           <a href="#tiers" class="btn btn-ghost btn-sm hide-md">Sponsor</a>
 
-          <a id="hdr-donate" href="{{ href_donate }}"
-             class="btn btn-primary btn-sm cta"
-             data-p2p-propagate="1"
-             data-analytics="cta_click"
-             data-analytics-meta='{{ {"where":"header","surface":"desktop"}|tojson }}'>
+          <a
+            id="hdr-donate"
+            href="{{ href_donate }}"
+            class="btn btn-primary btn-sm cta"
+            data-p2p-propagate="1"
+            data-analytics="cta_click"
+            data-analytics-meta='{{ {"where":"header","surface":"desktop"}|tojson }}'
+          >
             Donate
           </a>
-          
-          <span id="hdr-total-pill"
-      class="pill hide-sm"
-      aria-live="polite"
-      aria-atomic="true"
-      title="Raised so far">
-      $0
-      </span>
 
-          <span class="secure-pill hide-sm" aria-label="Payments are secured by Stripe">
+          <span
+            id="hdr-total-pill"
+            class="pill hide-sm"
+            aria-live="polite"
+            aria-atomic="true"
+            title="Raised so far"
+          >
+            $0
+          </span>
+
+          <span
+            class="secure-pill hide-sm"
+            aria-label="Payments are secured by Stripe"
+          >
             <span class="dot"></span> Stripe Secure
           </span>
 
-          <button id="hdr-share" type="button"
-                  class="btn btn-lite btn-sm"
-                  aria-label="Share this fundraiser"
-                  data-analytics="share_click"
-                  data-analytics-meta='{{ {"where":"header"}|tojson }}'
-                  data-share='{{ {"title": "Support " ~ team_name, "text": "Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'>
+          <button
+            id="hdr-share"
+            type="button"
+            class="btn btn-lite btn-sm"
+            aria-label="Share this fundraiser"
+            data-analytics="share_click"
+            data-analytics-meta='{{ {"where":"header"}|tojson }}'
+            data-share='{{ {"title": "Support " ~ team_name, "text": "Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/")} | tojson }}'
+          >
             Share
           </button>
         </div>
@@ -98,476 +153,718 @@
 </header>
 
 <style {{ nonce_attr() }}>
-/* ==========================================================================
-   FundChamps — Header + Hero Overlay (Prod-Ready)
-   - Scopes header styles to #site-header to avoid collisions
-   - Uses logical props + tokens; safe for CSP/nonced usage
-   - A11y: focus-visible, reduced motion, forced colors, high-contrast
-   - Hero overlay lift via CSS variables (no HTML/JS changes)
-   ========================================================================== */
+  /* ==========================================================================
+     FundChamps — Header + Hero Overlay (Prod-Ready)
+     - Scopes header styles to #site-header to avoid collisions
+     - Uses logical props + tokens; safe for CSP/nonced usage
+     - A11y: focus-visible, reduced motion, forced colors, high-contrast
+     - Hero overlay lift via CSS variables (no HTML/JS changes)
+     ========================================================================== */
 
-/* ----- Global tokens & utilities --------------------------------------- */
-:root{
-  /* layout */
-  --frame-max: 1340px;
-  --frame-gutter: clamp(16px, 3vw, 28px);
+  /* ----- Global tokens & utilities --------------------------------------- */
+  :root{
+    /* layout */
+    --frame-max: 1340px;
+    --frame-gutter: clamp(16px, 3vw, 28px);
 
-  /* header height used by skip/anchors */
-  --hdr-h: 72px;
-  --fc-header-h: var(--hdr-h);
-}
-html{ scroll-padding-top: var(--fc-header-h) }
-
-.skip-link{
-  position:absolute; inset-inline:0; top:-40px; z-index:9999;
-  background:#111318; color:#fff; padding:.6rem 1rem; border-radius:0 0 .6rem .6rem;
-}
-.skip-link:focus{ top:0 }
-.sr-only{ position:absolute !important; width:1px !important; height:1px !important;
-  padding:0 !important; margin:-1px !important; overflow:hidden !important;
-  clip:rect(0,0,1px,1px) !important; white-space:nowrap !important; border:0 !important;
-}
-
-/* ----- Header shell ----------------------------------------------------- */
-#site-header.hdr{ position:sticky; top:env(safe-area-inset-top,0px); z-index:70; isolation:isolate }
-#site-header .hdr-band{
-  position:absolute; inset:0 0 auto 0; height:64px; pointer-events:none;
-  background:
-    radial-gradient(120% 160% at 50% -60%, color-mix(in srgb, var(--accent, #facc15) 16%, transparent) 0%, transparent 65%),
-    linear-gradient(180deg, rgba(18,20,26,.92), rgba(12,14,18,.78));
-}
-#site-header .frame{ max-width:var(--frame-max); margin-inline:auto; padding-inline:var(--frame-gutter) }
-#site-header .glass{
-  --g1:rgba(18,20,26,.82); --g2:rgba(12,14,18,.62);
-  background:linear-gradient(180deg,var(--g1),var(--g2));
-  border:1px solid rgba(255,255,255,.10);
-  -webkit-backdrop-filter:saturate(130%) blur(12px); backdrop-filter:saturate(130%) blur(12px);
-  box-shadow:0 14px 36px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
-  border-radius:1rem;
-}
-#site-header .row{
-  display:grid; grid-template-columns:auto 1fr auto; align-items:center;
-  gap:clamp(.5rem,1.2vw,1rem); padding-block: clamp(10px, 1vw, 16px);
-}
-#site-header.hdr.is-scrolled .glass{
-  box-shadow:0 18px 50px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.04);
-}
-#site-header.hdr.is-hidden{ transform:translateY(-112%); transition:transform .26s cubic-bezier(.2,.8,.2,1) }
-@media (prefers-reduced-motion:reduce){ #site-header.hdr.is-hidden{ transform:none } }
-
-/* ----- Brand ------------------------------------------------------------ */
-#site-header .brand{ display:inline-flex; align-items:center; gap:.72rem; text-decoration:none }
-#site-header .crest{
-  inline-size:clamp(38px, 4.2vw, 44px); block-size:clamp(38px, 4.2vw, 44px);
-  border-radius:12px; background-size:cover; background-position:center; background-color:rgba(255,255,255,.08);
-  color:var(--accent,#facc15);
-  box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12);
-}
-#site-header .brand-text{ display:flex; flex-direction:column; line-height:1 }
-#site-header .brand-name{ font-weight:1000; letter-spacing:-.01em; font-size:clamp(1.08rem,.9rem + 1.1vw,1.65rem); color:#e5e7eb }
-#site-header .brand-sub{ opacity:.92; color:#cbd5e1; font-size:clamp(.66rem,.6rem + .32vw,.9rem); font-weight:800 }
-
-/* ----- Primary nav ------------------------------------------------------ */
-#site-header .primary .nav-list{ display:flex; align-items:center; gap:clamp(.6rem,1.1vw,1.1rem) }
-#site-header .nav-link{
-  position:relative; color:#e5e7eb; font-weight:900; opacity:.96; text-decoration:none;
-  font-size:clamp(.92rem,.85rem + .22vw,1.05rem); padding:.25rem .2rem; border-radius:.35rem;
-  transition:color .15s ease, opacity .15s ease, outline-color .15s ease;
-}
-#site-header .nav-link:hover{ color:#fff; opacity:1 }
-#site-header .nav-link:focus-visible{
-  outline:2px solid color-mix(in srgb, var(--accent,#facc15) 70%, #ffffff 30%); outline-offset:3px;
-}
-#site-header .nav-link::after{
-  content:""; position:absolute; left:.2rem; right:.2rem; bottom:-4px; height:2px; border-radius:2px;
-  background:linear-gradient(90deg,var(--accent,#facc15),#fff7cc); transform:scaleX(0); transform-origin:left;
-  transition:transform .18s ease;
-}
-#site-header .nav-link:hover::after{ transform:scaleX(1) }
-#site-header .nav-link.active{ color:var(--accent,#facc15) }
-#site-header .nav-link.active::after{ transform:scaleX(1) }
-
-/* ----- Actions / buttons ------------------------------------------------ */
-#site-header .actions{ display:flex; align-items:center; gap:.5rem }
-#site-header .btn{
-  display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
-  border-radius:999px; font-weight:900; line-height:1; text-decoration:none;
-}
-#site-header .btn-sm{ font-size:.92rem; padding:.56rem .88rem }
-#site-header .btn-primary{
-  background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#111;
-  border:1px solid rgba(0,0,0,.25); box-shadow:0 10px 24px rgba(250,204,21,.25);
-}
-#site-header .btn-ghost{ background:transparent; color:#e5e7eb; border:1px solid rgba(255,255,255,.18) }
-#site-header .btn-lite{  background:rgba(255,255,255,.06); color:#e5e7eb; border:1px solid rgba(255,255,255,.14) }
-#site-header .btn:hover{ filter:brightness(1.07) }
-#site-header .btn:focus-visible{
-  outline:2px solid color-mix(in srgb, var(--accent,#facc15) 60%, #ffffff 40%); outline-offset:3px;
-}
-#site-header .cta{ position:relative; overflow:hidden }
-#site-header .cta::before{
-  content:""; position:absolute; inset:-2px; border-radius:inherit;
-  background:conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--accent,#facc15) 75%, #fff 25%) 30%, transparent 60%);
-  filter:blur(12px); opacity:.35; transition:transform .8s ease;
-}
-#site-header .cta:hover::before{ transform:rotate(180deg) }
-
-/* Mobile burger icon state */
-#menu-toggle[aria-expanded="true"] .ham { opacity:0; transition:opacity .15s ease }
-#menu-toggle[aria-expanded="true"] .close { opacity:1 !important; transition:opacity .15s ease }
-
-/* ----- Security / totals pills ----------------------------------------- */
-#site-header .secure-pill{
-  display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .6rem; border-radius:999px;
-  font-weight:900; font-size:.78rem; color:#e8ecf3;
-  border:1px solid rgba(255,255,255,.14); background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
-}
-#site-header .secure-pill .dot{ inline-size:6px; block-size:6px; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.4) }
-
-#site-header .pill{
-  display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .55rem; border-radius:999px;
-  font-weight:900; font-variant-numeric:tabular-nums; color:#eaf0fa;
-  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
-}
-#site-header .pill::before{ content:""; inline-size:6px; block-size:6px; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.35) }
-@media (max-width:680px){ #site-header .pill{ display:none } } /* keep mobile clean */
-
-/* ----- Mobile sheet menu ----------------------------------------------- */
-#site-header #site-menu.sheet{
-  position:fixed; inset:auto var(--frame-gutter) max(.75rem, env(safe-area-inset-bottom,0px)) var(--frame-gutter);
-  z-index:90; display:grid; gap:.6rem; padding:.9rem; border-radius:1rem; color:#e5e7eb; color-scheme:dark;
-  background:linear-gradient(180deg, rgba(16,18,24,.96), rgba(10,12,16,.94));
-  -webkit-backdrop-filter:saturate(120%) blur(10px); backdrop-filter:saturate(120%) blur(10px);
-  border:1px solid rgba(255,255,255,.10);
-  transform:translateY(8px); opacity:0; pointer-events:none; transition:transform .18s ease, opacity .18s ease;
-}
-#site-header #site-menu.sheet.open{ transform:none; opacity:1; pointer-events:auto }
-#site-header #site-menu a{
-  text-decoration:none; font-weight:900; font-size:1rem; padding:.6rem .7rem; border-radius:.6rem; color:inherit;
-}
-#site-header #site-menu a:hover{ background:rgba(255,255,255,.06) }
-
-/* ----- Responsive toggles ---------------------------------------------- */
-.hidden{display:none}
-.lg\:hidden{display:none}
-.lg\:flex{display:flex}
-@media (max-width:980px){ .lg\:flex{display:none} .lg\:hidden{display:inline-flex} }
-.hide-sm{display:inline-flex}
-@media (max-width:680px){ .hide-sm{display:none} }
-.hide-md{display:inline-flex}
-@media (max-width:880px){ .hide-md{display:none} }
-
-/* legacy menus (force off) */
-#menu, .mobile-menu, [data-legacy-menu]{ display:none !important }
-
-/* ----- Hero anchor seam ------------------------------------------------- */
-#hero,[data-hero]{ scroll-margin-top: var(--fc-header-h); margin-top: clamp(8px, 1.2vh, 16px) }
-
-/* ==========================================================================
-   HERO OVERLAY LIFT (title on the photograph)
-   - Controls live via CSS variables (no JS/HTML changes)
-   - Desktop lift: 12% (tweak one number)
-   - Clears QR coin on very wide layouts
-   ========================================================================== */
-#{{ IDP }} .overlay{
-  /* previously: inset:auto 0 0 0 */
-  inset: auto 0 var(--overlay-bottom, 0) 0;
-}
-@media (min-width: 980px){
-  /* Raise overlay by ~12% of media height on desktop */
-  #{{ IDP }} .media{ --overlay-bottom: 12%; }
-}
-@media (min-width: 1200px){
-  /* Ensure we clear the QR coin on wide viewports */
-  #{{ IDP }} .overlay{ bottom: max(88px, var(--overlay-bottom, 12%)); }
-}
-/* Fine-tune the line to visually sit higher without excessive lift */
-#{{ IDP }} .overlay .tagline{ line-height:.95; letter-spacing:-.01em }
-/* Optional slight lift on small screens; keep readability prioritized */
-@media (max-width: 520px){
-  #{{ IDP }} .media{ --overlay-bottom: 6%; }
-}
-
-/* ----- Accessibility prefs --------------------------------------------- */
-@media (prefers-contrast: more){
-  #site-header .glass, #site-header .btn, #site-header .btn-primary, #site-header .btn-lite, #site-header .btn-ghost,
-  #site-header .secure-pill, #site-header .pill{ box-shadow:none }
-  #site-header .nav-link::after{ background:currentColor }
-}
-@media (forced-colors: active){
-  #site-header *{ forced-color-adjust:auto }
-  #site-header .glass, #site-header .btn, #site-header .btn-primary, #site-header .btn-lite, #site-header .btn-ghost,
-  #site-header .secure-pill, #site-header .pill{
-    background:Canvas !important; color:CanvasText !important; border:1px solid CanvasText !important; box-shadow:none !important;
+    /* header height used by skip/anchors */
+    --hdr-h: 72px;
+    --fc-header-h: var(--hdr-h);
   }
-}
+  html{ scroll-padding-top: var(--fc-header-h) }
+
+  .skip-link{
+    position:absolute; inset-inline:0; top:-40px; z-index:9999;
+    background:#111318; color:#fff; padding:.6rem 1rem; border-radius:0 0 .6rem .6rem;
+  }
+  .skip-link:focus{ top:0 }
+  .sr-only{ position:absolute !important; width:1px !important; height:1px !important;
+    padding:0 !important; margin:-1px !important; overflow:hidden !important;
+    clip:rect(0,0,1px,1px) !important; white-space:nowrap !important; border:0 !important;
+  }
+
+  /* ----- Header shell ----------------------------------------------------- */
+  #site-header.hdr{ position:sticky; top:env(safe-area-inset-top,0px); z-index:70; isolation:isolate }
+  #site-header .hdr-band{
+    position:absolute; inset:0 0 auto 0; height:64px; pointer-events:none;
+    background:
+      radial-gradient(120% 160% at 50% -60%, color-mix(in srgb, var(--accent, #facc15) 16%, transparent) 0%, transparent 65%),
+      linear-gradient(180deg, rgba(18,20,26,.92), rgba(12,14,18,.78));
+  }
+  #site-header .frame{ max-width:var(--frame-max); margin-inline:auto; padding-inline:var(--frame-gutter) }
+  #site-header .glass{
+    --g1:rgba(18,20,26,.82); --g2:rgba(12,14,18,.62);
+    background:linear-gradient(180deg,var(--g1),var(--g2));
+    border:1px solid rgba(255,255,255,.10);
+    -webkit-backdrop-filter:saturate(130%) blur(12px); backdrop-filter:saturate(130%) blur(12px);
+    box-shadow:0 14px 36px rgba(0,0,0,.32), inset 0 1px 0 rgba(255,255,255,.06);
+    border-radius:1rem;
+  }
+  #site-header .row{
+    display:grid; grid-template-columns:auto 1fr auto; align-items:center;
+    gap:clamp(.5rem,1.2vw,1rem); padding-block: clamp(10px, 1vw, 16px);
+  }
+  #site-header.hdr.is-scrolled .glass{
+    box-shadow:0 18px 50px rgba(0,0,0,.44), inset 0 1px 0 rgba(255,255,255,.04);
+  }
+  #site-header.hdr.is-hidden{ transform:translateY(-112%); transition:transform .26s cubic-bezier(.2,.8,.2,1) }
+  @media (prefers-reduced-motion:reduce){ #site-header.hdr.is-hidden{ transform:none } }
+
+  /* ----- Brand ------------------------------------------------------------ */
+  #site-header .brand{ display:inline-flex; align-items:center; gap:.72rem; text-decoration:none }
+  #site-header .crest{
+    inline-size:clamp(38px, 4.2vw, 44px); block-size:clamp(38px, 4.2vw, 44px);
+    border-radius:12px; background-size:cover; background-position:center; background-color:rgba(255,255,255,.08);
+    color:var(--accent,#facc15);
+    box-shadow:0 6px 18px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+  }
+  #site-header .brand-text{ display:flex; flex-direction:column; line-height:1 }
+  #site-header .brand-name{ font-weight:1000; letter-spacing:-.01em; font-size:clamp(1.08rem,.9rem + 1.1vw,1.65rem); color:#e5e7eb }
+  #site-header .brand-sub{ opacity:.92; color:#cbd5e1; font-size:clamp(.66rem,.6rem + .32vw,.9rem); font-weight:800 }
+
+  /* ----- Primary nav ------------------------------------------------------ */
+  #site-header .primary .nav-list{ display:flex; align-items:center; gap:clamp(.6rem,1.1vw,1.1rem) }
+  #site-header .nav-link{
+    position:relative; color:#e5e7eb; font-weight:900; opacity:.96; text-decoration:none;
+    font-size:clamp(.92rem,.85rem + .22vw,1.05rem); padding:.25rem .2rem; border-radius:.35rem;
+    transition:color .15s ease, opacity .15s ease, outline-color .15s ease;
+  }
+  #site-header .nav-link:hover{ color:#fff; opacity:1 }
+  #site-header .nav-link:focus-visible{
+    outline:2px solid color-mix(in srgb, var(--accent,#facc15) 70%, #ffffff 30%); outline-offset:3px;
+  }
+  #site-header .nav-link::after{
+    content:""; position:absolute; left:.2rem; right:.2rem; bottom:-4px; height:2px; border-radius:2px;
+    background:linear-gradient(90deg,var(--accent,#facc15),#fff7cc); transform:scaleX(0); transform-origin:left;
+    transition:transform .18s ease;
+  }
+  #site-header .nav-link:hover::after{ transform:scaleX(1) }
+  #site-header .nav-link.active{ color:var(--accent,#facc15) }
+  #site-header .nav-link.active::after{ transform:scaleX(1) }
+
+  /* ----- Actions / buttons ------------------------------------------------ */
+  #site-header .actions{ display:flex; align-items:center; gap:.5rem }
+  #site-header .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
+    border-radius:999px; font-weight:900; line-height:1; text-decoration:none;
+  }
+  #site-header .btn-sm{ font-size:.92rem; padding:.56rem .88rem }
+  #site-header .btn-primary{
+    background:linear-gradient(180deg,#fffbe6,var(--accent,#facc15)); color:#111;
+    border:1px solid rgba(0,0,0,.25); box-shadow:0 10px 24px rgba(250,204,21,.25);
+  }
+  #site-header .btn-ghost{ background:transparent; color:#e5e7eb; border:1px solid rgba(255,255,255,.18) }
+  #site-header .btn-lite{  background:rgba(255,255,255,.06); color:#e5e7eb; border:1px solid rgba(255,255,255,.14) }
+  #site-header .btn:hover{ filter:brightness(1.07) }
+  #site-header .btn:focus-visible{
+    outline:2px solid color-mix(in srgb, var(--accent,#facc15) 60%, #ffffff 40%); outline-offset:3px;
+  }
+  #site-header .cta{ position:relative; overflow:hidden }
+  #site-header .cta::before{
+    content:""; position:absolute; inset:-2px; border-radius:inherit;
+    background:conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--accent,#facc15) 75%, #fff 25%) 30%, transparent 60%);
+    filter:blur(12px); opacity:.35; transition:transform .8s ease;
+  }
+  #site-header .cta:hover::before{ transform:rotate(180deg) }
+
+  /* Mobile burger icon state */
+  #menu-toggle[aria-expanded="true"] .ham { opacity:0; transition:opacity .15s ease }
+  #menu-toggle[aria-expanded="true"] .close { opacity:1 !important; transition:opacity .15s ease }
+
+  /* ----- Security / totals pills ----------------------------------------- */
+  #site-header .secure-pill{
+    display:inline-flex; align-items:center; gap:.45rem; padding:.35rem .6rem; border-radius:999px;
+    font-weight:900; font-size:.78rem; color:#e8ecf3;
+    border:1px solid rgba(255,255,255,.14); background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));
+  }
+  #site-header .secure-pill .dot{ inline-size:6px; block-size:6px; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.4) }
+
+  #site-header .pill{
+    display:inline-flex; align-items:center; gap:.4rem; padding:.38rem .55rem; border-radius:999px;
+    font-weight:900; font-variant-numeric:tabular-nums; color:#eaf0fa;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+  }
+  #site-header .pill::before{ content:""; inline-size:6px; block-size:6px; border-radius:999px; background:var(--accent,#facc15); box-shadow:0 0 0 2px rgba(0,0,0,.35) }
+  @media (max-width:680px){ #site-header .pill{ display:none } } /* keep mobile clean */
+
+  /* ----- Mobile sheet menu ----------------------------------------------- */
+  #site-header #site-menu.sheet{
+    position:fixed; inset:auto var(--frame-gutter) max(.75rem, env(safe-area-inset-bottom,0px)) var(--frame-gutter);
+    z-index:90; display:grid; gap:.6rem; padding:.9rem; border-radius:1rem; color:#e5e7eb; color-scheme:dark;
+    background:linear-gradient(180deg, rgba(16,18,24,.96), rgba(10,12,16,.94));
+    -webkit-backdrop-filter:saturate(120%) blur(10px); backdrop-filter:saturate(120%) blur(10px);
+    border:1px solid rgba(255,255,255,.10);
+    transform:translateY(8px); opacity:0; pointer-events:none; transition:transform .18s ease, opacity .18s ease;
+  }
+  #site-header #site-menu.sheet.open{ transform:none; opacity:1; pointer-events:auto }
+  #site-header #site-menu a{
+    text-decoration:none; font-weight:900; font-size:1rem; padding:.6rem .7rem; border-radius:.6rem; color:inherit;
+  }
+  #site-header #site-menu a:hover{ background:rgba(255,255,255,.06) }
+
+  /* ----- Responsive toggles ---------------------------------------------- */
+  .hidden{display:none}
+  .lg\:hidden{display:none}
+  .lg\:flex{display:flex}
+  @media (max-width:980px){ .lg\:flex{display:none} .lg\:hidden{display:inline-flex} }
+  .hide-sm{display:inline-flex}
+  @media (max-width:680px){ .hide-sm{display:none} }
+  .hide-md{display:inline-flex}
+  @media (max-width:880px){ .hide-md{display:none} }
+
+  /* legacy menus (force off) */
+  #menu, .mobile-menu, [data-legacy-menu]{ display:none !important }
+
+  /* ----- Hero anchor seam ------------------------------------------------- */
+  #hero,[data-hero]{ scroll-margin-top: var(--fc-header-h); margin-top: clamp(8px, 1.2vh, 16px) }
+
+  /* ==========================================================================
+     HERO OVERLAY LIFT (title on the photograph)
+     - Controls live via CSS variables (no JS/HTML changes)
+     - Desktop lift: 12% (tweak one number)
+     - Clears QR coin on very wide layouts
+     ========================================================================== */
+  #{{ IDP }} .overlay{
+    /* previously: inset:auto 0 0 0 */
+    inset: auto 0 var(--overlay-bottom, 0) 0;
+  }
+  @media (min-width: 980px){
+    /* Raise overlay by ~12% of media height on desktop */
+    #{{ IDP }} .media{ --overlay-bottom: 12%; }
+  }
+  @media (min-width: 1200px){
+    /* Ensure we clear the QR coin on wide viewports */
+    #{{ IDP }} .overlay{ bottom: max(88px, var(--overlay-bottom, 12%)); }
+  }
+  /* Fine-tune the line to visually sit higher without excessive lift */
+  #{{ IDP }} .overlay .tagline{ line-height:.95; letter-spacing:-.01em }
+  /* Optional slight lift on small screens; keep readability prioritized */
+  @media (max-width: 520px){
+    #{{ IDP }} .media{ --overlay-bottom: 6%; }
+  }
+
+  /* ----- Accessibility prefs --------------------------------------------- */
+  @media (prefers-contrast: more){
+    #site-header .glass, #site-header .btn, #site-header .btn-primary, #site-header .btn-lite, #site-header .btn-ghost,
+    #site-header .secure-pill, #site-header .pill{ box-shadow:none }
+    #site-header .nav-link::after{ background:currentColor }
+  }
+  @media (forced-colors: active){
+    #site-header *{ forced-color-adjust:auto }
+    #site-header .glass, #site-header .btn, #site-header .btn-primary, #site-header .btn-lite, #site-header .btn-ghost,
+    #site-header .secure-pill, #site-header .pill{
+      background:Canvas !important; color:CanvasText !important; border:1px solid CanvasText !important; box-shadow:none !important;
+    }
+  }
 </style>
 
 <style {{ nonce_attr() }}>
-/* header total pill polish (safe to add even if you kept earlier CSS) */
-#site-header .cta-row{ display:flex; align-items:center; gap:.5rem; flex-wrap:wrap }
-#hdr-total-pill.pill{ white-space:nowrap; min-inline-size:72px; }
-@media (max-width:680px){ #hdr-total-pill{ display:none } } /* keep mobile clean */
+  /* header total pill polish (safe to add even if you kept earlier CSS) */
+  #site-header .cta-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  #hdr-total-pill.pill {
+    white-space: nowrap;
+    min-inline-size: 72px;
+  }
+  @media (max-width: 680px) {
+    #hdr-total-pill {
+      display: none;
+    }
+  } /* keep mobile clean */
 </style>
 
 <script {{ nonce_attr() }} type="module">
-(() => {
-  "use strict";
-  // De-dupe skip-links from template includes
-  try { document.querySelectorAll(".skip-link").forEach((el,i)=>{ if(i>0) el.remove(); }); } catch {}
-
-  const header   = document.getElementById("site-header");
-  const toggle   = document.getElementById("menu-toggle");
-  const donate   = document.getElementById("hdr-donate") || document.getElementById("hdr-donate-mb");
-  const shareBtn = document.getElementById("hdr-share");
-  const saveData = !!(navigator.connection && 'saveData' in navigator.connection && navigator.connection.saveData);
-
-  /* Accent → CSS var */
-  try { header.style.setProperty("--accent", header.getAttribute("data-accent") || "#facc15"); } catch {}
-
-  /* Smart sticky show/hide + scrolled state */
-  try {
-    let lastY = 0, hidden = false, ticking = false;
-    addEventListener("scroll", () => {
-      if (ticking) return; ticking = true;
-      requestAnimationFrame(() => {
-        const y = scrollY || 0;
-        header.classList.toggle("is-scrolled", y > 4);
-        if (!matchMedia("(prefers-reduced-motion: reduce)").matches && !saveData){
-          if (y - lastY > 12 && y > 110 && !hidden) { header.classList.add("is-hidden"); hidden = true; }
-          else if (lastY - y > 12 || y <= 110)     { header.classList.remove("is-hidden"); hidden = false; }
-        }
-        lastY = y; ticking = false;
+  (() => {
+    "use strict";
+    // De-dupe skip-links from template includes
+    try {
+      document.querySelectorAll(".skip-link").forEach((el, i) => {
+        if (i > 0) el.remove();
       });
-    }, { passive: true });
-  } catch {}
+    } catch {}
 
-  /* Mobile sheet menu (lazy create) + focus trap */
-  function ensureSheet(){
-    let sheet = header.querySelector("#site-menu");
-    if (sheet) return sheet;
-    sheet = document.createElement("nav");
-    sheet.id="site-menu"; sheet.className="sheet"; sheet.setAttribute("role","dialog"); sheet.setAttribute("aria-modal","true"); sheet.setAttribute("aria-label","Mobile navigation");
-    sheet.innerHTML = `
+    const header = document.getElementById("site-header");
+    const toggle = document.getElementById("menu-toggle");
+    const donate =
+      document.getElementById("hdr-donate") ||
+      document.getElementById("hdr-donate-mb");
+    const shareBtn = document.getElementById("hdr-share");
+    const saveData = !!(
+      navigator.connection &&
+      "saveData" in navigator.connection &&
+      navigator.connection.saveData
+    );
+
+    /* Accent → CSS var */
+    try {
+      header.style.setProperty(
+        "--accent",
+        header.getAttribute("data-accent") || "#facc15",
+      );
+    } catch {}
+
+    /* Smart sticky show/hide + scrolled state */
+    try {
+      let lastY = 0,
+        hidden = false,
+        ticking = false;
+      addEventListener(
+        "scroll",
+        () => {
+          if (ticking) return;
+          ticking = true;
+          requestAnimationFrame(() => {
+            const y = scrollY || 0;
+            header.classList.toggle("is-scrolled", y > 4);
+            if (
+              !matchMedia("(prefers-reduced-motion: reduce)").matches &&
+              !saveData
+            ) {
+              if (y - lastY > 12 && y > 110 && !hidden) {
+                header.classList.add("is-hidden");
+                hidden = true;
+              } else if (lastY - y > 12 || y <= 110) {
+                header.classList.remove("is-hidden");
+                hidden = false;
+              }
+            }
+            lastY = y;
+            ticking = false;
+          });
+        },
+        { passive: true },
+      );
+    } catch {}
+
+    /* Mobile sheet menu (lazy create) + focus trap */
+    function ensureSheet() {
+      let sheet = header.querySelector("#site-menu");
+      if (sheet) return sheet;
+      sheet = document.createElement("nav");
+      sheet.id = "site-menu";
+      sheet.className = "sheet";
+      sheet.setAttribute("role", "dialog");
+      sheet.setAttribute("aria-modal", "true");
+      sheet.setAttribute("aria-label", "Mobile navigation");
+      sheet.innerHTML = `
       <a class="nav-link" href="{{ href_home }}">Home</a>
       <a class="nav-link" href="#tiers">Tiers</a>
-      <a class="nav-link" href="#impact">Impact</a>
+      <a class="nav-link" href="#impact-v2">Impact</a>
       <a class="nav-link" href="#about">About</a>
       <a class="btn btn-primary" href="{{ href_donate }}" data-p2p-propagate="1" data-analytics="cta_click" data-analytics-meta='{{ {"where":"header","surface":"sheet"}|tojson }}'>Donate</a>
     `;
-    header.appendChild(sheet);
-    return sheet;
-  }
-  let untrap = null;
-  function trapFocus(node){
-    if (!node) return ()=>{};
-    const sel='a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
-    const focusables = () => Array.from(node.querySelectorAll(sel)).filter(x=>!x.disabled && x.tabIndex!==-1);
-    function onKey(e){ if(e.key!=='Tab') return; const k=focusables(); if(!k.length) return;
-      const first=k[0], last=k[k.length-1];
-      if (e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+      header.appendChild(sheet);
+      return sheet;
     }
-    document.addEventListener('keydown', onKey);
-    try { (focusables()[0]||node).focus({preventScroll:true}); } catch {}
-    return ()=>document.removeEventListener('keydown', onKey);
-  }
-  function setMenu(open){
-    const sheet=ensureSheet();
-    toggle?.setAttribute("aria-expanded", String(open));
-    sheet.classList.toggle("open", open);
-    try { sheet.inert = !open; } catch {}
-    document.documentElement.classList.toggle("overflow-hidden", open);
-    if (open){ untrap = trapFocus(sheet); } else { try { untrap && untrap(); } catch {} untrap=null; }
-  }
-  if (toggle) {
-    setMenu(false);
-    toggle.addEventListener("click", ()=> setMenu(toggle.getAttribute("aria-expanded")!=="true"));
-    addEventListener("keydown",(e)=>{ if(e.key==="Escape") setMenu(false); },{passive:true});
-    document.addEventListener("click",(e)=>{
-      const s=header.querySelector("#site-menu"); if(!s) return;
-      if (s.classList.contains('open') && !s.contains(e.target) && !toggle.contains(e.target)) setMenu(false);
-    },{passive:true});
-    header.addEventListener("click",(e)=>{
-      const a=e.target.closest && e.target.closest('#site-menu a[href^="#"]');
-      if (a) setTimeout(()=>setMenu(false), 0);
-    });
-  }
-
-  /* Scroll spy (activates for present sections only) */
-  try {
-    const links = Array.from(document.querySelectorAll("#site-header .nav-link")).filter(a=>a.hash);
-    const pairs = links.map(a=>[a, document.querySelector(a.hash)]).filter(([,sec])=>sec && sec.id);
-    if (pairs.length){
-      const io = new IntersectionObserver((ents)=>{
-        ents.forEach(ent=>{
-          if (!ent.isIntersecting) return;
-          const id = "#" + ent.target.id;
-          links.forEach(a=>{
-            const on = a.hash===id;
-            a.classList.toggle("active", on);
-            if (on) a.setAttribute("aria-current","page"); else a.removeAttribute("aria-current");
-          });
-        });
-      }, { rootMargin: "-20% 0px -70% 0px", threshold: 0.01 });
-      pairs.forEach(([,sec])=> io.observe(sec));
-      addEventListener('pagehide',()=>io.disconnect(),{once:true});
-    }
-  } catch {}
-
-  /* P2P / UTM decoration + Share hardening */
-  (function(){
-    const keys = ["ref","ref_id","peer","peer_id","peer_slug","campaign","campaign_id"];
-    const parseQS = () => Object.fromEntries(keys.map(k=>[k, new URLSearchParams(location.search).get(k)]).filter(([,v])=>v));
-    const readCtx = () => { try { const raw = localStorage.getItem("fc_ref_ctx"); if(!raw) return {}; const obj = JSON.parse(raw)||{}; if (obj.ttl && Date.now()>obj.ttl) return {}; return obj.data||{}; } catch { return {}; } };
-    const merged = Object.assign({}, readCtx(), parseQS());
-    const add = (url, extra={}) => {
-      try{ const u=new URL(url, location.origin);
-        Object.entries({...merged, ...extra}).forEach(([k,v])=>{ if(v!=null&&v!=="") u.searchParams.set(k,v); });
-        return u.toString();
-      }catch{ const sep=url.includes("?")?"&":"?"; return url+sep+new URLSearchParams({...merged, ...extra}).toString(); }
-    };
-    document.querySelectorAll('#site-header a[href*="donate"], #site-header a[href*="sponsor"], #site-header a[data-p2p-propagate="1"]').forEach(a=>{
-      a.href = add(a.getAttribute("href")||"#", {utm_source:"site",utm_medium:"header",utm_campaign:"fundraiser"});
-      if (a.hasAttribute("data-payment-link") && !a.hasAttribute("target")) { a.target="_blank"; a.rel="nofollow noopener noreferrer"; }
-    });
-    if (shareBtn){ try{
-      const p = JSON.parse(shareBtn.getAttribute("data-share")||"{}");
-      p.url = add(p.url||location.href, {utm_source:"share",utm_medium:"header",utm_campaign:"fan_share"});
-      shareBtn.setAttribute("data-share", JSON.stringify(p));
-    }catch{} }
-  })();
-
-  if (shareBtn) {
-    shareBtn.addEventListener("click", async ()=>{
-      let cfg = {}; try { cfg = JSON.parse(shareBtn.getAttribute("data-share") || "{}"); } catch {}
-      let ok=false; try{ if (navigator.share) { await navigator.share(Object.assign({ url: location.href }, cfg)); ok=true; }
-        else { await navigator.clipboard.writeText(cfg.url||location.href); ok=true; } }catch{}
-      if (ok){ const t=shareBtn.textContent; shareBtn.textContent="Copied!"; setTimeout(()=>shareBtn.textContent=t,1100); }
-    }, { passive: true });
-  }
-
-  /* Header height → CSS vars */
-  (function(){
-    function setHdrVars(){
-      try { const h = header.offsetHeight || 72;
-        document.documentElement.style.setProperty("--hdr-h", h + "px");
-        document.documentElement.style.setProperty("--fc-header-h", h + "px");
+    let untrap = null;
+    function trapFocus(node) {
+      if (!node) return () => {};
+      const sel =
+        'a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])';
+      const focusables = () =>
+        Array.from(node.querySelectorAll(sel)).filter(
+          (x) => !x.disabled && x.tabIndex !== -1,
+        );
+      function onKey(e) {
+        if (e.key !== "Tab") return;
+        const k = focusables();
+        if (!k.length) return;
+        const first = k[0],
+          last = k[k.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+      document.addEventListener("keydown", onKey);
+      try {
+        (focusables()[0] || node).focus({ preventScroll: true });
       } catch {}
+      return () => document.removeEventListener("keydown", onKey);
     }
-    setHdrVars();
-    try { new ResizeObserver(setHdrVars).observe(header); } catch { addEventListener("resize", setHdrVars, { passive: true }); }
-  })();
-  
-    /* ===== Live total pill ===== */
-  (function(){
-    const pill = document.getElementById('hdr-total-pill');
-    if (!pill) return;
+    function setMenu(open) {
+      const sheet = ensureSheet();
+      toggle?.setAttribute("aria-expanded", String(open));
+      sheet.classList.toggle("open", open);
+      try {
+        sheet.inert = !open;
+      } catch {}
+      document.documentElement.classList.toggle("overflow-hidden", open);
+      if (open) {
+        untrap = trapFocus(sheet);
+      } else {
+        try {
+          untrap && untrap();
+        } catch {}
+        untrap = null;
+      }
+    }
+    if (toggle) {
+      setMenu(false);
+      toggle.addEventListener("click", () =>
+        setMenu(toggle.getAttribute("aria-expanded") !== "true"),
+      );
+      addEventListener(
+        "keydown",
+        (e) => {
+          if (e.key === "Escape") setMenu(false);
+        },
+        { passive: true },
+      );
+      document.addEventListener(
+        "click",
+        (e) => {
+          const s = header.querySelector("#site-menu");
+          if (!s) return;
+          if (
+            s.classList.contains("open") &&
+            !s.contains(e.target) &&
+            !toggle.contains(e.target)
+          )
+            setMenu(false);
+        },
+        { passive: true },
+      );
+      header.addEventListener("click", (e) => {
+        const a =
+          e.target.closest && e.target.closest('#site-menu a[href^="#"]');
+        if (a) setTimeout(() => setMenu(false), 0);
+      });
+    }
 
-    // prefer compact format on wide numbers; switch to "full" by changing this flag
-    const useCompact = true;
-    const fmt = (n) => new Intl.NumberFormat(undefined, {
-      style:'currency', currency:'USD',
-      maximumFractionDigits:0,
-      notation: useCompact && n >= 10000 ? 'compact' : 'standard',
-      compactDisplay: 'short'
-    }).format(n);
-
-    let last = 0;
-    const setValue = (n) => {
-      last = n;
-      pill.textContent = `${fmt(n)} raised`;
-      pill.setAttribute('aria-label', `${fmt(n)} raised`);
-    };
-
-    // progressive enhancement: show whatever is on the hero if present
+    /* Scroll spy (activates for present sections only) */
     try {
-      const hero = document.querySelector('[data-hero],[id="fundraiser-hero"]') || document.getElementById('fundraiser-hero');
-      const raisedAttr = document.querySelector('[data-raised]')?.getAttribute('data-raised');
-      const seed = Number(raisedAttr || 0);
-      if (!Number.isNaN(seed) && seed > 0) setValue(seed);
+      const links = Array.from(
+        document.querySelectorAll("#site-header .nav-link"),
+      ).filter((a) => a.hash);
+      const pairs = links
+        .map((a) => [a, document.querySelector(a.hash)])
+        .filter(([, sec]) => sec && sec.id);
+      if (pairs.length) {
+        const io = new IntersectionObserver(
+          (ents) => {
+            ents.forEach((ent) => {
+              if (!ent.isIntersecting) return;
+              const id = "#" + ent.target.id;
+              links.forEach((a) => {
+                const on = a.hash === id;
+                a.classList.toggle("active", on);
+                if (on) a.setAttribute("aria-current", "page");
+                else a.removeAttribute("aria-current");
+              });
+            });
+          },
+          { rootMargin: "-20% 0px -70% 0px", threshold: 0.01 },
+        );
+        pairs.forEach(([, sec]) => io.observe(sec));
+        addEventListener("pagehide", () => io.disconnect(), { once: true });
+      }
     } catch {}
 
-    async function hydrateOnce(signal){
-      try{
-        const res = await fetch('/api/totals', { headers:{'Accept':'application/json'}, signal });
-        if(!res.ok) return;
-        const j = await res.json();
-        const raised = Number(j?.raised ?? j?.total ?? 0);
-        if (!Number.isFinite(raised)) return;
-        // tiny ease if value increased (no fancy animation for CSP/A11Y calm)
-        if (raised !== last) setValue(raised);
-      }catch{/* offline or aborted is fine */}
+    /* P2P / UTM decoration + Share hardening */
+    (function () {
+      const keys = [
+        "ref",
+        "ref_id",
+        "peer",
+        "peer_id",
+        "peer_slug",
+        "campaign",
+        "campaign_id",
+      ];
+      const parseQS = () =>
+        Object.fromEntries(
+          keys
+            .map((k) => [k, new URLSearchParams(location.search).get(k)])
+            .filter(([, v]) => v),
+        );
+      const readCtx = () => {
+        try {
+          const raw = localStorage.getItem("fc_ref_ctx");
+          if (!raw) return {};
+          const obj = JSON.parse(raw) || {};
+          if (obj.ttl && Date.now() > obj.ttl) return {};
+          return obj.data || {};
+        } catch {
+          return {};
+        }
+      };
+      const merged = Object.assign({}, readCtx(), parseQS());
+      const add = (url, extra = {}) => {
+        try {
+          const u = new URL(url, location.origin);
+          Object.entries({ ...merged, ...extra }).forEach(([k, v]) => {
+            if (v != null && v !== "") u.searchParams.set(k, v);
+          });
+          return u.toString();
+        } catch {
+          const sep = url.includes("?") ? "&" : "?";
+          return (
+            url + sep + new URLSearchParams({ ...merged, ...extra }).toString()
+          );
+        }
+      };
+      document
+        .querySelectorAll(
+          '#site-header a[href*="donate"], #site-header a[href*="sponsor"], #site-header a[data-p2p-propagate="1"]',
+        )
+        .forEach((a) => {
+          a.href = add(a.getAttribute("href") || "#", {
+            utm_source: "site",
+            utm_medium: "header",
+            utm_campaign: "fundraiser",
+          });
+          if (
+            a.hasAttribute("data-payment-link") &&
+            !a.hasAttribute("target")
+          ) {
+            a.target = "_blank";
+            a.rel = "nofollow noopener noreferrer";
+          }
+        });
+      if (shareBtn) {
+        try {
+          const p = JSON.parse(shareBtn.getAttribute("data-share") || "{}");
+          p.url = add(p.url || location.href, {
+            utm_source: "share",
+            utm_medium: "header",
+            utm_campaign: "fan_share",
+          });
+          shareBtn.setAttribute("data-share", JSON.stringify(p));
+        } catch {}
+      }
+    })();
+
+    if (shareBtn) {
+      shareBtn.addEventListener(
+        "click",
+        async () => {
+          let cfg = {};
+          try {
+            cfg = JSON.parse(shareBtn.getAttribute("data-share") || "{}");
+          } catch {}
+          let ok = false;
+          try {
+            if (navigator.share) {
+              await navigator.share(Object.assign({ url: location.href }, cfg));
+              ok = true;
+            } else {
+              await navigator.clipboard.writeText(cfg.url || location.href);
+              ok = true;
+            }
+          } catch {}
+          if (ok) {
+            const t = shareBtn.textContent;
+            shareBtn.textContent = "Copied!";
+            setTimeout(() => (shareBtn.textContent = t), 1100);
+          }
+        },
+        { passive: true },
+      );
     }
 
-    const controller = new AbortController();
-    hydrateOnce(controller.signal);
-    // refresh every 60s, light touch
-    const iv = setInterval(()=>hydrateOnce(controller.signal), 60_000);
+    /* Header height → CSS vars */
+    (function () {
+      function setHdrVars() {
+        try {
+          const h = header.offsetHeight || 72;
+          document.documentElement.style.setProperty("--hdr-h", h + "px");
+          document.documentElement.style.setProperty("--fc-header-h", h + "px");
+        } catch {}
+      }
+      setHdrVars();
+      try {
+        new ResizeObserver(setHdrVars).observe(header);
+      } catch {
+        addEventListener("resize", setHdrVars, { passive: true });
+      }
+    })();
 
-    addEventListener('pagehide', ()=>{
-      controller.abort();
-      clearInterval(iv);
-    }, { once:true });
+    /* ===== Live total pill ===== */
+    (function () {
+      const pill = document.getElementById("hdr-total-pill");
+      if (!pill) return;
+
+      // prefer compact format on wide numbers; switch to "full" by changing this flag
+      const useCompact = true;
+      const fmt = (n) =>
+        new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+          notation: useCompact && n >= 10000 ? "compact" : "standard",
+          compactDisplay: "short",
+        }).format(n);
+
+      let last = 0;
+      const setValue = (n) => {
+        last = n;
+        pill.textContent = `${fmt(n)} raised`;
+        pill.setAttribute("aria-label", `${fmt(n)} raised`);
+      };
+
+      // progressive enhancement: show whatever is on the hero if present
+      try {
+        const hero =
+          document.querySelector('[data-hero],[id="fundraiser-hero"]') ||
+          document.getElementById("fundraiser-hero");
+        const raisedAttr = document
+          .querySelector("[data-raised]")
+          ?.getAttribute("data-raised");
+        const seed = Number(raisedAttr || 0);
+        if (!Number.isNaN(seed) && seed > 0) setValue(seed);
+      } catch {}
+
+      async function hydrateOnce(signal) {
+        try {
+          const res = await fetch("/api/totals", {
+            headers: { Accept: "application/json" },
+            signal,
+          });
+          if (!res.ok) return;
+          const j = await res.json();
+          const raised = Number(j?.raised ?? j?.total ?? 0);
+          if (!Number.isFinite(raised)) return;
+          // tiny ease if value increased (no fancy animation for CSP/A11Y calm)
+          if (raised !== last) setValue(raised);
+        } catch {
+          /* offline or aborted is fine */
+        }
+      }
+
+      const controller = new AbortController();
+      hydrateOnce(controller.signal);
+      // refresh every 60s, light touch
+      const iv = setInterval(() => hydrateOnce(controller.signal), 60_000);
+
+      addEventListener(
+        "pagehide",
+        () => {
+          controller.abort();
+          clearInterval(iv);
+        },
+        { once: true },
+      );
+    })();
+
+    /* Donate prefetch & payments preconnect (save-data aware) */
+    try {
+      if (donate && !saveData)
+        donate.addEventListener(
+          "pointerenter",
+          () => {
+            const add = (rel, href) => {
+              const l = document.createElement("link");
+              l.rel = rel;
+              l.href = href;
+              l.crossOrigin = "anonymous";
+              document.head.appendChild(l);
+            };
+            add("dns-prefetch", "//checkout.stripe.com");
+            add("preconnect", "https://checkout.stripe.com");
+            add("preconnect", "https://js.stripe.com");
+            add("dns-prefetch", "//www.paypal.com");
+            add("preconnect", "https://www.paypal.com");
+            let l = document.querySelector('link[data-prefetch="donate"]');
+            if (!l) {
+              l = document.createElement("link");
+              l.rel = "prefetch";
+              l.href = "{{ href_donate }}";
+              l.as = "document";
+              l.setAttribute("data-prefetch", "donate");
+              document.head.appendChild(l);
+            }
+          },
+          { passive: true },
+        );
+    } catch {}
   })();
-
-  /* Donate prefetch & payments preconnect (save-data aware) */
-  try{
-    if (donate && !saveData) donate.addEventListener('pointerenter', ()=>{
-      const add = (rel, href) => { const l=document.createElement('link'); l.rel=rel; l.href=href; l.crossOrigin='anonymous'; document.head.appendChild(l); };
-      add('dns-prefetch','//checkout.stripe.com'); add('preconnect','https://checkout.stripe.com'); add('preconnect','https://js.stripe.com');
-      add('dns-prefetch','//www.paypal.com');       add('preconnect','https://www.paypal.com');
-      let l = document.querySelector('link[data-prefetch="donate"]');
-      if (!l){ l = document.createElement('link'); l.rel='prefetch'; l.href='{{ href_donate }}'; l.as='document'; l.setAttribute('data-prefetch','donate'); document.head.appendChild(l); }
-    }, { passive:true });
-  }catch{}
-})();
 </script>
 
 <script {{ nonce_attr() }} type="module">
-(() => {
-  const pill = document.getElementById('hdr-total-pill');
-  if (!pill) return;
+  (() => {
+    const pill = document.getElementById("hdr-total-pill");
+    if (!pill) return;
 
-  // Respect user’s data saver
-  const saveData = !!(navigator.connection && 'saveData' in navigator.connection && navigator.connection.saveData);
+    // Respect user’s data saver
+    const saveData = !!(
+      navigator.connection &&
+      "saveData" in navigator.connection &&
+      navigator.connection.saveData
+    );
 
-  // Fmt: $12,340 → under 10k full; else $12.3K / $1.2M / $1.2B
-  const usdCompact = (n) => {
-    const abs = Math.abs(n);
-    if (abs < 10_000) return new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
-    const units = [[1e9,'B'],[1e6,'M'],[1e3,'K']];
-    for (const [m,s] of units){ if (abs >= m) return `$${(n/m).toFixed(abs >= 100*m ? 0 : 1)}${s}`; }
-    return `$${n.toFixed(0)}`;
-  };
+    // Fmt: $12,340 → under 10k full; else $12.3K / $1.2M / $1.2B
+    const usdCompact = (n) => {
+      const abs = Math.abs(n);
+      if (abs < 10_000)
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency: "USD",
+          maximumFractionDigits: 0,
+        }).format(n);
+      const units = [
+        [1e9, "B"],
+        [1e6, "M"],
+        [1e3, "K"],
+      ];
+      for (const [m, s] of units) {
+        if (abs >= m) return `$${(n / m).toFixed(abs >= 100 * m ? 0 : 1)}${s}`;
+      }
+      return `$${n.toFixed(0)}`;
+    };
 
-  // 1) immediate best-effort from hero dataset (no network)
-  try{
-    const seed = document.querySelector('[data-raised]');
-    const r = Number(seed?.getAttribute('data-raised') || 0);
-    if (r > 0) { pill.textContent = `${usdCompact(r)} raised`; pill.title = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(r) + ' raised'; }
-  }catch{}
+    // 1) immediate best-effort from hero dataset (no network)
+    try {
+      const seed = document.querySelector("[data-raised]");
+      const r = Number(seed?.getAttribute("data-raised") || 0);
+      if (r > 0) {
+        pill.textContent = `${usdCompact(r)} raised`;
+        pill.title =
+          new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+          }).format(r) + " raised";
+      }
+    } catch {}
 
-  // 2) hydrate from API
-  async function hydrate() {
-    try{
-      const res = await fetch('/api/totals', { headers:{ 'Accept':'application/json' } });
-      if (!res.ok) return;
-      const j = await res.json();
-      const raised = Number(j?.raised ?? j?.total ?? 0);
-      if (!(raised >= 0)) return;
-      pill.textContent = `${usdCompact(raised)} raised`;
-      pill.title = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0}).format(raised) + ' raised';
-      pill.setAttribute('aria-label', pill.textContent);
-    }catch{/* ignore offline */}
-  }
+    // 2) hydrate from API
+    async function hydrate() {
+      try {
+        const res = await fetch("/api/totals", {
+          headers: { Accept: "application/json" },
+        });
+        if (!res.ok) return;
+        const j = await res.json();
+        const raised = Number(j?.raised ?? j?.total ?? 0);
+        if (!(raised >= 0)) return;
+        pill.textContent = `${usdCompact(raised)} raised`;
+        pill.title =
+          new Intl.NumberFormat(undefined, {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+          }).format(raised) + " raised";
+        pill.setAttribute("aria-label", pill.textContent);
+      } catch {
+        /* ignore offline */
+      }
+    }
 
-  hydrate();
+    hydrate();
 
-  // 3) gentle polling (pauses when tab hidden, slows if Save-Data)
-  const intervalMs = saveData ? 120_000 : 45_000;
-  let timer = setInterval(() => { if (document.visibilityState === 'visible') hydrate(); }, intervalMs);
-  addEventListener('pagehide', () => clearInterval(timer), { once:true });
-})();
+    // 3) gentle polling (pauses when tab hidden, slows if Save-Data)
+    const intervalMs = saveData ? 120_000 : 45_000;
+    let timer = setInterval(() => {
+      if (document.visibilityState === "visible") hydrate();
+    }, intervalMs);
+    addEventListener("pagehide", () => clearInterval(timer), { once: true });
+  })();
 </script>
-

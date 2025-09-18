@@ -1,9 +1,8 @@
- {% set
-NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else
-'') %} {% set _hero_url = url_for('static', filename=_hero_img, v=_ver) if _ver
-else url_for('static', filename=_hero_img) %} {% set funds_raised =
-(funds_raised if funds_raised is defined else 0) | float %} {% set
-fundraising_goal = (fundraising_goal if fundraising_goal is defined and
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+defined else '') %} {% set _hero_url = url_for('static', filename=_hero_img,
+v=_ver) if _ver else url_for('static', filename=_hero_img) %} {% set
+funds_raised = (funds_raised if funds_raised is defined else 0) | float %} {%
+set fundraising_goal = (fundraising_goal if fundraising_goal is defined and
 fundraising_goal else 10000) | float %} {% set _raw_pct = (funds_raised /
 (fundraising_goal if fundraising_goal else 1) * 100) %} {% set pct = 0 if
 _raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %} {% set hero_title =
@@ -138,10 +137,10 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
           💛 Sponsor Gym Time
         </a>
 
-        <a href="#impact" class="fc-btn" data-cta="hero-learn">Learn more</a>
+        <a href="#impact-v2" class="fc-btn" data-cta="hero-learn">Learn more</a>
       </div>
 
-       {% set _milestones = [25,50,75,100] %}
+      {% set _milestones = [25,50,75,100] %}
       <div class="milestones" aria-hidden="true">
         {% for m in _milestones %}
         <span class="chip {{ 'hit' if pct >= m else '' }}">{{ m }}%</span>

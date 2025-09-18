@@ -1,76 +1,102 @@
-{# ===================== Scoreboard Hero + Impact Ladder (SV-ELITE, refactor) ===================== #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{# ===================== Scoreboard Hero + Impact Ladder (SV-ELITE, refactor)
+===================== #} {% set NONCE = NONCE if NONCE is defined else
+(csp_nonce() if csp_nonce is defined else '') %} {% macro nonce_attr()
+-%}nonce="{{ NONCE }}"{%- endmacro %} {# Fallback macros if app-level helpers
+aren’t present #} {% if roll_money is not defined %} {% macro roll_money(v,
+symbol='$') -%} {%- set n = (v if v is number else
+(v|string)|replace('$','')|replace(',','')|float) -%} {%- if n >= 100000 and (n
+% 100 == 0) -%}{%- set n = n / 100 -%}{%- endif -%} {{- symbol }}{{
+'{:,.0f}'.format(n) -}} {%- endmacro %} {% endif %} {% if roll_pct is not
+defined %} {% macro roll_pct(v) -%} {%- set n = (v if v is number else
+(v|string)|replace('%','')|float) -%} {{ '{:.0f}'.format(n) -}} {%- endmacro %}
+{% endif %} {# IDs & inputs #} {% set IDP = IDP|default('fundraiser-hero') %} {%
+set FCID = (IDP ~ '-media') %} {% set TEAM_NAME = (team.name if team and
+team.name else team.team_name if team and team.team_name else 'Connect ATX
+Elite') %} {% set TITLE = fundraiser_title or 'Fuel the Season.' %} {% set
+TITLE_2 = fundraiser_title_2 or 'Fund the Future.' %} {% set SUBTITLE =
+meta_description or 'Direct support for gear, travel, and tutoring—every dollar
+moves a kid forward.' %} {% set GOAL = (fundraising_goal or GOAL_USD or
+50000)|int %} {% set RAISED = (funds_raised or 0)|int %} {% set PCT = (100.0 *
+(RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %} {% set
+PCT_CLAMP = (0 if PCT < 0 else (100 if PCT > 100 else PCT)) %} {% set THEME_HEX
+= theme_hex|default('#facc15') %} {% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE'
+%} {% set TEXT_SHORT = TEXT_SHORTCODE or '44321' %} {% set SPL =
+(stripe_payment_link if stripe_payment_link is defined and stripe_payment_link)
+or '' %} {% set HREF_IMPACT = ( safe_url_for('main.impact') if (safe_url_for is
+defined and has_endpoint is defined and has_endpoint('main.impact')) else
+'#impact-v2' ) %} {% set HREF_IMPACT = (safe_url_for('main.impact') if
+(safe_url_for is defined and has_endpoint is defined and
+has_endpoint('main.impact')) else '#impact') %} {% set HREF_SPONSOR =
+(safe_url_for('main.become_sponsor') if (safe_url_for is defined and
+has_endpoint is defined and has_endpoint('main.become_sponsor')) else
+'/become-sponsor') %} {# Hero image selection #} {% set _hero_src =
+(hero_image_url or team.hero_bg or team.hero_image or team.team_photo or
+team.photo_url or 'images/hero/hero-1920.avif') %} {% set hero_src = (_hero_src
+if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if
+url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
 
-{# Fallback macros if app-level helpers aren’t present #}
-{% if roll_money is not defined %}
-  {% macro roll_money(v, symbol='$') -%}
-    {%- set n = (v if v is number else (v|string)|replace('$','')|replace(',','')|float) -%}
-    {%- if n >= 100000 and (n % 100 == 0) -%}{%- set n = n / 100 -%}{%- endif -%}
-    {{- symbol }}{{ '{:,.0f}'.format(n) -}}
-  {%- endmacro %}
-{% endif %}
-{% if roll_pct is not defined %}
-  {% macro roll_pct(v) -%}
-    {%- set n = (v if v is number else (v|string)|replace('%','')|float) -%}
-    {{ '{:.0f}'.format(n) -}}
-  {%- endmacro %}
-{% endif %}
-
-{# IDs & inputs #}
-{% set IDP = IDP|default('fundraiser-hero') %}
-{% set FCID = (IDP ~ '-media') %}
-{% set TEAM_NAME = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set TITLE = fundraiser_title or 'Fuel the Season.' %}
-{% set TITLE_2 = fundraiser_title_2 or 'Fund the Future.' %}
-{% set SUBTITLE = meta_description or 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
-{% set GOAL = (fundraising_goal or GOAL_USD or 50000)|int %}
-{% set RAISED = (funds_raised or 0)|int %}
-{% set PCT = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %}
-{% set PCT_CLAMP = (0 if PCT < 0 else (100 if PCT > 100 else PCT)) %}
-{% set THEME_HEX = theme_hex|default('#facc15') %}
-{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
-{% set TEXT_SHORT = TEXT_SHORTCODE or '44321' %}
-{% set SPL = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link) or '' %}
-{% set HREF_DONATE = SPL or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
-{% set HREF_IMPACT = (safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact') %}
-{% set HREF_SPONSOR = (safe_url_for('main.become_sponsor') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.become_sponsor')) else '/become-sponsor') %}
-
-{# Hero image selection #}
-{% set _hero_src = (hero_image_url or team.hero_bg or team.hero_image or team.team_photo or team.photo_url or 'images/hero/hero-1920.avif') %}
-{% set hero_src = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
-
-<section id="{{ IDP }}" class="sb-hero" data-raised="{{ RAISED }}" data-goal="{{ GOAL }}" data-deadline="{{ DEADLINE or '' }}">
+<section
+  id="{{ IDP }}"
+  class="sb-hero"
+  data-raised="{{ RAISED }}"
+  data-goal="{{ GOAL }}"
+  data-deadline="{{ DEADLINE or '' }}"
+>
   <div class="wrap">
     <!-- LEFT: Photo + overlay -->
     <figure id="{{ FCID }}" class="media" role="group" aria-label="Team photo">
-      <img src="{{ hero_src }}" alt="{{ TEAM_NAME }} team photo" loading="eager" decoding="async" fetchpriority="high">
+      <img
+        src="{{ hero_src }}"
+        alt="{{ TEAM_NAME }} team photo"
+        loading="eager"
+        decoding="async"
+        fetchpriority="high"
+      />
       <figcaption class="overlay">
         <span class="chip">{{ TEAM_NAME }}</span>
-        <h2 class="tagline"><span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span></h2>
+        <h2 class="tagline">
+          <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
+        </h2>
       </figcaption>
 
       <!-- Floating QR coin -->
       <aside class="qr-coin" role="group" aria-label="Scan to give">
-        <img id="{{ IDP }}-qr" alt="QR code to donate" width="132" height="132" decoding="async" loading="lazy">
+        <img
+          id="{{ IDP }}-qr"
+          alt="QR code to donate"
+          width="132"
+          height="132"
+          decoding="async"
+          loading="lazy"
+        />
         <div class="qr-cap"><b>Scan to give</b> — or press <kbd>D</kbd></div>
       </aside>
     </figure>
 
     <!-- RIGHT: Scoreboard + Ladder -->
-    <header class="panel" aria-labelledby="{{ IDP }}-title" aria-describedby="{{ IDP }}-desc">
+    <header
+      class="panel"
+      aria-labelledby="{{ IDP }}-title"
+      aria-describedby="{{ IDP }}-desc"
+    >
       <div class="panel-inner">
         <div class="brand"><span class="chip small">{{ TEAM_NAME }}</span></div>
-        <h1 id="{{ IDP }}-title" class="title"><span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span></h1>
+        <h1 id="{{ IDP }}-title" class="title">
+          <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
+        </h1>
         <p id="{{ IDP }}-desc" class="sub">{{ SUBTITLE }}</p>
 
         <!-- Score row -->
         <div class="score">
           <div class="money tabular">
-            <span class="raised" data-role="raised">{{ roll_money(RAISED) }}</span>
+            <span class="raised" data-role="raised"
+              >{{ roll_money(RAISED) }}</span
+            >
             <span class="sep">/</span>
             <span class="goal" data-role="goal">{{ roll_money(GOAL) }}</span>
-            <span class="pct" data-role="pct">• {{ roll_pct(PCT_CLAMP) }}%</span>
+            <span class="pct" data-role="pct"
+              >• {{ roll_pct(PCT_CLAMP) }}%</span
+            >
           </div>
 
           <!-- In the score row -->
@@ -81,421 +107,685 @@
         </div>
 
         <!-- Progress line -->
-        <div class="meter" role="meter"
-             aria-valuemin="0" aria-valuemax="{{ GOAL|int }}" aria-valuenow="{{ RAISED|int }}"
-             aria-valuetext="{{ roll_pct(PCT_CLAMP) }}% of goal">
-          <div class="track"><div class="fill" style="--p: {{ PCT_CLAMP }}%"></div></div>
+        <div
+          class="meter"
+          role="meter"
+          aria-valuemin="0"
+          aria-valuemax="{{ GOAL|int }}"
+          aria-valuenow="{{ RAISED|int }}"
+          aria-valuetext="{{ roll_pct(PCT_CLAMP) }}% of goal"
+        >
+          <div class="track">
+            <div class="fill" style="--p: {{ PCT_CLAMP }}%"></div>
+          </div>
         </div>
 
         <!-- Chips (inside .chips) -->
         <div class="chips" role="group" aria-label="Quick add amounts">
-          <button class="chip-btn" type="button" data-amt="25"  aria-pressed="false">+$25  <em>· 1 team meal</em></button>
-          <button class="chip-btn" type="button" data-amt="50"  aria-pressed="false">+$50  <em>· 1 jersey piece</em></button>
-          <button class="chip-btn" type="button" data-amt="100" aria-pressed="false">+$100 <em>· 1 week of gym time</em></button>
+          <button
+            class="chip-btn"
+            type="button"
+            data-amt="25"
+            aria-pressed="false"
+          >
+            +$25 <em>· 1 team meal</em>
+          </button>
+          <button
+            class="chip-btn"
+            type="button"
+            data-amt="50"
+            aria-pressed="false"
+          >
+            +$50 <em>· 1 jersey piece</em>
+          </button>
+          <button
+            class="chip-btn"
+            type="button"
+            data-amt="100"
+            aria-pressed="false"
+          >
+            +$100 <em>· 1 week of gym time</em>
+          </button>
         </div>
 
         <!-- Optional: sticky donate wrapper for mobile -->
         <div class="sticky-cta">
           <!-- CTA row -->
           <div class="cta">
-            <a id="{{ IDP }}-donate" class="btn gold" href="{{ HREF_DONATE }}"
-               target="_blank" rel="noopener noreferrer"
-               aria-label="Donate to {{ TEAM_NAME }}" aria-keyshortcuts="D"
-               aria-describedby="{{ IDP }}-donate-kbd">Donate <span class="amt"></span> →</a>
+            <a
+              id="{{ IDP }}-donate"
+              class="btn gold"
+              href="{{ HREF_DONATE }}"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Donate to {{ TEAM_NAME }}"
+              aria-keyshortcuts="D"
+              aria-describedby="{{ IDP }}-donate-kbd"
+              >Donate <span class="amt"></span> →</a
+            >
 
             <label class="toggle">
-              <input id="{{ IDP }}-monthly" name="monthly" type="checkbox">
+              <input id="{{ IDP }}-monthly" name="monthly" type="checkbox" />
               <span>Make it monthly</span>
             </label>
 
-            <span id="{{ IDP }}-donate-kbd" class="sr-only">Tip: Press D to donate. Hotkey is disabled while typing.</span>
+            <span id="{{ IDP }}-donate-kbd" class="sr-only"
+              >Tip: Press D to donate. Hotkey is disabled while typing.</span
+            >
             <p class="note">Every <b>$100</b> ≈ a week of gym time.</p>
           </div>
         </div>
 
         <!-- Secondary actions -->
         <nav class="sec">
-          <a class="btn ghost sm" href="{{ HREF_DONATE }}" target="_blank" rel="noopener">Skip to Donate</a>
+          <a
+            class="btn ghost sm"
+            href="{{ HREF_DONATE }}"
+            target="_blank"
+            rel="noopener"
+            >Skip to Donate</a
+          >
           <a class="btn ghost sm" href="{{ HREF_IMPACT }}">Impact</a>
           <a class="btn ghost sm" href="{{ HREF_SPONSOR }}">Become a Sponsor</a>
-          <button class="btn ghost sm" type="button" id="{{ IDP }}-share">Share</button>
-          <span id="{{ IDP }}-share-live" class="sr-only" aria-live="polite"></span>
+          <button class="btn ghost sm" type="button" id="{{ IDP }}-share">
+            Share
+          </button>
+          <span
+            id="{{ IDP }}-share-live"
+            class="sr-only"
+            aria-live="polite"
+          ></span>
         </nav>
 
         <!-- Impact Ladder (three fixed rungs) -->
         <div class="ladder" role="group" aria-label="Impact ladder milestones">
           <div class="rung" data-threshold="1000">
-            <div class="bar"></div><div class="lbl"><span class="amt">$1,000</span><span class="what">Gym Week</span></div>
+            <div class="bar"></div>
+            <div class="lbl">
+              <span class="amt">$1,000</span><span class="what">Gym Week</span>
+            </div>
           </div>
           <div class="rung" data-threshold="5000">
-            <div class="bar"></div><div class="lbl"><span class="amt">$5,000</span><span class="what">Travel Slot</span></div>
+            <div class="bar"></div>
+            <div class="lbl">
+              <span class="amt">$5,000</span
+              ><span class="what">Travel Slot</span>
+            </div>
           </div>
           <div class="rung" data-threshold="10000">
-            <div class="bar"></div><div class="lbl"><span class="amt">$10,000</span><span class="what">Tutor Block</span></div>
+            <div class="bar"></div>
+            <div class="lbl">
+              <span class="amt">$10,000</span
+              ><span class="what">Tutor Block</span>
+            </div>
           </div>
         </div>
 
-        <p class="sms">📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.</p>
+        <p class="sms">
+          📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.
+        </p>
       </div>
     </header>
   </div>
 </section>
 
 <style {{ nonce_attr() }}>
-/* ================= Scoreboard Hero — Enterprise Refactor ================= */
-#{{ IDP }}{
-  /* Design tokens */
-  --accent: {{ THEME_HEX }};
-  --line: rgba(255,255,255,.14);
-  --ghost: rgba(255,255,255,.08);
-  --radius: 18px;
-  --gap: clamp(14px, 2.2vw, 22px);
-  --panel-max: 560px;            /* keep in sync with tiers-match */
-  --overlay-lift: clamp(40px, 12vh, 140px); /* ⬆ raise overlay text on photo */
-  color:#eef2f7;
-  container-type: inline-size;
-}
-
-/* Layout */
-#{{ IDP }} .wrap {
-  display: grid;
-  grid-template-columns: minmax(44%, 1fr) minmax(40%, var(--panel-max));
-  gap: var(--gap);
-  align-items: stretch; /* 🔑 makes both sides equal height */
-}
-@media (max-width:980px) {
-  #{{ IDP }} .wrap { grid-template-columns: 1fr; }}
-
-/* Media (left) */
-#{{ IDP }} .media{
-  position:relative; border-radius:var(--radius); overflow:hidden;
-  border:1px solid var(--line); background:#111;
-}
-#{{ IDP }} .media img{
-  inline-size:100%; block-size:100%; aspect-ratio:16/9;
-  object-fit:cover; filter:saturate(1.04) contrast(1.04) brightness(.9);
-}
-
-/* Overlay: lifted headline */
-#{{ IDP }} .overlay{
-  position:absolute; inset:auto 0 0 0;
-  display:grid; gap:.5rem; padding:1rem 1.2rem;
-  padding-block-end: var(--overlay-lift);           /* << move text higher */
-  background:linear-gradient(180deg, transparent, rgba(0,0,0,.86));
-}
-#{{ IDP }} .overlay .chip{
-  display:inline-flex; align-items:center; gap:.45rem;
-  padding:.32rem .7rem; border-radius:.7rem;
-  background:rgba(255,255,255,.12); border:1px solid var(--line); font-weight:900;
-}
-#{{ IDP }} .overlay .tagline{
-  margin:0; font-weight:1000; text-transform:uppercase; text-wrap:balance;
-  line-height:.98; letter-spacing:-.01em;
-  font-size:clamp(1.5rem,1.2rem + 3.2vw,3.2rem);
-}
-#{{ IDP }} .overlay .tagline .accent{ color:var(--accent) }
-
-/* Fine-tune lift per breakpoint */
-@media (max-width:680px){ #{{ IDP }}{ --overlay-lift: clamp(16px, 4vh, 72px) } }
-
-/* QR coin */
-#{{ IDP }} .qr-coin{
-  position:absolute; left:1rem; bottom:1rem;
-  display:grid; gap:.35rem; width:max-content;
-  padding:.6rem; border-radius:16px; background:rgba(0,0,0,.76);
-  border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.45);
-}
-#{{ IDP }} .qr-coin img{ inline-size:132px; block-size:132px; image-rendering:crisp-edges }
-#{{ IDP }} .qr-coin .qr-cap{ font-size:.85rem; color:#e5e7eb }
-@media (max-width:520px){ #{{ IDP }} .qr-coin{ display:none } }
-
-/* Panel (right) */
-#{{ IDP }} .panel-inner{
-  display:flex; flex-direction:column; gap:.65rem;
-  border:1px solid var(--line); border-radius:var(--radius);
-  padding:clamp(14px,2.2vw,20px);
-  background:linear-gradient(180deg,rgba(15,16,20,.9),rgba(15,16,20,.72));
-  box-shadow:0 22px 80px rgba(0,0,0,.5);
-}
-#{{ IDP }} .brand .small{
-  font-size:.85rem; padding:.26rem .6rem; border-radius:.6rem;
-  background:rgba(255,255,255,.10); border:1px solid var(--line);
-}
-#{{ IDP }} .title{
-  margin:.1rem 0 .16rem; font-weight:1000; line-height:1.02;
-  font-size:clamp(1.9rem,1rem + 2.6vw,2.6rem);
-}
-#{{ IDP }} .title .accent{ color:var(--accent) }
-#{{ IDP }} .sub{ color:#dbe5f5 }
-
-/* Scoreboard row */
-#{{ IDP }} .score{
-  display:flex; align-items:flex-end; justify-content:space-between;
-  gap:.8rem; flex-wrap:wrap;
-}
-#{{ IDP }} .tabular{ font-variant-numeric:tabular-nums }
-#{{ IDP }} .money{ font-weight:1000; font-size:clamp(1.2rem,.9rem + 1.8vw,1.8rem) }
-#{{ IDP }} .money .sep{ opacity:.7; padding:0 .35rem }
-#{{ IDP }} .money .pct{ opacity:.9; font-weight:800; margin-left:.4rem }
-#{{ IDP }} .timer{ display:flex; align-items:center; gap:.5rem }
-#{{ IDP }} .timer .value{
-  background:rgba(255,255,255,.08); border:1px solid var(--line);
-  padding:.28rem .55rem; border-radius:.6rem; font-weight:900;
-}
-
-/* Meter */
-#{{ IDP }} .meter .track{
-  block-size:10px; border-radius:999px; overflow:hidden;
-  background:var(--ghost); border:1px solid var(--line);
-}
-#{{ IDP }} .meter .fill{
-  inline-size:var(--p,0%); block-size:100%;
-  background:linear-gradient(90deg,#fffbe6,var(--accent));
-  border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
-}
-
-/* Segmented chips */
-#{{ IDP }} .chips{
-  display:flex; gap:0; border:1px solid var(--line);
-  border-radius:.8rem; overflow:hidden; background:rgba(255,255,255,.06);
-}
-#{{ IDP }} .chip-btn{
-  flex:1 1 0; border:0; border-right:1px solid var(--line);
-  padding:.6rem .9rem; font-weight:1000; background:transparent; color:#eef2f7;
-}
-#{{ IDP }} .chip-btn:last-child{ border-right:0 }
-#{{ IDP }} .chip-btn em{ opacity:.9; font-style:normal; margin-left:.25rem; font-weight:600; font-size:.9em }
-#{{ IDP }} .chip-btn[aria-pressed="true"]{
-  color:#0b0f15; background:linear-gradient(180deg,#fffbe6,var(--accent));
-  border-color:rgba(0,0,0,.22);
-}
-
-/* CTA + optional sticky wrapper */
-#{{ IDP }} .cta{
-  display:grid; grid-template-columns:1fr auto;
-  gap:.45rem .6rem; align-items:center;
-}
-#{{ IDP }} .btn{
-  display:inline-flex; align-items:center; justify-content:center; gap:.45rem;
-  border-radius:999px; font-weight:1000; text-decoration:none; padding:.85rem 1.1rem;
-}
-#{{ IDP }} .btn.gold{
-  background:linear-gradient(180deg,#fffbe6,var(--accent));
-  color:#0b0f15; border:1px solid rgba(0,0,0,.25);
-}
-#{{ IDP }} .btn.ghost{ background:rgba(255,255,255,.08); border:1px solid var(--line); color:#eaf0fa }
-#{{ IDP }} .btn.sm{ padding:.55rem .8rem; font-weight:900 }
-#{{ IDP }} .note{ grid-column:1/-1; text-align:center; color:#fde68a }
-#{{ IDP }} .toggle{ display:inline-flex; align-items:center; gap:.4rem; user-select:none }
-#{{ IDP }} .toggle input{ accent-color: var(--accent) }
-
-#{{ IDP }} .sticky-cta{} /* neutral desktop */
-@media (max-width:780px){
-  #{{ IDP }} .sticky-cta{
-    position:sticky; bottom:8px; z-index:20; padding:6px; border-radius:14px;
-    backdrop-filter:saturate(115%) blur(6px);
-    background:linear-gradient(180deg,rgba(7,9,12,.85),rgba(7,9,12,.78));
-    border:1px solid var(--line);
+  /* ================= Scoreboard Hero — Enterprise Grid-Lock ================= */
+  #{{ IDP }}{
+    --accent: {{ THEME_HEX }};
+    --line: rgba(255,255,255,.14);
+    --ghost: rgba(255,255,255,.08);
+    --radius: 18px;
+    --gap: clamp(14px, 2.2vw, 22px);
+    --panel-max: 560px;
+    --overlay-lift: clamp(40px, 12vh, 140px);
+    color:#eef2f7;
+    container-type: inline-size;
   }
-  #{{ IDP }} .sticky-cta .btn.gold{ inline-size:100% }
-}
 
-/* Secondary actions */
-#{{ IDP }} .sec{ display:flex; flex-wrap:wrap; gap:.45rem; justify-content:center }
-
-/* Impact ladder */
-#{{ IDP }} .ladder{
-  margin-top:.35rem; padding-top:.6rem; border-top:1px dashed var(--line);
-  display:flex; flex-direction:column; gap:.6rem;
-}
-#{{ IDP }} .rung{ display:flex; align-items:center; gap:.7rem }
-#{{ IDP }} .rung .bar{
-  inline-size:180px; max-inline-size:40vw; block-size:10px;
-  border-radius:999px; position:relative; overflow:hidden;
-  background:var(--ghost); border:1px solid var(--line);
-}
-#{{ IDP }} .rung .bar::after{
-  content:""; position:absolute; inset:0;
-  transform:scaleX(var(--fill,0)); transform-origin:left;
-  background:linear-gradient(90deg,#fffbe6,var(--accent));
-  transition:transform .6s cubic-bezier(.22,.9,.27,1);
-}
-#{{ IDP }} .rung .lbl{ display:flex; gap:.4rem; font-weight:900 }
-#{{ IDP }} .rung .lbl .amt{ opacity:.95 } .rung .lbl .what{ opacity:.85 }
-
-/* Accessibility modes */
-@media (prefers-reduced-motion: reduce){
-  #{{ IDP }} .meter .fill, #{{ IDP }} .rung .bar::after{ transition:none }
-}
-@media (prefers-contrast: more){
-  #{{ IDP }} .overlay{ background:linear-gradient(180deg, transparent, rgba(0,0,0,.92)) }
-  #{{ IDP }} .btn.gold{ box-shadow:none }
-}
-@media (forced-colors: active){
-  #{{ IDP }} .media, #{{ IDP }} .panel-inner, #{{ IDP }} .chip-btn,
-  #{{ IDP }} .btn, #{{ IDP }} .qr-coin{
-    background:Canvas !important; color:CanvasText !important;
-    border:1px solid CanvasText !important; box-shadow:none !important;
+  /* 1) Wrap grid: equal-height columns via align-items:stretch */
+  #{{ IDP }} .wrap{
+    display:grid;
+    grid-template-columns: minmax(44%,1fr) minmax(40%, var(--panel-max));
+    gap: var(--gap);
+    align-items: stretch; /* 🔑 equalize heights */
   }
-}
+  @media (max-width:980px){
+    #{{ IDP }} .wrap{ grid-template-columns: 1fr; }
+  }
 
-/* Light theme */
-.light #{{ IDP }}{ color:#0f172a }
-.light #{{ IDP }} .panel-inner{
-  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.86));
-  border:1px solid rgba(0,0,0,.10); box-shadow:0 18px 50px rgba(0,0,0,.08);
-}
-.light #{{ IDP }} .title .accent{ color:var(--accent) }
-.light #{{ IDP }} .sub{ color:#334155 }
-.light #{{ IDP }} .chip-btn{ color:#111; border-color:rgba(0,0,0,.12) }
-.light #{{ IDP }} .btn.ghost{ color:#111; border-color:rgba(0,0,0,.12); background:rgba(0,0,0,.04) }
-.light #{{ IDP }} .meter .track{ background:rgba(0,0,0,.08); border-color:rgba(0,0,0,.10) }
+  /* 2) Explicit placement so both sides share the same row */
+  #{{ IDP }} .media{
+    grid-column:1; grid-row:1;
+    position:relative; border-radius:var(--radius); overflow:hidden;
+    border:1px solid var(--line); background:#111;
+  }
+  #{{ IDP }} .panel{
+    grid-column:2; grid-row:1;
+    display:flex; flex-direction:column;
+  }
+  @media (max-width:980px){
+    #{{ IDP }} .media, #{{ IDP }} .panel{ grid-column:auto; grid-row:auto; }
+  }
+
+  /* Media (left) */
+  #{{ IDP }} .media img{
+    inline-size:100%; block-size:100%; aspect-ratio:16/9;
+    object-fit:cover; filter:saturate(1.04) contrast(1.04) brightness(.9);
+  }
+  #{{ IDP }} .overlay{
+    position:absolute; inset:auto 0 0 0;
+    display:grid; gap:.5rem; padding:1rem 1.2rem;
+    padding-block-end: var(--overlay-lift);
+    background:linear-gradient(180deg, transparent, rgba(0,0,0,.86));
+  }
+  #{{ IDP }} .overlay .chip{
+    display:inline-flex; align-items:center; gap:.45rem;
+    padding:.32rem .7rem; border-radius:.7rem;
+    background:rgba(255,255,255,.12); border:1px solid var(--line); font-weight:900;
+  }
+  #{{ IDP }} .overlay .tagline{
+    margin:0; font-weight:1000; text-transform:uppercase; text-wrap:balance;
+    line-height:.98; letter-spacing:-.01em;
+    font-size:clamp(1.5rem,1.2rem + 3.2vw,3.2rem);
+  }
+  #{{ IDP }} .overlay .tagline .accent{ color:var(--accent) }
+  @media (max-width:680px){ #{{ IDP }}{ --overlay-lift: clamp(16px, 4vh, 72px) } }
+
+  /* Optional QR coin */
+  #{{ IDP }} .qr-coin{
+    position:absolute; left:1rem; bottom:1rem;
+    display:grid; gap:.35rem; width:max-content;
+    padding:.6rem; border-radius:16px; background:rgba(0,0,0,.76);
+    border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.45);
+  }
+  #{{ IDP }} .qr-coin img{ inline-size:132px; block-size:132px; image-rendering:crisp-edges }
+  #{{ IDP }} .qr-coin .qr-cap{ font-size:.85rem; color:#e5e7eb }
+  @media (max-width:520px){ #{{ IDP }} .qr-coin{ display:none } }
+
+  /* Panel (right) */
+  #{{ IDP }} .panel-inner{
+    display:flex; flex-direction:column; gap:.65rem;
+    border:1px solid var(--line); border-radius:var(--radius);
+    padding:clamp(14px,2.2vw,20px);
+    background:linear-gradient(180deg,rgba(15,16,20,.9),rgba(15,16,20,.72));
+    box-shadow:0 22px 80px rgba(0,0,0,.5);
+  }
+  #{{ IDP }} .brand .small{
+    font-size:.85rem; padding:.26rem .6rem; border-radius:.6rem;
+    background:rgba(255,255,255,.10); border:1px solid var(--line);
+  }
+  #{{ IDP }} .title{
+    margin:.1rem 0 .16rem; font-weight:1000; line-height:1.02;
+    font-size:clamp(1.9rem,1rem + 2.6vw,2.6rem);
+  }
+  #{{ IDP }} .title .accent{ color:var(--accent) }
+  #{{ IDP }} .sub{ color:#dbe5f5 }
+
+  /* Scoreboard row */
+  #{{ IDP }} .score{ display:flex; align-items:flex-end; justify-content:space-between; gap:.8rem; flex-wrap:wrap }
+  #{{ IDP }} .tabular{ font-variant-numeric:tabular-nums }
+  #{{ IDP }} .money{ font-weight:1000; font-size:clamp(1.2rem,.9rem + 1.8vw,1.8rem) }
+  #{{ IDP }} .money .sep{ opacity:.7; padding:0 .35rem }
+  #{{ IDP }} .money .pct{ opacity:.9; font-weight:800; margin-left:.4rem }
+  #{{ IDP }} .timer{ display:flex; align-items:center; gap:.5rem }
+  #{{ IDP }} .timer .value{
+    background:rgba(255,255,255,.08); border:1px solid var(--line);
+    padding:.28rem .55rem; border-radius:.6rem; font-weight:900;
+  }
+
+  /* Meter */
+  #{{ IDP }} .meter .track{
+    block-size:10px; border-radius:999px; overflow:hidden;
+    background:var(--ghost); border:1px solid var(--line);
+  }
+  #{{ IDP }} .meter .fill{
+    inline-size:var(--p,0%); block-size:100%;
+    background:linear-gradient(90deg,#fffbe6,var(--accent));
+    border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
+  }
+
+  /* Segmented chips */
+  #{{ IDP }} .chips{ display:flex; gap:0; border:1px solid var(--line); border-radius:.8rem; overflow:hidden; background:rgba(255,255,255,.06) }
+  #{{ IDP }} .chip-btn{
+    flex:1 1 0; border:0; border-right:1px solid var(--line);
+    padding:.6rem .9rem; font-weight:1000; background:transparent; color:#eef2f7;
+  }
+  #{{ IDP }} .chip-btn:last-child{ border-right:0 }
+  #{{ IDP }} .chip-btn em{ opacity:.9; font-style:normal; margin-left:.25rem; font-weight:600; font-size:.9em }
+  #{{ IDP }} .chip-btn[aria-pressed="true"]{
+    color:#0b0f15; background:linear-gradient(180deg,#fffbe6,var(--accent));
+    border-color:rgba(0,0,0,.22);
+  }
+
+  /* CTA + sticky mobile wrapper */
+  #{{ IDP }} .cta{ display:grid; grid-template-columns:1fr auto; gap:.45rem .6rem; align-items:center }
+  #{{ IDP }} .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:1000; text-decoration:none; padding:.85rem 1.1rem }
+  #{{ IDP }} .btn.gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
+  #{{ IDP }} .btn.ghost{ background:rgba(255,255,255,.08); border:1px solid var(--line); color:#eaf0fa }
+  #{{ IDP }} .btn.sm{ padding:.55rem .8rem; font-weight:900 }
+  #{{ IDP }} .note{ grid-column:1/-1; text-align:center; color:#fde68a }
+  #{{ IDP }} .toggle{ display:inline-flex; align-items:center; gap:.4rem; user-select:none }
+  #{{ IDP }} .toggle input{ accent-color: var(--accent) }
+
+  @media (max-width:780px){
+    #{{ IDP }} .sticky-cta{
+      position:sticky; bottom:8px; z-index:20; padding:6px; border-radius:14px;
+      backdrop-filter:saturate(115%) blur(6px);
+      background:linear-gradient(180deg,rgba(7,9,12,.85),rgba(7,9,12,.78));
+      border:1px solid var(--line);
+    }
+    #{{ IDP }} .sticky-cta .btn.gold{ inline-size:100% }
+  }
+
+  /* Impact ladder */
+  #{{ IDP }} .ladder{ margin-top:.35rem; padding-top:.6rem; border-top:1px dashed var(--line); display:flex; flex-direction:column; gap:.6rem }
+  #{{ IDP }} .rung{ display:flex; align-items:center; gap:.7rem }
+  #{{ IDP }} .rung .bar{
+    inline-size:180px; max-inline-size:40vw; block-size:10px;
+    border-radius:999px; position:relative; overflow:hidden;
+    background:var(--ghost); border:1px solid var(--line);
+  }
+  #{{ IDP }} .rung .bar::after{
+    content:""; position:absolute; inset:0;
+    transform:scaleX(var(--fill,0)); transform-origin:left;
+    background:linear-gradient(90deg,#fffbe6,var(--accent));
+    transition:transform .6s cubic-bezier(.22,.9,.27,1);
+  }
+  #{{ IDP }} .rung .lbl{ display:flex; gap:.4rem; font-weight:900 }
+  #{{ IDP }} .rung .lbl .amt{ opacity:.95 } #{{ IDP }} .rung .lbl .what{ opacity:.85 }
+
+  /* A11y / prefs */
+  @media (prefers-reduced-motion: reduce){
+    #{{ IDP }} .meter .fill, #{{ IDP }} .rung .bar::after{ transition:none }
+  }
+  @media (prefers-contrast: more){
+    #{{ IDP }} .overlay{ background:linear-gradient(180deg, transparent, rgba(0,0,0,.92)) }
+    #{{ IDP }} .btn.gold{ box-shadow:none }
+  }
+  @media (forced-colors: active){
+    #{{ IDP }} .media, #{{ IDP }} .panel-inner, #{{ IDP }} .chip-btn,
+    #{{ IDP }} .btn, #{{ IDP }} .qr-coin{
+      background:Canvas !important; color:CanvasText !important;
+      border:1px solid CanvasText !important; box-shadow:none !important;
+    }
+  }
+
+  /* Light theme */
+  .light #{{ IDP }}{ color:#0f172a }
+  .light #{{ IDP }} .panel-inner{
+    background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.86));
+    border:1px solid rgba(0,0,0,.10); box-shadow:0 18px 50px rgba(0,0,0,.08);
+  }
+  .light #{{ IDP }} .title .accent{ color:var(--accent) }
+  .light #{{ IDP }} .sub{ color:#334155 }
+  .light #{{ IDP }} .chip-btn{ color:#111; border-color:rgba(0,0,0,.12) }
+  .light #{{ IDP }} .btn.ghost{ color:#111; border-color:rgba(0,0,0,.12); background:rgba(0,0,0,.04) }
+  .light #{{ IDP }} .meter .track{ background:rgba(0,0,0,.08); border-color:rgba(0,0,0,.10) }
+
+  /* 4) Reusable lock rail utility (opt-in) */
+  .lock-rail{
+    display:grid;
+    grid-template-columns: 1fr minmax(300px, 560px);
+    align-items: stretch;
+    gap: var(--gap, 1.5rem);
+  }
+  .lock-rail > .main{ grid-column:1; grid-row:1; }
+  .lock-rail > .rail{ grid-column:2; grid-row:1; }
+  @media (max-width:980px){
+    .lock-rail{ grid-template-columns:1fr; }
+    .lock-rail > .main, .lock-rail > .rail{ grid-column:auto; grid-row:auto; }
+  }
 </style>
 
 <script {{ nonce_attr() }} type="module">
-(() => {
-  const root = document.getElementById({{ IDP|tojson }}); if (!root) return;
-  const $  = (s, r=root)=>r.querySelector(s);
-  const $$ = (s, r=root)=>Array.from(r.querySelectorAll(s));
+  (() => {
+    const root = document.getElementById({{ IDP|tojson }}); if (!root) return;
+    const $  = (s, r=root)=>r.querySelector(s);
+    const $$ = (s, r=root)=>Array.from(r.querySelectorAll(s));
 
-  const donate   = $('#{{ IDP }}-donate');
-  const amtOut   = donate?.querySelector('.amt');
-  const monthly  = $('#{{ IDP }}-monthly');
-  const shareBtn = $('#{{ IDP }}-share');
-  const shareLive= $('#{{ IDP }}-share-live');
-  const deadlineOut = $('#{{ IDP }}-deadline');
+    const donate   = $('#{{ IDP }}-donate');
+    const amtOut   = donate?.querySelector('.amt');
+    const monthly  = $('#{{ IDP }}-monthly');
+    const shareBtn = $('#{{ IDP }}-share');
+    const shareLive= $('#{{ IDP }}-share-live');
+    const deadlineOut = $('#{{ IDP }}-deadline');
 
-  // --- decorate URL with UTMs/params (stable)
-  function decorate(url, extra={}) {
-    try{
-      const u=new URL(url, location.origin), cur=new URL(location.href);
-      for (const k of ['utm_source','utm_medium','utm_campaign','utm_content']){
-        const v=cur.searchParams.get(k); if (v && !u.searchParams.get(k)) u.searchParams.set(k,v);
-      }
-      if(!u.searchParams.get('utm_source'))  u.searchParams.set('utm_source','hero');
-      if(!u.searchParams.get('utm_content')) u.searchParams.set('utm_content', extra.content||'cta');
-      if(extra.amount) u.searchParams.set('amount', String(extra.amount));
-      if(extra.freq)   u.searchParams.set('freq',   String(extra.freq));
-      return u.toString();
-    }catch{ return url; }
-  }
-  const ensureDecorated = ()=>{ if (donate) donate.href = decorate(donate.href); };
-  donate?.addEventListener('pointerenter', ensureDecorated, {once:true, passive:true});
-  donate?.addEventListener('focus',        ensureDecorated, {once:true, passive:true});
-  donate?.addEventListener('click',        ensureDecorated, {once:true, passive:true});
-
-  // --- segmented chips selection
-  $$('.chip-btn[data-amt]').forEach(btn=>{
-    btn.addEventListener('click', ()=>{
-      const amt = btn.getAttribute('data-amt');
-      $$('.chip-btn').forEach(b=>b.setAttribute('aria-pressed','false'));
-      btn.setAttribute('aria-pressed','true');
-      if (amtOut) amtOut.textContent = ` + $${amt}`;
-      if (donate) donate.href = decorate(donate.href, {
-        amount: amt,
-        freq: (localStorage.getItem('fc_monthly')==='1' ? 'monthly' : undefined)
-      });
-      donate?.setAttribute('aria-label', `Donate $${amt} to {{ TEAM_NAME }}`);
-    }, {passive:true});
-  });
-
-  // --- remember monthly toggle
-  if (monthly){
-    const init = localStorage.getItem('fc_monthly')==='1';
-    monthly.checked = init;
-    if (donate) donate.href = decorate(donate.href, { freq: init ? 'monthly' : undefined });
-    monthly.addEventListener('change', ()=>{
-      const on = monthly.checked; localStorage.setItem('fc_monthly', on?'1':'0');
-      if (donate) donate.href = decorate(donate.href, { freq: on ? 'monthly' : undefined });
-    }, {passive:true});
-  }
-
-  // --- share
-  shareBtn?.addEventListener('click', async ()=>{
-    try{
-      const payload = { title: '{{ (TITLE ~ " " ~ TITLE_2)|e }}', text: '{{ SUBTITLE|e }}', url: location.href };
-      if (navigator.share) await navigator.share(payload); else await navigator.clipboard.writeText(payload.url);
-      if (shareLive){ shareLive.textContent='Link copied'; setTimeout(()=>shareLive.textContent='', 1800); }
-    }catch{}
-  });
-
-  // --- hotkey D (not while typing)
-  addEventListener('keydown',(e)=>{
-    const tag=(e.target?.tagName||'').toLowerCase();
-    if ((e.key==='d'||e.key==='D') && !/input|textarea|select/.test(tag)){ donate?.click(); }
-  },{passive:true});
-
-  // --- deadline ticker (“period timer”)
-  const deadline = root.getAttribute('data-deadline')||'';
-  const rel = new Intl.RelativeTimeFormat(navigator.language||'en-US',{numeric:'auto'});
-  function tick(){
-    if (!deadline){ deadlineOut && (deadlineOut.textContent='—'); return; }
-    const end=new Date(deadline), diff=(+end) - Date.now();
-    if (Number.isNaN(+end)){ deadlineOut.textContent='—'; return; }
-    if (diff<=0){ deadlineOut.textContent='now'; return; }
-    const s=diff/1000|0, m=s/60|0, h=m/60|0, d=h/24|0;
-    deadlineOut.textContent = d?rel.format(d,'day'): h?rel.format(h,'hour'): rel.format(m,'minute');
-  }
-  tick(); setInterval(tick, 30_000);
-
-  // --- QR inherits decorated CTA
-  try{
-    const qrImg = $('#{{ IDP }}-qr');
-    if (qrImg){
-      ensureDecorated();
-      const u = new URL(donate?.href || {{ HREF_DONATE|tojson }}, location.origin);
-      if(!u.searchParams.get('utm_medium'))  u.searchParams.set('utm_medium','qr');
-      if(!u.searchParams.get('utm_content')) u.searchParams.set('utm_content','qr');
-      qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=264x264&margin=0&data=${encodeURIComponent(u.toString())}`;
+    // --- decorate URL with UTMs/params (stable)
+    function decorate(url, extra={}) {
+      try{
+        const u=new URL(url, location.origin), cur=new URL(location.href);
+        for (const k of ['utm_source','utm_medium','utm_campaign','utm_content']){
+          const v=cur.searchParams.get(k); if (v && !u.searchParams.get(k)) u.searchParams.set(k,v);
+        }
+        if(!u.searchParams.get('utm_source'))  u.searchParams.set('utm_source','hero');
+        if(!u.searchParams.get('utm_content')) u.searchParams.set('utm_content', extra.content||'cta');
+        if(extra.amount) u.searchParams.set('amount', String(extra.amount));
+        if(extra.freq)   u.searchParams.set('freq',   String(extra.freq));
+        return u.toString();
+      }catch{ return url; }
     }
-  }catch{}
+    const ensureDecorated = ()=>{ if (donate) donate.href = decorate(donate.href); };
+    donate?.addEventListener('pointerenter', ensureDecorated, {once:true, passive:true});
+    donate?.addEventListener('focus',        ensureDecorated, {once:true, passive:true});
+    donate?.addEventListener('click',        ensureDecorated, {once:true, passive:true});
 
-  // --- Animate meter on view
-  (function animateFill(){
-    const fill = root.querySelector('.meter .fill'); if (!fill) return;
-    const pct = parseFloat(getComputedStyle(fill).getPropertyValue('--p')||'0');
-    fill.style.width='0%';
-    try{
-      const io=new IntersectionObserver(([ent])=>{
-        if (ent.isIntersecting){ fill.style.width = pct + '%'; io.disconnect(); }
-      },{threshold:.3});
-      io.observe(fill); addEventListener('pagehide',()=>io.disconnect(),{once:true});
-    }catch{ fill.style.width = pct + '%'; }
-  })();
-
-  // --- Light ladder rungs (and animate bar fill) based on totals
-  function updateRungs(raised){
-    $$('.ladder .rung').forEach(r=>{
-      const need = +r.getAttribute('data-threshold')||0;
-      const pct  = Math.max(0, Math.min(1, raised / Math.max(need,1)));
-      r.style.setProperty('--fill', pct.toString());
+    // --- segmented chips selection
+    $$('.chip-btn[data-amt]').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        const amt = btn.getAttribute('data-amt');
+        $$('.chip-btn').forEach(b=>b.setAttribute('aria-pressed','false'));
+        btn.setAttribute('aria-pressed','true');
+        if (amtOut) amtOut.textContent = ` + $${amt}`;
+        if (donate) donate.href = decorate(donate.href, {
+          amount: amt,
+          freq: (localStorage.getItem('fc_monthly')==='1' ? 'monthly' : undefined)
+        });
+        donate?.setAttribute('aria-label', `Donate $${amt} to {{ TEAM_NAME }}`);
+      }, {passive:true});
     });
-  }
-  updateRungs(parseFloat(root.getAttribute('data-raised')||'0'));
 
-  // --- Hydrate from /api/totals (quietly)
-  (async function hydrate(){
+    // --- remember monthly toggle
+    if (monthly){
+      const init = localStorage.getItem('fc_monthly')==='1';
+      monthly.checked = init;
+      if (donate) donate.href = decorate(donate.href, { freq: init ? 'monthly' : undefined });
+      monthly.addEventListener('change', ()=>{
+        const on = monthly.checked; localStorage.setItem('fc_monthly', on?'1':'0');
+        if (donate) donate.href = decorate(donate.href, { freq: on ? 'monthly' : undefined });
+      }, {passive:true});
+    }
+
+    // --- share
+    shareBtn?.addEventListener('click', async ()=>{
+      try{
+        const payload = { title: '{{ (TITLE ~ " " ~ TITLE_2)|e }}', text: '{{ SUBTITLE|e }}', url: location.href };
+        if (navigator.share) await navigator.share(payload); else await navigator.clipboard.writeText(payload.url);
+        if (shareLive){ shareLive.textContent='Link copied'; setTimeout(()=>shareLive.textContent='', 1800); }
+      }catch{}
+    });
+
+    // --- hotkey D (not while typing)
+    addEventListener('keydown',(e)=>{
+      const tag=(e.target?.tagName||'').toLowerCase();
+      if ((e.key==='d'||e.key==='D') && !/input|textarea|select/.test(tag)){ donate?.click(); }
+    },{passive:true});
+
+    // --- deadline ticker (“period timer”)
+    const deadline = root.getAttribute('data-deadline')||'';
+    const rel = new Intl.RelativeTimeFormat(navigator.language||'en-US',{numeric:'auto'});
+    function tick(){
+      if (!deadline){ deadlineOut && (deadlineOut.textContent='—'); return; }
+      const end=new Date(deadline), diff=(+end) - Date.now();
+      if (Number.isNaN(+end)){ deadlineOut.textContent='—'; return; }
+      if (diff<=0){ deadlineOut.textContent='now'; return; }
+      const s=diff/1000|0, m=s/60|0, h=m/60|0, d=h/24|0;
+      deadlineOut.textContent = d?rel.format(d,'day'): h?rel.format(h,'hour'): rel.format(m,'minute');
+    }
+    tick(); setInterval(tick, 30_000);
+
+    // --- QR inherits decorated CTA
     try{
-      const res = await fetch('/api/totals', {headers:{'Accept':'application/json'}});
-      if(!res.ok) return;
-      const j = await res.json();
-      const raised = Number(j?.raised ?? j?.total ?? {{ RAISED }});
-      const goal   = Number(j?.goal ?? {{ GOAL }});
-      const pct    = Math.max(0, Math.min(100, (raised/Math.max(1,goal))*100));
-
-      // numbers
-      const cur = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
-      $('.money [data-role="raised"]').textContent = cur.format(raised);
-      $('.money [data-role="goal"]').textContent   = cur.format(goal);
-      $('.money [data-role="pct"]').textContent    = `• ${Math.round(pct)}%`;
-
-      // meter
-      const fill = root.querySelector('.meter .fill'); if (fill) fill.style.width = pct + '%';
-
-      // ladder
-      updateRungs(raised);
+      const qrImg = $('#{{ IDP }}-qr');
+      if (qrImg){
+        ensureDecorated();
+        const u = new URL(donate?.href || {{ HREF_DONATE|tojson }}, location.origin);
+        if(!u.searchParams.get('utm_medium'))  u.searchParams.set('utm_medium','qr');
+        if(!u.searchParams.get('utm_content')) u.searchParams.set('utm_content','qr');
+        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=264x264&margin=0&data=${encodeURIComponent(u.toString())}`;
+      }
     }catch{}
+
+    // --- Animate meter on view
+    (function animateFill(){
+      const fill = root.querySelector('.meter .fill'); if (!fill) return;
+      const pct = parseFloat(getComputedStyle(fill).getPropertyValue('--p')||'0');
+      fill.style.width='0%';
+      try{
+        const io=new IntersectionObserver(([ent])=>{
+          if (ent.isIntersecting){ fill.style.width = pct + '%'; io.disconnect(); }
+        },{threshold:.3});
+        io.observe(fill); addEventListener('pagehide',()=>io.disconnect(),{once:true});
+      }catch{ fill.style.width = pct + '%'; }
+    })();
+
+    // --- Light ladder rungs (and animate bar fill) based on totals
+    function updateRungs(raised){
+      $$('.ladder .rung').forEach(r=>{
+        const need = +r.getAttribute('data-threshold')||0;
+        const pct  = Math.max(0, Math.min(1, raised / Math.max(need,1)));
+        r.style.setProperty('--fill', pct.toString());
+      });
+    }
+    updateRungs(parseFloat(root.getAttribute('data-raised')||'0'));
+
+    // --- Hydrate from /api/totals (quietly)
+    (async function hydrate(){
+      try{
+        const res = await fetch('/api/totals', {headers:{'Accept':'application/json'}});
+        if(!res.ok) return;
+        const j = await res.json();
+        const raised = Number(j?.raised ?? j?.total ?? {{ RAISED }});
+        const goal   = Number(j?.goal ?? {{ GOAL }});
+        const pct    = Math.max(0, Math.min(100, (raised/Math.max(1,goal))*100));
+
+        // numbers
+        const cur = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
+        $('.money [data-role="raised"]').textContent = cur.format(raised);
+        $('.money [data-role="goal"]').textContent   = cur.format(goal);
+        $('.money [data-role="pct"]').textContent    = `• ${Math.round(pct)}%`;
+
+        // meter
+        const fill = root.querySelector('.meter .fill'); if (fill) fill.style.width = pct + '%';
+
+        // ladder
+        updateRungs(raised);
+      }catch{}
+    })();
   })();
-})();
 </script>
 
+<script {{ nonce_attr() }} type="module">
+  (() => {
+    "use strict";
+    const rootId = {{ IDP|tojson }};
+    const root   = document.getElementById(rootId);
+    if (!root) return;
+
+    /* ---------- shorthands ---------- */
+    const $  = (s, r=root) => r.querySelector(s);
+    const $$ = (s, r=root) => Array.from(r.querySelectorAll(s));
+    const reduce = matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
+
+    /* ---------- config from data-* ---------- */
+    const goal   = +root.getAttribute("data-goal")   || 0;
+    const raised = +root.getAttribute("data-raised") || 0;
+    const deadline = root.getAttribute("data-deadline") || "";
+    const teamName = {{ (TEAM_NAME or 'Team')|tojson }};
+
+    /* ---------- formatters ---------- */
+    const fmtMoney = (n) => {
+      try { return new Intl.NumberFormat(navigator.language||"en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n); }
+      catch { return "$" + Math.round(n).toLocaleString(); }
+    };
+    const relfmt = new Intl.RelativeTimeFormat(navigator.language||"en-US",{numeric:"auto"});
+
+    /* ---------- UTM decoration ---------- */
+    function decorate(url, extra={}){
+      try{
+        const u = new URL(url, location.origin);
+        const cur = new URL(location.href);
+        // carry page utms if missing
+        ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(k=>{
+          const v = cur.searchParams.get(k);
+          if (v && !u.searchParams.get(k)) u.searchParams.set(k,v);
+        });
+        // defaults for hero
+        if (!u.searchParams.get("utm_source"))  u.searchParams.set("utm_source","hero");
+        if (!u.searchParams.get("utm_medium"))  u.searchParams.set("utm_medium","site");
+        if (!u.searchParams.get("utm_campaign"))u.searchParams.set("utm_campaign","fundchamps");
+        if (!u.searchParams.get("utm_content")) u.searchParams.set("utm_content","cta");
+        // extras
+        Object.entries(extra).forEach(([k,v])=>{
+          if (v!=null && v!=="") u.searchParams.set(k, String(v));
+        });
+        return u.pathname + (u.search||"") + (u.hash||"");
+      }catch{ return url; }
+    }
+
+    /* ---------- DOM hooks ---------- */
+    const donateBtn = $("#"+rootId+"-donate") || $(".cta .btn.gold", root);
+    const donateAmtLabel = $(".cta .btn.gold .amt", root) || $(".hero-amt-label", root);
+    const monthlyTgl = $('.toggle input[name="recurring"]', root) || $("#recurring", root);
+    const chipBtns = $$(".chip-btn[data-amt]", root);
+    const meterFill = $(".meter .fill", root);
+    const marks = $$(".hm-marks li,[data-k]", root); // optional if present
+    const raisedEl = $(".money .raised, .hm-raised", root);
+    const goalEl   = $(".money .goal,   .hm-goal", root);
+    const pctEl    = $(".money .pct,    .hm-pct", root);
+    const cdOut    = $(".timer .value", root) || $("#"+rootId+"-deadline-inline");
+    const qrImg    = $(".qr-coin img, #"+rootId+"-qr", root);
+
+    /* ---------- values ---------- */
+    const pct = goal>0 ? Math.max(0, Math.min(1, raised/goal)) : 0;
+
+    /* ---------- numbers + meter ---------- */
+    function renderNumbers(){
+      if (raisedEl) raisedEl.textContent = fmtMoney(raised);
+      if (goalEl)   goalEl.textContent   = fmtMoney(goal);
+      if (pctEl)    pctEl.textContent    = Math.round(pct*100) + "%";
+    }
+    function renderMeter(){
+      if (!meterFill) return;
+      const target = Math.round(pct*100) + "%";
+      if (reduce){
+        meterFill.style.width = target;
+      }else{
+        meterFill.style.width = "0%";
+        try{
+          const io = new IntersectionObserver(([ent])=>{
+            if (!ent?.isIntersecting) return;
+            meterFill.style.width = target;
+            io.disconnect();
+          }, {threshold:.25, rootMargin:"0px 0px -20% 0px"});
+          io.observe(meterFill);
+          addEventListener("pagehide", ()=>io.disconnect(), {once:true});
+        }catch{ meterFill.style.width = target; }
+      }
+      // mark ticks (25/50/75/100) if present
+      marks.forEach(li=>{
+        const k = +(li.getAttribute("data-k")||li.textContent.replace("%",""));
+        if (k && pct*100 >= k) li.classList.add("reached");
+      });
+    }
+
+    /* ---------- ladder rungs sync ---------- */
+    function renderLadder(){
+      $$(".ladder .rung", root).forEach(r=>{
+        const amt = +r.getAttribute("data-amt") || 0;
+        const f = goal>0 ? Math.max(0, Math.min(1, amt/goal)) : 0;
+        r.style.setProperty("--fill", String(f));
+        const bar = r.querySelector(".bar");
+        if (bar) bar.style.setProperty("--fill", String(f));
+        // write friendly label if missing
+        const lblAmt = r.querySelector(".lbl .amt");
+        if (lblAmt && !lblAmt.textContent.trim()) lblAmt.textContent = fmtMoney(amt);
+      });
+    }
+
+    /* ---------- chips → decorate CTA ---------- */
+    function applyCTA({amount, freq}={}){
+      if (!donateBtn) return;
+      const href = donateBtn.getAttribute("href") || {{ (HREF_DONATE or '/donate')|tojson }};
+      donateBtn.setAttribute("href", decorate(href, {
+        amount: amount||"",
+        freq:   freq|| (monthlyTgl?.checked ? "monthly" : "")
+      }));
+      // external processors → open in new tab
+      try{
+        const abs = new URL(donateBtn.href, location.origin).href;
+        if (/^https?:\/\/(buy\.stripe\.com|checkout\.stripe\.com)/i.test(abs) || /paypal\.com/i.test(abs)){
+          donateBtn.target = "_blank";
+          donateBtn.rel = "nofollow noopener noreferrer";
+        }
+      }catch{}
+    }
+    function setPressed(btn){
+      chipBtns.forEach(b=>b.setAttribute("aria-pressed","false"));
+      btn?.setAttribute("aria-pressed","true");
+    }
+
+    chipBtns.forEach(b=>{
+      b.setAttribute("role","button");
+      b.setAttribute("aria-pressed","false");
+      b.addEventListener("click", ()=>{
+        const amt = +b.getAttribute("data-amt") || 0;
+        setPressed(b);
+        applyCTA({amount: amt});
+        if (donateAmtLabel) donateAmtLabel.textContent = " + " + fmtMoney(amt);
+        if (donateBtn) donateBtn.setAttribute("aria-label", `Donate ${fmtMoney(amt)} to ${teamName}`);
+      }, {passive:true});
+    });
+
+    monthlyTgl?.addEventListener("change", ()=>applyCTA({}), {passive:true});
+
+    // seed once on intent
+    donateBtn?.addEventListener("pointerenter", ()=>applyCTA({}), {passive:true, once:true});
+    donateBtn?.addEventListener("focus",        ()=>applyCTA({}), {passive:true, once:true});
+    donateBtn?.addEventListener("click",        ()=>applyCTA({}), {passive:true, once:true});
+
+    /* ---------- preconnect on intent ---------- */
+    const preconnectOnce = (()=>{ let done=false; return ()=>{ if (done) return; done=true;
+      [["dns-prefetch","//checkout.stripe.com"],["preconnect","https://checkout.stripe.com"],["preconnect","https://js.stripe.com"],["preconnect","https://www.paypal.com"]]
+        .forEach(([rel,href])=>{ try{ const l=document.createElement("link"); l.rel=rel; l.href=href; l.crossOrigin="anonymous"; document.head.appendChild(l); }catch{}; });
+    };})();
+    donateBtn?.addEventListener("pointerenter", preconnectOnce, {passive:true});
+    donateBtn?.addEventListener("focus",        preconnectOnce, {passive:true});
+
+    /* ---------- countdown ---------- */
+    (function countdown(){
+      if (!cdOut) return;
+      if (!deadline){ cdOut.textContent = "—"; return; }
+      const end = new Date(deadline);
+      if (isNaN(+end)){ cdOut.textContent = "—"; return; }
+      const tick = ()=>{
+        const diff = +end - Date.now();
+        if (diff <= 0){ cdOut.textContent = "now"; return; }
+        const m = Math.floor(diff/60000);
+        const h = Math.floor(m/60);
+        const d = Math.floor(h/24);
+        cdOut.textContent = d ? relfmt.format(d,"day") : h ? relfmt.format(h,"hour") : relfmt.format(m,"minute");
+      };
+      tick();
+      const id = setInterval(tick, 30_000);
+      addEventListener("pagehide", ()=>clearInterval(id), {once:true});
+    })();
+
+    /* ---------- QR coin ---------- */
+    (function qr(){
+      if (!qrImg) return;
+      applyCTA({}); // ensure CTA decorated first
+      const href = donateBtn?.href || {{ (HREF_DONATE or '/donate')|tojson }};
+      const url = new URL(href, location.origin);
+      if (!url.searchParams.get("utm_medium"))  url.searchParams.set("utm_medium","qr");
+      if (!url.searchParams.get("utm_content")) url.searchParams.set("utm_content","qr-coin");
+      const src = `https://api.qrserver.com/v1/create-qr-code/?size=264x264&margin=0&data=${encodeURIComponent(url.toString())}`;
+      qrImg.src = src; qrImg.alt = "Scan to donate";
+      qrImg.decoding = "async"; qrImg.loading = "lazy";
+    })();
+
+    /* ---------- hotkey D ---------- */
+    addEventListener("keydown", (e)=>{
+      const t=(e.target?.tagName||"").toLowerCase();
+      if ((e.key==="d"||e.key==="D") && !/input|textarea|select/.test(t)) donateBtn?.click();
+    }, {passive:true});
+
+    /* ---------- boot ---------- */
+    renderNumbers();
+    renderMeter();
+    renderLadder();
+
+    // zero-state: avoid rolling nonsense
+    if (raised === 0 && raisedEl) raisedEl.textContent = "$0";
+  })();
+</script>

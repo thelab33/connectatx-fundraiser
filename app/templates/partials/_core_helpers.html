@@ -1,0 +1,68 @@
+{# Core helpers: import in base + children #} {% macro nonce_attr(nonce) -%}{%
+if nonce %}nonce="{{ nonce }}"{% endif %}{%- endmacro %} {% macro sri(path)
+-%}{{ (SRI.get(path) if (SRI is defined and SRI) else None) }}{%- endmacro %} {%
+macro asset(path) -%} {%- if not path -%}{{ '' }} {%- elif url_for is defined
+-%}{{ url_for('static', filename=path, v=(VER if VER else None)) }} {%- else
+-%}/static/{{ path.lstrip('/') }}{%- endif -%} {%- endmacro %} {% macro
+asset_abs(path) -%} {%- set rel = asset(path) -%} {%- if not rel -%}{{ '' }} {%-
+elif rel.startswith('http') or rel.startswith('//') -%}{{ rel }} {%- elif
+request is defined -%}{{ request.url_root ~ rel.lstrip('/') }} {%- else -%}{{
+rel }}{% endif %} {%- endmacro %} {% macro script_tag(src, module=false,
+defer=true, async=false, sri_key=None, nonce=None) -%}
+<script
+  {{
+  nonce_attr(nonce)
+  }}{%
+  if
+  module
+  %}
+  type="module"
+  {%
+  endif
+  %}{%
+  if
+  async
+  %}
+  async{%
+  endif
+  %}{%
+  if
+  defer
+  %}
+  defer{%
+  endif
+  %}
+  src="{{ src }}"
+  {%
+  if
+  sri_key
+  and
+  SRI
+  and
+  SRI.get(sri_key)
+  %}
+  integrity="{{ SRI.get(sri_key) }}"
+  crossorigin="anonymous"
+  {%
+  endif
+  %}
+></script>
+{%- endmacro %} {% macro link_css(href, sri_key=None) -%}
+<link
+  rel="stylesheet"
+  href="{{ href }}"
+  {%
+  if
+  sri_key
+  and
+  SRI
+  and
+  SRI.get(sri_key)
+  %}
+  integrity="{{ SRI.get(sri_key) }}"
+  crossorigin="anonymous"
+  {%
+  endif
+  %}
+/>
+{%- endmacro %}
