@@ -2,6 +2,8 @@
 node_modules/
 dist/
 *.log
+legacy/
+
 
 # Python
 .venv/
@@ -25,4 +27,5 @@ Thumbs.db
 *.pem
 *.key
 *.p12
-
+/app/static/css/output.css
+/app/static/css/tailwind.min.css

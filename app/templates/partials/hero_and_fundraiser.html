@@ -1,50 +1,52 @@
-{# ===================== Scoreboard Hero + Impact Ladder (SV-ELITE, refactor)
-===================== #} {% set NONCE = NONCE if NONCE is defined else
-(csp_nonce() if csp_nonce is defined else '') %} {% macro nonce_attr()
--%}nonce="{{ NONCE }}"{%- endmacro %} {# Fallback macros if app-level helpers
-aren’t present #} {% if roll_money is not defined %} {% macro roll_money(v,
-symbol='$') -%} {%- set n = (v if v is number else
-(v|string)|replace('$','')|replace(',','')|float) -%} {%- if n >= 100000 and (n
-% 100 == 0) -%}{%- set n = n / 100 -%}{%- endif -%} {{- symbol }}{{
-'{:,.0f}'.format(n) -}} {%- endmacro %} {% endif %} {% if roll_pct is not
-defined %} {% macro roll_pct(v) -%} {%- set n = (v if v is number else
-(v|string)|replace('%','')|float) -%} {{ '{:.0f}'.format(n) -}} {%- endmacro %}
-{% endif %} {# IDs & inputs #} {% set IDP = IDP|default('fundraiser-hero') %} {%
-set FCID = (IDP ~ '-media') %} {% set TEAM_NAME = (team.name if team and
-team.name else team.team_name if team and team.team_name else 'Connect ATX
-Elite') %} {% set TITLE = fundraiser_title or 'Fuel the Season.' %} {% set
-TITLE_2 = fundraiser_title_2 or 'Fund the Future.' %} {% set SUBTITLE =
-meta_description or 'Direct support for gear, travel, and tutoring—every dollar
-moves a kid forward.' %} {% set GOAL = (fundraising_goal or GOAL_USD or
-50000)|int %} {% set RAISED = (funds_raised or 0)|int %} {% set PCT = (100.0 *
-(RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %} {% set
-PCT_CLAMP = (0 if PCT < 0 else (100 if PCT > 100 else PCT)) %} {% set THEME_HEX
-= theme_hex|default('#facc15') %} {% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE'
-%} {% set TEXT_SHORT = TEXT_SHORTCODE or '44321' %} {% set SPL =
-(stripe_payment_link if stripe_payment_link is defined and stripe_payment_link)
-or '' %} {% set HREF_IMPACT = ( safe_url_for('main.impact') if (safe_url_for is
-defined and has_endpoint is defined and has_endpoint('main.impact')) else
-'#impact-v2' ) %} {% set HREF_IMPACT = (safe_url_for('main.impact') if
-(safe_url_for is defined and has_endpoint is defined and
-has_endpoint('main.impact')) else '#impact') %} {% set HREF_SPONSOR =
-(safe_url_for('main.become_sponsor') if (safe_url_for is defined and
-has_endpoint is defined and has_endpoint('main.become_sponsor')) else
-'/become-sponsor') %} {# Hero image selection #} {% set _hero_src =
-(hero_image_url or team.hero_bg or team.hero_image or team.team_photo or
-team.photo_url or 'images/hero/hero-1920.avif') %} {% set hero_src = (_hero_src
-if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if
-url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{# ===================== Scoreboard Hero — Pro 5.0 ===================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{% if roll_money is not defined %}
+{% macro roll_money(v, symbol='$') -%}
+  {%- set n = (v if v is number else (v|string)|replace('$','')|replace(',','')|float) -%}
+  {{- symbol }}{{ '{:,.0f}'.format(n) -}}
+{%- endmacro %}
+{% endif %}
+
+{% if roll_pct is not defined %}
+{% macro roll_pct(v) -%}
+  {%- set n = (v if v is number else (v|string)|replace('%','')|float) -%}
+  {{ '{:.0f}'.format(n) -}}
+{%- endmacro %}
+{% endif %}
+
+{# IDs & inputs #}
+{% set IDP        = IDP|default('fundraiser-hero') %}
+{% set FCID       = (IDP ~ '-media') %}
+{% set TEAM_NAME  = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
+{% set TITLE      = fundraiser_title   or 'Fuel the Season.' %}
+{% set TITLE_2    = fundraiser_title_2 or 'Fund the Future.' %}
+{% set SUBTITLE   = meta_description   or 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set GOAL       = (fundraising_goal or GOAL_USD or 50000)|int %}
+{% set RAISED     = (funds_raised or 0)|int %}
+{% set PCT        = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %}
+{% set PCT_CLAMP  = (0 if PCT < 0 else (100 if PCT > 100 else PCT)) %}
+{% set THEME_HEX  = theme_hex|default('#facc15') %}
+{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
+{% set TEXT_SHORT   = TEXT_SHORTCODE or '44321' %}
+{% set HREF_IMPACT  = (safe_url_for('main.impact')  if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact-v2') %}
+{% set HREF_SPONSOR = (safe_url_for('main.become_sponsor') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.become_sponsor')) else '/become-sponsor') %}
+{% set _hero_src    = (hero_image_url or team.hero_bg or team.hero_image or team.team_photo or team.photo_url or 'images/hero/hero-1920.avif') %}
+{% set hero_src     = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
 
 <section
   id="{{ IDP }}"
-  class="sb-hero"
+  class="hero"
   data-raised="{{ RAISED }}"
   data-goal="{{ GOAL }}"
   data-deadline="{{ DEADLINE or '' }}"
+  style="--accent: {{ THEME_HEX }};"
+  aria-label="Fundraiser hero and scoreboard"
 >
-  <div class="wrap">
-    <!-- LEFT: Photo + overlay -->
-    <figure id="{{ FCID }}" class="media" role="group" aria-label="Team photo">
+  <div class="hero__shell">
+    <!-- LEFT: Media -->
+    <figure id="{{ FCID }}" class="hero__media" role="group" aria-label="Team photo">
       <img
         src="{{ hero_src }}"
         alt="{{ TEAM_NAME }} team photo"
@@ -52,35 +54,25 @@ url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
         decoding="async"
         fetchpriority="high"
       />
-      <figcaption class="overlay">
+      <figcaption class="hero__overlay">
         <span class="chip">{{ TEAM_NAME }}</span>
         <h2 class="tagline">
           <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
         </h2>
       </figcaption>
 
-      <!-- Floating QR coin -->
-      <aside class="qr-coin" role="group" aria-label="Scan to give">
-        <img
-          id="{{ IDP }}-qr"
-          alt="QR code to donate"
-          width="132"
-          height="132"
-          decoding="async"
-          loading="lazy"
-        />
-        <div class="qr-cap"><b>Scan to give</b> — or press <kbd>D</kbd></div>
+      <!-- QR coin (optional) -->
+      <aside class="qr" role="group" aria-label="Scan to give">
+        <img id="{{ IDP }}-qr" alt="QR code to donate" width="132" height="132" decoding="async" loading="lazy" />
+        <div class="qr__cap"><b>Scan to give</b> — or press <kbd>D</kbd></div>
       </aside>
     </figure>
 
-    <!-- RIGHT: Scoreboard + Ladder -->
-    <header
-      class="panel"
-      aria-labelledby="{{ IDP }}-title"
-      aria-describedby="{{ IDP }}-desc"
-    >
-      <div class="panel-inner">
-        <div class="brand"><span class="chip small">{{ TEAM_NAME }}</span></div>
+    <!-- RIGHT: Scoreboard Panel -->
+    <header class="panel" aria-labelledby="{{ IDP }}-title" aria-describedby="{{ IDP }}-desc">
+      <div class="panel__inner">
+        <div class="brand"><span class="chip chip--sm">{{ TEAM_NAME }}</span></div>
+
         <h1 id="{{ IDP }}-title" class="title">
           <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
         </h1>
@@ -89,24 +81,18 @@ url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
         <!-- Score row -->
         <div class="score">
           <div class="money tabular">
-            <span class="raised" data-role="raised"
-              >{{ roll_money(RAISED) }}</span
-            >
+            <span class="raised" data-role="raised">{{ roll_money(RAISED) }}</span>
             <span class="sep">/</span>
             <span class="goal" data-role="goal">{{ roll_money(GOAL) }}</span>
-            <span class="pct" data-role="pct"
-              >• {{ roll_pct(PCT_CLAMP) }}%</span
-            >
+            <span class="pct" data-role="pct">• {{ roll_pct(PCT_CLAMP) }}%</span>
           </div>
-
-          <!-- In the score row -->
           <div class="timer">
             <span class="label">Goal ends in</span>
             <span id="{{ IDP }}-deadline" class="value">—</span>
           </div>
         </div>
 
-        <!-- Progress line -->
+        <!-- Progress meter -->
         <div
           class="meter"
           role="meter"
@@ -115,328 +101,357 @@ url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
           aria-valuenow="{{ RAISED|int }}"
           aria-valuetext="{{ roll_pct(PCT_CLAMP) }}% of goal"
         >
-          <div class="track">
-            <div class="fill" style="--p: {{ PCT_CLAMP }}%"></div>
-          </div>
+          <div class="track"><div class="fill" style="--p: {{ PCT_CLAMP }}%"></div></div>
         </div>
 
-        <!-- Chips (inside .chips) -->
+        <!-- Quick-add chips -->
         <div class="chips" role="group" aria-label="Quick add amounts">
-          <button
-            class="chip-btn"
-            type="button"
-            data-amt="25"
-            aria-pressed="false"
-          >
-            +$25 <em>· 1 team meal</em>
-          </button>
-          <button
-            class="chip-btn"
-            type="button"
-            data-amt="50"
-            aria-pressed="false"
-          >
-            +$50 <em>· 1 jersey piece</em>
-          </button>
-          <button
-            class="chip-btn"
-            type="button"
-            data-amt="100"
-            aria-pressed="false"
-          >
-            +$100 <em>· 1 week of gym time</em>
-          </button>
+          <button class="chip-btn" type="button" data-amt="25"  aria-pressed="false">+$25 <em>· 1 team meal</em></button>
+          <button class="chip-btn" type="button" data-amt="50"  aria-pressed="false">+$50 <em>· 1 jersey piece</em></button>
+          <button class="chip-btn" type="button" data-amt="100" aria-pressed="false">+$100 <em>· 1 week of gym time</em></button>
         </div>
 
-        <!-- Optional: sticky donate wrapper for mobile -->
-        <div class="sticky-cta">
-          <!-- CTA row -->
+        <!-- Sticky donate (mobile-first) -->
+        <div class="sticky">
           <div class="cta">
             <a
               id="{{ IDP }}-donate"
-              class="btn gold"
+              class="btn btn--gold"
               href="{{ HREF_DONATE }}"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Donate to {{ TEAM_NAME }}"
               aria-keyshortcuts="D"
               aria-describedby="{{ IDP }}-donate-kbd"
-              >Donate <span class="amt"></span> →</a
-            >
+            >Donate <span class="amt"></span> →</a>
 
             <label class="toggle">
               <input id="{{ IDP }}-monthly" name="monthly" type="checkbox" />
               <span>Make it monthly</span>
             </label>
 
-            <span id="{{ IDP }}-donate-kbd" class="sr-only"
-              >Tip: Press D to donate. Hotkey is disabled while typing.</span
-            >
+            <span id="{{ IDP }}-donate-kbd" class="sr-only">Tip: Press D to donate. Hotkey is disabled while typing.</span>
             <p class="note">Every <b>$100</b> ≈ a week of gym time.</p>
           </div>
         </div>
 
         <!-- Secondary actions -->
         <nav class="sec">
-          <a
-            class="btn ghost sm"
-            href="{{ HREF_DONATE }}"
-            target="_blank"
-            rel="noopener"
-            >Skip to Donate</a
-          >
-          <a class="btn ghost sm" href="{{ HREF_IMPACT }}">Impact</a>
-          <a class="btn ghost sm" href="{{ HREF_SPONSOR }}">Become a Sponsor</a>
-          <button class="btn ghost sm" type="button" id="{{ IDP }}-share">
-            Share
-          </button>
-          <span
-            id="{{ IDP }}-share-live"
-            class="sr-only"
-            aria-live="polite"
-          ></span>
+          <a class="btn btn--ghost btn--sm" href="{{ HREF_DONATE }}" target="_blank" rel="noopener">Skip to Donate</a>
+          <a class="btn btn--ghost btn--sm" href="{{ HREF_IMPACT }}">Impact</a>
+          <a class="btn btn--ghost btn--sm" href="{{ HREF_SPONSOR }}">Become a Sponsor</a>
+          <button class="btn btn--ghost btn--sm" type="button" id="{{ IDP }}-share">Share</button>
+          <span id="{{ IDP }}-share-live" class="sr-only" aria-live="polite"></span>
         </nav>
 
-        <!-- Impact Ladder (three fixed rungs) -->
+        <!-- Impact ladder -->
         <div class="ladder" role="group" aria-label="Impact ladder milestones">
           <div class="rung" data-threshold="1000">
             <div class="bar"></div>
-            <div class="lbl">
-              <span class="amt">$1,000</span><span class="what">Gym Week</span>
-            </div>
+            <div class="lbl"><span class="amt">$1,000</span><span class="what">Gym Week</span></div>
           </div>
           <div class="rung" data-threshold="5000">
             <div class="bar"></div>
-            <div class="lbl">
-              <span class="amt">$5,000</span
-              ><span class="what">Travel Slot</span>
-            </div>
+            <div class="lbl"><span class="amt">$5,000</span><span class="what">Travel Slot</span></div>
           </div>
           <div class="rung" data-threshold="10000">
             <div class="bar"></div>
-            <div class="lbl">
-              <span class="amt">$10,000</span
-              ><span class="what">Tutor Block</span>
-            </div>
+            <div class="lbl"><span class="amt">$10,000</span><span class="what">Tutor Block</span></div>
           </div>
         </div>
 
-        <p class="sms">
-          📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.
-        </p>
+        <p class="sms">📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.</p>
       </div>
     </header>
   </div>
 </section>
 
 <style {{ nonce_attr() }}>
-  /* ================= Scoreboard Hero — Enterprise Grid-Lock ================= */
-  #{{ IDP }}{
-    --accent: {{ THEME_HEX }};
-    --line: rgba(255,255,255,.14);
-    --ghost: rgba(255,255,255,.08);
-    --radius: 18px;
-    --gap: clamp(14px, 2.2vw, 22px);
-    --panel-max: 560px;
-    --overlay-lift: clamp(40px, 12vh, 140px);
-    color:#eef2f7;
-    container-type: inline-size;
-  }
+/* =============== Scoreboard Hero — Enterprise tokens =============== */
+.hero{ color:#eef2f7; container-type:inline-size; }
+.hero__shell{
+  max-width:1200px; margin-inline:auto; padding:clamp(14px,2.5vw,22px);
+  display:grid; grid-template-columns:minmax(44%,1fr) minmax(40%,560px);
+  align-items:stretch; gap:clamp(14px, 2.2vw, 22px);
+}
+@media (max-width:980px){ .hero__shell{ grid-template-columns:1fr } }
 
-  /* 1) Wrap grid: equal-height columns via align-items:stretch */
-  #{{ IDP }} .wrap{
-    display:grid;
-    grid-template-columns: minmax(44%,1fr) minmax(40%, var(--panel-max));
-    gap: var(--gap);
-    align-items: stretch; /* 🔑 equalize heights */
-  }
-  @media (max-width:980px){
-    #{{ IDP }} .wrap{ grid-template-columns: 1fr; }
-  }
+.hero__media{
+  grid-column:1; position:relative; border-radius:18px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.14); background:#111;
+}
+.hero__media img{
+  inline-size:100%; block-size:100%; aspect-ratio:16/9;
+  object-fit:cover; filter:saturate(1.04) contrast(1.04) brightness(.9);
+}
+.hero__overlay{
+  position:absolute; inset:auto 0 0 0; display:grid; gap:.5rem;
+  padding:1rem 1.2rem clamp(40px, 12vh, 140px);
+  background:linear-gradient(180deg, transparent, rgba(0,0,0,.86));
+}
+.chip{
+  display:inline-flex; align-items:center; gap:.45rem;
+  padding:.32rem .7rem; border-radius:.7rem;
+  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.14);
+  font-weight:900;
+}
+.tagline{
+  margin:0; font-weight:1000; text-transform:uppercase; text-wrap:balance;
+  line-height:.98; letter-spacing:-.01em; font-size:clamp(1.5rem,1.2rem + 3.2vw,3.2rem);
+}
+.tagline .accent{ color:var(--accent) }
+@media (max-width:680px){ .hero__overlay{ padding-block-end: clamp(16px, 4vh, 72px) } }
 
-  /* 2) Explicit placement so both sides share the same row */
-  #{{ IDP }} .media{
-    grid-column:1; grid-row:1;
-    position:relative; border-radius:var(--radius); overflow:hidden;
-    border:1px solid var(--line); background:#111;
-  }
-  #{{ IDP }} .panel{
-    grid-column:2; grid-row:1;
-    display:flex; flex-direction:column;
-  }
-  @media (max-width:980px){
-    #{{ IDP }} .media, #{{ IDP }} .panel{ grid-column:auto; grid-row:auto; }
-  }
+.qr{
+  position:absolute; left:1rem; bottom:1rem; display:grid; gap:.35rem;
+  padding:.6rem; border-radius:16px; background:rgba(0,0,0,.76);
+  border:1px solid rgba(255,255,255,.14); box-shadow:0 14px 40px rgba(0,0,0,.45);
+}
+.qr img{ inline-size:132px; block-size:132px; image-rendering:crisp-edges }
+.qr__cap{ font-size:.85rem; color:#e5e7eb }
+@media (max-width:520px){ .qr{ display:none } }
 
-  /* Media (left) */
-  #{{ IDP }} .media img{
-    inline-size:100%; block-size:100%; aspect-ratio:16/9;
-    object-fit:cover; filter:saturate(1.04) contrast(1.04) brightness(.9);
-  }
-  #{{ IDP }} .overlay{
-    position:absolute; inset:auto 0 0 0;
-    display:grid; gap:.5rem; padding:1rem 1.2rem;
-    padding-block-end: var(--overlay-lift);
-    background:linear-gradient(180deg, transparent, rgba(0,0,0,.86));
-  }
-  #{{ IDP }} .overlay .chip{
-    display:inline-flex; align-items:center; gap:.45rem;
-    padding:.32rem .7rem; border-radius:.7rem;
-    background:rgba(255,255,255,.12); border:1px solid var(--line); font-weight:900;
-  }
-  #{{ IDP }} .overlay .tagline{
-    margin:0; font-weight:1000; text-transform:uppercase; text-wrap:balance;
-    line-height:.98; letter-spacing:-.01em;
-    font-size:clamp(1.5rem,1.2rem + 3.2vw,3.2rem);
-  }
-  #{{ IDP }} .overlay .tagline .accent{ color:var(--accent) }
-  @media (max-width:680px){ #{{ IDP }}{ --overlay-lift: clamp(16px, 4vh, 72px) } }
+.panel{ grid-column:2; display:flex; }
+.panel__inner{
+  display:flex; flex-direction:column; gap:.65rem;
+  border:1px solid rgba(255,255,255,.14); border-radius:18px;
+  padding:clamp(14px,2.2vw,20px);
+  background:linear-gradient(180deg,rgba(15,16,20,.9),rgba(15,16,20,.72));
+  box-shadow:0 22px 80px rgba(0,0,0,.5);
+}
+.chip--sm{ font-size:.85rem; padding:.26rem .6rem; border-radius:.6rem; background:rgba(255,255,255,.10) }
+.title{ margin:.1rem 0 .16rem; font-weight:1000; line-height:1.02; font-size:clamp(1.9rem,1rem + 2.6vw,2.6rem) }
+.title .accent{ color:var(--accent) }
+.sub{ color:#dbe5f5 }
 
-  /* Optional QR coin */
-  #{{ IDP }} .qr-coin{
-    position:absolute; left:1rem; bottom:1rem;
-    display:grid; gap:.35rem; width:max-content;
-    padding:.6rem; border-radius:16px; background:rgba(0,0,0,.76);
-    border:1px solid var(--line); box-shadow:0 14px 40px rgba(0,0,0,.45);
-  }
-  #{{ IDP }} .qr-coin img{ inline-size:132px; block-size:132px; image-rendering:crisp-edges }
-  #{{ IDP }} .qr-coin .qr-cap{ font-size:.85rem; color:#e5e7eb }
-  @media (max-width:520px){ #{{ IDP }} .qr-coin{ display:none } }
+.score{ display:flex; align-items:flex-end; justify-content:space-between; gap:.8rem; flex-wrap:wrap }
+.tabular{ font-variant-numeric:tabular-nums }
+.money{ font-weight:1000; font-size:clamp(1.2rem,.9rem + 1.8vw,1.8rem) }
+.money .sep{ opacity:.7; padding:0 .35rem }
+.money .pct{ opacity:.9; font-weight:800; margin-left:.4rem }
+.timer{ display:flex; align-items:center; gap:.5rem }
+.timer .value{
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+  padding:.28rem .55rem; border-radius:.6rem; font-weight:900;
+}
 
-  /* Panel (right) */
-  #{{ IDP }} .panel-inner{
-    display:flex; flex-direction:column; gap:.65rem;
-    border:1px solid var(--line); border-radius:var(--radius);
-    padding:clamp(14px,2.2vw,20px);
-    background:linear-gradient(180deg,rgba(15,16,20,.9),rgba(15,16,20,.72));
-    box-shadow:0 22px 80px rgba(0,0,0,.5);
-  }
-  #{{ IDP }} .brand .small{
-    font-size:.85rem; padding:.26rem .6rem; border-radius:.6rem;
-    background:rgba(255,255,255,.10); border:1px solid var(--line);
-  }
-  #{{ IDP }} .title{
-    margin:.1rem 0 .16rem; font-weight:1000; line-height:1.02;
-    font-size:clamp(1.9rem,1rem + 2.6vw,2.6rem);
-  }
-  #{{ IDP }} .title .accent{ color:var(--accent) }
-  #{{ IDP }} .sub{ color:#dbe5f5 }
+/* Meter */
+.meter .track{
+  block-size:10px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+}
+.meter .fill{
+  inline-size:var(--p,0%); block-size:100%;
+  background:linear-gradient(90deg,#fffbe6,var(--accent));
+  border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
+}
 
-  /* Scoreboard row */
-  #{{ IDP }} .score{ display:flex; align-items:flex-end; justify-content:space-between; gap:.8rem; flex-wrap:wrap }
-  #{{ IDP }} .tabular{ font-variant-numeric:tabular-nums }
-  #{{ IDP }} .money{ font-weight:1000; font-size:clamp(1.2rem,.9rem + 1.8vw,1.8rem) }
-  #{{ IDP }} .money .sep{ opacity:.7; padding:0 .35rem }
-  #{{ IDP }} .money .pct{ opacity:.9; font-weight:800; margin-left:.4rem }
-  #{{ IDP }} .timer{ display:flex; align-items:center; gap:.5rem }
-  #{{ IDP }} .timer .value{
-    background:rgba(255,255,255,.08); border:1px solid var(--line);
-    padding:.28rem .55rem; border-radius:.6rem; font-weight:900;
-  }
+/* Quick-add chips */
+.chips{
+  display:flex; gap:0; border:1px solid rgba(255,255,255,.14);
+  border-radius:.8rem; overflow:hidden; background:rgba(255,255,255,.06)
+}
+.chip-btn{
+  flex:1 1 0; border:0; border-right:1px solid rgba(255,255,255,.14);
+  padding:.6rem .9rem; font-weight:1000; background:transparent; color:#eef2f7;
+}
+.chip-btn:last-child{ border-right:0 }
+.chip-btn em{ opacity:.9; font-style:normal; margin-left:.25rem; font-weight:600; font-size:.9em }
+.chip-btn[aria-pressed="true"]{
+  color:#0b0f15; background:linear-gradient(180deg,#fffbe6,var(--accent));
+  border-color:rgba(0,0,0,.22);
+}
 
-  /* Meter */
-  #{{ IDP }} .meter .track{
-    block-size:10px; border-radius:999px; overflow:hidden;
-    background:var(--ghost); border:1px solid var(--line);
-  }
-  #{{ IDP }} .meter .fill{
-    inline-size:var(--p,0%); block-size:100%;
-    background:linear-gradient(90deg,#fffbe6,var(--accent));
-    border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
-  }
+/* CTA / Sticky */
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:1000; text-decoration:none; padding:.85rem 1.1rem }
+.btn--gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
+.btn--ghost{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#eaf0fa }
+.btn--sm{ padding:.55rem .8rem; font-weight:900 }
+.note{ grid-column:1/-1; text-align:center; color:#fde68a }
+.toggle{ display:inline-flex; align-items:center; gap:.4rem; user-select:none }
+.toggle input{ accent-color: var(--accent) }
 
-  /* Segmented chips */
-  #{{ IDP }} .chips{ display:flex; gap:0; border:1px solid var(--line); border-radius:.8rem; overflow:hidden; background:rgba(255,255,255,.06) }
-  #{{ IDP }} .chip-btn{
-    flex:1 1 0; border:0; border-right:1px solid var(--line);
-    padding:.6rem .9rem; font-weight:1000; background:transparent; color:#eef2f7;
+.sticky{ position:relative }
+@media (max-width:780px){
+  .sticky{
+    position:sticky; bottom:8px; z-index:20; padding:6px; border-radius:14px;
+    backdrop-filter:saturate(115%) blur(6px);
+    background:linear-gradient(180deg,rgba(7,9,12,.85),rgba(7,9,12,.78));
+    border:1px solid rgba(255,255,255,.14);
   }
-  #{{ IDP }} .chip-btn:last-child{ border-right:0 }
-  #{{ IDP }} .chip-btn em{ opacity:.9; font-style:normal; margin-left:.25rem; font-weight:600; font-size:.9em }
-  #{{ IDP }} .chip-btn[aria-pressed="true"]{
-    color:#0b0f15; background:linear-gradient(180deg,#fffbe6,var(--accent));
-    border-color:rgba(0,0,0,.22);
-  }
+  .sticky .btn--gold{ inline-size:100% }
+}
 
-  /* CTA + sticky mobile wrapper */
-  #{{ IDP }} .cta{ display:grid; grid-template-columns:1fr auto; gap:.45rem .6rem; align-items:center }
-  #{{ IDP }} .btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:1000; text-decoration:none; padding:.85rem 1.1rem }
-  #{{ IDP }} .btn.gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
-  #{{ IDP }} .btn.ghost{ background:rgba(255,255,255,.08); border:1px solid var(--line); color:#eaf0fa }
-  #{{ IDP }} .btn.sm{ padding:.55rem .8rem; font-weight:900 }
-  #{{ IDP }} .note{ grid-column:1/-1; text-align:center; color:#fde68a }
-  #{{ IDP }} .toggle{ display:inline-flex; align-items:center; gap:.4rem; user-select:none }
-  #{{ IDP }} .toggle input{ accent-color: var(--accent) }
+/* Impact ladder */
+.ladder{ margin-top:.35rem; padding-top:.6rem; border-top:1px dashed rgba(255,255,255,.14); display:flex; flex-direction:column; gap:.6rem }
+.rung{ display:flex; align-items:center; gap:.7rem }
+.rung .bar{
+  inline-size:180px; max-inline-size:40vw; block-size:10px;
+  border-radius:999px; position:relative; overflow:hidden;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+}
+.rung .bar::after{
+  content:""; position:absolute; inset:0;
+  transform:scaleX(var(--fill,0)); transform-origin:left;
+  background:linear-gradient(90deg,#fffbe6,var(--accent));
+  transition:transform .6s cubic-bezier(.22,.9,.27,1);
+}
+.rung .lbl{ display:flex; gap:.4rem; font-weight:900 }
+.rung .lbl .amt{ opacity:.95 } .rung .lbl .what{ opacity:.85 }
 
-  @media (max-width:780px){
-    #{{ IDP }} .sticky-cta{
-      position:sticky; bottom:8px; z-index:20; padding:6px; border-radius:14px;
-      backdrop-filter:saturate(115%) blur(6px);
-      background:linear-gradient(180deg,rgba(7,9,12,.85),rgba(7,9,12,.78));
-      border:1px solid var(--line);
-    }
-    #{{ IDP }} .sticky-cta .btn.gold{ inline-size:100% }
-  }
+/* Light theme compatibility */
+.light .hero{ color:#0f172a }
+.light .panel__inner{
+  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.86));
+  border:1px solid rgba(0,0,0,.10); box-shadow:0 18px 50px rgba(0,0,0,.08);
+}
+.light .sub{ color:#334155 }
+.light .chip-btn{ color:#111; border-color:rgba(0,0,0,.12) }
+.light .btn--ghost{ color:#111; border-color:rgba(0,0,0,.12); background:rgba(0,0,0,.04) }
+.light .meter .track{ background:rgba(0,0,0,.08); border-color:rgba(0,0,0,.10) }
 
-  /* Impact ladder */
-  #{{ IDP }} .ladder{ margin-top:.35rem; padding-top:.6rem; border-top:1px dashed var(--line); display:flex; flex-direction:column; gap:.6rem }
-  #{{ IDP }} .rung{ display:flex; align-items:center; gap:.7rem }
-  #{{ IDP }} .rung .bar{
-    inline-size:180px; max-inline-size:40vw; block-size:10px;
-    border-radius:999px; position:relative; overflow:hidden;
-    background:var(--ghost); border:1px solid var(--line);
+/* Motion & HCM */
+@media (prefers-reduced-motion: reduce){
+  .meter .fill, .rung .bar::after{ transition:none }
+}
+@media (forced-colors: active){
+  .hero__media, .panel__inner, .chip-btn, .btn, .qr{
+    background:Canvas !important; color:CanvasText !important;
+    border:1px solid CanvasText !important; box-shadow:none !important;
   }
-  #{{ IDP }} .rung .bar::after{
-    content:""; position:absolute; inset:0;
-    transform:scaleX(var(--fill,0)); transform-origin:left;
-    background:linear-gradient(90deg,#fffbe6,var(--accent));
-    transition:transform .6s cubic-bezier(.22,.9,.27,1);
-  }
-  #{{ IDP }} .rung .lbl{ display:flex; gap:.4rem; font-weight:900 }
-  #{{ IDP }} .rung .lbl .amt{ opacity:.95 } #{{ IDP }} .rung .lbl .what{ opacity:.85 }
-
-  /* A11y / prefs */
-  @media (prefers-reduced-motion: reduce){
-    #{{ IDP }} .meter .fill, #{{ IDP }} .rung .bar::after{ transition:none }
-  }
-  @media (prefers-contrast: more){
-    #{{ IDP }} .overlay{ background:linear-gradient(180deg, transparent, rgba(0,0,0,.92)) }
-    #{{ IDP }} .btn.gold{ box-shadow:none }
-  }
-  @media (forced-colors: active){
-    #{{ IDP }} .media, #{{ IDP }} .panel-inner, #{{ IDP }} .chip-btn,
-    #{{ IDP }} .btn, #{{ IDP }} .qr-coin{
-      background:Canvas !important; color:CanvasText !important;
-      border:1px solid CanvasText !important; box-shadow:none !important;
-    }
-  }
-
-  /* Light theme */
-  .light #{{ IDP }}{ color:#0f172a }
-  .light #{{ IDP }} .panel-inner{
-    background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.86));
-    border:1px solid rgba(0,0,0,.10); box-shadow:0 18px 50px rgba(0,0,0,.08);
-  }
-  .light #{{ IDP }} .title .accent{ color:var(--accent) }
-  .light #{{ IDP }} .sub{ color:#334155 }
-  .light #{{ IDP }} .chip-btn{ color:#111; border-color:rgba(0,0,0,.12) }
-  .light #{{ IDP }} .btn.ghost{ color:#111; border-color:rgba(0,0,0,.12); background:rgba(0,0,0,.04) }
-  .light #{{ IDP }} .meter .track{ background:rgba(0,0,0,.08); border-color:rgba(0,0,0,.10) }
-
-  /* 4) Reusable lock rail utility (opt-in) */
-  .lock-rail{
-    display:grid;
-    grid-template-columns: 1fr minmax(300px, 560px);
-    align-items: stretch;
-    gap: var(--gap, 1.5rem);
-  }
-  .lock-rail > .main{ grid-column:1; grid-row:1; }
-  .lock-rail > .rail{ grid-column:2; grid-row:1; }
-  @media (max-width:980px){
-    .lock-rail{ grid-template-columns:1fr; }
-    .lock-rail > .main, .lock-rail > .rail{ grid-column:auto; grid-row:auto; }
-  }
+}
 </style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const root = document.getElementById('{{ IDP }}');
+  if (!root || window.__HERO_V50__) return; window.__HERO_V50__ = true;
+
+  const raisedEl = root.querySelector('[data-role="raised"]');
+  const goalEl   = root.querySelector('[data-role="goal"]');
+  const pctEl    = root.querySelector('[data-role="pct"]');
+  const fillEl   = root.querySelector('.meter .fill');
+  const chips    = [...root.querySelectorAll('.chip-btn')];
+  const donate   = document.getElementById('{{ IDP }}-donate');
+  const monthly  = document.getElementById('{{ IDP }}-monthly');
+  const shareBtn = document.getElementById('{{ IDP }}-share');
+  const shareLive= document.getElementById('{{ IDP }}-share-live');
+  const deadlineEl = document.getElementById('{{ IDP }}-deadline');
+
+  const RAISED = +(root.dataset.raised || 0);
+  const GOAL   = +(root.dataset.goal   || 1);
+  const PCT    = Math.max(0, Math.min(100, (RAISED/GOAL)*100 || 0));
+  const DEADLINE = root.dataset.deadline; // ISO optional
+
+  // Money format
+  const money = (n) => (new Intl.NumberFormat('en-US',{ style:'currency', currency:'USD', maximumFractionDigits:0 }).format(n));
+
+  // Update UI values once DOM is ready
+  try {
+    raisedEl.textContent = money(RAISED);
+    goalEl.textContent   = money(GOAL);
+    pctEl.textContent    = `• ${Math.round(PCT)}%`;
+    fillEl.style.setProperty('--p', `${PCT}%`);
+  } catch {}
+
+  // Animate meter on visibility
+  try{
+    const io = new IntersectionObserver((ents)=>{
+      ents.forEach(ent => {
+        if (ent.isIntersecting){
+          fillEl.style.inlineSize = `${PCT}%`;
+          io.disconnect();
+        }
+      });
+    }, { threshold: .3 });
+    io.observe(fillEl);
+  }catch{}
+
+  // Ladder fill based on thresholds
+  try{
+    const rungs = [...root.querySelectorAll('.rung')];
+    rungs.forEach(r => {
+      const th = +(r.getAttribute('data-threshold') || 0);
+      const frac = Math.max(0, Math.min(1, RAISED / th || 0));
+      r.querySelector('.bar')?.style.setProperty('--fill', String(frac));
+    });
+  }catch{}
+
+  // Quick-add chips affect Donate button label & href amount param
+  function setAmt(amt){
+    const el = donate.querySelector('.amt');
+    if (el) el.textContent = amt ? money(amt) : '';
+    try{
+      const url = new URL(donate.href, location.origin);
+      if (amt){ url.searchParams.set('amount', String(amt)); } else { url.searchParams.delete('amount'); }
+      url.searchParams.set('interval', monthly?.checked ? 'month' : 'one_time');
+      donate.href = url.toString();
+    }catch{}
+  }
+  chips.forEach(btn=>{
+    btn.addEventListener('click', () => {
+      const isOn = btn.getAttribute('aria-pressed') === 'true';
+      chips.forEach(b => b.setAttribute('aria-pressed','false'));
+      if (!isOn){
+        btn.setAttribute('aria-pressed','true');
+        setAmt(+btn.dataset.amt || 0);
+      } else {
+        setAmt(0);
+      }
+    }, { passive:true });
+  });
+  monthly?.addEventListener('change', ()=> {
+    const active = chips.find(b => b.getAttribute('aria-pressed') === 'true');
+    setAmt(active ? +active.dataset.amt : 0);
+  }, { passive:true });
+
+  // Keyboard shortcut D (unless typing in an input/textarea/contenteditable)
+  addEventListener('keydown', (e) => {
+    const typing = /INPUT|TEXTAREA/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
+    if (!typing && (e.key === 'd' || e.key === 'D')){
+      donate?.focus();
+      donate?.click();
+    }
+  });
+
+  // Share button
+  shareBtn?.addEventListener('click', async () => {
+    try{
+      if (navigator.share){
+        await navigator.share({ title: document.title, text: 'Support our season!', url: location.href });
+        shareLive.textContent = 'Shared.';
+      } else {
+        await navigator.clipboard.writeText(location.href);
+        shareLive.textContent = 'Link copied.';
+      }
+    }catch{}
+  }, { passive:true });
+
+  // Deadline countdown (if ISO provided)
+  function tickDeadline(){
+    if (!DEADLINE) return;
+    try{
+      const end = new Date(DEADLINE).getTime();
+      if (!isFinite(end)) return;
+      const now = Date.now();
+      const ms = Math.max(0, end - now);
+      const s = Math.floor(ms/1000);
+      const d = Math.floor(s/86400);
+      const h = Math.floor((s%86400)/3600);
+      const m = Math.floor((s%3600)/60);
+      const out = d>0 ? `${d}d ${h}h` : (h>0 ? `${h}h ${m}m` : `${m}m`);
+      deadlineEl.textContent = out;
+      if (ms === 0){ clearInterval(timer); deadlineEl.textContent = 'Ended'; }
+    }catch{}
+  }
+  let timer = null;
+  if (DEADLINE){
+    tickDeadline();
+    timer = setInterval(tickDeadline, 30_000);
+    addEventListener('pagehide', () => clearInterval(timer), { once:true });
+  }
+})();
+</script>
 
 <script {{ nonce_attr() }} type="module">
   (() => {

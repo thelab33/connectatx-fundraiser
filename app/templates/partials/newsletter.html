@@ -1,270 +1,320 @@
-// widgets/newsletter.js — Enterprise hydrator (ESM, CSP-safe)
-// Features: timed, exit-intent, scroll%, hash, cooldowns (session + N-day),
-// honeypot + min dwell, offline queue + retry, SHA-256 email hash, a11y focus trap.
+<dialog
+  id="newsletter-modal"
+  class="fixed inset-0 z-[12000] flex hidden items-center justify-center bg-black/85 backdrop-blur-lg transition-opacity duration-500 opacity-0 pointer-events-none"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="newsletter-title"
+  tabindex="-1"
+>
+  <div
+    id="newsletter-box"
+    class="relative w-[95vw] max-w-sm rounded-3xl bg-zinc-900 p-6 sm:p-8 text-center font-geist text-yellow-100 shadow-2xl ring-4 ring-amber-400/40 ring-offset-4 ring-offset-zinc-900 opacity-0 scale-95 transition-transform duration-300 ease-out"
+    role="document"
+    tabindex="0"
+  >
+    <!-- Close button -->
+    <button
+      id="newsletter-close"
+      aria-label="Close newsletter signup"
+      class="absolute top-3 right-3 z-10 rounded-full bg-black/30 hover:bg-black/60 text-yellow-200 hover:text-yellow-100 w-11 h-11 flex items-center justify-center focus:ring-4 ring-amber-400 focus:outline-none"
+      type="button"
+    >
+      <span aria-hidden="true" class="text-3xl select-none">&times;</span>
+    </button>
 
-export function initNewsletterModal(root = document) {
-  const modal = root.querySelector('#newsletter-modal[data-widget="newsletter"]');
-  if (!modal || modal.__init) return;
-  modal.__init = true;
+    <!-- Animated Basketball SVG -->
+    <div
+      class="mx-auto mb-5 flex justify-center cursor-pointer"
+      tabindex="0"
+      role="img"
+      aria-label="Spinning basketball icon"
+    >
+      <span id="newsletter-ball" class="inline-block h-16 w-16" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" class="h-16 w-16 animate-spin-slow" aria-hidden="true">
+          <circle cx="24" cy="24" r="22" fill="#FBBF24" stroke="#F59E0B" stroke-width="3"/>
+          <path d="M24 2v44M2 24h44" stroke="#78350F" stroke-width="2"/>
+          <path d="M10 10c9 9 19 29 28 28M38 10C29 19 9 29 10 38" stroke="#92400E" stroke-width="2"/>
+        </svg>
+      </span>
+    </div>
 
-  // Nodes
-  const box     = modal.querySelector('#newsletter-box');
-  const form    = modal.querySelector('#newsletter-form');
-  const email   = modal.querySelector('#newsletter-email');
-  const invite  = modal.querySelector('#newsletter-invite');
-  const errEl   = modal.querySelector('#email-error');
-  const hintEl  = modal.querySelector('#email-suggestion');
-  const thanks  = modal.querySelector('#newsletter-thankyou');
-  const submitB = modal.querySelector('#newsletter-submit');
-  const confFx  = modal.querySelector('#swish-confetti');
-  const hp      = modal.querySelector('#newsletter-company');
+    <!-- Heading & onboarding tooltip -->
+    <h2
+      id="newsletter-title"
+      class="mb-2 text-3xl font-extrabold text-yellow-300 flex flex-col items-center gap-1 tracking-tight relative group"
+    >
+      Stay in the Loop with
+      <span class="text-amber-400" aria-live="polite">
+        {{ team.team_name or "Connect ATX Elite" }}
+      </span>
+      <span
+        class="text-xs font-normal text-amber-200 block max-w-xs absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-yellow-900/90 px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity text-center pointer-events-none select-none"
+        role="tooltip"
+      >
+        Get exclusive updates &amp; help our team shine! ✨
+      </span>
+    </h2>
 
-  // Options
-  const action       = (modal.dataset.action || '').trim();
-  const DELAY_SEC    = parseInt(modal.dataset.delay || '0', 10);
-  const SCROLL_PCT   = parseInt(modal.dataset.scroll || '0', 10);
-  const EXIT_INTENT  = (modal.dataset.exitIntent || modal.dataset.exit_intent || modal.dataset['exit-intent'] || '0') === '1';
-  const COOLDOWN_D   = parseInt(modal.dataset.cooldownDays || '7', 10);
-  const MIN_DWELL_MS = parseInt(modal.dataset.minDwellMs || '2500', 10);
-  const SCOPE        = (modal.dataset.scope || 'global') + '';
+    <p class="mb-8 text-base opacity-90 max-w-[90%] mx-auto">
+      Get <strong class="font-bold text-yellow-200">exclusive updates, game invites,</strong> and ways to help <strong>{{ team.team_name or "Connect ATX Elite" }}</strong> shine.<br />
+      <span class="font-semibold text-yellow-200">One email a month, no spam.</span>
+    </p>
 
-  // Storage keys (scoped)
-  const K = (k) => `fc_nl_${k}:${SCOPE}`;
-  const now = () => Date.now();
-  const start = now();
-  let openedAt = 0, lastFocus = null, debounceId = null;
+    <!-- Form -->
+    <form
+      id="newsletter-form"
+      novalidate
+      autocomplete="off"
+      aria-describedby="newsletter-desc"
+      class="relative"
+      role="form"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span id="newsletter-desc" class="sr-only">Email address field and subscribe button</span>
+      <div class="relative flex items-center justify-center w-[90%] mx-auto">
+        <input
+          id="newsletter-email"
+          name="email"
+          type="email"
+          placeholder="your@email.com"
+          required
+          autocomplete="email"
+          class="peer w-full rounded-full bg-yellow-50 py-3 px-5 text-zinc-900 shadow-sm opacity-90 focus:ring-2 focus:ring-yellow-300 outline-none transition"
+          aria-describedby="email-error"
+          aria-required="true"
+          aria-invalid="false"
+          inputmode="email"
+        />
+        <span
+          class="absolute right-5 top-1/2 -translate-y-1/2 text-2xl text-yellow-400 peer-focus:text-amber-500 select-none"
+          aria-hidden="true"
+        >🏀</span>
+      </div>
 
-  // Helpers: email + domain suggestion
-  const isEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(v||'').trim());
-  const COMMON = ["gmail.com","yahoo.com","outlook.com","hotmail.com","icloud.com","aol.com","live.com","msn.com","proton.me","protonmail.com"];
-  const ldist = (a,b)=>{ a=String(a||""); b=String(b||""); const m=a.length,n=b.length,d=Array.from({length:m+1},(_,i)=>[i,...Array(n).fill(0)]); for(let j=1;j<=n;j++) d[0][j]=j; for(let i=1;i<=m;i++){ for(let j=1;j<=n;j++){ d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1)); } } return d[m][n]; };
-  const suggestDomain = (addr) => {
-    const parts = String(addr||"").split("@"); if (parts.length!==2) return null;
-    const dom = parts[1].toLowerCase().replace(/\s+/g,"").replace(/\.con\b/,".com").replace(/\.cpm\b/,".com");
-    let best=null, dmin=9; for (const c of COMMON){ const d=ldist(dom,c); if (d<dmin){ dmin=d; best=c; } }
-    return best && dmin>0 && dmin<=2 ? `${parts[0]}@${best}` : null;
-  };
+      <!-- Invite a friend (optional) -->
+      <input
+        id="newsletter-invite"
+        name="invite"
+        type="email"
+        placeholder="Friend’s email (optional)"
+        class="mt-3 w-full rounded-full bg-yellow-50 py-2 px-5 text-zinc-900 opacity-80 shadow-sm"
+        inputmode="email"
+        aria-label="Invite a friend"
+      >
 
-  // Context hidden fields
-  try {
-    modal.querySelector('#nl-source-url').value = location.href;
-    modal.querySelector('#nl-referrer').value   = document.referrer || '';
-    const p = new URLSearchParams(location.search), utm={};
-    ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'].forEach(k=>{ const v=p.get(k); if(v) utm[k]=v; });
-    modal.querySelector('#nl-utm').value = JSON.stringify(utm);
-  } catch {}
+      <!-- Error message -->
+      <p
+        id="email-error"
+        class="mt-2 min-h-[1.25rem] text-sm font-bold text-red-600 sr-only"
+        role="alert"
+        aria-live="assertive"
+      ></p>
 
-  // Eligibility
-  function eligible(){
-    try {
-      if (localStorage.getItem(K('subscribed')) === '1') return false;
-      if (sessionStorage.getItem(K('shown_session')) === '1') return false;
-      if (localStorage.getItem(K('optout')) === '1') return false;
-      const last = parseInt(localStorage.getItem(K('last')) || '0', 10);
-      if (last && (now() - last) < COOLDOWN_D * 86400000) return false;
-    } catch {}
-    return true;
-  }
+      <!-- Submit button -->
+      <button
+        type="submit"
+        class="mt-6 relative overflow-hidden rounded-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-10 py-3 font-bold text-zinc-900 shadow-lg transition-all duration-300 ease-in-out basketball-btn-glow focus-visible:ring-4 focus-visible:ring-yellow-400 active:scale-95"
+        aria-live="polite"
+      >
+        Subscribe
+        <span
+          id="swish-confetti"
+          class="absolute left-1/2 top-1/2 pointer-events-none opacity-0 text-3xl -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700 select-none"
+          aria-hidden="true"
+        >🏆🎉</span>
+      </button>
 
-  // Open/Close
-  function openModal(manual=false){
-    if (modal.classList.contains('flex')) return;
-    if (!manual && now() - start < MIN_DWELL_MS) return; // don't open too fast
+      <!-- Thank you message -->
+      <p
+        id="newsletter-thankyou"
+        aria-live="polite"
+        class="mt-6 hidden text-lg font-semibold tracking-wide text-cyan-400 animate-pulse select-none"
+      >
+        Swish! Never miss an invite—welcome to the fam!
+      </p>
 
-    lastFocus = document.activeElement;
-    modal.classList.remove('hidden');
-    modal.showModal?.();
-    requestAnimationFrame(()=>{ modal.classList.add('flex'); modal.style.opacity='1'; box.style.opacity='1'; box.style.transform='scale(1)'; });
-    document.documentElement.style.overflow='hidden';
-    email?.focus();
-    modal.setAttribute('aria-hidden','false');
-    openedAt = now();
-    try { sessionStorage.setItem(K('shown_session'),'1'); localStorage.setItem(K('last'), String(now())); } catch {}
-    try { (window.dataLayer = window.dataLayer || []).push({ event:'newsletter_open', scope:SCOPE }); } catch {}
-  }
-  function closeModal(){
-    box.style.opacity='0'; box.style.transform='scale(.98)'; modal.style.opacity='0';
-    setTimeout(()=>{
-      modal.close?.(); modal.classList.add('hidden'); modal.classList.remove('flex');
-      document.documentElement.style.overflow='';
-      form?.reset(); thanks?.classList.add('hidden');
-      if (errEl){ errEl.textContent=''; errEl.classList.add('sr-only'); }
-      email?.setAttribute('aria-invalid','false');
-      modal.setAttribute('aria-hidden','true');
-      lastFocus?.focus?.();
-      try { (window.dataLayer = window.dataLayer || []).push({ event:'newsletter_close', scope:SCOPE }); } catch {}
-    }, 160);
-  }
+      <!-- Opt-out button -->
+      <button
+        id="newsletter-nothanks"
+        type="button"
+        class="mt-4 block mx-auto text-sm text-yellow-300 hover:underline focus:underline focus:outline-none select-none"
+        tabindex="0"
+      >
+        No thanks, maybe later
+      </button>
+    </form>
+  </div>
+</dialog>
 
-  // Triggers
-  if (DELAY_SEC>0 && eligible()) setTimeout(()=>{ if(eligible()) openModal(false); }, DELAY_SEC*1000);
-  const tryHash = ()=>{ if ((location.hash||'').replace(/^#/,'')==='newsletter') openModal(true); };
-  addEventListener('hashchange', tryHash, { passive:true }); tryHash();
+<style>
+  #newsletter-modal:not(.hidden) { opacity: 1; pointer-events: auto; transition: opacity 0.4s; }
+  #newsletter-box.animate-popIn { opacity: 1 !important; transform: scale(1) !important; }
+  #newsletter-box.animate-popOut { opacity: 0 !important; transform: scale(0.95) !important; }
+  .animate-spin-slow { animation: spin 3.8s linear infinite; }
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+  .ripple-effect { position: absolute; border-radius: 50%; transform: scale(0); animation: ripple 600ms linear forwards; pointer-events: none; background-color: rgba(251,191,36,0.4);}
+  @keyframes ripple { to { transform: scale(4); opacity: 0; } }
+  .bounce-temp { animation: bounce 600ms ease forwards; }
+  @keyframes bounce { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10%); } }
+  #email-error:not(:empty) { display: block !important; }
+  .confetti-piece { position: fixed; width: 8px; height: 8px; border-radius: 2px; opacity: 0.9; pointer-events: none; z-index: 15000; filter: drop-shadow(0 0 1px #fff9) drop-shadow(0 0 2px #facc15aa); animation: confetti-spin 8s linear infinite; }
+  @keyframes confetti-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+</style>
 
-  // Delegated open/close
-  root.addEventListener('click', (e)=>{
-    const o = e.target.closest?.('[data-open-newsletter]');
-    const c = e.target.closest?.('[data-newsletter-close]');
-    if (o){ e.preventDefault(); openModal(true); }
-    if (c){ e.preventDefault(); try{ localStorage.setItem(K('optout'),'1'); }catch{} closeModal(); }
-  }, { passive:false });
+<script type="module">
+  (() => {
+    const modal = document.getElementById('newsletter-modal');
+    const box = document.getElementById('newsletter-box');
+    const closeBtn = document.getElementById('newsletter-close');
+    const form = document.getElementById('newsletter-form');
+    const emailInp = document.getElementById('newsletter-email');
+    const friendInp = document.getElementById('newsletter-invite');
+    const errEl = document.getElementById('email-error');
+    const thanksEl = document.getElementById('newsletter-thankyou');
+    const confettiEmoji = document.getElementById('swish-confetti');
+    const noThanks = document.getElementById('newsletter-nothanks');
+    const ball = document.getElementById('newsletter-ball');
+    let lastFocus = null, debounceTimeout = null;
 
-  // Scroll %
-  if (SCROLL_PCT>0){
-    const onScroll=()=>{
-      const pct = (scrollY / Math.max(1, document.documentElement.scrollHeight - innerHeight)) * 100;
-      if (pct >= SCROLL_PCT && eligible()){ openModal(false); removeEventListener('scroll', onScroll); }
-    };
-    addEventListener('scroll', onScroll, { passive:true });
-  }
+    const validEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-  // Exit intent
-  if (EXIT_INTENT){
-    const onLeave=(e)=>{ if (e.clientY <= 0 && eligible()){ openModal(false); removeEventListener('mouseout', onLeave); } };
-    addEventListener('mouseout', onLeave, { passive:true });
-  }
+    function openModal() {
+      lastFocus = document.activeElement;
+      modal.classList.remove('hidden');
+      modal.style.opacity = '1';
+      box.classList.remove('animate-popOut');
+      box.classList.add('animate-popIn');
+      modal.showModal?.();
+      document.body.style.overflow = 'hidden';
+      emailInp.focus();
+      window.dispatchEvent(new CustomEvent('newsletterModalViewed'));
+    }
 
-  // Backdrop + Esc
-  modal.addEventListener('click', e => { if (e.target === modal) closeModal(); }, { passive:true });
-  addEventListener('keydown', e => { if (e.key==='Escape' && !modal.classList.contains('hidden')) closeModal(); });
+    function closeModal() {
+      box.classList.remove('animate-popIn');
+      box.classList.add('animate-popOut');
+      modal.style.opacity = '0';
+      setTimeout(() => {
+        modal.close?.();
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+        errEl.textContent = '';
+        errEl.classList.add('sr-only');
+        thanksEl.classList.add('hidden');
+        form.reset();
+        confettiEmoji.style.opacity = 0;
+        emailInp.disabled = false;
+        form.querySelector('button[type="submit"]').classList.remove('opacity-60', 'pointer-events-none');
+        lastFocus?.focus();
+      }, 350);
+    }
 
-  // Focus trap
-  modal.addEventListener('keydown', e=>{
-    if (e.key!=='Tab') return;
-    const f = modal.querySelectorAll('a,button,input,select,textarea,[tabindex]:not([tabindex="-1"])');
-    if (!f.length) return;
-    const first = f[0], last = f[f.length-1];
-    if (e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
-  });
-
-  // Live validation + suggestion
-  email?.addEventListener('input', ()=>{
-    clearTimeout(debounceId);
-    debounceId = setTimeout(()=>{
-      const v = email.value.trim();
-      const hint = suggestDomain(v);
-      if (hintEl){
-        hintEl.textContent = (hint && isEmail(hint)) ? `Did you mean ${hint}?` : '';
-        hintEl.style.cursor = hint ? 'pointer' : '';
-        if (hint && !hintEl.__bound){
-          hintEl.addEventListener('click', ()=>{ email.value = hint; hintEl.textContent=''; email.dispatchEvent(new Event('input')); });
-          hintEl.__bound = true;
+    emailInp.addEventListener('input', () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        const val = emailInp.value.trim();
+        if (!val) {
+          errEl.textContent = '';
+          emailInp.setAttribute('aria-invalid', 'false');
+        } else if (!validEmail(val)) {
+          errEl.textContent = 'Please enter a valid email address.';
+          errEl.classList.remove('sr-only');
+          emailInp.setAttribute('aria-invalid', 'true');
+        } else {
+          errEl.textContent = '';
+          errEl.classList.add('sr-only');
+          emailInp.setAttribute('aria-invalid', 'false');
         }
+      }, 400);
+    });
+
+    if (!sessionStorage.getItem('newsletter_shown') && !sessionStorage.getItem('newsletter_optout')) {
+      setTimeout(() => { openModal(); sessionStorage.setItem('newsletter_shown', '1'); }, 10000);
+    }
+
+    closeBtn.addEventListener('click', closeModal);
+    noThanks.addEventListener('click', e => {
+      e.preventDefault();
+      sessionStorage.setItem('newsletter_optout', '1');
+      closeModal();
+      window.dispatchEvent(new CustomEvent('newsletterModalOptout'));
+    });
+    modal.addEventListener('click', e => { if (e.target === modal) closeModal(); });
+    window.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal(); });
+
+    modal.addEventListener('keydown', e => {
+      if (e.key !== 'Tab') return;
+      const focusables = modal.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      const first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    });
+
+    form.querySelector('button[type="submit"]').addEventListener('click', e => {
+      const btn = e.currentTarget;
+      const ripple = document.createElement('span');
+      ripple.className = 'ripple-effect';
+      btn.appendChild(ripple);
+      const rect = btn.getBoundingClientRect();
+      ripple.style.left = `${e.clientX - rect.left}px`;
+      ripple.style.top = `${e.clientY - rect.top}px`;
+      setTimeout(() => ripple.remove(), 600);
+    });
+
+    ball.addEventListener('click', () => {
+      ball.classList.add('bounce-temp');
+      setTimeout(() => ball.classList.remove('bounce-temp'), 600);
+    });
+    ball.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ball.click(); } });
+
+    function launchConfetti() {
+      const confettiCount = 24;
+      const colors = ['#FBBF24', '#FACC15', '#FFD700', '#FFC107', '#FFEB3B'];
+      const btn = form.querySelector('button[type="submit"]');
+      const rect = btn.getBoundingClientRect();
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement('div');
+        confetti.className = 'confetti-piece';
+        confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = `${rect.left + rect.width / 2}px`;
+        confetti.style.top = `${rect.top + rect.height / 2}px`;
+        document.body.appendChild(confetti);
+        const angle = Math.random() * 2 * Math.PI;
+        const velocity = Math.random() * 120 + 50;
+        confetti.animate([
+          { transform: 'translate(0, 0) rotate(0deg)', opacity: 1 },
+          { transform: `translate(${Math.cos(angle) * velocity}px, ${Math.sin(angle) * velocity}px) rotate(${Math.random() * 360}deg)`, opacity: 0 }
+        ], { duration: 1500, easing: 'ease-out', fill: 'forwards' });
+        setTimeout(() => confetti.remove(), 1600);
       }
-      if (!v){ if (errEl){errEl.textContent=''; errEl.classList.add('sr-only');} email.setAttribute('aria-invalid','false'); return; }
-      if (!isEmail(v)){ if (errEl){ errEl.textContent='Please enter a valid email address.'; errEl.classList.remove('sr-only'); } email.setAttribute('aria-invalid','true'); }
-      else { if (errEl){ errEl.textContent=''; errEl.classList.add('sr-only'); } email.setAttribute('aria-invalid','false'); }
-    }, 160);
-  });
+    }
 
-  // Offline queue
-  const qkey = K('queue');
-  const enqueue = (obj)=>{ try{ const q=JSON.parse(localStorage.getItem(qkey)||'[]'); q.push(obj); localStorage.setItem(qkey, JSON.stringify(q)); }catch{} };
-  async function postJSON(payload, timeout=7000){
-    if (!action) return false;
-    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), timeout);
-    try{
-      const res = await fetch(action, {
-        method:'POST', headers:{'Content-Type':'application/json','Accept':'application/json'},
-        body:JSON.stringify(payload), credentials:'same-origin', signal:ctl.signal
-      });
-      clearTimeout(t); return res.ok;
-    }catch{ clearTimeout(t); return false; }
-  }
-  async function flushQueue(){
-    try{
-      const q = JSON.parse(localStorage.getItem(qkey)||'[]'); if(!q.length) return;
-      const next = q.shift(); const ok = await postJSON(next);
-      if (ok){ localStorage.setItem(qkey, JSON.stringify(q)); if (q.length) setTimeout(flushQueue, 500); }
-    }catch{}
-  }
-  addEventListener('online', flushQueue, { passive:true });
-
-  // Hash email (SHA-256 when available)
-  async function hashEmail(v){
-    try{
-      if (crypto?.subtle){
-        const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(String(v)));
-        return 'sha256_' + Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const email = emailInp.value.trim(), invite = friendInp.value.trim();
+      if (!validEmail(email)) {
+        errEl.textContent = 'Please enter a valid email address.';
+        errEl.classList.remove('sr-only');
+        box.classList.add('ring-red-400');
+        setTimeout(() => box.classList.remove('ring-red-400'), 600);
+        return;
       }
-    }catch{}
-    // tiny fallback
-    let h=0; for (let i=0;i<String(v).length;i++) h=(h*31 + v.charCodeAt(i))>>>0;
-    return 'h' + h.toString(16);
-  }
+      errEl.classList.add('sr-only');
+      emailInp.disabled = true;
+      form.querySelector('button[type="submit"]').classList.add('opacity-60', 'pointer-events-none');
+      confettiEmoji.style.opacity = 1;
+      form.querySelector('button[type="submit"]').classList.add('animate-bounce');
+      setTimeout(() => form.querySelector('button[type="submit"]').classList.remove('animate-bounce'), 900);
 
-  // Submit
-  form?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-
-    const dwell = now() - start;
-    const eVal = (email?.value || '').trim();
-    const iVal = (invite?.value || '').trim();
-
-    if (hp && hp.value) { closeModal(); return; }
-    if (dwell < MIN_DWELL_MS){
-      if (errEl){ errEl.textContent='Please take a moment and try again.'; errEl.classList.remove('sr-only'); }
-      return;
-    }
-    if (!isEmail(eVal)){
-      if (errEl){ errEl.textContent='Please enter a valid email address.'; errEl.classList.remove('sr-only'); }
-      email?.setAttribute('aria-invalid','true'); return;
-    }
-
-    if (errEl){ errEl.textContent=''; errEl.classList.add('sr-only'); }
-    email?.setAttribute('aria-invalid','false');
-
-    const orig = submitB?.getAttribute('data-label') || submitB?.textContent || '';
-    if (submitB){ submitB.disabled=true; submitB.classList.add('opacity-60','pointer-events-none'); submitB.textContent=submitB.getAttribute('data-busy')||'Subscribing…'; }
-    email && (email.disabled = true); invite && (invite.disabled = true);
-
-    const payload = {
-      email: eVal, invite: iVal || undefined,
-      source_url: modal.querySelector('#nl-source-url')?.value || '',
-      referrer:   modal.querySelector('#nl-referrer')?.value || '',
-      utm: (()=>{ try{ return JSON.parse(modal.querySelector('#nl-utm')?.value || '{}'); }catch{ return {}; } })(),
-      t_opened: openedAt || null, t_submitted: now()
-    };
-
-    let ok=false;
-    if (navigator.onLine) {
-      ok = await postJSON(payload);
-      if (!ok && !action){
-        try{
-          location.href = `mailto:news@example.org?subject=Newsletter%20Subscribe&body=${encodeURIComponent(eVal)}${iVal? '%0AInvite:%20'+encodeURIComponent(iVal):''}`;
-          ok = true;
-        }catch{}
-      }
-    } else {
-      enqueue(payload); ok = true;
-    }
-
-    if (ok){
-      thanks?.classList.remove('hidden');
-      confFx && (confFx.style.opacity = 1, setTimeout(()=> confFx.style.opacity = 0, 900));
-      try { localStorage.setItem(K('subscribed'),'1'); } catch {}
-      try {
-        const h = await hashEmail(eVal);
-        (window.dataLayer = window.dataLayer || []).push({ event:'newsletter_subscribed', scope:SCOPE, email_hash:h });
-      } catch {}
-      setTimeout(closeModal, 1200);
-    } else {
-      if (errEl){ errEl.textContent='Something went wrong. Please try again soon.'; errEl.classList.remove('sr-only'); }
-      if (submitB){ submitB.disabled=false; submitB.classList.remove('opacity-60','pointer-events-none'); submitB.textContent=orig; }
-      email && (email.disabled = false); invite && (invite.disabled = false);
-    }
-  });
-
-  // Kick queued sends (if any)
-  flushQueue().catch(()=>{});
-}
-
-// Optional auto-init (safe to include multiple times)
-if (typeof document !== 'undefined') {
-  const boot = () => initNewsletterModal();
-  document.readyState !== 'loading'
-    ? boot()
-    : document.addEventListener('DOMContentLoaded', boot, { once:true });
-}
-
+      // API placeholder — replace with your backend call
+      setTimeout(() => {
+        thanksEl.classList.remove('hidden');
+        launchConfetti();
+        window.dispatchEvent(new CustomEvent('newsletterSubscribed', { detail: { email, invite } }));
+        setTimeout(closeModal, 1700);
+        confettiEmoji.style.opacity = 0;
+      }, 950);
+    });
+  })();
+</script>

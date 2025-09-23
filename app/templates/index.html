@@ -1,222 +1,96 @@
 {# ============================================================================
-index.html — Premium Compact (CSP-safe, a11y, less-scroll, enterprise refactor)
-- Guards: roll_money/roll_pct macros, GOAL/RAISED defaults, stable IDP - Hero
-overlay lift, 3-up tiers - Impact Board + optional Shot-Chart + Impact Stories
-(lockers) - NEW: under-hero duo (Impact v2 + Tiers)
-========================================================================== #} {%
-extends "base.html" %} {# ---------- Flags (query-string overridable) ----------
-#} {% set _q = request.args if request is defined else {} %} {% set _OFF =
-['0','false','off','no','disable'] %} {% set SHOW_TIERS = (show_tiers if
-show_tiers is defined else (_q.get('tiers','1') |lower not in _OFF)) %} {% set
-SHOW_IMPACT = (show_impact if show_impact is defined else (_q.get('impact','1')
-|lower not in _OFF)) %} {% set SHOW_ABOUT = (show_about if show_about is defined
-else (_q.get('about','1') |lower not in _OFF)) %} {# ---------- Nonce helper
-passthrough ---------- #} {% if NONCE is not defined %}{% set NONCE =
-csp_nonce() if csp_nonce is defined else '' %}{% endif %} {% if nonce_attr is
-not defined %}{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}{%
-endif %} {# ---------- Safe helpers & scoreboard defaults (GLOBAL for all
-partials) ---------- #} {% if roll_money is not defined %} {% macro
-roll_money(v, symbol='$') -%} {%- set n = (v if v is number else
-(v|string)|replace('$','')|replace(',','')|float) -%} {%- if n >= 100000 and (n
-% 100 == 0) -%}{%- set n = n / 100 -%}{%- endif -%} {{- symbol }}{{
-'{:,.0f}'.format(n) -}} {%- endmacro %} {% endif %} {% if roll_pct is not
-defined %} {% macro roll_pct(v) -%} {%- set n = (v if v is number else
-(v|string)|replace('%','')|float) -%} {{ '{:.0f}'.format(n) -}} {%- endmacro %}
-{% endif %} {# Theme + links used by impact/shot partials #} {% set THEME_HEX =
-theme_hex|default('#facc15') %} {% set SPL = (stripe_payment_link if
-stripe_payment_link is defined and stripe_payment_link) or '' %} {% set
-HREF_DONATE = SPL or (safe_url_for('main.donate') if (safe_url_for is defined
-and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
-{% set HREF_SPONSOR= (safe_url_for('main.become_sponsor') if (safe_url_for is
-defined and has_endpoint is defined and has_endpoint('main.become_sponsor'))
-else '/become-sponsor') %} {# Scoreboard numbers (safe defaults so includes
-never crash) #} {% set GOAL = (fundraising_goal if fundraising_goal is defined
-and fundraising_goal else (GOAL_USD if GOAL_USD is defined and GOAL_USD else
-50000))|int %} {% set RAISED = (funds_raised if funds_raised is defined and
-funds_raised else 0)|int %} {% set PCT = (100.0 * (RAISED if GOAL>0 else 0) /
-(GOAL if GOAL>0 else 1))|round(1) %} {% set PCT_CLAMP = 0 if PCT < 0 else (100
-if PCT > 100 else PCT) %} {# Stable IDs so hero JS can toJSON safely #} {% set
-IDP = 'fundraiser-hero' %} {% set PAGE_ID = 'home-compact' %} {% set HERO_ID =
-IDP %} {% block title %}{{ fundraiser_title or 'Fuel the Season — Fund the
-Future' }}{% endblock %} {% block h1 %}{% endblock %} {% block extra_head %} {{
-super() }}
-<meta
-  name="description"
-  content="{{ meta_description if meta_description is defined and meta_description else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' }}"
-/>
+  index.html — FundChamps Elite (modern, partial-aware)
+  Renders in the right order and finds your partials even if filenames differ.
+============================================================================ #}
+{% extends "base.html" %}
+{% import 'partials/_fmt.html' as fmt %}
+{% from 'partials/_core_helpers.html' import nonce_attr %}
 
-<style {{ nonce_attr() }}>
-      /* ——— Layout tighten ——— */
-      .section{ padding-block: clamp(0.9rem, 1.8vw, 1.6rem) }
-      .section.section--tight{ padding-block: clamp(0.7rem, 1.2vw, 1.1rem) }
-      .section + .section{ padding-top: clamp(0.6rem, 1.2vw, 1rem) }
-      .container{ max-width: 1200px }
+{# ---------- Feature flags (URL override) ---------- #}
+{% set _q   = request.args if request is defined else {} %}
+{% set _OFF = ['0','false','off','no','disable'] %}
+{% set SHOW_TIERS  = (show_tiers  if show_tiers  is defined else (_q.get('tiers','1')  |lower not in _OFF)) %}
+{% set SHOW_IMPACT = (show_impact if show_impact is defined else (_q.get('impact','1') |lower not in _OFF)) %}
+{% set SHOW_ABOUT  = (show_about  if show_about  is defined else (_q.get('about','1')  |lower not in _OFF)) %}
 
-      /* ——— Hero: compact height + lifted overlay text ——— */
-      #fc-hero{ --hero-min-h: clamp(420px, 55vh, 680px) }
-      #{{ HERO_ID }}{ --hero-overlay-lift: clamp(28px, 12vh, 120px) }
-      @media (max-width:680px){ #{{ HERO_ID }}{ --hero-overlay-lift: clamp(16px, 4vh, 72px) } }
+{# ---------- Runtime links ---------- #}
+{% set SPL         = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link) or '' %}
+{% set HREF_DONATE = SPL or (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate') %}
 
-      /* ——— Tiers grid density ——— */
-      #tiers .grid{ display:grid !important; gap:.7rem !important; grid-template-columns: 1fr !important; align-items:stretch }
-      @media (min-width:700px){  #tiers .grid{ grid-template-columns: repeat(2, minmax(0,1fr)) !important } }
-      @media (min-width:980px){  #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important } }
-      @media (min-width:1280px){ #tiers .grid{ grid-template-columns: repeat(3, minmax(0,1fr)) !important } }
+{# ---------- Fundraising math (safe defaults) ---------- #}
+{% set GOAL       = (fundraising_goal if fundraising_goal else 50000)|int %}
+{% set RAISED     = (funds_raised if funds_raised else 0)|int %}
+{% set PCT        = (100.0 * RAISED / (GOAL if GOAL > 0 else 1))|round(1) %}
+{% set PCT_CLAMP  = 0 if PCT < 0 else (100 if PCT > 100 else PCT) %}
 
-      /* Tighter tier internals */
-      #tiers .flip-card{ aspect-ratio: 1 / 1.05; min-height:0 }
-      #tiers .flip-card-inner{ min-height:0 }
-      #tiers .flip-face.front{ padding:.9rem }
-      #tiers .flip-back{ padding:1rem }
-      #tiers .text-xl{ font-size:1.05rem }
-      #tiers .text-sm{ font-size:.84rem }
-      #tiers .slots{ height:6px; margin-top:.5rem }
-      #tiers .tier-perks{ display:flex; flex-wrap:wrap; gap:.35rem; margin-top:.55rem }
-      #tiers .tier-perks li{ display:inline-flex; align-items:center; gap:.3rem; padding:.24rem .44rem; border-radius:.55rem; background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); font-weight:800; font-size:.78rem; color:#e5e7eb; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
-      #tiers .tier-perks li svg{ display:none }
-      #tiers .btn-row{ gap:.45rem; margin-top:.6rem }
-      #tiers [data-tier-cta]{ font-size:.9rem; padding:.56rem .8rem; border-radius:.6rem }
-      #tiers [data-share]{ padding:.42rem .62rem; border-radius:.6rem; font-size:.82rem }
-      #tiers .ribbon{ top:10px; right:10px; font-size:10px; padding:.18rem .44rem; border-radius:.45rem }
+{# ---------- Title/SEO ---------- #}
+{% block title %}{{ fundraiser_title or 'FundChamps | Connect ATX Elite' }}{% endblock %}
+{% block h1 %}{% endblock %}
 
-      /* Collapsibles */
-      details.fc-fold{ background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03)); border:1px solid rgba(255,255,255,.12); border-radius:1rem; overflow:hidden }
-      details.fc-fold + details.fc-fold{ margin-top:.8rem }
-      .fc-fold > summary{ cursor:pointer; list-style:none; padding:.8rem 1rem; font-weight:1000; display:flex; align-items:center; gap:.6rem; background:linear-gradient(180deg,rgba(0,0,0,.18),rgba(0,0,0,.06)) }
-      .fc-fold > summary::-webkit-details-marker{ display:none }
-      .fc-fold[open] > summary{ border-bottom:1px solid rgba(255,255,255,.10) }
-      .fc-fold .fold-body{ padding:.9rem 1rem }
-      .fold-kbd{ font-size:.8rem; padding:.14rem .4rem; border:1px solid rgba(255,255,255,.18); border-radius:.4rem; background:rgba(255,255,255,.06) }
+{% block content %}
 
-      /* Impact polish */
-      .impact-v2 { padding-top: clamp(.35rem, .8vw, .8rem) }
-      .impact-v2 .head { margin-bottom: .45rem }
-      .impact-v2 .meter .track { height: 12px }
+  {# ===== 0) Sponsor Leaderboard (no extra wrapper to avoid duplicate IDs) ===== #}
+  {% include "partials/sponsor_leaderboard.html" ignore missing with context %}
 
-      /* Shot chart sizing (balanced, compact) */
-      #impact-shot { padding-top: clamp(.35rem, .8vw, .8rem) }
-      #impact-shot .court{
-        max-height: clamp(260px, 48vh, 520px);
-        min-height: clamp(220px, 38vh, 440px);
-      }
+  {# ===== 1) Hero (compact) ===== #}
+  {% include "partials/hero_and_fundraiser.html" ignore missing with context %}
 
-      /* Hide duplicate H2 inside Stories fold body (keeps board H2 visible) */
-      #fold-impact-stories .fold-body h2:first-of-type{ display:none }
+  {# ===== 2) Tiers (3-up squares) ===== #}
+  {% if SHOW_TIERS %}
+    {% include "partials/tiers.html" ignore missing with context %}
+  {% endif %}
 
-      /* Optional: side-by-side board + shot on wide screens (no markup changes) */
-      @media (min-width:1100px){
-        .section.container:has(> .impact-v2 + #impact-shot){
-          display:grid; grid-template-columns: 1.1fr .9fr; gap: clamp(14px, 2vw, 22px); align-items:start;
-        }
-        #impact-shot{ padding-top: 0 }
-      }
+  {# ===== 3) Impact (collapsible to reduce scroll) ===== #}
+  {% if SHOW_IMPACT %}
+    <section class="section section--tight container">
+      <details class="fc-fold" open>
+        <summary>
+          <span>Impact Buckets</span>
+          <span class="fold-kbd">less scroll</span>
+        </summary>
+        <div class="fold-body">
+          {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+        </div>
+      </details>
+    </section>
+  {% endif %}
 
-      /* ── NEW: Under-hero two-up (Impact v2 + Tiers) ───────────────────── */
-      #under-hero-duo .duo-grid{
-        display:grid; gap:clamp(12px,1.8vw,18px);
-        grid-template-columns:minmax(0,1.15fr) minmax(0,.85fr);
-        align-items:start;
-      }
-      @media (max-width:1100px){ #under-hero-duo .duo-grid{ grid-template-columns:1fr } }
+  {# ===== 4) About (collapsible) ===== #}
+  {% if SHOW_ABOUT %}
+    <section class="section section--tight container">
+      <details class="fc-fold">
+        <summary>
+          <span>About Our Program</span>
+        </summary>
+        <div class="fold-body">
+          {% include "partials/about_section.html" ignore missing with context %}
+        </div>
+      </details>
+    </section>
+  {% endif %}
 
-      /* make the tiers column sticky for nice scroll behavior */
-      #under-hero-duo .duo-right{ position:sticky; top:calc(var(--sticky-offset, 72px) + 10px); align-self:start }
+<script {{ nonce_attr(NONCE) }}>
+(() => {
+  const links = [...document.querySelectorAll('.local-nav a[href^="#"]')];
+  if (!links.length || window.__FC_SPY__) return; window.__FC_SPY__ = true;
 
-      /* neutralize outer spacing when tiers partial is nested in the duo */
-      #under-hero-duo .duo-right :where(#tiers){
-        padding:0 !important; margin:0 !important; background:transparent; border:0;
-      }
-      #under-hero-duo .duo-right :where(#tiers .container){ padding:0 !important }
-      #under-hero-duo .duo-right :where(#tiers .grid){ margin-top:.4rem }
+  const map = new Map(
+    links.map(a => [a, document.querySelector(a.getAttribute('href'))]).filter(([,el])=>!!el)
+  );
+  const setActive = (a) => links.forEach(l => l.classList.toggle('is-active', l === a));
 
-      /* Minor seams */
-      #fc-hero .hm-track{ height:12px }
-      #sponsor-leaderboard{ min-height:0.001px }
+  const io = new IntersectionObserver((ents) => {
+    const vis = ents.filter(e => e.isIntersecting).sort((a,b)=> b.intersectionRatio - a.intersectionRatio)[0];
+    if (!vis) return;
+    for (const [a, el] of map) if (el === vis.target) { setActive(a); break; }
+  }, { rootMargin: "-40% 0px -55% 0px", threshold: [0, .2, .5, .8] });
 
-    /* in index.html <style> (already safe to add) */
-  #under-hero-duo .duo-right :where(#tiers){ padding:0 !important; margin:0 !important; background:transparent; border:0; }
-  #under-hero-duo .duo-right :where(#tiers .container){ padding:0 !important; }
-  #under-hero-duo .duo-right :where(#tiers .grid){ margin-top:.4rem; }
-</style>
-{% endblock %} {% block content %} {# 0) Sponsor Leaderboard #} {% include
-"partials/sponsor_leaderboard.html" ignore missing with context %} {# 1) Hero
-(uses IDP, GOAL/RAISED already defined) #} {% include
-"partials/hero_and_fundraiser.html" ignore missing with context %} {# 1.5)
-Under-hero duo: Impact (left) + Tiers (right) #}
-<section
-  id="under-hero-duo"
-  class="section container seam-after-hero"
-  aria-label="Impact and Tiers"
->
-  <div class="duo-grid">
-    <div class="duo-left">
-      {% include "partials/impact_lockers_premium_v2.html" ignore missing with
-      context %}
-    </div>
-    {% if SHOW_TIERS %}
-    <aside class="duo-right" aria-labelledby="tiers-heading">
-      {% include "partials/tiers.html" ignore missing with context %}
-    </aside>
-    {% endif %}
-  </div>
-</section>
-
-{# (REMOVED: standalone Tiers block to avoid duplicate rendering) #} {# 3)
-Impact — Board + optional Shot-Chart + Stories (kept below) #} {% if SHOW_IMPACT
-%} {% include "partials/impact_board.html" ignore missing with context %} {%
-include "partials/impact_shot.html" ignore missing with context %}
-
-<section class="section section--tight container">
-  <details class="fc-fold" id="fold-impact-stories" open>
-    <summary>
-      <span>Impact Stories</span>
-      <span class="fold-kbd">open</span>
-    </summary>
-    <div class="fold-body">
-      {% include "partials/impact_lockers_premium.html" ignore missing with
-      context %}
-    </div>
-  </details>
-</section>
-{% endif %} {# 4) About (collapsible) #} {% if SHOW_ABOUT %}
-<section class="section section--tight container">
-  <details class="fc-fold" id="fold-about">
-    <summary><span>About Our Program</span></summary>
-    <div class="fold-body">
-      {% include "partials/about_section.html" ignore missing with context %}
-    </div>
-  </details>
-</section>
-{% endif %} {% endblock %} {% block body_scripts %} {{ super() }}
-<script {{ nonce_attr() }}>
-  /* Collapsible state persistence + anchor-aware opening */
-  (function () {
-    const key = (id) => `fc_fold_${id}`;
-    document.querySelectorAll("details.fc-fold[id]").forEach((d) => {
-      const k = key(d.id);
-      try {
-        const saved = localStorage.getItem(k);
-        if (saved === "0") d.removeAttribute("open");
-        if (saved === "1") d.setAttribute("open", "");
-      } catch {}
-      d.addEventListener(
-        "toggle",
-        () => {
-          try {
-            localStorage.setItem(k, d.open ? "1" : "0");
-          } catch {}
-        },
-        { passive: true },
-      );
-    });
-    try {
-      if (location.hash) {
-        const target = document.getElementById(location.hash.slice(1));
-        const fold =
-          target && target.closest && target.closest("details.fc-fold");
-        if (fold && !fold.open) fold.open = true;
-      }
-    } catch {}
-  })();
+  map.forEach(el => io.observe(el));
+})();
 </script>
+<style {{ nonce_attr(NONCE) }}>
+  .local-nav a.is-active{ font-weight:900; text-decoration:underline; text-underline-offset:4px }
+</style>
+
 {% endblock %}
+

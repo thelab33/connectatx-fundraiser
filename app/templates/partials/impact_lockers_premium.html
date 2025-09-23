@@ -1,58 +1,97 @@
-{# Impact (Lockers Premium — V2, self-contained, CSP-safe) #}
-<section id="impact-v2" class="section impact-v2" aria-label="Your impact">
-  <div class="shell">
+{# ===================== Impact — Pro 5.0 (tokenized, a11y, CSP-safe) ===================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+<section
+  id="impact"
+  class="impact section"
+  aria-labelledby="impact-h"
+  style="--accent: {{ theme_hex|default('#facc15') }}"
+  data-raised="{{ RAISED|default(0) }}"
+  data-goal="{{ GOAL|default(50000) }}"
+>
+  <div class="impact__shell">
+    <!-- Header -->
     <header class="head">
-      <h2 class="title">Your <span class="accent">Impact</span></h2>
-      <p class="sub">Where Gifts Go</p>
+      <h2 id="impact-h" class="title">Your <span class="accent">Impact</span></h2>
+      <p class="sub">Where every dollar goes — live.</p>
     </header>
 
     <!-- KPI strip -->
     <ul class="kpis" role="list">
       <li class="kpi">
-        <span class="num">500+</span><span class="label">Families Served</span>
+        <span class="num">500+</span><span class="lab">Families Served</span>
       </li>
       <li class="kpi">
-        <span class="num">3.5</span><span class="label">Team GPA</span>
+        <span class="num">3.5</span><span class="lab">Team GPA</span>
       </li>
       <li class="kpi">
-        <span class="num">92%</span><span class="label">College-track</span>
+        <span class="num">92%</span><span class="lab">College-track</span>
       </li>
       <li class="kpi">
-        <span class="num">$0</span><span class="label">Player Turned Away</span>
+        <span class="num">$0</span><span class="lab">Player Turned Away</span>
       </li>
     </ul>
 
+    <!-- Overall meter -->
+    <div
+      class="meter"
+      role="meter"
+      aria-label="Progress toward goal"
+      aria-valuemin="0"
+      aria-valuemax="{{ GOAL|int if GOAL is defined else 50000 }}"
+      aria-valuenow="{{ RAISED|int if RAISED is defined else 0 }}"
+      aria-describedby="impact-meter-desc"
+    >
+      <div class="track"><div class="fill" style="--p: 0%"></div></div>
+      <div class="line tabular">
+        <b data-raised>$0</b>
+        /
+        <b data-goal>$0</b>
+        <span class="pct">• 0%</span>
+      </div>
+      <p id="impact-meter-desc" class="sr-only">Funds raised out of total goal.</p>
+    </div>
+
+    <!-- Ladder -->
+    {% set LADDER = LADDER|default([
+      {'amt': 1000, 'label':'Gym Week'},
+      {'amt': 5000, 'label':'Travel Slot'},
+      {'amt': 10000,'label':'Tutor Block'}
+    ]) %}
+    <div class="ladder" role="group" aria-label="Impact ladder milestones">
+      {% for rung in LADDER %}
+      <div class="rung" data-th="{{ rung.amt }}">
+        <div class="bar" aria-hidden="true"></div>
+        <div class="lbl">
+          <span class="amt">${{ '{:,.0f}'.format(rung.amt) }}</span>
+          <span class="what">{{ rung.label }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
     <!-- Lockers grid -->
-    <div class="grid" role="list">
+    <div class="grid" role="list" aria-label="Where gifts go">
       <article class="locker" role="listitem">
         <div class="emoji" aria-hidden="true">🎒</div>
         <h3 class="h">Game-Day Gear</h3>
-        <p class="p">
-          Uniforms, shoes, practice kits, healthy snacks & hydration, bags, and
-          team apparel for players in need.
-        </p>
+        <p class="p">Uniforms, shoes, kits, snacks & hydration, bags, and team apparel for players in need.</p>
       </article>
       <article class="locker" role="listitem">
         <div class="emoji" aria-hidden="true">🚌</div>
         <h3 class="h">Travel & Lodging</h3>
-        <p class="p">
-          Tournaments, showcases, hotel nights for players and families, and
-          safe transportation.
-        </p>
+        <p class="p">Tournaments, showcases, hotel nights for players and families, and safe transportation.</p>
       </article>
       <article class="locker" role="listitem">
         <div class="emoji" aria-hidden="true">📚</div>
         <h3 class="h">Tutoring & Mentoring</h3>
-        <p class="p">
-          After-practice study hall, academic coaching, and mentorship.
-        </p>
+        <p class="p">After-practice study hall, academic coaching, and mentorship.</p>
       </article>
       <article class="locker" role="listitem">
         <div class="emoji" aria-hidden="true">🩺</div>
         <h3 class="h">Wellness</h3>
-        <p class="p">
-          Athletic trainers, recovery tools, and nutrition support.
-        </p>
+        <p class="p">Athletic trainers, recovery tools, and nutrition support.</p>
       </article>
       <article class="locker" role="listitem">
         <div class="emoji" aria-hidden="true">🏀</div>
@@ -66,162 +105,161 @@
       </article>
     </div>
 
+    <!-- Allocation breakdown (visual) -->
+    <div class="breakdown" role="img" aria-label="Allocation breakdown: Gear 34%, Travel 31%, Tutoring 22%, Wellness 13%">
+      <div class="seg gear" style="--pc:34%">Gear</div>
+      <div class="seg travel" style="--pc:31%">Travel</div>
+      <div class="seg tutoring" style="--pc:22%">Tutoring</div>
+      <div class="seg wellness" style="--pc:13%">Wellness</div>
+    </div>
+
+    <!-- CTAs -->
     <div class="cta-row">
-      <a href="{{ HREF_DONATE }}" class="btn btn-gold">Donate to a Need →</a>
-      <a href="/impact" class="btn btn-ghost">See More Stories</a>
+      <a class="btn btn--gold" href="{{ HREF_DONATE|default('/donate') }}">Donate to a Need →</a>
+      <a class="btn btn--ghost" href="{{ safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '/impact' }}">See More Stories</a>
     </div>
   </div>
 </section>
 
 <style {{ nonce_attr() }}>
-  /* Impact v2 — scoped */
-  .section.impact-v2 {
-    --accent: var(--fc-brand, #facc15);
-    color: #e9eef9;
-  }
-  .section.impact-v2 .shell {
-    max-width: min(1380px, 98vw);
-    margin-inline: auto;
-    padding-inline: clamp(14px, 2.6vw, 28px);
-    padding-block: clamp(20px, 3.2vw, 36px);
-  }
-  .section.impact-v2 .head {
-    display: grid;
-    gap: 0.35rem;
-    margin-bottom: clamp(12px, 1.6vw, 16px);
-  }
-  .section.impact-v2 .title {
-    font-size: clamp(1.3rem, 1rem + 1.6vw, 2rem);
-    font-weight: 1000;
-  }
-  .section.impact-v2 .title .accent {
-    color: var(--accent);
-  }
-  .section.impact-v2 .sub {
-    color: #cdd6e3;
-  }
+/* ================= Impact — tokens match site system ================= */
+.impact{ color:#eaf0fa }
+.impact .accent{ color:var(--accent) }
+.impact__shell{ max-width:1200px; margin-inline:auto; padding:clamp(16px,3vw,28px) }
 
-  .section.impact-v2 .kpis {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0.6rem;
-    list-style: none;
-    padding: 0;
-    margin: 0 0 0.9rem;
-  }
-  @media (max-width: 860px) {
-    .section.impact-v2 .kpis {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  .section.impact-v2 .kpi {
-    display: grid;
-    place-items: center;
-    gap: 0.2rem;
-    border: 1px solid #ffffff24;
-    background: #ffffff10;
-    border-radius: 0.9rem;
-    padding: 0.7rem;
-  }
-  .section.impact-v2 .kpi .num {
-    font-weight: 1000;
-    font-size: 1.15rem;
-    color: #fff;
-  }
-  .section.impact-v2 .kpi .label {
-    font-size: 0.86rem;
-    color: #d7dfeb;
-  }
+.head{ display:grid; gap:.35rem; margin-bottom:clamp(12px,2vw,18px) }
+.title{ margin:0; font-weight:1000; font-size:clamp(1.6rem,1.2rem + 2.2vw,2.2rem) }
+.sub{ margin:0; color:#b9c2d0 }
 
-  .section.impact-v2 .grid {
-    display: grid;
-    gap: 0.7rem;
-    grid-template-columns: repeat(6, minmax(0, 1fr));
-  }
-  @media (max-width: 1280px) {
-    .section.impact-v2 .grid {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 780px) {
-    .section.impact-v2 .grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-  @media (max-width: 520px) {
-    .section.impact-v2 .grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  .section.impact-v2 .locker {
-    display: grid;
-    gap: 0.28rem;
-    min-height: 140px;
-    border: 1px solid #ffffff24;
-    background: linear-gradient(
-      180deg,
-      rgba(17, 17, 17, 0.62),
-      rgba(17, 17, 17, 0.48)
-    );
-    border-radius: 0.9rem;
-    padding: 0.9rem;
-    transition:
-      transform 0.12s ease,
-      box-shadow 0.2s ease,
-      background 0.2s ease;
-  }
-  .section.impact-v2 .locker:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 14px 40px rgb(0 0 0 / 28%);
-    background: linear-gradient(
-      180deg,
-      rgba(20, 20, 22, 0.74),
-      rgba(20, 20, 22, 0.52)
-    );
-  }
-  .section.impact-v2 .locker:focus-within {
-    outline: 2px solid color-mix(in srgb, var(--accent) 60%, #fff 40%);
-    outline-offset: 3px;
-  }
-  .section.impact-v2 .locker .emoji {
-    font-size: 1.28rem;
-    opacity: 0.95;
-  }
-  .section.impact-v2 .locker .h {
-    margin: 0.06rem 0;
-    font-weight: 900;
-    color: #fff;
-    font-size: 1.02rem;
-  }
-  .section.impact-v2 .locker .p {
-    color: #cfd7e5;
-    font-size: 0.95rem;
-  }
+/* KPIs */
+.kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(10px,1.6vw,16px); padding:0; margin:clamp(8px,1.6vw,12px) 0 0; list-style:none }
+.kpi{
+  display:flex; align-items:center; justify-content:center; gap:.5rem;
+  border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:.7rem;
+  background:linear-gradient(180deg, rgba(16,18,24,.92), rgba(16,18,24,.78));
+}
+.kpi .num{ font-weight:1000; font-size:clamp(1rem,.8rem + 1.2vw,1.4rem) }
+.kpi .lab{ opacity:.9 }
+@media (max-width:760px){ .kpis{ grid-template-columns:repeat(2,1fr) } }
 
-  .section.impact-v2 .cta-row {
-    display: flex;
-    gap: 0.6rem;
-    flex-wrap: wrap;
-    margin-top: 0.95rem;
+/* Meter */
+.meter{ display:grid; gap:.5rem; margin-top:clamp(12px,2vw,18px) }
+.tabular{ font-variant-numeric:tabular-nums }
+.meter .track{
+  block-size:10px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14)
+}
+.meter .fill{
+  inline-size:var(--p,0%); block-size:100%;
+  background:linear-gradient(90deg,#fffbe6,var(--accent));
+  border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
+}
+.meter .line{ color:#dbe5f5 }
+
+/* Ladder */
+.ladder{ display:flex; flex-direction:column; gap:.55rem; margin-top:.3rem }
+.rung{ display:flex; align-items:center; gap:.7rem }
+.rung .bar{
+  inline-size:min(280px, 44vw); block-size:10px; border-radius:999px; position:relative; overflow:hidden;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14)
+}
+.rung .bar::after{
+  content:""; position:absolute; inset:0; transform:scaleX(var(--fill,0)); transform-origin:left;
+  background:linear-gradient(90deg,#fffbe6,var(--accent)); transition:transform .6s cubic-bezier(.22,.9,.27,1);
+}
+.rung .lbl{ font-weight:900; display:flex; gap:.4rem }
+.rung .amt{ opacity:.95 } .rung .what{ opacity:.85 }
+
+/* Lockers grid */
+.grid{
+  display:grid; gap:clamp(12px,2vw,18px);
+  grid-template-columns:repeat(12,1fr);
+  margin-top:clamp(14px,2vw,20px);
+}
+.locker{
+  grid-column:span 4; display:grid; gap:.35rem;
+  background:linear-gradient(180deg, rgba(16,18,24,.92), rgba(16,18,24,.78));
+  border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:clamp(12px,2vw,16px);
+  box-shadow:0 14px 46px rgba(0,0,0,.45);
+}
+.emoji{ font-size:1.25rem }
+.h{ margin:.1rem 0; font-size:1.1rem; font-weight:900 }
+.p{ margin:0; color:#cbd6e4 }
+@media (max-width:980px){ .locker{ grid-column:span 6 } }
+@media (max-width:640px){ .locker{ grid-column:span 12 } }
+
+/* Allocation */
+.breakdown{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-top:clamp(12px,2vw,18px)
+}
+.seg{
+  position:relative; padding:.65rem .75rem; border-radius:12px; text-align:center; font-weight:900;
+  border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06);
+}
+.seg::after{
+  content:""; position:absolute; left:0; bottom:0; height:4px; width:calc(var(--pc,0) * 1%);
+  background:linear-gradient(90deg,#fffbe6,var(--accent)); border-bottom-left-radius:12px; border-bottom-right-radius:12px;
+}
+@media (max-width:760px){ .breakdown{ grid-template-columns:repeat(2,1fr) } }
+
+/* CTAs */
+.cta-row{ display:flex; flex-wrap:wrap; gap:.6rem; margin-top:clamp(14px,2vw,20px) }
+.btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:1000; text-decoration:none; padding:.7rem 1rem }
+.btn--gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
+.btn--ghost{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#eaf0fa }
+
+/* Light theme */
+.light .impact{ color:#0f172a }
+.light .sub{ color:#334155 }
+.light .kpi, .light .locker{ background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9)); border-color:rgba(0,0,0,.10); box-shadow:0 10px 26px rgba(0,0,0,.08) }
+.light .meter .track, .light .rung .bar, .light .seg{ background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.12) }
+.light .btn--ghost{ color:#0f172a; border-color:rgba(0,0,0,.12) }
+
+/* Motion & HCM */
+@media (prefers-reduced-motion: reduce){
+  .meter .fill, .rung .bar::after{ transition:none }
+}
+@media (forced-colors: active){
+  .kpi, .locker, .seg, .btn, .meter .track, .rung .bar{
+    background:Canvas !important; color:CanvasText !important; border:1px solid CanvasText !important; box-shadow:none !important;
   }
-  .section.impact-v2 .btn {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border-radius: 999px;
-    font-weight: 900;
-    padding: 0.8rem 1.15rem;
-    text-decoration: none;
-  }
-  .section.impact-v2 .btn-gold {
-    background: linear-gradient(180deg, #fffbe6, var(--accent));
-    color: #111;
-    border: 1px solid rgba(0, 0, 0, 0.18);
-  }
-  .section.impact-v2 .btn-ghost {
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
-    color: #e5e7eb;
-  }
+}
 </style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const root = document.getElementById('impact');
+  if (!root || window.__IMPACT_V50__) return; window.__IMPACT_V50__ = true;
+
+  const raised  = +(root.dataset.raised || 0);
+  const goal    = Math.max(1, +(root.dataset.goal || 1));
+  const pct     = Math.max(0, Math.min(100, (raised / goal) * 100));
+  const fmtUSD  = (n)=> new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
+
+  // Meter numbers
+  try{
+    root.querySelector('[data-raised]').textContent = fmtUSD(raised);
+    root.querySelector('[data-goal]').textContent   = fmtUSD(goal);
+    root.querySelector('.pct').textContent = `• ${Math.round(pct)}%`;
+  }catch{}
+
+  // Animate meter on view
+  try{
+    const fill = root.querySelector('.meter .fill');
+    const io = new IntersectionObserver((ents)=>{
+      ents.forEach(ent => { if (ent.isIntersecting){ fill.style.inlineSize = `${pct}%`; io.disconnect(); }});
+    }, { threshold:.2 });
+    io.observe(fill);
+  }catch{}
+
+  // Ladder fill
+  try{
+    root.querySelectorAll('.rung').forEach(r => {
+      const th = +(r.getAttribute('data-th') || 0);
+      const frac = Math.max(0, Math.min(1, th ? (raised / th) : 0));
+      r.querySelector('.bar')?.style.setProperty('--fill', String(frac));
+    });
+  }catch{}
+})();
+</script>
+

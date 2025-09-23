@@ -12,11 +12,10 @@
     <div class="grid">
       <figure class="photo">
         <img
-          src="/static/images/about/locker-room.jpg"
-          alt="Team in the locker room"
-          loading="lazy"
-          decoding="async"
-        />
+  src="{{ asset('/static/images/about/locker-room.avif') }}"
+  srcset="{{ asset('/static/images/about/locker-room.avif') }} 1x, {{ asset('/static/images/about/locker-room@2x.avif') }} 2x"
+  type="image/avif"
+  width="960" height="640" loading="lazy" decoding="async" alt="Team in the locker room">
       </figure>
 
       <div class="story">
