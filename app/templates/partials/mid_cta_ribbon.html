@@ -1,14 +1,20 @@
- {% set _brand =
-(team.theme_color if team and team.theme_color else '#facc15') %} {% set _cid =
-(campaign.id if campaign and campaign.id else (campaign_id if campaign_id is
-defined else None)) %}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% set _brand = (team.theme_color if team and team.theme_color else '#facc15')
+%} {% set _cid = (campaign.id if campaign and campaign.id else (campaign_id if
+campaign_id is defined else None)) %}
 
 <div
-  class="relative overflow-hidden rounded-2xl ring-1 ring-white/10 bg-gradient-to-r from-zinc-900 to-zinc-800 p-6 sm:p-8"
->
+  class="relative overflow-hidden rounded-2xl ring-1 ring-white/10 bg-gradient-to-r from-zinc-900 to-zinc-800 p-6 sm:p-8">
   <div
-    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4"
-  >
+    class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
     <div>
       <p class="text-sm uppercase tracking-wider text-white/70">
         Fuel the Season
@@ -21,7 +27,6 @@ defined else None)) %}
         changes lives.
       </p>
 
-      
       <div
         id="kpi-fragment-{{ _cid or 'default' }}"
         class="mt-4 flex flex-wrap items-center gap-3 text-sm text-white/80"
@@ -36,9 +41,7 @@ defined else None)) %}
         hx-swap="outerHTML"
         {%
         endif
-        %}
-      >
-        
+        %}>
         <span class="opacity-80" id="kpi-raised">—</span>
         <span aria-hidden="true">•</span>
         <span class="opacity-80" id="kpi-donors">—</span>
@@ -55,8 +58,7 @@ defined else None)) %}
         data-cta="Fuel the Season"
         data-track="cta-mid-ribbon"
         data-confetti="true"
-        onclick="window.plausible?.('Donate Click', {props:{placement:'mid-ribbon'}})"
-      >
+        onclick="window.plausible?.('Donate Click', {props:{placement:'mid-ribbon'}})">
         💛 Donate Now
       </a>
 
@@ -64,8 +66,7 @@ defined else None)) %}
         type="button"
         class="px-5 py-3 rounded-xl font-semibold bg-white/5 hover:bg-white/10 transition"
         data-cta="Share"
-        onclick="try{ navigator.share?.({title: document.title, url: location.href}); }catch{}"
-      >
+        onclick="try{ navigator.share?.({title: document.title, url: location.href}); }catch{}">
         🔗 Share
       </button>
     </div>
@@ -80,6 +81,5 @@ defined else None)) %}
         rgba(255, 255, 255, 0.14),
         transparent 70%
       );
-    "
-  ></div>
+    "></div>
 </div>

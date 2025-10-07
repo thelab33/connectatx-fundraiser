@@ -1,11 +1,19 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 defined else '') %} {% set _hero_url = url_for('static', filename=_hero_img,
 v=_ver) if _ver else url_for('static', filename=_hero_img) %} {% set
 funds_raised = (funds_raised if funds_raised is defined else 0) | float %} {%
 set fundraising_goal = (fundraising_goal if fundraising_goal is defined and
 fundraising_goal else 10000) | float %} {% set _raw_pct = (funds_raised /
 (fundraising_goal if fundraising_goal else 1) * 100) %} {% set pct = 0 if
-_raw_pct < 0 else (100 if _raw_pct > 100 else _raw_pct) %} {% set hero_title =
+_raw_pct < 0 else (100 if _raw_pct> 100 else _raw_pct) %} {% set hero_title =
 hero_title if hero_title is defined else (_TEAM.hero_title if _TEAM and
 _TEAM.hero_title else 'Fuel the Season, Fund the Future') %} {% set hero_sub =
 hero_sub if hero_sub is defined else (_TEAM.hero_sub if _TEAM and _TEAM.hero_sub
@@ -16,9 +24,8 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 relative fc-section"
   aria-labelledby="hero-title"
-  style="isolation: isolate"
->
-  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
+  style="isolation: isolate">
+  <style {{ nonce_attr() }}>
     #hero-bg {
       position: absolute;
       inset: 0;
@@ -90,8 +97,7 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
       <header class="fc-stack">
         <h2 id="hero-title" class="fc-h1">{{ hero_title }}</h2>
         <p
-          class="text-[var(--fc-fs-lg)] text-[color:var(--fc-muted)] max-w-2xl"
-        >
+          class="text-[var(--fc-fs-lg)] text-[color:var(--fc-muted)] max-w-2xl">
           {{ hero_sub }}
         </p>
       </header>
@@ -104,16 +110,13 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
           aria-valuemax="100"
           aria-valuenow="{{ pct|round(1) }}"
           aria-label="Fundraising progress"
-          aria-live="polite"
-        >
+          aria-live="polite">
           <div class="track">
             <div class="fill" style="inline-size:{{ pct|round(1) }}%"></div>
           </div>
           <span class="pct" aria-hidden="true">{{ pct|round(0) }}%</span>
-          <span class="sr-only"
-            >Raised {{ funds_raised|round(0) }} of {{ fundraising_goal|round(0)
-            }} ({{ pct|round(0) }} percent)</span
-          >
+          <span class="sr-only">Raised {{ funds_raised|round(0) }} of {{ fundraising_goal|round(0)
+            }} ({{ pct|round(0) }} percent)</span>
         </div>
 
         <a
@@ -132,8 +135,7 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
           endif
           %}
           class="fc-btn fc-btn-primary"
-          data-cta="hero-sponsor"
-        >
+          data-cta="hero-sponsor">
           💛 Sponsor Gym Time
         </a>
 
@@ -143,34 +145,11 @@ stripe_payment_link is defined and stripe_payment_link else '') %}
       {% set _milestones = [25,50,75,100] %}
       <div class="milestones" aria-hidden="true">
         {% for m in _milestones %}
-        <span class="chip {{ 'hit' if pct >= m else '' }}">{{ m }}%</span>
+        <span class="chip {{ 'hit' if pct>= m else '' }}">{{ m }}%</span>
         {% endfor %}
       </div>
     </div>
   </div>
 
-  <script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
-    // Highlight next milestone when meter updates
-    (function () {
-      const root = document.currentScript.closest("section");
-      const chips = root.querySelectorAll(".milestones .chip");
-      function mark(p) {
-        chips.forEach((ch) =>
-          ch.classList.toggle("hit", parseInt(ch.textContent, 10) <= p),
-        );
-      }
-      document.addEventListener(
-        "fc:meter:update",
-        (e) => {
-          const d = e.detail || {};
-          const p = Math.max(
-            0,
-            Math.min(100, +d.goal ? (+d.raised / +d.goal) * 100 : 0),
-          );
-          mark(p);
-        },
-        { passive: true },
-      );
-    })();
-  </script>
+  <script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='js/extracted/partials__hero_billboard.html__1.js', v='1.0.0') }}"></script>
 </section>

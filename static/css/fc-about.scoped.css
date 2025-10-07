@@ -1,0 +1,29 @@
+.fc-about .sheet-page {.fc-about color:#e8ecf6; background: radial-gradient(120% 70% at 50% 0%, .fc-about #0f1219 0%, .fc-about #0b0e15 60%); }
+.about-sheet {.fc-about display:grid; gap:1rem }
+.head {.fc-about display:grid; gap:.4rem; margin-bottom:.3rem }
+.title {.fc-about font:1000 1.4rem/1.15 "Poppins", .fc-about system-ui; color:#fff; letter-spacing:-.01em }
+.title .accent {.fc-about color:var(--accent, .fc-about #facc15) }
+.deck {.fc-about color:#cdd6e3; max-width:70ch }
+
+.story {.fc-about background:linear-gradient(180deg, .fc-about #10141d, .fc-about #0b0e15); border:1px solid #ffffff14; border-radius:14px; padding:.9rem }
+.story p {.fc-about margin:.35rem 0; color:#d5deea; font:600 .98rem/1.5 "Inter" }
+.prose :where(h1, .fc-about h2, .fc-about h3) {.fc-about font-family:"Poppins"; font-weight:900; color:#fff; }
+.prose :where(p, .fc-about li) {.fc-about color:#d5deea; }
+
+.values .subhead, .fc-about .staff .subhead {.fc-about font:900 .95rem/1.1 "Poppins"; color:#fff; margin:.3rem 0 }
+.bullets {.fc-about list-style:none; padding:0; margin:0; display:grid; gap:.4rem }
+.bullets li {.fc-about background:#0f131c; border:1px solid #ffffff14; border-radius:12px; padding:.55rem .7rem; color:#cbd5e1; font:700 .95rem/1.35 "Inter" }
+.bullets b {.fc-about color:#fff }
+
+.people {.fc-about list-style:none; padding:0; margin:0; display:grid; gap:.5rem; grid-template-columns:repeat(2, .fc-about minmax(0, .fc-about 1fr)); }
+.p {.fc-about display:grid; grid-template-columns:auto 1fr; gap:.6rem; align-items:center; background:#0f131c; border:1px solid #ffffff14; border-radius:12px; padding:.55rem .7rem }
+.ph {.fc-about width:42px; height:42px; border-radius:10px; background:#121723; display:grid; place-items:center; overflow:hidden; }
+.ph img {.fc-about width:100%; height:100%; object-fit:cover }
+.avatar {.fc-about display:inline-grid; place-items:center; width:100%; height:100%; font:900 .95rem/1 "Poppins"; color:#111; background:#facc15; }
+.meta .name {.fc-about color:#fff }
+.meta .role {.fc-about color:#a8b3c7; font:800 .82rem/1 "Inter" }
+
+.foot {.fc-about display:flex; gap:.6rem; flex-wrap:wrap; margin-top:.4rem }
+
+@media (max-width:820px) {.fc-about .people { grid-template-columns:1fr; }
+}

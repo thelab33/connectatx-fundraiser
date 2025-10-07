@@ -1,0 +1,484 @@
+{# ====================== Hero • Classic (Pro 2025 • Enterprise) — Refactored ====================== #}
+{# CSP nonce macro (honors NONCE or callable csp_nonce()) #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+
+{# ---------- Inputs & smart defaults (overridable from view/context) ---------- #}
+{% set TEAM = team if team is defined and team else {} %}
+{% set TEAM_NAME = (TEAM.name if 'name' in TEAM else (TEAM.team_name if 'team_name' in TEAM else 'Connect ATX Elite')) %}
+{% set ACCENT = (ACCENT if ACCENT is defined and ACCENT else (theme_hex if theme_hex is defined and theme_hex else '#facc15')) %}
+
+{# Best-effort DONATE_URL resolver (works with flask + raw links) #}
+{% set DONATE_URL = (DONATE_URL if DONATE_URL is defined and DONATE_URL else
+  (HREF_DONATE if HREF_DONATE is defined and HREF_DONATE else
+    (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else
+      (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')
+    )
+  )
+) %}
+
+{# Copy defaults #}
+{% set TAGLINE_TOP    = (hero_tagline_top    if hero_tagline_top    is defined else 'Fuel the Season.') %}
+{% set TAGLINE_ACCENT = (hero_tagline_accent if hero_tagline_accent is defined else 'Fund the Future.') %}
+{% set SUBTITLE       = (hero_subtitle       if hero_subtitle       is defined else 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.') %}
+{% set KPI_GAMES      = TEAM.games_played if 'games_played' in TEAM else 35 %}
+{% set KPI_CHIPS      = TEAM.championships if 'championships' in TEAM else 5 %}
+{% set KPI_HOURS      = TEAM.training_hours if 'training_hours' in TEAM else 120 %}
+
+{# Team-level media fallbacks #}
+{% set _TEAM_JPG  = (TEAM.hero_jpg  if 'hero_jpg'  in TEAM else (TEAM.hero_image if 'hero_image' in TEAM else (TEAM.team_photo if 'team_photo' in TEAM else (TEAM.photo_url if 'photo_url' in TEAM else None)))) %}
+{% set _TEAM_AVIF = (TEAM.hero_avif if 'hero_avif' in TEAM else None) %}
+{% set _TEAM_WEBP = (TEAM.hero_webp if 'hero_webp' in TEAM else None) %}
+{% set _DEF_JPG_REL = 'images/connect-atx-team.jpg' %}
+{% set _U = (url_for is defined) %}
+{% set _DEF_JPG = (_DEF_JPG_REL if '://' in _DEF_JPG_REL else (_U and url_for('static', filename=_DEF_JPG_REL) or '/static/' ~ _DEF_JPG_REL)) %}
+
+{# ---- Rotator sources: 1 existing + 4 open slots. Overwrite via HERO_ROTATIONS in view. ---- #}
+{% set HERO_ROTATIONS = HERO_ROTATIONS if (HERO_ROTATIONS is defined and HERO_ROTATIONS) else [
+  {"alt": TEAM_NAME ~ " — Varsity","avif": "/static/images/teams/varsity.avif","webp": "/static/images/teams/varsity.webp","jpg": "/static/images/teams/varsity.jpg","focus":"50% 32%","safeTop":"12vh","safeBottom":"22vh","pan":"right"},
+  {"alt": TEAM_NAME ~ " — Team 2 (slot)","jpg": "/static/images/teams/slot-2.jpg","focus":"50% 40%","safeTop":"16vh","safeBottom":"18vh","pan":"center"},
+  {"alt": TEAM_NAME ~ " — Team 3 (slot)","jpg": "/static/images/teams/slot-3.jpg","focus":"50% 30%","safeTop":"10vh","safeBottom":"20vh","pan":"left"},
+  {"alt": TEAM_NAME ~ " — Team 4 (slot)","jpg": "/static/images/teams/slot-4.jpg","focus":"50% 35%","safeTop":"18vh","safeBottom":"18vh","pan":"right"},
+  {"alt": TEAM_NAME ~ " — Team 5 (slot)","jpg": "/static/images/teams/slot-5.jpg","focus":"50% 44%","safeTop":"22vh","safeBottom":"12vh","pan":"center"}
+] %}
+
+<section class="fcx-hero fcx-hero--cinematic" style="--accent: {{ ACCENT|e }};" role="region" aria-label="{{ TEAM_NAME|e }} Fundraiser Hero" data-team="{{ TEAM_NAME|e }}" data-interval="{{ (hero_interval if hero_interval is defined else 6500)|int }}" data-rotate="{{ 'true' if (hero_rotate if hero_rotate is defined else true) else 'false' }}">
+  <div class="fcx-hero__container">
+    <div class="fcx-hero__grid">
+      <!-- Left: Copy & CTAs -->
+      <header class="fcx-hero__content">
+        <span class="fcx-chip fcx-chip--lg">{{ TEAM_NAME|e }}</span>
+        <h1 class="fcx-hero__title display-xl">
+          <span>{{ TAGLINE_TOP|e }}</span>
+          <span class="fcx-accent">{{ TAGLINE_ACCENT|e }}</span>
+        </h1>
+        <p class="fcx-hero__subtitle">{{ SUBTITLE|e }}</p>
+        <p class="fcx-hero__impact"><strong>Your support puts kids on the court—and on track for life.</strong></p>
+        <ul class="fcx-kpis" role="list" aria-label="Team stats">
+          <li><span class="fcx-kpi-val"><b>{{ KPI_GAMES }}+</b></span><span class="fcx-kpi-label">Games</span></li>
+          <li><span class="fcx-kpi-val"><b>{{ KPI_CHIPS }}</b></span><span class="fcx-kpi-label">Championships</span></li>
+          <li><span class="fcx-kpi-val"><b>{{ KPI_HOURS }}+</b></span><span class="fcx-kpi-label">Training Hrs/Week</span></li>
+        </ul>
+        <nav class="fcx-hero__cta" aria-label="Main actions">
+          <a href="#tiers" class="fcx-btn fcx-btn-ghost" data-analytics="hero:back-team">🏀 Back Our Ballers</a>
+          <a href="{{ DONATE_URL }}" class="fcx-btn fcx-btn-accent pulse" target="_blank" rel="noopener" data-cta="donate" data-analytics="hero:fuel-season">⛹️ Fuel the Season</a>
+          <button class="fcx-btn fcx-btn-lite" type="button" data-share aria-label="Share fundraiser">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true" style="vertical-align:middle"><path d="M15.84 11.63a2.48 2.48 0 0 0-1.96.97l-5.46-2.7a2.53 2.53 0 0 0 0-1.8l5.45-2.7a2.5 2.5 0 1 0-.73-1.41L7.7 6.7a2.5 2.5 0 1 0 0 6.6l5.45 2.7a2.52 2.52 0 1 0 .73-1.41z" fill="currentColor"/></svg>
+            <span>Share</span>
+          </button>
+        </nav>
+        <div class="fcx-hero__trust">
+          <span class="fcx-tax-badge" data-modal="tax-info">100% Tax Deductible</span>
+          <span class="fcx-secure-badge" data-modal="secure-info">Secure via Stripe/PayPal</span>
+        </div>
+        <div class="fcx-hero__qr">
+          <img src="/static/images/qr.png" alt="Donate QR code" width="94" height="94" loading="lazy" />
+          <div class="fcx-qr-caption"><strong>Scan to Give</strong> — or press <kbd>D</kbd></div>
+        </div>
+      </header>
+
+      <!-- Right: CINEMATIC Image Rotator -->
+      <figure class="fcx-hero__media" role="group" aria-label="{{ TEAM_NAME|e }} hero slideshow">
+        <div class="fcx-hero__frame" aria-hidden="true"></div>
+        <div class="fcx-hero__slides fcx-hero__slides--cinematic" id="fcx-slides" aria-live="off">
+          {% for s in HERO_ROTATIONS %}
+            {# Source fallbacks as in your code #}
+            <div class="fcx-slide{% if loop.first %} is-active{% endif %}"
+                 role="group"
+                 aria-label="{{ (s.alt or TEAM_NAME)|e }}"
+                 data-safe-top="{{ (s.safeTop or '12vh')|e }}"
+                 data-safe-bottom="{{ (s.safeBottom or '12vh')|e }}"
+                 style="--focus: {{ (s.focus or '50% 30%')|e }}; --pan: {{ (s.pan or 'center')|e }};">
+              <picture>
+                {% if s.avif %}<source type="image/avif" srcset="{{ s.avif }}">{% endif %}
+                {% if s.webp %}<source type="image/webp" srcset="{{ s.webp }}">{% endif %}
+                <img
+                  src="{{ s.jpg }}"
+                  alt="{{ (s.alt or '')|e }}"
+                  class="fcx-hero__img ken"
+                  decoding="async"
+                  fetchpriority="{{ 'high' if loop.first else 'low' }}"
+                  sizes="(max-width: 900px) 100vw, 56vw"
+                  loading="{{ 'eager' if loop.first else 'lazy' }}"
+                  style="object-position: {{ (s.focus or '50% 30%')|e }}; max-height: 66vh; min-height: 370px; border-radius: 22px; box-shadow: 0 8px 42px rgba(0,0,0,0.18);"
+                  onerror="this.onerror=null; this.src={{ _DEF_JPG|tojson }};">
+              </picture>
+              <canvas class="fcx-blur" width="24" height="14" aria-hidden="true"></canvas>
+            </div>
+          {% endfor %}
+        </div>
+        <!-- Overlay & Controls (as in your code, unchanged for brevity) -->
+        <figcaption class="fcx-hero__overlay smart-overlay" id="fcx-overlay">
+          <div class="overlay-shell">
+            {% if TEAM.logo_url %}<img src="{{ TEAM.logo_url }}" class="fcx-logo" alt="" width="32" height="32" loading="lazy" />{% endif %}
+            <span class="fcx-chip fcx-chip--sm">{{ TEAM_NAME|e }}</span>
+            <div class="overlay-title"><span>Fuel the Season.</span><span class="fcx-accent">Fund the Future.</span></div>
+            <p class="overlay-sub">Every dollar moves a kid forward.</p>
+          </div>
+          <div class="fcx-hero__controls" role="group" aria-label="Slideshow controls">
+            <button class="ctrl prev" type="button" aria-label="Previous slide">‹</button>
+            <div class="dots" role="tablist" aria-label="Slides">
+              {% for s in HERO_ROTATIONS %}
+                <button class="dot{% if loop.first %} is-active{% endif %}" role="tab" aria-selected="{{ 'true' if loop.first else 'false' }}" aria-label="Go to slide {{ loop.index }}" data-slide="{{ loop.index0 }}"></button>
+              {% endfor %}
+            </div>
+            <button class="ctrl next" type="button" aria-label="Next slide">›</button>
+            <button class="ctrl pause" type="button" aria-pressed="false" aria-label="Pause slideshow">❚❚</button>
+          </div>
+        </figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+{% include "partials/sponsor_leaderboard.html" ignore missing with context %}
+
+<style {{ nonce_attr() }}>
+/* Cinematic Hero — Next-level SaaS polish */
+.fcx-hero--cinematic {
+  position: relative;
+  --safe-top: 12vh;
+  --safe-bottom: 12vh;
+  --zoom: 1.025;
+  --zoom-active: 1.07;
+  --accent: {{ ACCENT }};
+  background: radial-gradient(ellipse at 50% 44%, #191a20 80%, #0b0b0e 100%);
+  color: #f1f2f6;
+  min-height: 520px;
+  box-shadow: 0 0 40px #08081a12;
+}
+.fcx-hero__container {
+  max-width: 1300px;
+  margin-inline: auto;
+  padding-inline: clamp(12px, 5vw, 40px);
+  padding-block: clamp(26px, 8vw, 86px);
+}
+.fcx-hero__grid {
+  display: grid;
+  gap: clamp(24px, 4vw, 52px);
+  grid-template-columns: 1.1fr 1.13fr;
+  align-items: center;
+}
+@media (max-width: 990px) { .fcx-hero__grid { grid-template-columns: 1fr; gap: 18px; } }
+
+.fcx-hero__content {
+  color: #fff;
+  display: grid;
+  gap: 0.95rem;
+  min-width: 0;
+}
+.fcx-chip { ... } /* Keep your badge styles, or use previous */
+.fcx-chip--lg { font-size: 1.08rem; }
+.fcx-chip--sm { font-size: .84rem; }
+.fcx-hero__title.display-xl {
+  font-size: clamp(2.3rem, 5vw, 3.7rem);
+  font-weight: 1000;
+  line-height: 1.02;
+  margin: .6rem 0 0;
+  letter-spacing: -.02em;
+}
+.fcx-accent { color: var(--accent); }
+.fcx-hero__subtitle { max-width: 72ch; opacity: .98; font-size: 1.06rem; }
+.fcx-hero__impact { opacity: .98; font-weight: 500; }
+.fcx-kpis { display: flex; gap: 22px; flex-wrap: wrap; margin: .28rem 0; color: #e5e7eb; }
+.fcx-kpi-val { font-size: 1.13rem; }
+.fcx-kpi-label { font-size: .89rem; opacity: .89; }
+
+.fcx-hero__cta { display: flex; gap: .88rem; flex-wrap: wrap; margin-top: .35rem; }
+.fcx-btn { ... } /* Keep as before or use previous */
+.fcx-btn-ghost { background: #ffffff16; border: 2px solid var(--accent); color: var(--accent); }
+.fcx-btn-accent { background: var(--accent); color: #0b0c0f; font-weight: 900; box-shadow: 0 8px 26px color-mix(in srgb, var(--accent) 14%, #0000); }
+.fcx-btn-lite { background: #ffffff15; }
+.pulse { animation: pulse 2.3s ease-out infinite; box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 33%, transparent); }
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 44%, transparent); }
+  75% { box-shadow: 0 0 0 24px color-mix(in srgb, var(--accent) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 0%, transparent); }
+}
+
+.fcx-hero__trust { display: flex; gap: 1.22rem; flex-wrap: wrap; opacity: .97; margin-top: .22rem; }
+.fcx-tax-badge, .fcx-secure-badge { font-size: .78rem; letter-spacing: .10em; padding: .29rem .67rem; border-radius: .92rem; background: #11131b76; border: 1px solid #ffffff28; }
+
+.fcx-hero__qr { display: flex; gap: .82rem; align-items: center; margin-top: .32rem; }
+.fcx-qr-caption { font-size: .97rem; opacity: .95; }
+
+.fcx-hero__media {
+  position: relative;
+  overflow: visible;
+  border-radius: 2.2rem;
+  background: #07090e;
+  box-shadow: 0 8px 54px #000c;
+  min-width: 0;
+  width: 100%;
+}
+.fcx-hero__frame {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2.5px rgba(255,255,255,.10);
+}
+.fcx-hero__media::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: linear-gradient(to bottom, rgba(7,10,18,.67) 0%, rgba(12,15,22,.19) 26%, rgba(9,10,13,.21) 76%, rgba(10,11,16,.56) 100%);
+}
+@supports (backdrop-filter: blur(2px)) {
+  .fcx-hero__media::after { backdrop-filter: saturate(1.06) blur(.7px); }
+}
+.fcx-hero__slides--cinematic {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16/7.2;
+  min-height: 380px;
+  max-height: 68vh;
+  margin: 0 auto;
+  border-radius: 2.2rem;
+  box-shadow: 0 12px 82px rgba(8,10,32,0.17);
+  display: flex; align-items: center; background: linear-gradient(115deg, #18181b 20%, #232526 100%);
+  overflow: hidden;
+}
+@media (max-width: 900px) {
+  .fcx-hero__slides--cinematic { max-width: 100vw; aspect-ratio: 16/11; }
+}
+.fcx-slide {
+  position: absolute; inset: 0;
+  opacity: 0; z-index: 1;
+  transition: opacity .86s cubic-bezier(.39,.58,.57,1), transform .9s cubic-bezier(.18,.9,.32,1);
+  contain: layout paint;
+  pointer-events: none;
+}
+.fcx-slide.is-active { opacity: 1; z-index: 2; pointer-events: auto; }
+.fcx-hero__img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: var(--focus, 50% 30%);
+  filter: brightness(0.98) saturate(1.1);
+  border-radius: 2.2rem;
+  box-shadow: 0 8px 44px #000a;
+}
+.ken { transform: scale(var(--zoom)); transition: transform 6s cubic-bezier(.19,.77,.42,1); }
+.fcx-slide.is-active .ken { transform: translateX(var(--pan-x,0)) scale(var(--zoom-active)); }
+.fcx-blur { position: absolute; inset: 0; filter: blur(26px); opacity: .19; pointer-events: none; }
+
+.smart-overlay { position: absolute; inset: 0; display: grid; place-items: center; pointer-events: none; }
+.overlay-shell {
+  pointer-events: auto;
+  width: min(1080px, 97%);
+  padding-top: var(--safe-top, 13vh);
+  padding-bottom: var(--safe-bottom, 13vh);
+  padding-inline: clamp(8px, 5vw, 34px);
+  text-align: center;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,.34);
+  border-radius: 2.2rem;
+  background: linear-gradient(180deg,rgba(22,23,35,.02) 0%,rgba(22,23,35,.14) 60%,rgba(22,23,35,.20) 100%);
+}
+.overlay-title { font-size: clamp(1.5rem, 3vw, 2.6rem); font-weight: 1000; line-height: 1.06; letter-spacing: -0.018em; }
+.overlay-sub { font-size: 1.01rem; opacity: .98; margin-top: 1px; }
+
+.fcx-hero__controls { position: absolute; inset-inline: 0; bottom: clamp(10px,2vh,28px); display: flex; align-items: center; justify-content: center; gap: .92rem; pointer-events: auto; }
+.fcx-hero__controls .ctrl { background: #ffffff1a; color: #fff; border: 1.7px solid #ffffff24; border-radius: .79rem; padding: .58rem .8rem; cursor: pointer; font-weight: 800; }
+.fcx-hero__controls .dots { display: flex; gap: .65rem; }
+.fcx-hero__controls .dot { width: .63rem; height: .63rem; border-radius: 999px; cursor: pointer; border: 1.4px solid #fff5; background: #fff2; }
+.fcx-hero__controls .dot.is-active { background: var(--accent); border-color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ken, .fcx-slide { transition: none; }
+  .fcx-slide.is-active .ken { transform: none; }
+}
+@media (max-width: 740px) {
+  .overlay-shell { padding-top: clamp(8vh, 10vw, 18vh); padding-bottom: clamp(6vh, 9vw, 15vh); }
+}
+</style>
+
+<script {{ nonce_attr() }}>
+(function(){
+  'use strict';
+  // === Setup & selectors ===
+  const root = (function(){
+    try { 
+      return document.currentScript.closest('.fcx-hero--cinematic, .fcx-hero--classic');
+    } catch(e) { 
+      return document.querySelector('.fcx-hero--cinematic, .fcx-hero--classic');
+    }
+  })();
+  if(!root) return;
+  const slides = Array.from(root.querySelectorAll('.fcx-slide'));
+  if(!slides.length) return;
+
+  const overlayShell = root.querySelector('#fcx-overlay .overlay-shell');
+  const dots = Array.from(root.querySelectorAll('.fcx-hero__controls .dot'));
+  const prevBtn = root.querySelector('.fcx-hero__controls .prev');
+  const nextBtn = root.querySelector('.fcx-hero__controls .next');
+  const pauseBtn = root.querySelector('.fcx-hero__controls .pause');
+  const sponsorWall = root.querySelector('.sponsor-wall'); // for possible real-time sponsor updates
+
+  // === Preferences & Environment Detection ===
+  const reduceMotion = matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const conn = navigator.connection || {}; 
+  const saveData = !!conn.saveData; 
+  const slowNet = (conn.effectiveType||'').includes('2g');
+  const interval = Math.max(4500, parseInt(root.getAttribute('data-interval')||'6500',10));
+  const canRotate = root.getAttribute('data-rotate') !== 'false' && !reduceMotion && !saveData && !slowNet && slides.length>1;
+
+  let idx = Math.max(0, slides.findIndex(s => s.classList.contains('is-active'))); 
+  if(idx < 0) idx = 0;
+  let userPaused=false, hoverPaused=false, viewPaused=false, hiddenPaused=false; 
+  let rafId=0, lastTick=0;
+
+  // === Overlay “safe area” from each slide ===
+  function setOverlaySafeFrom(sl){
+    if(!overlayShell || !sl) return;
+    const cs = getComputedStyle(sl);
+    overlayShell.style.setProperty('--safe-top', (cs.getPropertyValue('--safe-top') || '14vh').trim());
+    overlayShell.style.setProperty('--safe-bottom', (cs.getPropertyValue('--safe-bottom') || '14vh').trim());
+  }
+
+  // === Mark active slide/dot + preheat image ===
+  function markActive(i){
+    slides.forEach((s,j)=>{
+      const a=j===i; 
+      s.classList.toggle('is-active', a);
+      s.setAttribute('aria-hidden', a?'false':'true');
+    });
+    dots.forEach((d,j)=>{
+      const on=j===i;
+      d.classList.toggle('is-active', on);
+      d.setAttribute('aria-selected', on?'true':'false');
+      d.setAttribute('tabindex', on?'0':'-1');
+    });
+    // Preheat next img (LQIP UX)
+    const nxt = slides[(i+1)%slides.length]?.querySelector('img');
+    if(nxt){
+      const src = nxt.currentSrc || nxt.getAttribute('src');
+      if(src){ const im = new Image(); im.decoding='async'; im.src = src; }
+    }
+    setOverlaySafeFrom(slides[i]);
+    // Hook: Analytics or events
+    try{
+      window.dispatchEvent(new CustomEvent('fc:hero:changed',{detail:{index:i}}));
+      if(window.FundChampsAnalytics) window.FundChampsAnalytics.heroSlide(i);
+    }catch(_){}
+  }
+
+  function activate(i){
+    idx = ((i % slides.length) + slides.length) % slides.length;
+    markActive(idx);
+  }
+  function next(){ activate(idx+1);}
+  function prev(){ activate(idx-1);}
+
+  // LQIP Mask & Blur (always animate in on img load)
+  slides.forEach(s=>{
+    const img = s.querySelector('img');
+    const cv = s.querySelector('canvas.fcx-blur');
+    if(img && cv){
+      img.addEventListener('load', ()=>{ cv.style.opacity='0'; }, { once:true });
+      try{ const ctx=cv.getContext('2d'); ctx.fillStyle='#000'; ctx.globalAlpha=.14; ctx.fillRect(0,0,cv.width,cv.height); }catch(_){}
+    }
+  });
+
+  // === Controls & accessibility ===
+  if(nextBtn) nextBtn.addEventListener('click', ()=>{
+    userPaused=true; 
+    pauseBtn && pauseBtn.setAttribute('aria-pressed','true');
+    next();
+  });
+  if(prevBtn) prevBtn.addEventListener('click', ()=>{
+    userPaused=true;
+    pauseBtn && pauseBtn.setAttribute('aria-pressed','true');
+    prev();
+  });
+  if(pauseBtn) pauseBtn.addEventListener('click', ()=>{
+    userPaused=!userPaused;
+    pauseBtn.setAttribute('aria-pressed', userPaused ? 'true' : 'false');
+    if(!userPaused) tick(performance.now());
+  });
+  dots.forEach((d)=> d.addEventListener('click', ()=>{
+    userPaused=true;
+    pauseBtn && pauseBtn.setAttribute('aria-pressed','true');
+    const n=+d.getAttribute('data-slide')||0;
+    activate(n); 
+    d.focus({preventScroll:true});
+  }));
+  root.addEventListener('keydown', (e)=>{
+    if(e.key==='ArrowRight'){ e.preventDefault(); userPaused=true; next(); }
+    if(e.key==='ArrowLeft'){ e.preventDefault(); userPaused=true; prev(); }
+  });
+  root.addEventListener('mouseenter', ()=>{ hoverPaused=true; });
+  root.addEventListener('mouseleave', ()=>{ hoverPaused=false; });
+
+  // Viewport pause (performance!)
+  if('IntersectionObserver' in window){
+    const io = new IntersectionObserver((entries)=>{
+      viewPaused = !(entries[0] && entries[0].isIntersecting && entries[0].intersectionRatio>0);
+    }, { threshold:[0,.19] });
+    io.observe(root);
+  }
+  document.addEventListener('visibilitychange', ()=>{ hiddenPaused = (document.visibilityState !== 'visible'); });
+
+  function paused(){ return userPaused || hoverPaused || viewPaused || hiddenPaused || !canRotate; }
+  function tick(now){
+    if(paused()){ lastTick = now; rafId = requestAnimationFrame(tick); return; }
+    if(!lastTick) lastTick = now;
+    if(now - lastTick >= interval){ next(); lastTick = now; }
+    rafId = requestAnimationFrame(tick);
+  }
+
+  // Set ARIA/Tabindex for dots for accessibility
+  dots.forEach((d,i)=> d.setAttribute('tabindex', i===idx ? '0':'-1'));
+  activate(idx);
+
+  // Only start auto-rotate if eligible
+  if(canRotate){
+    rafId = requestAnimationFrame(tick);
+  } else {
+    const ctrls = root.querySelector('.fcx-hero__controls');
+    if(ctrls) ctrls.style.display='none';
+  }
+
+  // === Share Button (web share or fallback) ===
+  const shareBtn = root.querySelector('[data-share]');
+  shareBtn && shareBtn.addEventListener('click', async ()=>{
+    const payload = {
+      title: document.title, 
+      text: `Support {{ TEAM_NAME|e }} — every dollar moves a kid forward.`, 
+      url: location.href
+    };
+    try { 
+      if(navigator.share && !reduceMotion){ await navigator.share(payload); return; } 
+    } catch(_) {}
+    try { 
+      await navigator.clipboard.writeText(payload.url); 
+      shareBtn.textContent='Copied'; setTimeout(()=> shareBtn.textContent='Share', 1200); 
+    } catch(_) { 
+      window.prompt('Copy this link:', payload.url); 
+    }
+  }, { passive:true });
+
+  // === Hotkeys: D for donate ===
+  const donateCTA = root.querySelector('[data-cta="donate"]');
+  const isTyping = (e) => { 
+    const t=e.target; return t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName)); 
+  };
+  document.addEventListener('keydown', (e)=>{
+    if(isTyping(e) || e.metaKey || e.ctrlKey || e.altKey) return;
+    const k=(e.key||'').toLowerCase();
+    if(k==='d'){ donateCTA?.focus({preventScroll:true}); donateCTA?.click(); }
+  }, { passive:true });
+
+  // === Optional: Sponsor Wall, Digital Rewards, Real-Time Leaderboard ===
+  // Example: Auto-update sponsor wall or real-time shoutout
+  if(window.FundChampsRealtime && sponsorWall){
+    window.FundChampsRealtime.on('newSponsor', (data)=>{
+      // Animate-in new sponsor, or update wall in real time
+      try {
+        const el = document.createElement('div');
+        el.className = 'sponsor-card animate-pop';
+        el.innerHTML = `<img src="${data.logo}" alt="${data.name}"><span>${data.name}</span>`;
+        sponsorWall.prepend(el);
+      } catch(_) {}
+    });
+  }
+})();
+</script>
+

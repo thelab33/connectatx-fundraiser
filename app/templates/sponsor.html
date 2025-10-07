@@ -1,13 +1,20 @@
- {%
-extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
-(csp_nonce() if csp_nonce is defined else '') %} {% set _brand_name =
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
+(csp_nonce if csp_nonce is defined else '') %} {% set _brand_name =
 team.team_name if team and team.team_name else 'Connect ATX Elite' %} {% block
 h1 %}{{ _brand_name }} — Sponsorship Opportunities{% endblock %} {% block
-content %} 
+content %}
 
 <section
-  class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12"
->
+  class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12">
   <h2 class="text-3xl sm:text-4xl font-extrabold text-yellow-400 mb-4">
     Become a Sponsor
   </h2>
@@ -18,18 +25,14 @@ content %}
   </p>
 </section>
 
-
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-12"
-  id="tiers"
->
+  id="tiers">
   {% include "partials/tiers.html" ignore missing with context %}
 </section>
 
-
 <section
-  class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12"
->
+  class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite text-center my-12">
   <h2 class="text-2xl font-bold mb-4 text-yellow-400">
     Scan to Donate Instantly
   </h2>
@@ -47,13 +50,10 @@ content %}
   </div>
   <p class="mt-4 text-sm text-zinc-400">
     Prefer a link?
-    <a href="{{ stripe_payment_link or '/donate' }}" class="underline"
-      >Click here</a
-    >
+    <a href="{{ stripe_payment_link or '/donate' }}" class="underline">Click here</a>
   </p>
 
-   {% if sponsors and
-  sponsors|length > 0 %}
+  {% if sponsors and sponsors|length> 0 %}
   <div class="mt-8 border-t border-white/10 pt-6">
     <h3 class="text-lg font-semibold text-yellow-300 mb-4">
       Proudly Backed By
@@ -61,8 +61,7 @@ content %}
     <div class="flex flex-wrap justify-center gap-4 sm:gap-6">
       {% for s in sponsors %}
       <span
-        class="inline-flex items-center text-sm text-zinc-300 bg-white/5 px-3 py-1 rounded-full"
-      >
+        class="inline-flex items-center text-sm text-zinc-300 bg-white/5 px-3 py-1 rounded-full">
         🏅 {{ s }}
       </span>
       {% endfor %}
@@ -71,9 +70,8 @@ content %}
   {% endif %}
 </section>
 
-
 <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 container-elite my-12">
   {% include "partials/newsletter.html" ignore missing with context %}
 </section>
 
- {% endblock %}
+{% endblock %}

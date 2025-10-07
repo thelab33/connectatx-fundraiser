@@ -1,0 +1,323 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# =================== Sponsor Leaderboard — Agency Elite v6 (Slim) =================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{# --------- Configurable/White-label --------- #}
+{% set _seed      = (shoutouts if shoutouts is defined and shoutouts else []) %}
+{% set _team_id   = (team.team_id if team and team.team_id else 'global') %}
+{% set _brand     = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set _sf        = safe_url_for is defined and safe_url_for %}
+{% set API_SHOUTS = (_sf and has_endpoint('api.shoutouts') and safe_url_for('api.shoutouts')) or '/api/shoutouts' %}
+
+<section
+  id="sponsor-leaderboard"
+  class="lb lb--elite lb--slim print:hidden"
+  role="region"
+  aria-label="Live sponsor shoutouts"
+  tabindex="-1"
+  style="--accent: {{ _brand }}; --header-h: var(--fc-header-h, 0px)"
+  data-team-key="{{ _team_id }}"
+  data-api="{{ API_SHOUTS }}"
+  data-vip-tiers="Platinum,Gold,Silver,Bronze"
+  data-ttl-seconds="86400"
+  data-max-store="64"
+  data-dedupe-window-seconds="900"
+  data-default-speed="normal"
+  data-autoscroll="1"
+  data-brand-chip="1">
+  <p class="sr-only" aria-live="polite" id="sr-shout">
+    Shoutouts are live — every donation counts!
+  </p>
+  <p class="sr-only" aria-live="assertive" aria-atomic="true" id="sr-vip"></p>
+
+  <div class="lb__viewport" role="presentation">
+    <div class="lb__rail lb__marquee" id="ticker-rail" role="list" aria-busy="true">
+      {# — Optional demo seeds (safe to remove) — #}
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Platinum" data-sponsor="Nike" data-msg="Just do it — Support the team!" aria-label="✨ Nike: Just do it — Support the team!">
+        ✨ <span class="txt"><span class="who">Nike</span><span class="msg">Just do it — Support the team!</span></span>
+      </span>
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Gold" data-sponsor="Austin Coffee" data-msg="Fueling our champions with the best brew in town!">
+        🏅 <span class="txt"><span class="who">Austin Coffee</span><span class="msg">Fueling our champions with the best brew in town!</span></span>
+      </span>
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Silver" data-sponsor="Texas BBQ Co." data-msg="Pit-smoked perfection — just like our team!">
+        🎉 <span class="txt"><span class="who">Texas BBQ Co.</span><span class="msg">Pit-smoked perfection — just like our team!</span></span>
+      </span>
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Bronze" data-sponsor="Local Brewery" data-msg="Cheers to champions — beer for the win!">
+        🥉 <span class="txt"><span class="who">Local Brewery</span><span class="msg">Cheers to champions — beer for the win!</span></span>
+      </span>
+
+      <span aria-hidden="true" class="pill headline select-none" tabindex="-1">
+        🏆 Sponsor leaderboard is live — real-time shoutouts!
+      </span>
+
+      <span id="shoutouts-empty" role="listitem" class="pill placeholder" aria-label="No shoutouts yet">
+        No shoutouts yet —
+        <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>
+      </span>
+
+      <div class="lb__controls" role="group" aria-label="Ticker controls">
+        <button type="button" class="ctrl" id="ticker-ctrl"  aria-pressed="false" aria-label="Pause live ticker">⏸</button>
+        <button type="button" class="ctrl" id="speed-ctrl"   aria-pressed="false" aria-label="Speed: Normal" data-speed="normal">⏩</button>
+        <span class="pill offline-pill" id="offline-pill" style="display:none">⚠ Offline — queued</span>
+        <span class="brand-chip" id="lb-brand-chip" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" fill="currentColor"/><path d="M9 12l2 2 4-4" stroke="#0b0b0c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Powered by FundChamps
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style {{ nonce_attr() }}>
+/* Leaderboard — Agency Elite v6 (Slim) */
+.lb--slim{
+  --lb-h: 44px; --gap: .5rem; --pill-px: .7rem; --pill-py: .32rem; --fs: .84rem;
+  --rail-speed: 30s;
+  --bg:#0b0e15; --bg-rail:#0b0e15;
+  --pill:#1a1f2a; --pill-muted:#242a36;
+  --ink:#e9eef7; --muted:#ccd4df; --gold: var(--accent, #facc15);
+  --ring: color-mix(in srgb, var(--gold) 42%, transparent);
+  --radius: 999px; --shadow: 0 6px 24px rgba(0,0,0,.28);
+}
+.lb{ position:relative; padding:0; background:var(--bg); border-radius:.875rem; box-shadow:var(--shadow); overflow:hidden; }
+.lb__viewport{
+  position:relative; display:flex; align-items:center; justify-content:center;
+  height:var(--lb-h); padding:0 .5rem;
+  background:linear-gradient(180deg,#111418,#0c0f15);
+  border:1px solid rgba(255,255,255,.06);
+}
+.lb__viewport::before,.lb__viewport::after{
+  content:""; position:absolute; inset:0 auto 0 0; width:42px; pointer-events:none; z-index:2;
+  background:linear-gradient(90deg,#0c0f1500 0%, #0c0f15 100%);
+}
+.lb__viewport::after{ inset:auto 0 auto auto; transform:scaleX(-1); }
+@supports (-webkit-mask-image: linear-gradient(#000,#000)) or (mask-image: linear-gradient(#000,#000)){
+  .lb__viewport::before,.lb__viewport::after{display:none}
+  .lb__viewport{ -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
+                  mask-image:linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%); }
+}
+.lb__rail{ display:flex; align-items:center; gap:var(--gap); white-space:nowrap; will-change:transform; animation:fc-ticker var(--rail-speed) linear infinite; }
+.lb:hover .lb__rail,.lb:focus-within .lb__rail{ animation-play-state:paused; }
+
+.pill{
+  display:inline-flex; align-items:center; background:var(--pill); color:var(--ink);
+  padding:var(--pill-py) var(--pill-px); border-radius:var(--radius); font-weight:800; font-size:var(--fs); line-height:1;
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 0 0 1px rgba(0,0,0,.42);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.pill:hover{ transform:translateY(-1px); }
+.pill .txt{ display:flex; flex-direction:column; margin-left:.45rem; }
+.pill .who{ color:var(--gold); font-weight:900; }
+.pill .msg{ color:var(--muted); font-weight:600; font-size:.78em; }
+.pill.placeholder{ background:var(--pill-muted); }
+.pill.headline{ font-weight:1000; color: color-mix(in srgb, var(--gold) 92%, #fff); letter-spacing:.01em; }
+
+.lb__controls{ display:inline-flex; align-items:center; gap:.25rem; margin-left:.25rem; }
+.ctrl{ background:var(--pill); color:var(--ink); border-radius:999px; padding:.28rem .6rem; font-size:.8rem; font-weight:900; line-height:1; border:1px solid rgba(255,255,255,.06); }
+.ctrl:hover{ background: color-mix(in srgb, var(--gold) 88%, #000); color:#0c0d10; }
+
+.brand-chip{ display:inline-flex; align-items:center; gap:.35rem; background:rgba(0,0,0,.72); color:var(--gold); padding:.26rem .55rem; border-radius:999px; font-size:.72rem; box-shadow:0 2px 6px rgba(0,0,0,.18); }
+
+/* VIP Accents */
+.pill[data-tier="Platinum"]{ background: radial-gradient(120% 140% at 30% 10%, #cce7ff22 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #b3e5fc40, 0 0 0 2px #b3e5fc26; }
+.pill[data-tier="Gold"]    { background: radial-gradient(120% 140% at 30% 10%, #ffefc426 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 55%, #000), 0 0 0 2px color-mix(in srgb, var(--gold) 28%, transparent); }
+.pill[data-tier="Silver"]  { background: radial-gradient(120% 140% at 30% 10%, #d9d9d926 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #c0c0c033, 0 0 0 2px #c0c0c020; }
+.pill[data-tier="Bronze"]  { background: radial-gradient(120% 140% at 30% 10%, #cd7f3226 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #cd7f3238, 0 0 0 2px #cd7f3220; }
+
+/* Responsive */
+@media (max-width: 780px){
+  .lb--slim{ --lb-h: 46px; --fs: .86rem; --pill-px:.68rem; --pill-py:.34rem; --gap:.5rem; --rail-speed:34s; }
+  .brand-chip{ display:none; }
+}
+
+/* Prefs */
+@media (prefers-reduced-motion: reduce){ .lb__rail{ animation:none !important; transform:none !important; } }
+@media (prefers-contrast: more){ .lb__viewport{ border-color:#ffffff26 } .pill{ box-shadow:0 0 0 1px #ffffff26, 0 1px 0 #000 inset; } }
+
+/* Marquee */
+@keyframes fc-ticker{ from{ transform:translateX(100%)} to{ transform:translateX(-100%)} }
+</style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const ROOT = document.getElementById('sponsor-leaderboard');
+  if (!ROOT || ROOT.__wired) return; ROOT.__wired = true;
+
+  const rail   = ROOT.querySelector('#ticker-rail');
+  const pauseB = ROOT.querySelector('#ticker-ctrl');
+  const speedB = ROOT.querySelector('#speed-ctrl');
+  const offlinePill = ROOT.querySelector('#offline-pill');
+  const srVip  = ROOT.querySelector('#sr-vip');
+  if (!rail) return;
+
+  const cfg = {
+    teamKey: ROOT.dataset.teamKey || 'global',
+    api: ROOT.dataset.api || '/api/shoutouts',
+    ttl: +ROOT.dataset.ttlSeconds || 86400,
+    max: +ROOT.dataset.maxStore || 64,
+    dedupeWindow: +ROOT.dataset.dedupeWindowSeconds || 900,
+    defaultSpeed: ROOT.dataset.defaultSpeed || 'normal',
+    autoscroll: ROOT.dataset.autoscroll !== '0',
+  };
+
+  const LS_KEY = `fc:shouts:${cfg.teamKey}`;
+  const now = () => Date.now();
+
+  // UTIL: read/write compact store
+  const readStore = () => {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+  };
+  const writeStore = (arr) => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(arr.slice(-cfg.max))); } catch {}
+  };
+
+  const fmtName = (who) => (who || 'Anonymous Sponsor');
+  const tierEmoji = (tier) => ({
+    Platinum:'✨', Gold:'🏅', Silver:'🎉', Bronze:'🥉'
+  }[tier] || '🎉');
+
+  // DEDUPE key
+  const keyFor = (who, msg) => `${(who||'').trim().toLowerCase()}|${(msg||'').trim().toLowerCase()}`;
+
+  // Render a pill node
+  const pillNode = ({tier, who, msg}) => {
+    const span = document.createElement('span');
+    span.className = 'pill';
+    if (tier) span.dataset.tier = tier;
+    span.setAttribute('role','listitem');
+    span.tabIndex = -1;
+    span.innerHTML = `${tierEmoji(tier)} <span class="txt"><span class="who">${fmtName(who)}</span><span class="msg">${msg||''}</span></span>`;
+    return span;
+  };
+
+  // Insert + announce
+  const insertPill = (item, {toFront=false}={}) => {
+    const node = pillNode(item);
+    if (toFront) rail.insertBefore(node, rail.firstChild);
+    else rail.appendChild(node);
+
+    // aria announcement for VIPs
+    if (item.tier && /platinum|gold/i.test(item.tier)) {
+      srVip.textContent = `${fmtName(item.who)} joined as ${item.tier}!`;
+      setTimeout(() => srVip.textContent = '', 1500);
+    }
+  };
+
+  // Hydrate from store to DOM (clears placeholders)
+  const hydrateFromStore = () => {
+    const items = readStore().filter(i => (i.expires || 0)> now());
+    if (!items.length) return;
+
+    rail.querySelector('#shoutouts-empty')?.remove();
+    rail.setAttribute('aria-busy','false');
+    items.forEach(i => insertPill(i));
+    document.dispatchEvent(new CustomEvent('fc:shoutouts:updated'));
+  };
+
+  // Add to store with TTL & dedupe
+  const addShout = ({who, msg, tier, ts}) => {
+    const store = readStore().filter(i => (i.expires || 0)> now());
+    const k = keyFor(who, msg);
+
+    // dedupe in the recent window
+    if (store.some(i => i.key === k && Math.abs((ts||now()) - (i.ts||0)) < cfg.dedupeWindow*1000)) {
+      return false;
+    }
+    const item = {
+      key: k, who, msg, tier,
+      ts: ts || now(),
+      expires: now() + cfg.ttl*1000
+    };
+    store.push(item);
+    writeStore(store);
+    insertPill(item, {toFront:true});
+    document.dispatchEvent(new CustomEvent('fc:shoutouts:updated'));
+    return true;
+  };
+
+  // API fetch (poll)
+  const poll = async () => {
+    try {
+      const url = new URL(cfg.api, location.href);
+      url.searchParams.set('team_key', cfg.teamKey);
+      const res = await fetch(url, {headers:{'accept':'application/json'}});
+      if (!res.ok) throw new Error('bad status');
+      const data = await res.json(); // expect [{who,msg,tier,ts}, ...]
+      (Array.isArray(data) ? data : []).forEach(d => addShout(d));
+      offlinePill.style.display = 'none';
+    } catch {
+      offlinePill.style.display = 'inline-flex';
+    }
+  };
+
+  // Controls
+  const setPaused = (paused) => {
+    rail.style.animationPlayState = paused ? 'paused' : 'running';
+    pauseB.setAttribute('aria-pressed', String(paused));
+    pauseB.textContent = paused ? '▶' : '⏸';
+  };
+  pauseB?.addEventListener('click', () => {
+    const paused = rail.style.animationPlayState !== 'paused' ? true : false;
+    setPaused(paused);
+  });
+
+  const speeds = { slow:'42s', normal:'30s', fast:'20s' };
+  const nextSpeed = (s) => ({slow:'normal', normal:'fast', fast:'slow'}[s] || 'normal');
+  const applySpeed = (s) => {
+    rail.style.animationDuration = speeds[s] || speeds.normal;
+    speedB.dataset.speed = s;
+    speedB.setAttribute('aria-label', `Speed: ${s[0].toUpperCase()+s.slice(1)}`);
+  };
+  speedB?.addEventListener('click', () => applySpeed(nextSpeed(speedB.dataset.speed || cfg.defaultSpeed)));
+
+  // Reduced motion
+  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduce || !cfg.autoscroll) rail.style.animation = 'none';
+
+  // Wire pledge events from tiers
+  document.addEventListener('fc:sponsor:pledge', (e) => {
+    const d = e.detail || {};
+    // Tier inference fallback by amount
+    const tier = d.tier || (
+      (d.amount||0)>= 10000 ? 'Platinum' :
+      (d.amount||0)>= 5000  ? 'Gold'     :
+      (d.amount||0)>= 1500  ? 'Silver'   :
+      'Bronze'
+    );
+    const who = d.brand || d.name || 'New Sponsor';
+    const msg = d.monthly ? 'Joined as a monthly sponsor!' : 'Backed the season!';
+    addShout({ who, msg, tier });
+  }, { passive:true });
+
+  // Click handler for “be the first” CTA to open donate flow
+  ROOT.querySelector('#shoutouts-empty-cta')?.addEventListener('click', () => {
+    document.querySelector('[data-cta="donate"]')?.click();
+  });
+
+  // Online/offline status
+  const onNet = () => offlinePill.style.display = navigator.onLine ? 'none' : 'inline-flex';
+  window.addEventListener('online',  () => { onNet(); poll(); });
+  window.addEventListener('offline', onNet);
+  onNet();
+
+  // First render from stored + poll
+  hydrateFromStore();
+  poll();
+  // Gentle polling (60s)
+  setInterval(poll, 60000);
+
+  // Initial controls
+  setPaused(false);
+  applySpeed(cfg.defaultSpeed || 'normal');
+})();
+</script>
+

@@ -1,0 +1,50 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# FUNDCHAMPS-HERO-AUTO #}
+{% macro hero_banner(
+  idp,
+  theme_hex,
+  team_name,
+  title,
+  title_2,
+  subtitle,
+  panel_title,
+  panel_title_2,
+  href_donate,
+  href_impact,
+  href_sponsor,
+  text_keyword,
+  text_short,
+  raised,
+  goal,
+  deadline='',
+  currency='USD',
+  hero_src='',
+  hero_src_avif='',
+  hero_src_webp='',
+  hero_src_800='',
+  hero_src_1200='',
+  hero_src_1600='',
+  hero_src_2000='',
+  qr_src=''
+) %}
+<section
+  id="{{ idp }}"
+  class="hero"
+  style="--accent: {{ theme_hex }};"
+  aria-label="Fundraiser hero and live scoreboard"
+  data-raised="{{ raised }}"
+  data-goal="{{ goal }}"
+  data-deadline="{{ deadline }}"
+  data-currency="{{ currency }}"
+>
+  {% include 'components/hero_banner_body.html' %}
+</section>
+{% endmacro %}

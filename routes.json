@@ -2,181 +2,242 @@
   {
     "rule": "/",
     "endpoint": "main.home",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/about",
     "endpoint": "main.about",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
-    "rule": "/api/",
-    "endpoint": "api.root",
-    "methods": ["GET"]
+    "rule": "/admin/",
+    "endpoint": "admin.dashboard",
+    "methods": [
+      "GET"
+    ]
   },
   {
-    "rule": "/api/docs",
-    "endpoint": "api.doc",
-    "methods": ["GET"]
+    "rule": "/admin/goals",
+    "endpoint": "admin.goals",
+    "methods": [
+      "GET",
+      "POST"
+    ]
   },
   {
-    "rule": "/api/donors",
-    "endpoint": "api.donors_resource",
-    "methods": ["GET"]
+    "rule": "/admin/payouts/export",
+    "endpoint": "admin.export_payouts",
+    "methods": [
+      "GET"
+    ]
   },
   {
-    "rule": "/api/example/<uuid:uuid>",
-    "endpoint": "api.example_resource",
-    "methods": ["GET"]
+    "rule": "/admin/sponsors",
+    "endpoint": "admin.sponsors_list",
+    "methods": [
+      "GET"
+    ]
   },
   {
-    "rule": "/api/example/<uuid:uuid>/delete",
-    "endpoint": "api.example_delete",
-    "methods": ["POST"]
+    "rule": "/admin/sponsors/approve/<int:sponsor_id>",
+    "endpoint": "admin.approve_sponsor",
+    "methods": [
+      "POST"
+    ]
   },
   {
-    "rule": "/api/example/<uuid:uuid>/restore",
-    "endpoint": "api.example_restore",
-    "methods": ["POST"]
+    "rule": "/admin/sponsors/delete/<int:sponsor_id>",
+    "endpoint": "admin.delete_sponsor",
+    "methods": [
+      "POST"
+    ]
   },
   {
-    "rule": "/api/payments/config",
-    "endpoint": "api.payments_config",
-    "methods": ["GET"]
+    "rule": "/admin/transactions",
+    "endpoint": "admin.transactions_list",
+    "methods": [
+      "GET"
+    ]
   },
   {
-    "rule": "/api/payments/paypal/capture",
-    "endpoint": "api.capture_paypal_order",
-    "methods": ["POST"]
-  },
-  {
-    "rule": "/api/payments/paypal/order",
-    "endpoint": "api.create_paypal_order",
-    "methods": ["POST"]
-  },
-  {
-    "rule": "/api/payments/readiness",
-    "endpoint": "api.payments_readiness",
-    "methods": ["GET"]
-  },
-  {
-    "rule": "/api/payments/stripe/intent",
-    "endpoint": "api.create_payment_intent",
-    "methods": ["POST"]
-  },
-  {
-    "rule": "/api/stats",
-    "endpoint": "api.stats_resource",
-    "methods": ["GET"]
-  },
-  {
-    "rule": "/api/status",
-    "endpoint": "api.status",
-    "methods": ["GET"]
-  },
-  {
-    "rule": "/api/swagger.json",
-    "endpoint": "api.specs",
-    "methods": ["GET"]
+    "rule": "/api/shoutouts",
+    "endpoint": "shoutouts.shoutouts",
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/become-sponsor",
     "endpoint": "main.become_sponsor",
-    "methods": ["GET", "POST"]
+    "methods": [
+      "GET",
+      "POST"
+    ]
   },
   {
     "rule": "/calendar",
     "endpoint": "main.calendar",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/contact",
     "endpoint": "main.contact",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/dev/stripe-smoke",
+    "endpoint": "main.stripe_smoke",
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/dismiss-onboarding",
     "endpoint": "main.dismiss_onboarding",
-    "methods": ["POST"]
+    "methods": [
+      "POST"
+    ]
   },
   {
     "rule": "/donate",
     "endpoint": "main.donate",
-    "methods": ["GET", "POST"]
+    "methods": [
+      "GET",
+      "POST"
+    ]
   },
   {
     "rule": "/healthz",
     "endpoint": "_healthz",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/metrics/click",
     "endpoint": "fc_metrics.click",
-    "methods": ["POST"]
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/metrics/health",
+    "endpoint": "fc_metrics.health",
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/metrics/impression",
     "endpoint": "fc_metrics.impression",
-    "methods": ["POST"]
+    "methods": [
+      "POST"
+    ]
   },
   {
     "rule": "/metrics/roi/weekly",
     "endpoint": "fc_metrics.weekly",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
-    "rule": "/payments/paypal/capture/<order_id>",
-    "endpoint": "fc_payments.paypal_capture",
-    "methods": ["POST"]
+    "rule": "/metrics/stripe/intent",
+    "endpoint": "fc_metrics.metrics_stripe_intent",
+    "methods": [
+      "POST"
+    ]
   },
   {
-    "rule": "/payments/paypal/order",
-    "endpoint": "fc_payments.paypal_order",
-    "methods": ["POST"]
+    "rule": "/newsletter/signup",
+    "endpoint": "newsletter.signup",
+    "methods": [
+      "POST"
+    ]
+  },
+  {
+    "rule": "/payments/health",
+    "endpoint": "fc_payments.health",
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/payments/stripe/intent",
     "endpoint": "fc_payments.create_stripe_intent",
-    "methods": ["POST"]
+    "methods": [
+      "POST"
+    ]
   },
   {
     "rule": "/payments/stripe/webhook",
     "endpoint": "fc_payments.stripe_webhook",
-    "methods": ["POST"]
+    "methods": [
+      "POST"
+    ]
   },
   {
     "rule": "/player-handbook",
     "endpoint": "main.player_handbook",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/sms/health",
+    "endpoint": "sms.health",
+    "methods": [
+      "GET"
+    ]
+  },
+  {
+    "rule": "/sms/webhook",
+    "endpoint": "sms.sms_webhook",
+    "methods": [
+      "POST"
+    ]
   },
   {
     "rule": "/sponsor-guide",
     "endpoint": "main.sponsor_guide",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/sponsors",
     "endpoint": "main.sponsor_list",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/static/<path:filename>",
     "endpoint": "static",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/stats",
     "endpoint": "main.stats_json",
-    "methods": ["GET"]
-  },
-  {
-    "rule": "/swaggerui/<path:filename>",
-    "endpoint": "restx_doc.static",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   },
   {
     "rule": "/version",
     "endpoint": "_version",
-    "methods": ["GET"]
+    "methods": [
+      "GET"
+    ]
   }
 ]

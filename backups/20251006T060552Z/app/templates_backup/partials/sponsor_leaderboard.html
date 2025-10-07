@@ -1,0 +1,571 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# =============== Sponsor Leaderboard — Pro 5.1 (CSP/a11y/perf/branding) =============== #}
+{% set NONCE      = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{% set _seed      = (shoutouts if shoutouts is defined and shoutouts else []) %}
+{% set _team_id   = (team.team_id if team and team.team_id else 'global') %}
+{% set _brand     = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set _sf        = safe_url_for is defined and safe_url_for %}
+{% set API_SHOUTS = (_sf and has_endpoint('api.shoutouts') and safe_url_for('api.shoutouts')) or '/api/shoutouts' %}
+
+<section
+  id="sponsor-leaderboard"
+  class="lb lb--sticky print:hidden"
+  role="region"
+  aria-label="Live sponsor shoutouts"
+  tabindex="-1"
+  style="--accent: {{ _brand }}; --header-h: var(--fc-header-h, 0px)"
+  data-team-key="{{ _team_id }}"
+  data-api="{{ API_SHOUTS }}"
+  data-vip-tiers="Platinum,Gold"
+  data-ttl-seconds="86400"
+  data-max-store="48"
+  data-dedupe-window-seconds="600"
+  data-default-speed="normal"
+  data-autoscroll="1"
+  data-brand-chip="1"
+>
+  <!-- A11y live region: Next shoutout (polite) -->
+  <p class="sr-only" aria-live="polite" id="sr-shout">
+    {{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else 'Shoutouts ready.' }}
+  </p>
+  <!-- A11y live region: VIP alert (assertive, atomic) -->
+  <p class="sr-only" aria-live="assertive" aria-atomic="true" id="sr-vip"></p>
+
+  <!-- Viewport with smooth gradient mask and rounded corners -->
+  <div class="lb__viewport" role="presentation">
+    <div class="lb__rail lb__marquee" id="ticker-rail" role="list" aria-busy="true">
+
+      <!-- SSR: Seed shoutouts, accessible badges, full tier color/emoji -->
+      {% for s in _seed %}
+        {% set t = (s.tier or 'General')|string %}
+        {% set badge = '✨' if t|lower == 'platinum'
+          else '🏅' if t|lower == 'gold'
+          else '🎉' if t|lower == 'silver'
+          else '🥉' if t|lower == 'bronze'
+          else '🔥'
+        %}
+        <span
+          role="listitem"
+          class="pill"
+          tabindex="-1"
+          data-tier="{{ t }}"
+          data-sponsor="{{ s.sponsor|e }}"
+          data-msg="{{ s.msg|e }}"
+          aria-label="{{ badge ~ ' ' ~ s.sponsor ~ ': ' ~ s.msg }}"
+        >
+          {{ badge }}
+          <span class="txt">
+            <span class="who font-bold text-elite-gold">{{ s.sponsor }}</span>
+            <span class="msg text-elite-gray">{{ s.msg }}</span>
+          </span>
+        </span>
+      {% endfor %}
+
+      <!-- Always-on headline, highlighted, unselectable, not aria-announced -->
+      <span
+        aria-hidden="true"
+        class="pill headline font-black text-elite-gold/95 select-none"
+        tabindex="-1"
+      >🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
+
+      <!-- SSR/JS empty state: never hidden, always accessible, clickable -->
+      {% if not _seed or not _seed|length %}
+        <span
+          id="shoutouts-empty"
+          role="listitem"
+          class="pill placeholder text-elite-gray/85"
+          aria-label="No shoutouts yet"
+        >
+          No shoutouts yet —
+          <button
+            type="button"
+            class="link-btn underline font-bold text-elite-gold hover:text-elite-red focus:outline-none"
+            id="shoutouts-empty-cta"
+            aria-label="Be the first to cheer us on"
+          >be the first 🎉</button>
+        </span>
+      {% endif %}
+
+      <!-- Controls: sticky to rail end, a11y, white-label support, brand chip -->
+      <div class="lb__controls flex items-center gap-2 ml-2" role="group" aria-label="Ticker controls">
+        <button
+          type="button"
+          class="ctrl px-3 py-1 rounded-full font-black transition hover:bg-elite-gold/90 hover:text-black"
+          id="ticker-ctrl"
+          aria-pressed="false"
+          aria-label="Pause live ticker"
+        >⏸ Pause</button>
+        <button
+          type="button"
+          class="ctrl px-3 py-1 rounded-full font-black transition hover:bg-elite-gold/90 hover:text-black"
+          id="speed-ctrl"
+          aria-pressed="false"
+          aria-label="Speed: Normal"
+          data-speed="normal"
+        >⏩ Speed</button>
+        <span
+          class="pill offline-pill font-bold bg-elite-red/90 text-white/95"
+          id="offline-pill"
+          style="display:none"
+        >⚠ Offline — queued</span>
+        <span
+          class="brand-chip ml-2 text-xs bg-black/80 text-elite-gold px-2 py-1 rounded-full shadow"
+          id="lb-brand-chip"
+          aria-hidden="true"
+        >
+          <svg viewBox="0 0 24 24" width="14" height="14" class="inline -mt-0.5 mr-1 align-middle">
+            <path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" fill="currentColor"/>
+            <path d="M9 12l2 2 4-4" stroke="#0b0b0c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Powered by FundChamps
+        </span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style {{ nonce_attr() }}>
+/* ==========================================================================
+   FundChamps • Sponsor Leaderboard 6.0 — Premium Agency
+   ========================================================================== */
+
+/* Sticky glass shell */
+.lb--sticky {
+  position: sticky;
+  top: var(--header-h, 0);
+  z-index: 40;
+}
+.lb {
+  background:
+    linear-gradient(180deg,rgba(12,14,18,0.97),rgba(12,14,18,0.81)),
+    radial-gradient(120% 80% at 54% -10%,color-mix(in srgb,var(--accent) 28%,transparent) 0%,transparent 95%);
+  backdrop-filter: blur(16px) saturate(145%);
+  border-block: 2px solid rgb(255 255 255 / 11%);
+  box-shadow: 0 10px 44px rgb(0 0 0 / 23%);
+  font-family: var(--font-sans), ui-sans-serif, "Inter", "Segoe UI", Arial, sans-serif;
+  isolation: isolate;
+  transition: background .19s;
+}
+
+/* Visually hide (SR only) */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+}
+
+/* Viewport: wide, edge-fade, premium rounding */
+.lb__viewport {
+  max-width: min(1220px, 99vw);
+  margin-inline: auto;
+  overflow: hidden;
+  padding: .52rem .88rem;
+  position: relative;
+  background: transparent;
+  border-radius: 2rem;
+  transition: box-shadow .16s;
+}
+@supports (mask-image: linear-gradient(black,white)) {
+  .lb__viewport {
+    --fade: linear-gradient(90deg,transparent 0,#000 6%,#000 94%,transparent 100%);
+    mask-image: var(--fade); -webkit-mask-image: var(--fade);
+  }
+}
+
+/* Rail: flex, no break, center */
+.lb__rail {
+  display: flex; align-items: center; gap: 1.11rem;
+  will-change: transform;
+  min-height: 54px;
+}
+
+/* Marquee */
+@keyframes lb-marquee {
+  from { transform: translateX(0);}
+  to   { transform: translateX(-50%);}
+}
+.lb__marquee {
+  animation: lb-marquee var(--speed-s, 29s) linear infinite;
+}
+#sponsor-leaderboard:hover .lb__marquee,
+#sponsor-leaderboard:focus-within .lb__marquee {
+  animation-play-state: paused;
+}
+
+/* Pill — premium badges, clear contrast, tier color backgrounds */
+.pill {
+  display: inline-flex; align-items: center; gap: .62rem;
+  max-width: clamp(13rem,36vw,32rem);
+  padding: .49rem .96rem;
+  border-radius: 999px;
+  font-weight: 900; letter-spacing: -0.01em;
+  background: rgb(255 255 255 / 11%);
+  border: 1.5px solid rgb(255 255 255 / 16%);
+  color: #e9eef7;
+  box-shadow:
+    0 2px 8px rgb(0 0 0 / 8%),
+    0 1px 0px rgb(255 255 255 / 10%) inset;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 1.07rem;
+  user-select: none;
+  transition: background .15s, color .14s, border .18s;
+}
+.pill .txt { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pill .who { color: #fff; font-weight: 1000; letter-spacing: -.01em; }
+.pill .msg { color: #c2cae7; font-weight: 700; margin-left: .24em; }
+
+/* Tier backgrounds and color upgrades */
+[data-tier="Platinum"] {
+  color: #e0e7ff;
+  text-shadow: 0 0 14px #a78bfa99;
+  background: linear-gradient(90deg,rgba(99,102,241,.23),rgba(255,255,255,0.06));
+  border-color: #a78bfa80;
+}
+[data-tier="Gold"] {
+  color: #fde68a;
+  text-shadow: 0 0 9px #facc15b0;
+  background: linear-gradient(90deg,rgba(250,204,21,.18),rgba(255,255,255,0.08));
+  border-color: #facc1580;
+}
+[data-tier="Silver"] {
+  color: #e5e7eb;
+  background: linear-gradient(90deg,rgba(156,163,175,.15),rgba(255,255,255,0.09));
+  border-color: #d1d5db70;
+}
+[data-tier="Bronze"] {
+  color: #fbbf24;
+  background: linear-gradient(90deg,rgba(251,191,36,0.12),rgba(255,255,255,0.07));
+  border-color: #fbbf2480;
+}
+
+/* Headline & placeholder */
+.pill.headline {
+  color: #fde68a;
+  background: rgba(250,204,21,0.12);
+  text-shadow: 0 0 12px rgb(250 204 21 / 33%);
+  font-size: 1.05em;
+}
+.pill.placeholder {
+  opacity: .93; border-style: dashed;
+  background: rgba(156,163,175,.10); color: #b6bdd1;
+  font-weight: 800;
+}
+.link-btn {
+  all: unset;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 900;
+  color: inherit;
+}
+.link-btn:focus-visible {
+  outline: 2px solid #fde047;
+  outline-offset: 2px;
+  border-radius: .35rem;
+  background: #18181b;
+}
+
+/* VIP animation pulse (on insert, motion-safe) */
+.vip { box-shadow: 0 0 0 0 rgba(250,204,21,0);}
+@media (prefers-reduced-motion: no-preference) {
+  .vip {
+    animation: lbVip 1.09s cubic-bezier(.21,.71,.54,1.04) 1;
+  }
+  @keyframes lbVip {
+    0%,100% { box-shadow: 0 0 0 0 rgba(250,204,21,0); transform: scale(1);}
+    40%     { box-shadow: 0 0 20px 2px rgba(250,204,21,.32); transform: scale(1.07);}
+    90%     { box-shadow: 0 0 0 0 rgba(250,204,21,0);}
+  }
+}
+
+/* Controls cluster — sticky, rounded, responsive, “glass” */
+.lb__controls {
+  margin-left: auto;
+  display: inline-flex; align-items: center; gap: .65rem;
+  background: transparent;
+}
+.ctrl {
+  display: inline-flex; align-items: center; gap: .44rem;
+  font-weight: 900; font-size: 1.01rem;
+  background: rgb(255 255 255 / 8%);
+  border: 1.5px solid rgb(255 255 255 / 14%);
+  color: #e5e7eb;
+  border-radius: 999px;
+  padding: .39rem 1rem;
+  transition: background .18s, color .14s, border .14s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.10);
+  min-width: 52px;
+  text-align: center;
+}
+.ctrl:hover,
+.ctrl:focus-visible {
+  background: rgb(255 255 255 / 16%);
+  color: #fde047;
+  outline: none;
+}
+.ctrl[aria-pressed="true"] {
+  background: rgb(255 255 255 / 21%);
+  color: #facc15;
+}
+
+/* Offline status pill */
+.offline-pill {
+  background: #991b1b;
+  border-color: #fecaca;
+  color: #fff;
+  display: none;
+  font-size: 1.01em;
+  font-weight: 900;
+  letter-spacing: .01em;
+  padding: .39rem 1.08rem;
+  border-radius: 999px;
+}
+.offline-pill.show { display: inline-flex; }
+
+/* Brand chip: only visible on md+ screens, super subtle */
+.brand-chip {
+  display: none;
+  align-items: center; gap: .44rem;
+  font-weight: 1000; font-size: .83rem;
+  padding: .39rem .78rem; border-radius: 999px;
+  color: #ffe484;
+  background: linear-gradient(96deg,rgba(255,255,255,.13),rgba(255,255,255,.03) 98%);
+  border: 1.5px solid rgb(255 255 255 / 15%);
+  box-shadow: 0 1px 6px rgba(250,204,21,0.04);
+  user-select: none;
+  transition: background .16s, color .13s;
+}
+.brand-chip svg {
+  display: block; filter: drop-shadow(0 2px 3px #facc1566);
+}
+@media (min-width: 640px) { .brand-chip { display: inline-flex; } }
+.brand-chip.hide, [data-brand-chip="0"] .brand-chip { display: none !important; }
+
+/* Motion/contrast/forced-colors: accessibility modes */
+@media (prefers-reduced-motion: reduce) {
+  .lb__marquee { animation: none !important; }
+  .vip { animation: none !important; }
+}
+@media (prefers-contrast: more), (prefers-reduced-transparency: reduce) {
+  .lb {
+    background: linear-gradient(180deg,rgb(12 14 18 / .99),rgb(12 14 18 / .95));
+  }
+  .pill { background: rgb(255 255 255 / 17%); }
+  .headline { text-shadow: none; }
+}
+@media (forced-colors: active) {
+  .lb { border-bottom: 2px solid CanvasText; }
+  .pill, .brand-chip {
+    border: 1.5px solid CanvasText !important;
+    background: Canvas !important;
+    color: CanvasText !important;
+    text-shadow: none !important;
+  }
+  .headline { color: CanvasText !important; }
+}
+
+/* Responsive: padding/font-size/radius tune for mobile */
+@media (max-width: 850px) {
+  .lb__viewport { padding: .29rem .19rem; border-radius: 1.17rem; }
+  .pill { font-size: .99rem; padding: .33rem .55rem;}
+  .lb__rail { gap: .48rem; min-height: 45px;}
+  .brand-chip { font-size: .76rem; padding: .33rem .53rem;}
+  .lb__controls { gap: .45rem;}
+}
+@media (max-width: 500px) {
+  .lb__viewport { padding: .09rem .07rem; border-radius: .45rem; }
+  .pill { font-size: .92rem; padding: .23rem .39rem;}
+  .brand-chip { font-size: .65rem; padding: .19rem .28rem;}
+}
+
+</style>
+<script {{ nonce_attr() }}>
+(() => {
+  // ========= Prevent Duplicate Init (hot reloads, partials, etc) =========
+  if (window.__LB_V60__) return; window.__LB_V60__ = true;
+
+  // ========= Elements =========
+  const root    = document.getElementById('sponsor-leaderboard');
+  const rail    = document.getElementById('ticker-rail');
+  if (!root || !rail) return;
+
+  const ctrl    = document.getElementById('ticker-ctrl');
+  const speedC  = document.getElementById('speed-ctrl');
+  const srLive  = document.getElementById('sr-shout');
+  const srVIP   = document.getElementById('sr-vip');
+  const offline = document.getElementById('offline-pill');
+
+  // ========= Config: Data attributes (customizable per instance) =========
+  const cfg = {
+    reduced     : matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData,
+    autoscroll  : root.dataset.autoscroll !== '0',
+    vipTiers    : (root.dataset.vipTiers || 'Platinum,Gold').split(',').map(x => x.trim().toLowerCase()),
+    ttl         : (+root.dataset.ttlSeconds || 86400) * 1000,
+    maxStore    : +root.dataset.maxStore || 48,
+    dedupeWin   : (+root.dataset.dedupeWindowSeconds || 600) * 1000,
+    teamKey     : root.dataset.teamKey || 'global',
+    api         : root.dataset.api   || '/api/shoutouts',
+    spdMap      : { slow:32, normal:24, fast:16 },
+    defaultSpd  : (root.dataset.defaultSpeed || 'normal').toLowerCase()
+  };
+  const storeKey = `fc_lb_6.0:${cfg.teamKey}`;
+
+  // ========= Utilities =========
+  const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmtKey = (who, msg) => `${who.toLowerCase().trim()}|${msg.toLowerCase().trim()}`;
+  const recent = new Map(); // key → {ts, el, count}
+
+  // ========= Pill Template =========
+  const pillTpl = ({tier='General', sponsor, msg}) => {
+    const badge =
+      /platinum/i.test(tier) ? '✨' : /gold/i.test(tier) ? '🏅' :
+      /silver/i.test(tier)   ? '🎉' : /bronze/i.test(tier) ? '🥉' : '🔥';
+    return `${badge}
+      <span class="txt"><span class="who">${esc(sponsor)}</span> <span class="msg">${esc(msg)}</span></span>`;
+  };
+
+  // ========= Speed/Marquee Controls =========
+  function setSpeed(mode) {
+    const m = cfg.spdMap[mode] ? mode : 'normal';
+    rail.style.setProperty('--speed-s', cfg.spdMap[m] + 's');
+    speedC.dataset.speed = m;
+    speedC.setAttribute('aria-label', `Speed: ${m.charAt(0).toUpperCase() + m.slice(1)}`);
+  }
+  setSpeed(cfg.reduced ? 'slow' : cfg.defaultSpd);
+
+  speedC?.addEventListener('click', () => {
+    const order = ['slow','normal','fast'];
+    setSpeed(order[(order.indexOf(speedC.dataset.speed)+1)%order.length]);
+    tuneSpeed();
+  }, { passive: true });
+
+  // ========= Pause/Resume Marquee, Accessibility =========
+  function pause(on) {
+    ctrl?.setAttribute('aria-pressed', on);
+    rail.style.animationPlayState = on ? 'paused' : 'running';
+    ctrl.textContent = on ? '▶ Play' : '⏸ Pause';
+  }
+  ctrl?.addEventListener('click', () => pause(ctrl.getAttribute('aria-pressed') !== 'true'), { passive:true });
+  if (cfg.reduced || !cfg.autoscroll) pause(true);
+
+  // Pause when not in viewport (for sticky nav/UX)
+  try {
+    const vp = root.querySelector('.lb__viewport');
+    new IntersectionObserver(([e]) =>
+      pause(!e.isIntersecting || cfg.reduced || !cfg.autoscroll), { threshold: .02 }
+    ).observe(vp);
+  } catch {}
+
+  // ========= Add Sponsor Item (dedupe, a11y, VIP, animate) =========
+  function addItem({ tier = 'General', sponsor = 'Anonymous', msg = 'supported the team!' }) {
+    const key = fmtKey(sponsor, msg);
+    const now = Date.now();
+
+    // Dedupe: bump & increment if within dedupe window
+    if (recent.has(key) && now - recent.get(key).ts < cfg.dedupeWin) {
+      const rec = recent.get(key); rec.ts = now; rec.count++;
+      let bump = rec.el.querySelector('.x-times');
+      if (!bump) bump = Object.assign(document.createElement('b'), { className: 'x-times' });
+      bump.textContent = ` ×${rec.count}`;
+      rec.el.appendChild(bump);
+      rail.prepend(rec.el);
+      return;
+    }
+
+    // Create pill element
+    const el = document.createElement('span');
+    const vip = cfg.vipTiers.includes(tier.toLowerCase());
+    el.className = 'pill' + (vip ? ' vip' : ''); el.role = 'listitem'; el.dataset.tier = tier;
+    el.innerHTML = pillTpl({ tier, sponsor, msg });
+    rail.prepend(el);
+
+    // Dedupe tracking + a11y live region
+    recent.set(key, { ts: now, el, count: 1 });
+    srLive.textContent = `${sponsor} ${msg}`;
+    if (vip) srVIP.textContent = `${sponsor} made a VIP ${tier} gift!`;
+
+    // Local cache (TTL)
+    try {
+      const cached = JSON.parse(localStorage.getItem(storeKey) || '[]').filter(x => now - x.ts < cfg.ttl);
+      cached.unshift({ tier, sponsor, msg, ts: now });
+      localStorage.setItem(storeKey, JSON.stringify(cached.slice(0, cfg.maxStore)));
+    } catch {}
+
+    tuneSpeed(); cloneLoop();
+  }
+
+  // ========= Placeholder State =========
+  function ensurePlaceholder() {
+    if (rail.querySelector('.pill:not(.placeholder):not(.headline)')) {
+      document.getElementById('shoutouts-empty')?.remove(); return;
+    }
+    if (document.getElementById('shoutouts-empty')) return;
+    const p = document.createElement('span');
+    p.id = 'shoutouts-empty'; p.className = 'pill placeholder'; p.role = 'listitem';
+    p.innerHTML = 'No shoutouts yet — <button type="button" class="link-btn" id="share-cta">be the first 🎉</button>';
+    rail.insertBefore(p, rail.querySelector('.headline')?.nextSibling || rail.firstChild);
+    p.querySelector('#share-cta').onclick = async () => {
+      try {
+        await (navigator.share
+          ? navigator.share({ title: document.title, url: location.href })
+          : navigator.clipboard.writeText(location.href));
+      } catch {}
+    };
+  }
+
+  // ========= Tune Speed to Fit Content (never too fast/slow) =========
+  function tuneSpeed() {
+    const viewport = root.querySelector('.lb__viewport'); if (!viewport) return;
+    const ratio = (rail.scrollWidth / (viewport.clientWidth || 1)) / 2;
+    const base = cfg.spdMap[speedC?.dataset.speed || 'normal'] || 24;
+    rail.style.setProperty('--speed-s', (Math.max(.93, Math.min(2.5, ratio)) * base) + 's');
+  }
+  new ResizeObserver(tuneSpeed).observe(rail);
+  addEventListener('resize', tuneSpeed, { passive: true });
+
+  // ========= Seamless Loop: clone for infinite scroll =========
+  function cloneLoop() {
+    if (rail.__cloned) return; rail.__cloned = true;
+    rail.querySelectorAll('.pill:not(.placeholder):not(.headline)').forEach(n => {
+      const c = n.cloneNode(true); c.setAttribute('aria-hidden', 'true'); c.tabIndex = -1; rail.appendChild(c);
+    });
+  }
+
+  // ========= Offline/Online: Queue new, show banner =========
+  const queue = [];
+  function setOffline(on) { offline?.classList.toggle('show', on); }
+  addEventListener('offline', () => setOffline(true));
+  addEventListener('online', () => { setOffline(false); while (queue.length) addItem(queue.shift()); });
+
+  // ========= Hydration: LocalStorage seed, then API =========
+  (async () => {
+    // Seed from localStorage (oldest first)
+    try { (JSON.parse(localStorage.getItem(storeKey) || '[]')).reverse().forEach(addItem); } catch {}
+    // Seed from API (oldest first)
+    try {
+      const u = new URL(cfg.api, location.origin); u.searchParams.set('team', cfg.teamKey);
+      const list = await fetch(u).then(r => r.ok ? r.json() : []);
+      if (Array.isArray(list)) list.reverse().forEach(addItem);
+    } catch {}
+    ensurePlaceholder(); rail.removeAttribute('aria-busy'); cloneLoop(); tuneSpeed();
+  })();
+
+  // ========= Public Event: socket/manual (agency/whitelabel ready) =========
+  addEventListener('fc:shoutout', e =>
+    (navigator.onLine ? addItem : queue.push.bind(queue))(e.detail || {})
+  );
+
+})();
+</script>
+

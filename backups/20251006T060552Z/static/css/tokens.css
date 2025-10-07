@@ -1,0 +1,31 @@
+:root {
+  /* Brand */
+  --fc-brand: #facc15;
+  --fc-surface: #0b0c0f;
+  --fc-surface-2: #16181d;
+  --fc-text: #e5e7eb;
+  --fc-muted: #9ca3af;
+  --fc-ring: color-mix(in srgb, var(--fc-brand) 40%, #ffffff 0%);
+
+  /* Elevation */
+  --fc-shadow-lg: 0 22px 70px rgba(0, 0, 0, 0.35);
+  --fc-border: 1px solid rgba(255, 255, 255, 0.1);
+
+  /* Radii */
+  --fc-radius: clamp(18px, 16px + 1vw, 28px);
+  --fc-radius-sm: 0.6rem;
+
+  /* Typography scale */
+  --step--1: clamp(0.82rem, 0.79rem + 0.1vw, 0.9rem);
+  --step-0: clamp(0.95rem, 0.9rem + 0.2vw, 1rem);
+  --step-1: clamp(1.1rem, 1rem + 0.6vw, 1.35rem);
+  --step-2: clamp(1.35rem, 1.2rem + 1vw, 1.7rem);
+  --step-3: clamp(1.6rem, 1.4rem + 1.4vw, 2.25rem);
+}
+/* Utility helpers */
+.fc-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: var(--fc-border);
+  border-radius: var(--fc-radius);
+  box-shadow: var(--fc-shadow-lg);
+}

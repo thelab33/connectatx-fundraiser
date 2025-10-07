@@ -1,0 +1,787 @@
+{# ===========================
+   Scoreboard Hero — Ultra 5.3 (Agency-Ready, Polished)
+   =========================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{# Utility Macros (shared) #}
+{% if roll_money is not defined %}
+  {% macro roll_money(v, symbol='$') -%}
+    {%- set n = (v if v is number else (v|string)|replace('$','')|replace(',','')|float) -%}
+    {{- symbol }}{{ '{:,.0f}'.format(n) -}}
+  {%- endmacro %}
+{% endif %}
+{% if roll_pct is not defined %}
+  {% macro roll_pct(v) -%}
+    {%- set n = (v if v is number else (v|string)|replace('%','')|float) -%}
+    {{ '{:.0f}'.format(n) -}}
+  {%- endmacro %}
+{% endif %}
+
+{# ---------- Configurable Data Inputs (for SaaS/White-label) ---------- #}
+{% set IDP        = IDP|default('fundraiser-hero') %}
+{% set FCID       = IDP ~ '-media' %}
+{% set TEAM_NAME  = (team.name or team.team_name or 'Connect ATX Elite') %}
+{% set TITLE      = fundraiser_title   or 'Fuel the Season.' %}
+{% set TITLE_2    = fundraiser_title_2 or 'Fund the Future.' %}
+{% set SUBTITLE   = meta_description   or 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set GOAL       = (fundraising_goal or GOAL_USD or 50000)|int %}
+{% set RAISED     = (funds_raised or 0)|int %}
+{% set PCT        = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %}
+{% set PCT_CLAMP  = (0 if PCT < 0 else (100 if PCT > 100 else PCT)) %}
+{% set THEME_HEX  = theme_hex|default('#facc15') %}
+{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
+{% set TEXT_SHORT   = TEXT_SHORTCODE or '44321' %}
+{% set HREF_IMPACT  = (safe_url_for('main.impact')  if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact-v2') %}
+{% set HREF_SPONSOR = (safe_url_for('main.become_sponsor') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.become_sponsor')) else '/become-sponsor') %}
+{% set _hero_src    = (hero_image_url or team.hero_bg or team.hero_image or team.team_photo or team.photo_url or 'images/hero/hero-1920.avif') %}
+{% set hero_src     = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{% set PANEL_TITLE = 'Be the Assist.' %}
+{% set PANEL_TITLE_2 = 'Fund Their Win.' %}
+
+<section
+  id="{{ IDP }}"
+  class="hero"
+  style="--accent: {{ THEME_HEX }};"
+  aria-label="Fundraiser hero and live scoreboard"
+  data-raised="{{ RAISED }}"
+  data-goal="{{ GOAL }}"
+  data-deadline="{{ DEADLINE or '' }}"
+  data-currency="{{ CURRENCY or 'USD' }}"
+>
+  <div class="hero__inner">
+    <div class="hero__grid">
+      <!-- === HERO MEDIA === -->
+      <header class="hero__left" role="region" aria-labelledby="{{ IDP }}-headline">
+        <figure class="hero__media">
+          <picture>
+            {% if hero_src_avif %}<source type="image/avif" srcset="{{ hero_src_avif }}">{% endif %}
+            {% if hero_src_webp %}<source type="image/webp" srcset="{{ hero_src_webp }}">{% endif %}
+            <img
+              src="{{ hero_src }}"
+              alt="{{ TEAM_NAME }} team photo"
+              class="hero__img"
+              decoding="async"
+              fetchpriority="high"
+              sizes="(max-width: 950px) 100vw, 60vw"
+              srcset="
+                {% if hero_src_800 %}{{ hero_src_800 }} 800w,{% endif %}
+                {% if hero_src_1200 %}{{ hero_src_1200 }} 1200w,{% endif %}
+                {% if hero_src_1600 %}{{ hero_src_1600 }} 1600w,{% endif %}
+                {% if hero_src_2000 %}{{ hero_src_2000 }} 2000w{% endif %}
+              "
+            />
+          </picture>
+
+          <!-- === OVERLAY CONTENT: CENTERED === -->
+          <figcaption class="hero__overlay hero__overlay--centered">
+            <span class="chip" id="{{ IDP }}-headline">{{ TEAM_NAME }}</span>
+            <h1 class="tagline">
+              <span>{{ TITLE }}</span>
+              <span class="accent">{{ TITLE_2 }}</span>
+            </h1>
+            <p class="sub" id="{{ IDP }}-deck">
+              Every dollar powers our journey: gear, travel, coaching, and tutoring.<br>
+              <b>Your support puts kids on the court—and on track for life.</b>
+            </p>
+            <ul class="kpis" aria-label="Team stats">
+              <li><span class="kpi-val"><b>35+</b></span><span class="kpi-label">Games Played</span></li>
+              <li><span class="kpi-val"><b>5</b></span><span class="kpi-label">Championships</span></li>
+              <li><span class="kpi-val"><b>120+</b></span><span class="kpi-label">Training Hours / Week</span></li>
+            </ul>
+            <nav class="cta" aria-label="Hero Actions">
+              <a href="{{ HREF_IMPACT }}" class="btn btn--ghost">🏀 Back Our Ballers</a>
+              <a href="{{ HREF_DONATE }}" class="btn btn--gold pulse"
+                 data-cta="donate" target="_blank" rel="noopener noreferrer"
+                 aria-label="Donate to {{ TEAM_NAME }}">
+                ⛹️ Fuel the Season
+              </a>
+            </nav>
+            <div class="hero-trust">
+              <span class="tax-badge">100% TAX DEDUCTIBLE</span>
+              <span class="secure-badge">SECURE VIA STRIPE / PAYPAL</span>
+            </div>
+
+            <!-- QR CODE -->
+            <div class="qr-hero">
+              <img id="{{ IDP }}-qr"
+                src="{{ QR_SRC }}"
+                alt="QR code to donate to {{ TEAM_NAME }}"
+                width="98" height="98"
+                decoding="async" loading="lazy" />
+              <div class="qr-cap"><b>Scan to give</b> — or press <kbd>D</kbd></div>
+            </div>
+          </figcaption>
+        </figure>
+      </header>
+
+      <!-- === SCOREBOARD PANEL === -->
+      <aside class="scoreboard" aria-labelledby="{{ IDP }}-panel-title" role="complementary">
+        <div class="panel__inner">
+          <div class="brand">
+            <span class="chip chip--sm">{{ TEAM_NAME }}</span>
+          </div>
+          <h2 id="{{ IDP }}-panel-title" class="title">
+            <span>{{ PANEL_TITLE }}</span>
+            <span class="accent">{{ PANEL_TITLE_2 }}</span>
+          </h2>
+          <p class="sub">{{ SUBTITLE }}</p>
+          <p class="scan-hint" aria-hidden="true">Scan to give — or press <kbd>D</kbd></p>
+          <section class="score" aria-label="Fundraising progress">
+            <div class="money tabular" aria-live="polite">
+              <span class="raised" data-role="raised">{{ roll_money(RAISED) }}</span>
+              <span class="sep" aria-hidden="true">/</span>
+              <span class="goal" data-role="goal">{{ roll_money(GOAL) }}</span>
+              <span class="pct" data-role="pct">• {{ roll_pct(PCT_CLAMP) }}%</span>
+            </div>
+            <div class="timer">
+              <span class="label">Goal ends in</span>
+              <time id="{{ IDP }}-deadline" class="value"
+                data-deadline="{{ DEADLINE or '' }}" aria-live="polite">—</time>
+            </div>
+          </section>
+
+          <!-- Progress Meter -->
+          <div class="meter-wrap">
+            <meter class="meter"
+              min="0" max="{{ GOAL|int }}" value="{{ RAISED|int }}"
+              aria-describedby="{{ IDP }}-panel-title">
+              {{ roll_pct(PCT_CLAMP) }}% of goal
+            </meter>
+            <div class="track" aria-hidden="true">
+              <div class="fill" style="--p: {{ PCT_CLAMP }}%"></div>
+            </div>
+          </div>
+
+          <!-- Quick Donation Chips -->
+          <div class="chips" role="group" aria-label="Quick donation amounts">
+            <button class="chip-btn" type="button" data-amt="25" aria-pressed="false">
+              +$25 <em>· 1 team meal</em>
+            </button>
+            <button class="chip-btn" type="button" data-amt="50" aria-pressed="false">
+              +$50 <em>· 1 jersey piece</em>
+            </button>
+            <button class="chip-btn" type="button" data-amt="100" aria-pressed="false">
+              +$100 <em>· 1 week of gym time</em>
+            </button>
+          </div>
+
+          <!-- Sticky CTA -->
+          <div class="sticky">
+            <div class="cta">
+              <a id="{{ IDP }}-donate" class="btn btn--gold"
+                 href="{{ HREF_DONATE }}" target="_blank" rel="noopener noreferrer"
+                 data-cta="donate" aria-describedby="{{ IDP }}-donate-kbd">
+                Donate <span class="amt" aria-hidden="true"></span> →
+              </a>
+              <label class="toggle">
+                <input id="{{ IDP }}-monthly" name="monthly" type="checkbox" />
+                <span>Make it monthly</span>
+              </label>
+            </div>
+            <span id="{{ IDP }}-donate-kbd" class="sr-only">
+              Tip: Press D to donate. Hotkey is disabled while typing.
+            </span>
+            <p class="note">Every <b>$100</b> ≈ a week of gym time.</p>
+          </div>
+
+          <!-- Secondary Actions -->
+          <nav class="sec" aria-label="Secondary actions">
+            <a class="btn btn--ghost btn--sm" href="{{ HREF_DONATE }}" target="_blank" rel="noopener noreferrer">Skip to Donate</a>
+            <a class="btn btn--ghost btn--sm" href="{{ HREF_IMPACT }}">Impact</a>
+            <a class="btn btn--ghost btn--sm" href="{{ HREF_SPONSOR }}">Become a Sponsor</a>
+            <button class="btn btn--ghost btn--sm"
+                    type="button"
+                    id="{{ IDP }}-share"
+                    aria-controls="{{ IDP }}-share-live"
+                    aria-expanded="false">
+              Share
+            </button>
+            <span id="{{ IDP }}-share-live" class="sr-only" aria-live="polite"></span>
+          </nav>
+
+          <!-- Milestones Ladder -->
+          <div class="ladder" role="group" aria-label="Impact ladder milestones">
+            <div class="rung" data-threshold="1000">
+              <div class="bar"></div>
+              <div class="lbl"><span class="amt">$1,000</span><span class="what">Gym Week</span></div>
+            </div>
+            <div class="rung" data-threshold="5000">
+              <div class="bar"></div>
+              <div class="lbl"><span class="amt">$5,000</span><span class="what">Travel Slot</span></div>
+            </div>
+            <div class="rung" data-threshold="10000">
+              <div class="bar"></div>
+              <div class="lbl"><span class="amt">$10,000</span><span class="what">Tutor Block</span></div>
+            </div>
+          </div>
+
+          <!-- SMS Donate -->
+          <p class="sms">📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.</p>
+        </div>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<style {{ nonce_attr() }}>
+/* ===========================
+   Scoreboard Hero Ultra v5.4
+   Centered Overlay Edition — Pro Polish
+   =========================== */
+
+/* ---------- BRAND TOKENS & SYSTEM ---------- */
+:root{
+  /* Brand */
+  --accent: {{ THEME_HEX | default('#fbe34a') }};
+  --ink: #eef2f7; --ink-weak:#f6f7fa; --ink-muted:#e9edf6;
+
+  /* Surfaces */
+  --bg-hero-top:#181e2a; --bg-hero-bottom:#1a1a23;
+
+  /* Radii / shadow */
+  --radius-xl: 2.5rem; --radius-lg:2.2rem; --radius-md:1.35rem; --radius-pill:999px;
+  --shadow-hero: 0 10px 40px #0003, 0 10px 40px color-mix(in srgb, var(--accent) 35%, transparent);
+  --shadow-card: 0 12px 32px #0003;
+
+  /* Layout */
+  --hero-min-h: 540px;
+  --shell-w: min(1280px, 96vw);
+  --gap: clamp(14px, 2.2vw, 28px);
+}
+
+/* Light mode */
+html[data-theme="light"]{
+  --bg-hero-top:#fefcea; --bg-hero-bottom:#faf9f5;
+  --ink:#1e293b; --ink-weak:#334155; --ink-muted:#475569;
+  --shadow-hero: 0 8px 28px #0001, 0 10px 30px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* Prefer system dark */
+@media (prefers-color-scheme: light){
+  :root:not([data-theme="dark"]){
+    --bg-hero-top:#fefcea; --bg-hero-bottom:#faf9f5;
+    --ink:#1e293b; --ink-weak:#334155; --ink-muted:#475569;
+  }
+}
+
+/* ---------- HERO MEDIA & IMAGE ---------- */
+.hero__media{
+  position:relative; border-radius:var(--radius-xl); overflow:hidden;
+  background: #151a24; box-shadow: var(--shadow-hero);
+  min-height: var(--hero-min-h);
+  isolation:isolate;
+}
+.hero__img{
+  width:100%; height:100%; min-height:320px; display:block;
+  object-fit:cover; object-position: var(--img-x,50%) var(--img-y,35%);
+  border-radius:inherit; aspect-ratio:16/9;
+  filter:saturate(1.02) contrast(1.03) brightness(.98);
+}
+.hero__media::before{
+  content:""; position:absolute; inset:0; z-index:1; pointer-events:none; border-radius:inherit;
+  background: linear-gradient(180deg, #0000 45%, #0009 100%);
+}
+
+/* ---------- OVERLAY (CENTERED) ---------- */
+.hero__overlay--centered{
+  position:absolute; inset:0; z-index:2; pointer-events:none;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-end; text-align:center;
+  padding: 2.7rem 1rem calc(3.8rem + env(safe-area-inset-bottom, 0px)) 1rem;
+  gap:1.25rem; min-height:86%;
+  background: linear-gradient(180deg, rgba(16,16,28,.18) 0 44%, rgba(22,22,33,.86) 100%);
+  -webkit-backdrop-filter: blur(2.5px); backdrop-filter: blur(2.5px);
+}
+@supports not (backdrop-filter: blur(2px)){
+  .hero__overlay--centered{ background: linear-gradient(180deg, rgba(16,16,28,.38) 0 44%, rgba(22,22,33,.92) 100%); }
+}
+.hero__overlay--centered *{ pointer-events:auto }
+
+/* Overlay content rhythm */
+.chip, .tagline, .sub, .kpis, .cta, .hero-trust{ margin-bottom:.2em }
+.tagline{ font-weight:1000; line-height:1.03; letter-spacing:.2px; text-wrap:balance }
+.tagline .accent{ color:var(--accent) }
+.sub{ max-width:min(70ch, 92%); margin-inline:auto; font-weight:700; opacity:.98 }
+
+/* KPIs */
+.kpis{ display:flex; gap:2.2rem; margin:.7em 0 1em; flex-wrap:wrap; justify-content:center }
+.kpi-val{ font-size:1.22em; font-weight:900; color:#ffe788; margin-bottom:.13em; text-shadow:0 2px 6px #0005 }
+.kpi-label{ font-size:.95em; font-weight:800; color:#ffe788; text-shadow:0 2px 6px #0005 }
+
+/* CTAs / trust row */
+.cta{ display:flex; gap:1.1rem; justify-content:center; margin-top:.7em; flex-wrap:wrap }
+.hero-trust{ display:flex; gap:1rem; margin-top:.8em; flex-wrap:wrap; justify-content:center }
+
+/* ---------- QR (centered, bottom-safe) ---------- */
+.qr-hero{
+  margin-top:2.2rem; margin-bottom:.2rem; display:flex; flex-direction:column; align-items:center; gap:.38em;
+}
+.qr-hero img{
+  width:92px; height:92px; border-radius:11px; background:#fff;
+  border:2.5px solid var(--accent, #facc15);
+  box-shadow:0 2px 18px #0003, 0 0 0 1px #fff3 inset;
+}
+.qr-cap{
+  background:#fffbe6; color:#181818; border-radius:999px; font-size:.97rem; font-weight:800;
+  padding:.24em 1.3em; margin-top:.25em; box-shadow:0 1.5px 8px #ffeaa555;
+  display:flex; align-items:center; gap:.5em;
+}
+.qr-cap .qr-divider{ display:inline-block; margin:0 .3em; color:#bbb }
+
+/* ---------- SCOREBOARD PANEL ---------- */
+.scoreboard{
+  display:flex; flex-direction:column;
+  background: linear-gradient(135deg, #181e2a 0%, #11131b 100%);
+  border: 2px solid color-mix(in srgb, #ffe788 10%, transparent);
+  border-radius:var(--radius-lg);
+  box-shadow: var(--shadow-card), 0 6px 40px #0003;
+  padding: 2.2rem 2.2rem 1.7rem; position:relative; color:var(--ink);
+  min-width: 380px; max-width: 490px; margin:0 auto;
+  transition: box-shadow .24s ease, border-color .21s ease;
+}
+.scoreboard::before{
+  content:""; display:block; height:5px; width:100%; background:var(--accent);
+  border-radius:6px 6px 0 0; margin-bottom:1.2rem;
+}
+.panel__inner{ width:100%; display:flex; flex-direction:column; gap:.45rem }
+
+/* Headline */
+.scoreboard .title{
+  font-size: clamp(1.5rem, 2.5vw, 2.1rem); font-weight:1000; line-height:1.12;
+  margin:0 0 .38rem; text-shadow:0 2px 14px #0004;
+}
+.scoreboard .title .accent{ color:var(--accent) }
+
+/* Subheader / pill */
+.scoreboard .sub{ font-size:1.13rem; font-weight:600; color:var(--ink-weak); margin:.4em 0 .9em }
+.scoreboard .chip{
+  font-size:.99rem; padding:.32em .9em; border-radius:8px; font-weight:800;
+  background:var(--accent); color:#18181b; box-shadow:0 2px 8px #ffeaa550;
+}
+
+/* Progress cluster */
+.scoreboard .score{
+  display:grid; grid-template-columns:1fr auto; align-items:end; gap:1rem; margin-top:.85rem;
+}
+.scoreboard .money{ font-size: clamp(1.15rem, 2vw, 1.4rem); font-weight:800 }
+.scoreboard .money .pct{ margin-left:.38rem; opacity:.88 }
+.scoreboard .timer{ font-size:.99rem; color:var(--accent); font-weight:800; margin-top:.21em }
+
+/* Meter */
+.meter-wrap{ margin-top:1.1em; margin-bottom:.8em }
+.meter, .track{
+  width:100%; height:13px; border-radius:16px;
+  background:#fffbe615; border:1.3px solid #ffeaa533;
+}
+.track{
+  background: linear-gradient(90deg, #fffbe6 0%, var(--accent) 100%);
+  position:relative; overflow:hidden;
+}
+.track .fill{
+  height:100%; width:var(--p, 0%); background:var(--accent); border-radius:inherit;
+  transition: width .7s cubic-bezier(.42,1,.58,1);
+  will-change: width;
+}
+.track .fill.glow{ box-shadow:0 0 16px color-mix(in srgb, var(--accent) 80%, transparent) }
+.meter::-webkit-meter-bar{ background:transparent; border:none }
+.meter::-webkit-meter-optimum-value{ background:var(--accent) }
+
+/* Donation chips */
+.chips{ display:flex; gap:.85rem; margin:1.2rem 0 .2rem }
+.chip-btn{
+  flex:1; min-height:44px; cursor:pointer;
+  padding:.89em .57em; font-size:1.06em; font-weight:900;
+  background:#fffbe61a; border:1.1px solid #fffbe629; border-radius:1.2em; color:var(--ink);
+  transition: background .16s ease, border-color .17s ease, color .16s ease;
+}
+.chip-btn:hover, .chip-btn[aria-pressed="true"]{
+  background: linear-gradient(90deg, #fffbe6, var(--accent) 85%);
+  color:#23241f; border-color:var(--accent);
+}
+
+/* Sticky CTA zone (no overlap on iOS bars) */
+.sticky{
+  position:sticky; bottom:0;
+  background: linear-gradient(180deg, transparent, #181e2ad8 80%);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+  padding-top:1.05rem; margin-top:auto;
+}
+
+/* Secondary nav */
+.scoreboard .sec{
+  display:flex; flex-wrap:wrap; gap:1.1em 1.5em; margin:1.05em 0 .7em; padding:0;
+}
+.scoreboard .btn--ghost{
+  background:transparent; border:1px solid #ffeaa530; color:#ffe788;
+  font-weight:800; border-radius:9px; padding:.28em 1.2em;
+  transition: background .18s ease, border-color .17s ease, color .16s ease;
+}
+.scoreboard .btn--ghost:hover{ background:#ffeaa520; border-color:var(--accent); color:#181e2a }
+
+/* Ladder */
+.ladder{ display:flex; flex-direction:column; gap:.51em; margin:.72em 0 .33em }
+.ladder .rung{ display:flex; align-items:center; gap:.5em }
+.ladder .bar{
+  flex:1; height:6px; background:#fffbe633; border-radius:3px; position:relative; overflow:hidden; margin-right:.6em;
+}
+.ladder .bar::after{
+  content:""; position:absolute; inset:0 auto 0 0; width:var(--fill, 0%); border-radius:inherit;
+  background:var(--accent); transition: width .5s cubic-bezier(.42,1,.58,1);
+}
+.ladder .lbl{ font-size:.98em; font-weight:800; color:#ffe788; display:flex; gap:.45em }
+.ladder .amt{ color:var(--accent) }
+.ladder .rung.reached .lbl .what{ color:#fff }
+.ladder .rung.reached .amt{ filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 80%, transparent)) }
+
+/* SMS */
+.scoreboard .sms{ font-size:.98em; color:#ffe788; margin-top:.49em; letter-spacing:.01em }
+
+/* ---------- RESPONSIVE ---------- */
+@media (max-width: 950px){
+  .hero__media, .hero__img{ min-height:230px; border-radius:1.1rem }
+  .hero__overlay--centered{
+    padding: 1.3rem .6rem calc(2.4rem + env(safe-area-inset-bottom, 0px)) .6rem;
+    gap:.72rem; min-height:94%;
+  }
+  .qr-hero{ margin-top:1.1rem }
+  .scoreboard{
+    width:100%; min-width: 98vw; max-width: 99vw;
+    padding: 1.2rem .9rem 1.1rem; border-radius:1.1rem;
+    margin: 0 auto;
+  }
+}
+@media (max-width: 700px){
+  .kpis{ flex-direction:column; gap:.5em }
+  .cta{ flex-direction:column; gap:.6rem }
+  .qr-hero{ margin-top:1.2rem }
+  .scoreboard{ padding:.7rem .35rem .7rem; border-radius:.79rem; font-size:.99rem }
+}
+
+/* ---------- ACCESSIBILITY ---------- */
+:where(a,button,.btn,.chip-btn):focus-visible{
+  outline:0;
+  box-shadow:
+    0 0 0 3px #000c,
+    0 0 0 5px color-mix(in srgb, var(--accent) 80%, #fff0);
+  border-radius:12px;
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important }
+}
+@media (prefers-contrast: more){
+  .scoreboard, .chip-btn, .btn{ border-color: color-mix(in srgb, var(--accent) 50%, #fff5) !important }
+  .track{ background:#fff }
+}
+@media (forced-colors: active){
+  .scoreboard, .chip-btn, .btn{ border: 1px solid CanvasText }
+  .track, .meter{ forced-color-adjust: none; background: Canvas; border-color: CanvasText }
+  .track .fill{ background: Highlight }
+  .scoreboard .btn--ghost{ border-color: CanvasText }
+}
+/* ===== Connect ATX Elite — Hero Polish v1.2 ===== */
+:root{
+  --accent: #facc15;               /* team gold */
+  --ink: #f6f7fb;                  /* primary text on hero */
+  --ink-weak:#e9eef9;
+  --ink-sub:#cfd6e7;
+  --panel: rgba(255,255,255,.10);
+  --ring: color-mix(in srgb, var(--accent) 80%, white 10%);
+  --shadow: 0 18px 48px rgba(0,0,0,.35);
+  --r-xl: 1.6rem; --r-lg: 1.1rem; --r-pill: 999px;
+}
+
+/* Media + soft depth */
+.hero__media{
+  position:relative; border-radius: var(--r-xl); overflow:hidden;
+  box-shadow: var(--shadow);
+  background:#10141d;
+}
+.hero__img{
+  width:100%; height:100%; object-fit:cover; aspect-ratio:16/9; display:block;
+  filter: saturate(1.03) contrast(1.05) brightness(.92);
+}
+.hero__media::after{
+  /* gentle darkening to lift type without crushing midtones */
+  content:""; position:absolute; inset:0; pointer-events:none; z-index:1; border-radius:inherit;
+  background:
+    radial-gradient(90% 70% at 50% 10%, rgba(0,0,0,.15), transparent 55%),
+    linear-gradient(180deg, rgba(8,10,14,.05) 40%, rgba(8,10,14,.78) 100%);
+}
+
+/* Centered overlay */
+.hero__overlay--centered{
+  position:absolute; inset:0; z-index:2; display:flex; flex-direction:column;
+  align-items:center; justify-content:flex-end; text-align:center;
+  gap:.9rem;
+  padding: 2.2rem 1rem calc(3.2rem + env(safe-area-inset-bottom,0));
+  color: var(--ink);
+  -webkit-backdrop-filter: blur(2.5px);
+  backdrop-filter: blur(2.5px);
+}
+
+/* Eyebrow chip */
+.chip{
+  display:inline-flex; align-items:center; gap:.5ch;
+  padding:.35rem .7rem; border-radius: .8rem;
+  background: rgba(255,255,255,.14);
+  border: 1px solid rgba(255,255,255,.18);
+  font-weight: 900; letter-spacing:.2px; color: var(--ink);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06);
+}
+
+/* Headline */
+.tagline{
+  font-weight:1000; line-height:1.02; text-wrap:balance;
+  font-size: clamp(1.8rem, 2.2vw + 1.1rem, 3.2rem);
+  text-shadow: 0 2px 20px rgba(0,0,0,.4);
+}
+.tagline .accent{ color: var(--accent) }
+
+/* Deck */
+.sub{
+  color: var(--ink-weak);
+  font-weight: 700;
+  line-height:1.4;
+  max-width:min(68ch, 92vw);
+  margin-top:.2rem;
+}
+.sub b{ color: #fff; text-shadow: 0 2px 10px rgba(0,0,0,.35) }
+
+/* KPIs */
+.kpis{
+  display:flex; flex-wrap:wrap; justify-content:center; gap: 1.4rem 2.2rem;
+  margin:.6rem 0 1rem;
+}
+.kpis li{ list-style:none; display:grid; place-items:center }
+.kpi-val{ font-weight:1000; color:#ffe788; text-shadow:0 2px 8px rgba(0,0,0,.35) }
+.kpi-label{ font-weight:800; color:#ffe788 }
+
+/* CTAs */
+.cta{ display:flex; flex-wrap:wrap; gap:.8rem 1rem; justify-content:center; margin-top:.2rem }
+.btn{
+  --bg: rgba(255,255,255,.12); --bd: rgba(255,255,255,.18); --fg: var(--ink);
+  display:inline-flex; align-items:center; gap:.6ch; text-decoration:none;
+  padding:.9rem 1.2rem; border-radius: var(--r-pill); font-weight:900;
+  border:1px solid var(--bd); background:var(--bg); color:var(--fg);
+  transition: transform .12s ease, background .22s ease, border-color .22s ease, color .22s ease;
+  will-change: transform;
+}
+.btn:active{ transform: translateY(1px) }
+.btn--ghost:hover{ --bg: rgba(255,255,255,.2) }
+.btn--gold{
+  --bg: linear-gradient(180deg,#fffbe6,var(--accent));
+  --bd: rgba(0,0,0,.25); --fg:#111218;
+  box-shadow: 0 12px 28px rgba(250,204,21,.22);
+}
+.btn--gold:hover{ filter: brightness(1.04) }
+
+/* Trust row */
+.hero-trust{
+  display:flex; gap:1rem; flex-wrap:wrap; justify-content:center;
+  color: var(--ink-sub); font-weight:800; letter-spacing:.02em;
+  margin-top:.2rem;
+}
+.hero-trust > span{
+  padding:.35rem .8rem; border-radius:.7rem;
+  border:1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.08);
+}
+
+/* QR */
+.qr-hero{ display:flex; flex-direction:column; align-items:center; gap:.45rem; margin-top:.4rem }
+.qr-hero img{
+  width:98px; height:98px; border-radius:12px; background:#fff;
+  border: 2.5px solid var(--accent);
+  box-shadow: 0 6px 20px rgba(0,0,0,.32), inset 0 0 0 1px rgba(255,255,255,.08);
+}
+.qr-cap{
+  display:flex; align-items:center; gap:.5ch;
+  background:#fffbe6; color:#1a1a1a; padding:.3rem 1.1rem;
+  border-radius: var(--r-pill); font-weight:900; box-shadow:0 2px 10px rgba(250,204,21,.25);
+}
+.qr-cap kbd{
+  font: inherit; padding:.05rem .45rem; border-radius:.5rem;
+  background:#000; color:#fff; box-shadow: inset 0 0 0 1px #fff2;
+}
+
+/* Focus rings */
+:where(a,button,.btn,.chip):focus-visible{
+  outline:0;
+  box-shadow: 0 0 0 3px rgba(0,0,0,.65), 0 0 0 5px var(--ring);
+}
+
+/* Responsive tweaks */
+@media (max-width: 900px){
+  .tagline{ font-size: clamp(1.6rem, 4vw + .6rem, 2.5rem) }
+  .hero__overlay--centered{ gap:.7rem; padding:1.4rem .7rem 2.6rem }
+}
+@media (max-width: 640px){
+  .cta{ flex-direction:column }
+  .btn{ width:min(420px,92vw) }
+  .sub{ max-width: 88vw }
+  .kpis{ gap:.9rem 1.2rem }
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{ transition:none !important; animation:none !important }
+}
+
+</style>
+
+
+<script {{ nonce_attr() }} type="module">
+/**
+ * FundChamps • Scoreboard Hero Ultra v5.3
+ * All selectors and variables scoped by ROOT_ID for SaaS widget safety.
+ * (No global pollution — safe for multi-embed.)
+ */
+(() => {
+  const ROOT_ID = '{{ IDP }}';
+  const root = document.getElementById(ROOT_ID);
+  if (!root || root.dataset.mounted === '1') return;
+  root.dataset.mounted = '1';
+
+  const $  = (sel, r = root) => r.querySelector(sel);
+  const $$ = (sel, r = root) => [...r.querySelectorAll(sel)];
+
+  // === ELEMENT CACHE ===
+  const raisedEl    = $('[data-role="raised"]');
+  const goalEl      = $('[data-role="goal"]');
+  const pctEl       = $('[data-role="pct"]');
+  const trackEl     = $('.track');
+  const nativeMeter = $('meter.meter');
+  const chipBtns    = $$('.chip-btn[data-amt]');
+  const donateBtn   = $('#' + ROOT_ID + '-donate');
+  const donateAmtEl = donateBtn?.querySelector('.amt');
+  const monthlyTgl  = $('#' + ROOT_ID + '-monthly');
+  const shareBtn    = $('#' + ROOT_ID + '-share');
+  const shareLive   = $('#' + ROOT_ID + '-share-live');
+  const deadlineOut = $('#' + ROOT_ID + '-deadline');
+  const qrImg       = $('#' + ROOT_ID + '-qr');
+  const bannerDonate = document.querySelector('[data-cta="donate-banner"]');
+
+  // === CONSTANTS ===
+  const RAISED   = +root.dataset.raised  || 0;
+  const GOAL     = Math.max(1, +root.dataset.goal || 1);
+  const DEADLINE = root.dataset.deadline || '';
+  const CURRENCY = root.dataset.currency || 'USD';
+  const LOCALE   = navigator.language    || 'en-US';
+
+  const moneyFmt = new Intl.NumberFormat(LOCALE, {
+    style: 'currency', currency: CURRENCY, maximumFractionDigits: 0
+  });
+  const fmtMoney  = n => moneyFmt.format(Math.max(0, +n || 0));
+  const clampPct  = n => Math.max(0, Math.min(100, n));
+
+  // === RENDER HELPERS ===
+  function renderStats(raised = RAISED, goal = GOAL) {
+    const pct = clampPct((raised / goal) * 100);
+    raisedEl && (raisedEl.textContent = fmtMoney(raised));
+    goalEl   && (goalEl.textContent   = fmtMoney(goal));
+    pctEl    && (pctEl.textContent    = `• ${Math.round(pct)}%`);
+    trackEl  && trackEl.style.setProperty('--p', pct);
+    nativeMeter && (nativeMeter.value = Math.max(0, raised));
+  }
+  function updateLadder(raised = RAISED) {
+    $$('.ladder .rung').forEach(r => {
+      const threshold = +r.dataset.threshold || 0;
+      const frac = threshold ? Math.min(1, raised / threshold) : 1;
+      r.querySelector('.bar')?.style.setProperty('--fill', frac);
+    });
+  }
+  function decorateUrl(url, { amount = 0, freq = 'one_time', content = 'cta' } = {}) {
+    try {
+      const u   = new URL(url, location.href);
+      const cur = new URL(location.href);
+      ['utm_source','utm_medium','utm_campaign','utm_content']
+        .forEach(k => cur.searchParams.has(k) && !u.searchParams.has(k) &&
+                      u.searchParams.set(k, cur.searchParams.get(k)));
+      u.searchParams.set('utm_source',  u.searchParams.get('utm_source')  || 'hero');
+      u.searchParams.set('utm_content', u.searchParams.get('utm_content') || content);
+      amount && u.searchParams.set('amount',   amount);
+      freq   && u.searchParams.set('interval', freq);
+      return u.toString();
+    } catch { return url; }
+  }
+  function syncDonateUrl(amt = 0) {
+    const freq = monthlyTgl?.checked ? 'month' : 'one_time';
+    [donateBtn, bannerDonate].filter(Boolean).forEach(btn => {
+      btn.href = decorateUrl(btn.href, { amount: amt, freq });
+    });
+    donateAmtEl && (donateAmtEl.textContent = amt ? `+${fmtMoney(amt)}` : '');
+    if (qrImg && donateBtn) {
+      const qrUrl = new URL('https://api.qrserver.com/v1/create-qr-code/');
+      qrUrl.searchParams.set('size', '264x264');
+      qrUrl.searchParams.set('margin', '0');
+      qrUrl.searchParams.set('data', donateBtn.href);
+      qrImg.src = qrUrl.toString();
+    }
+  }
+
+  // === EVENTS ===
+  chipBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const toggled = btn.getAttribute('aria-pressed') === 'true';
+      chipBtns.forEach(b => b.setAttribute('aria-pressed', 'false'));
+      if (!toggled) btn.setAttribute('aria-pressed', 'true');
+      syncDonateUrl(toggled ? 0 : +btn.dataset.amt);
+    });
+  });
+  monthlyTgl?.addEventListener('change', () => {
+    const active = chipBtns.find(b => b.getAttribute('aria-pressed') === 'true');
+    syncDonateUrl(active ? +active.dataset.amt : 0);
+  });
+  window.addEventListener('keydown', e => {
+    const typing = /^(INPUT|TEXTAREA)$/.test(document.activeElement?.tagName) ||
+                   document.activeElement?.isContentEditable;
+    if (!typing && (e.key === 'd' || e.key === 'D')) donateBtn?.click();
+  });
+  shareBtn?.addEventListener('click', async () => {
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: document.title, text: 'Support our season!', url: location.href });
+        shareLive.textContent = 'Shared.';
+      } else if (navigator.clipboard) {
+        await navigator.clipboard.writeText(location.href);
+        shareLive.textContent = 'Link copied.';
+      }
+    } catch {}
+    setTimeout(() => (shareLive.textContent = ''), 1500);
+  });
+
+  // === DEADLINE COUNTDOWN ===
+  function tickDeadline() {
+    if (!DEADLINE || !deadlineOut) return;
+    const ms = Math.max(0, Date.parse(DEADLINE) - Date.now());
+    const s  = Math.floor(ms / 1000);
+    const d  = Math.floor(s / 86400);
+    const h  = Math.floor((s % 86400) / 3600);
+    const m  = Math.floor((s % 3600) / 60);
+    deadlineOut.textContent =
+      ms <= 0 ? 'Ended' :
+      d  ? `${d}d ${h}h` :
+      h  ? `${h}h ${m}m` : `${m}m`;
+    deadlineOut.dateTime = new Date(Date.parse(DEADLINE)).toISOString();
+  }
+  if (DEADLINE) {
+    tickDeadline();
+    const t = setInterval(tickDeadline, 30_000);
+    addEventListener('pagehide', () => clearInterval(t), { once: true });
+  }
+
+  // === INIT ===
+  renderStats();
+  updateLadder();
+  syncDonateUrl(0);
+
+  // === OPTIONAL: Live API Poll ===
+  (async () => {
+    try {
+      const res = await fetch('/api/totals', { headers: { Accept: 'application/json' }, cache: 'no-store' });
+      if (!res.ok) return;
+      const { raised, goal } = await res.json();
+      renderStats(+raised || RAISED, +goal || GOAL);
+      updateLadder(+raised || RAISED);
+    } catch {}
+  })();
+})();
+</script>
+

@@ -1,0 +1,245 @@
+/* ════════════════════════════════════════════════════════════
+   FundChamps • SV-Elite v5.0  ✦  “Luxe Glass” refactor (scoped)
+   All rules intentionally scoped under .fc-root — NO global leak
+   ════════════════════════════════════════════════════════════ */
+
+/* ───────── 0. USAGE NOTE ─────────
+   Ensure component root contains the class: <section class="fc-root"> ... </section>
+   This keeps variables and styles strictly isolated to the component.
+*/
+
+/* ───────── 1. TOKENS ───────── */
+@layer fc-tokens {.fc-root {.fc-root --fc-brand: #facc15;
+    --fc-ring: color-mix(in srgb, .fc-root var(--fc-brand) 68%, .fc-root transparent);
+    --fc-ink: #e9eef9;
+    --fc-ink-2: #cbd5e1;
+    --fc-bg-1: #10141d;
+    --fc-bg-2: #0b0e15;
+    --fc-brd-1: #ffffff14;
+    --fc-brd-2: #ffffff2e;
+    --fc-radius: 18px;
+    --fc-shadow-1: 0 12px 34px rgba(0, .fc-root 0, .fc-root 0, .fc-root .36);
+    --fc-glass-blur: 22px;
+    color-scheme: dark light;
+  }
+
+  /* respect system light mode but still scoped */
+  @media (prefers-color-scheme: light) {.fc-root {.fc-root --fc-bg-1: #fafafa;
+      --fc-bg-2: #e9eef9;
+      --fc-ink: #1e293b;
+      --fc-ink-2: #475569;
+    }
+  }
+}
+
+/* ───────── 2. HELPERS ───────── */
+@layer fc-helpers {.fc-root .fc-btn {.fc-root display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: .4rem;
+    padding: .68rem 1rem;
+    border-radius: 999px;
+    font: 900 .92rem/1 Inter, .fc-root system-ui, .fc-root -apple-system;
+    background: linear-gradient(180deg, .fc-root #fffbe9, .fc-root var(--fc-brand));
+    color: #111;
+    border: 1.5px solid var(--fc-brand);
+    box-shadow: 0 3px 18px #facc1540, .fc-root 0 1px 0 #ffffff80 inset;
+    transition: transform .18s, box-shadow .18s;
+  }
+  .fc-root .fc-btn:hover {transform: translateY(-2px) scale(1.015); }
+  .fc-root .fc-btn:active {transform: translateY(0) scale(.98); }
+  .fc-root .fc-btn:focus-visible {outline: 0; box-shadow: 0 0 0 3px var(--fc-ring); }
+
+  .fc-root .fc-text-muted {color: var(--fc-ink-2); }
+  .fc-root .fc-strong {color: var(--fc-ink); font-weight: 800; }
+  .fc-root .fc-hidden {.fc-root display: none !important; }
+}
+
+/* ───────── 3. TILE GRID ───────── */
+@layer fc-tiles {.fc-root .fc-tiles {.fc-root --g: clamp(1rem, .fc-root 2vmin, .fc-root 1.6rem);
+    width: min(75rem, .fc-root 96vw);
+    margin: clamp(.8rem, .fc-root 2.5vh, .fc-root 2rem) auto 0;
+    padding-inline: clamp(.75rem, .fc-root 2vw, .fc-root 1.25rem);
+    display: grid;
+    gap: var(--g);
+    grid-template-columns: repeat(auto-fit, .fc-root minmax(260px, 1fr));
+    contain: layout;
+  }
+
+  .fc-root .fc-tile {.fc-root position: relative;
+    display: grid;
+    gap: .6rem;
+    min-height: 10rem;
+    padding: 1.25rem;
+    border-radius: var(--fc-radius);
+    background:
+      radial-gradient(120% 160% at 50% -60%, .fc-root rgba(255, .fc-root 255, .fc-root 255, .fc-root .04) 0%, .fc-root transparent 60%), .fc-root linear-gradient(180deg, .fc-root var(--fc-bg-1), .fc-root var(--fc-bg-2));
+    border: 1px solid var(--fc-brd-1);
+    color: var(--fc-ink);
+    box-shadow: var(--fc-shadow-1);
+    transition: transform .35s cubic-bezier(.18, .fc-root .8, .fc-root .32, .fc-root 1.15), .fc-root box-shadow .28s, .fc-root border-color .28s;
+    will-change: transform;
+    backdrop-filter: blur(var(--fc-glass-blur)) saturate(135%);
+    isolation: isolate;
+  }
+
+  /* 3-D tilt only when appropriate */
+  @media (hover:hover) and (prefers-reduced-motion:no-preference) {.fc-root .fc-tile:hover {.fc-root transform: rotateX(4deg) rotateY(-4deg) translateY(-6px);
+      border-color: var(--fc-brd-2);
+      box-shadow: 0 24px 48px rgba(0, .fc-root 0, .fc-root 0, .fc-root .45), 0 0 0 1px var(--fc-ring) inset;
+    }
+  }
+
+  .fc-root .fc-badge {.fc-root font: 800 .74rem Inter, system-ui;
+    border-radius: 999px;
+    padding: .3rem .68rem;
+    display: inline-grid;
+    place-items: center;
+  }
+
+  .fc-root .fc-badge--live {.fc-root background: #18210a;
+    color: #d7ff7a;
+    border-color: #315516;
+    animation: fc-glow 2s ease-in-out infinite;
+  }
+  @keyframes fc-glow {.fc-root 0%, .fc-root 100% {.fc-root box-shadow: 0 0 0 0 #d7ff7a56; }
+    50% {box-shadow: 0 0 0 10px #d7ff7a00; }
+  }
+
+  .fc-root .fc-ttl {.fc-root font: 1000 1.2rem/1.15 Poppins, ui-sans-serif;
+    color: #fff;
+    margin: 0;
+  }
+  .fc-root .fc-copy {.fc-root font: 600 .97rem/1.35 Inter, system-ui;
+    color: var(--fc-ink-2);
+    margin: 0;
+  }
+
+  /* mini-tier: glass accent variant used inside tiles */
+  .fc-root .mini-tier {.fc-root position: relative;
+    isolation: isolate;
+    border-radius: 12px;
+    background: rgba(250, .fc-root 204, .fc-root 21, .fc-root .08);
+    border: 1px solid rgba(255, .fc-root 255, .fc-root 255, .13);
+    padding: .55rem .5rem .48rem;
+    backdrop-filter: blur(14px) saturate(120%);
+  }
+  .fc-root .mini-tier::before {.fc-root content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(140deg, .fc-root rgba(255, .fc-root 255, .fc-root 255, .fc-root .07) 0%, transparent 40%);
+  }
+  .fc-root .mini-tier.is-premium {border-color: var(--fc-brand); }
+
+  .fc-root .fc-actions {display:flex; gap:.55rem; margin-top:.4rem; align-items:center; }
+  .fc-root .fc-link-alt {.fc-root font: 750 .95rem Inter, system-ui; text-decoration: none; color: var(--fc-brand); }
+  .fc-root .fc-link-alt:hover {.fc-root text-decoration: underline; }
+}
+
+/* ───────── 4. CENTERED MODAL ───────── */
+@layer fc-modal {.fc-root .fc-modal {.fc-root position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 1.2rem;
+    background: rgba(0, .fc-root 0, .fc-root 0, .65);
+    backdrop-filter: blur(4px);
+    opacity: 0; pointer-events: none; transition: opacity .28s ease;
+    overscroll-behavior: contain; z-index: 9999;
+  }
+  .fc-root .fc-modal[open] {opacity: 1; pointer-events: auto; }
+
+  .fc-root .fc-modal__panel {.fc-root width: 100%; max-width: 760px; max-height: 92vh;
+    display: flex; flex-direction: column;
+    border-radius: 22px; overflow: hidden; position: relative;
+    background: #0e1117; color: #e8ecf6;
+    box-shadow: 0 26px 68px rgba(0, .fc-root 0, .fc-root 0, .fc-root .66), .fc-root 0 2px 16px rgba(0, .fc-root 0, .fc-root 0, .fc-root .4);
+    transform: translateY(20px) scale(.97); opacity: 0;
+    transition: transform .34s cubic-bezier(.2, .fc-root .9, .fc-root .3, .fc-root 1.15), opacity .34s;
+  }
+  .fc-root .fc-modal[open] .fc-modal__panel {transform: none; opacity: 1; }
+
+  .fc-root .fc-modal__bar {.fc-root padding: 1.1rem 1.6rem; background: #0e1117;
+    display:flex; align-items:center; gap:.6rem;
+    border-bottom: 1px solid var(--fc-brd-2);
+    box-shadow: 0 1px 0 rgba(255, .fc-root 255, .fc-root 255, .05) inset;
+  }
+  .fc-root .fc-modal__title {.fc-root font: 1000 1.25rem Poppins, ui-sans-serif; margin:0; flex:1; }
+  .fc-root .fc-modal__close {font-size: 1.35rem; color: #e8ecf6; background: transparent; border: none;
+    padding: .15rem .4rem; border-radius: 8px; transition: background .15s;
+  }
+  .fc-root .fc-modal__close:hover {.fc-root background: rgba(255, .fc-root 255, .fc-root 255, .06); }
+  .fc-root .fc-modal__body {flex: 1; padding: 1.6rem; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--fc-brand) transparent;
+  }
+  .fc-root .fc-modal__body::-webkit-scrollbar {width: 8px; }
+  .fc-root .fc-modal__body::-webkit-scrollbar-thumb {background: var(--fc-brand); border-radius: 4px; }
+
+  .fc-root .fc-modal__body::after {.fc-root content: "";
+    position: sticky; bottom: 0; left: 0; width: 100%; height: 2.8rem;
+    pointer-events: none;
+    background: linear-gradient(to bottom, .fc-root transparent, #0e1117 90%);
+  }
+
+  .fc-root .skeleton {.fc-root background: #1b2230; border-radius: 8px; margin: 12px 0; }
+}
+
+/* ───────── 5. REVEAL FX ───────── */
+@layer fc-fx {.fc-root [data-fc-reveal] .fc-tile {.fc-root opacity: 0; transform: translateY(24px) scale(.97);
+    transition: opacity .55s ease, transform .55s ease;
+  }
+  .fc-root [data-fc-reveal] .fc-tile.is-visible {.fc-root opacity: 1; transform: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {.fc-root [data-fc-reveal] .fc-tile {opacity: 1 !important; transform: none !important; transition: none !important;
+    }
+    .fc-root .fc-tiles .fc-tile {.fc-root transition: none !important; }
+  }
+}
+
+/* ───────── 6. UTILITY: compact flip-card (for tiers) ───────── */
+@layer fc-flip {.fc-root .fc-flip {perspective: 1400px;
+    position: relative;
+    transform-style: preserve-3d;
+  }
+
+  .fc-root .fc-flip .fc-flip-inner {width: 100%; height: 100%;
+    transform-style: preserve-3d; transition: transform .42s ease;
+    position: relative;
+  }
+
+  .fc-root .fc-flip.flipped .fc-flip-inner {transform: rotateY(180deg); }
+
+  .fc-root .fc-flip-front, .fc-root .fc-flip-back {backface-visibility: hidden; transform-style: preserve-3d;
+    position: absolute; inset: 0; border-radius: inherit;
+  }
+  .fc-root .fc-flip-back {transform: rotateY(180deg); }
+}
+/* === CRISP MODE PATCH === */
+.fc-root, .fc-root * {-webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+.fc-root .fc-tile {backdrop-filter: none !important;
+}
+.fc-root .fc-tile::before {content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  backdrop-filter: blur(var(--fc-glass-blur)) saturate(135%);
+  background: inherit;
+  z-index: 0;
+}
+.fc-root .fc-tile> * {.fc-root position: relative; z-index: 1; }
+
+@media (hover:hover) {.fc-root .fc-tiles .fc-tile:hover {.fc-root transform: translateY(-6px) scale(1.015); /* no 3D blur */
+    border-color: var(--fc-brd-2);
+    box-shadow: 0 18px 36px rgba(0, .fc-root 0, .fc-root 0, .38);
+  }
+}
+
+.fc-root .fc-tiles {
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+/* End scoped stylesheet */

@@ -1,7 +1,21 @@
-{# =============== Sponsor Leaderboard — Pro 5.1 (CSP/a11y/perf/branding) =============== #}
-{% set NONCE      = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{# ---------- Nonce (define only if not imported) ---------- #}
+{% if nonce_attr is not defined %}
+  {% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
+  {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% endif %}
 
+<style {{ nonce_attr() }}>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+
+{# =================== Sponsor Leaderboard — Agency Elite v6 (Slim) =================== #}
+{# --------- Configurable/White-label --------- #}
 {% set _seed      = (shoutouts if shoutouts is defined and shoutouts else []) %}
 {% set _team_id   = (team.team_id if team and team.team_id else 'global') %}
 {% set _brand     = (team.theme_color if team and team.theme_color else '#facc15') %}
@@ -10,396 +24,283 @@
 
 <section
   id="sponsor-leaderboard"
-  class="lb lb--sticky print:hidden"
+  class="lb lb--elite lb--slim print:hidden"
   role="region"
   aria-label="Live sponsor shoutouts"
+  tabindex="-1"
   style="--accent: {{ _brand }}; --header-h: var(--fc-header-h, 0px)"
   data-team-key="{{ _team_id }}"
   data-api="{{ API_SHOUTS }}"
-  data-vip-tiers="Platinum,Gold"
+  data-vip-tiers="Platinum,Gold,Silver,Bronze"
   data-ttl-seconds="86400"
-  data-max-store="48"
-  data-dedupe-window-seconds="600"
+  data-max-store="64"
+  data-dedupe-window-seconds="900"
   data-default-speed="normal"
   data-autoscroll="1"
-  data-brand-chip="1"  {# set to "0" to hide FundChamps chip #}
->
-  <style {{ nonce_attr() }}>
-    /* ===== Base & ambience (matches header aesthetic) ===== */
-    .lb--sticky{ position:sticky; top:var(--header-h); z-index:40 }
-    .lb{
-      background:
-        linear-gradient(180deg, rgba(10,11,15,.86), rgba(10,11,15,.66)),
-        radial-gradient(120% 100% at 50% -30%, color-mix(in srgb, var(--accent) 22%, transparent) 0%, transparent 60%);
-      -webkit-backdrop-filter: blur(10px) saturate(140%);
-      backdrop-filter: blur(10px) saturate(140%);
-      border-bottom: 1px solid rgb(255 255 255 / 10%);
-      box-shadow: 0 8px 28px rgb(0 0 0 / 28%);
-      isolation:isolate;
-    }
-    .sr-only{ position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0 }
+  data-brand-chip="1">
+  <p class="sr-only" aria-live="polite" id="sr-shout">
+    Shoutouts are live — every donation counts!
+  </p>
+  <p class="sr-only" aria-live="assertive" aria-atomic="true" id="sr-vip"></p>
 
-    /* ===== Viewport with edge fade ===== */
-    .lb__viewport{
-      max-width:min(1200px,96vw);
-      margin-inline:auto;
-      padding:.45rem .6rem;
-      overflow:hidden; position:relative;
-      --fade: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
-    }
-    @supports (mask-image: linear-gradient(black, white)){
-      .lb__viewport{ mask-image:var(--fade); -webkit-mask-image:var(--fade); }
-    }
-
-    /* ===== Rail + marquee ===== */
-    .lb__rail{ display:flex; align-items:center; gap:1rem; padding:.15rem .3rem; will-change:transform }
-    @keyframes lb-marquee{ from{ transform:translateX(0) } to{ transform:translateX(-50%) } }
-    .lb__marquee{ animation: lb-marquee var(--speed-s,24s) linear infinite }
-    #sponsor-leaderboard:hover .lb__marquee{ animation-play-state: paused }
-
-    /* ===== Pills (shares header look) ===== */
-    .pill{
-      display:inline-flex; align-items:center; gap:.5rem;
-      max-width:clamp(12rem,36vw,30rem);
-      padding:.42rem .72rem; border-radius:999px; font-weight:900; letter-spacing:-.01em;
-      background:rgb(255 255 255 / 8%); border:1px solid rgb(255 255 255 / 14%); color:#e8edf6;
-      box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
-      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-    }
-    .pill .txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
-    .pill .who{ color:#fff; font-weight:1000 }
-
-    /* Tier tints */
-    [data-tier="Platinum"]{ color:#e0e7ff; text-shadow:0 0 14px #a78bfa }
-    [data-tier="Gold"]    { color:#fde68a; text-shadow:0 0 10px #facc15 }
-    [data-tier="Silver"]  { color:#e5e7eb }
-    [data-tier="Bronze"]  { color:#fbbf24 }
-
-    /* VIP entrance pulse (motion-safe) */
-    .vip{ box-shadow:0 0 0 0 rgba(250,204,21,0) }
-    @media (prefers-reduced-motion: no-preference){
-      .vip{ animation: lbVip 1.05s ease-out 1 }
-      @keyframes lbVip{
-        0%,100%{ box-shadow:0 0 0 0 rgba(250,204,21,0); transform:scale(1) }
-        50%    { box-shadow:0 0 22px 2px rgba(250,204,21,.35); transform:scale(1.03) }
-      }
-    }
-
-    .headline{ color:#fde68a; text-shadow:0 0 12px rgb(250 204 21 / 35%) }
-    .pill.placeholder{ opacity:.92; border-style:dashed; color:#e5e7eb }
-    .placeholder .link-btn{ all:unset; cursor:pointer; text-decoration:underline; font-weight:900 }
-    .placeholder .link-btn:focus-visible{ outline:2px solid #fde047; outline-offset:2px; border-radius:.35rem }
-
-    /* Controls cluster */
-    .lb__controls{ margin-left:auto; display:inline-flex; align-items:center; gap:.5rem }
-    .ctrl{
-      display:inline-flex; align-items:center; gap:.45rem; font-weight:900; font-size:.9rem;
-      background:rgb(255 255 255 / 8%); border:1px solid rgb(255 255 255 / 14%); color:#e5e7eb; border-radius:999px; padding:.38rem .68rem;
-      transition: background .2s ease;
-    }
-    .ctrl:hover{ background:rgb(255 255 255 / 12%) }
-    .ctrl[aria-pressed="true"]{ background:rgb(255 255 255 / 16%) }
-    .offline-pill{ background:#7f1d1d; border-color:#fecaca; color:#fff; display:none }
-    .offline-pill.show{ display:inline-flex }
-
-    /* FundChamps brand chip (md+) */
-    .brand-chip{ display:none; align-items:center; gap:.4rem; font-weight:900; font-size:.78rem;
-      padding:.35rem .6rem; border-radius:999px; color:#e8ecf3; border:1px solid rgb(255 255 255 / 14%);
-      background:linear-gradient(180deg, rgb(255 255 255 / 8%), rgb(255 255 255 / 4%)) }
-    @media (min-width: 720px){ .brand-chip{ display:inline-flex } }
-    .brand-chip svg{ display:block }
-
-    /* Prefs */
-    @media (prefers-reduced-motion: reduce){ .lb__marquee{ animation:none!important } }
-    @media (prefers-reduced-transparency: reduce), (prefers-contrast: more){
-      .lb{ background:linear-gradient(180deg, rgb(12 14 18 / .96), rgb(12 14 18 / .86)) }
-      .pill{ background:rgb(255 255 255 / 14%) }
-      .headline{ text-shadow:none }
-    }
-    @media (forced-colors: active){
-      .lb{ border-bottom:1px solid CanvasText }
-      .pill,.brand-chip{ border:1px solid CanvasText; text-shadow:none; background:Canvas; color:CanvasText }
-      .headline{ color:CanvasText }
-    }
-  </style>
-
-  <!-- Screenreader live regions -->
-  <p class="sr-only" aria-live="polite"    id="sr-shout">{{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else 'Shoutouts ready.' }}</p>
-  <p class="sr-only" aria-live="assertive" id="sr-vip" aria-atomic="true"></p>
-
-  <!-- Viewport -->
-  <div class="lb__viewport">
+  <div class="lb__viewport" role="presentation">
     <div class="lb__rail lb__marquee" id="ticker-rail" role="list" aria-busy="true">
-      {# ---- SSR seed items (optional) ---- #}
+
+      {# — Optional demo seeds (safe to remove) — #}
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Platinum" data-sponsor="Nike" data-msg="Just do it — Support the team!" aria-label="✨ Nike: Just do it — Support the team!">
+        ✨ <span class="txt"><span class="who">Nike</span><span class="msg">Just do it — Support the team!</span></span>
+      </span>
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Gold" data-sponsor="Austin Coffee" data-msg="Fueling our champions with the best brew in town!">
+        🏅 <span class="txt"><span class="who">Austin Coffee</span><span class="msg">Fueling our champions with the best brew in town!</span></span>
+      </span>
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Silver" data-sponsor="Texas BBQ Co." data-msg="Pit-smoked perfection — just like our team!">
+        🎉 <span class="txt"><span class="who">Texas BBQ Co.</span><span class="msg">Pit-smoked perfection — just like our team!</span></span>
+      </span>
+      <span role="listitem" class="pill" tabindex="-1" data-tier="Bronze" data-sponsor="Local Brewery" data-msg="Cheers to champions — beer for the win!">
+        🥉 <span class="txt"><span class="who">Local Brewery</span><span class="msg">Cheers to champions — beer for the win!</span></span>
+      </span>
+
+      {# — Your server-provided seeds (objects with who,msg,tier) — #}
       {% for s in _seed %}
-        {% set t = (s.tier or 'General')|string %}
-        {% set badge = '✨' if t|lower=='platinum' else '🏅' if t|lower=='gold' else '🎉' if t|lower=='silver' else '🥉' if t|lower=='bronze' else '🔥' %}
-        <span role="listitem" class="pill" data-tier="{{ t }}" data-sponsor="{{ s.sponsor|e }}" data-msg="{{ s.msg|e }}">
-          {{ badge }} <span class="txt"><span class="who">{{ s.sponsor }}</span> {{ s.msg }}</span>
-        </span>
+      <span role="listitem" class="pill" tabindex="-1"
+            {% if s.tier %}data-tier="{{ s.tier }}"{% endif %}
+            aria-label="{{ s.tier or '' }} {{ s.who or 'Sponsor' }}: {{ s.msg or '' }}">
+        {{ '✨' if s.tier == 'Platinum' else ('🏅' if s.tier == 'Gold' else ('🎉' if s.tier == 'Silver' else '🥉')) }}
+        <span class="txt"><span class="who">{{ s.who or 'Anonymous Sponsor' }}</span><span class="msg">{{ s.msg or '' }}</span></span>
+      </span>
       {% endfor %}
 
-      <!-- Ongoing headline -->
-      <span aria-hidden="true" class="pill headline">🏆 Sponsor leaderboard is live — real-time shoutouts!</span>
-
-      {% if not _seed %}
-      <span id="shoutouts-empty" role="listitem" class="pill placeholder">
-        No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>
+      <span aria-hidden="true" class="pill headline select-none" tabindex="-1">
+        🏆 Sponsor leaderboard is live — real-time shoutouts!
       </span>
-      {% endif %}
 
-      <!-- Controls -->
+      <span id="shoutouts-empty" role="listitem" class="pill placeholder" aria-label="No shoutouts yet">
+        No shoutouts yet —
+        <button type="button" class="link-btn" id="shoutouts-empty-cta" aria-label="Be the first to cheer us on">be the first 🎉</button>
+      </span>
+
       <div class="lb__controls" role="group" aria-label="Ticker controls">
-        <button type="button" class="ctrl" id="ticker-ctrl" aria-pressed="false" aria-label="Pause live ticker">⏸ Pause</button>
-        <button type="button" class="ctrl" id="speed-ctrl"  aria-pressed="false" aria-label="Speed: Normal" data-speed="normal">⏩ Speed</button>
-        <span class="pill offline-pill" id="offline-pill">⚠ Offline — queued</span>
-
-        <!-- Tasteful FundChamps credit -->
+        <button type="button" class="ctrl" id="ticker-ctrl"  aria-pressed="false" aria-label="Pause live ticker">⏸</button>
+        <button type="button" class="ctrl" id="speed-ctrl"   aria-pressed="false" aria-label="Speed: Normal" data-speed="normal">⏩</button>
+        <span class="pill offline-pill" id="offline-pill" style="display:none">⚠ Offline — queued</span>
         <span class="brand-chip" id="lb-brand-chip" aria-hidden="true">
-          <svg viewBox="0 0 24 24" width="14" height="14"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" fill="currentColor"/><path d="M9 12l2 2 4-4" stroke="#0b0b0c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 2l7 4v6c0 5-3.5 8-7 10-3.5-2-7-5-7-10V6l7-4z" fill="currentColor"/><path d="M9 12l2 2 4-4" stroke="#0b0b0c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
           Powered by FundChamps
         </span>
       </div>
     </div>
   </div>
-
-  <script {{ nonce_attr() }}>
-  (() => {
-    if (window.__LB_V51__) return; window.__LB_V51__ = true;
-
-    const root   = document.getElementById('sponsor-leaderboard');
-    const rail   = document.getElementById('ticker-rail');
-    const ctrl   = document.getElementById('ticker-ctrl');
-    const speedC = document.getElementById('speed-ctrl');
-    const sr     = document.getElementById('sr-shout');
-    const srVIP  = document.getElementById('sr-vip');
-    const offEl  = document.getElementById('offline-pill');
-    const brandChip = document.getElementById('lb-brand-chip');
-    if (!root || !rail) return;
-
-    /* ---------- Config ---------- */
-    const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
-    const saveData      = navigator.connection?.saveData || String(navigator.connection?.effectiveType||'').includes('2g');
-    const REDUCED       = !!(prefersReduce || saveData);
-    const AUTOSCROLL    = root.getAttribute('data-autoscroll') !== '0';
-    const VIP_TIERS     = (root.getAttribute('data-vip-tiers') || '').split(',').map(s=>s.trim().toLowerCase()).filter(Boolean);
-    const TTL           = +root.getAttribute('data-ttl-seconds') || 86400;
-    const MAX_STORE     = +root.getAttribute('data-max-store') || 48;
-    const DEDUPE_MS     = (+root.getAttribute('data-dedupe-window-seconds') || 600) * 1000;
-    const DEFAULT_SPD   = (root.getAttribute('data-default-speed') || 'normal').toLowerCase();
-    const TEAM_KEY      = root.getAttribute('data-team-key') || 'global';
-    const API           = root.getAttribute('data-api') || '/api/shoutouts';
-    const STORE_KEY     = `fc_sponsor_shoutouts_v5:${TEAM_KEY}`;
-    const SHOW_BRAND    = root.getAttribute('data-brand-chip') !== '0';
-    if (!SHOW_BRAND) brandChip?.remove();
-
-    /* ---------- Speed ---------- */
-    const speedMap = { slow: 32, normal: 24, fast: 16 };
-    function setSpeed(mode){
-      const m = (mode in speedMap) ? mode : 'normal';
-      rail.style.setProperty('--speed-s', (speedMap[m] || 24) + 's');
-      speedC?.setAttribute('data-speed', m);
-      speedC?.setAttribute('aria-label', `Speed: ${m[0].toUpperCase()}${m.slice(1)}`);
-    }
-    function tuneSpeed(){
-      try{
-        const viewport = root.querySelector('.lb__viewport'); if (!viewport) return;
-        const w = rail.scrollWidth || 1, v = viewport.clientWidth || 1;
-        const factor = Math.min(2.25, Math.max(.9, w / (v * 2)));
-        const base = speedMap[speedC?.dataset.speed || 'normal'] || 24;
-        rail.style.setProperty('--speed-s', (base * factor) + 's');
-      }catch{}
-    }
-    setSpeed(REDUCED ? 'slow' : DEFAULT_SPD);
-    speedC?.addEventListener('click', () => {
-      const order = ['slow','normal','fast'];
-      const idx = order.indexOf(speedC.dataset.speed || 'normal');
-      setSpeed(order[(idx + 1) % order.length]); requestAnimationFrame(tuneSpeed);
-    }, { passive:true });
-    addEventListener('resize', () => requestAnimationFrame(tuneSpeed), { passive:true });
-    try { new ResizeObserver(() => requestAnimationFrame(tuneSpeed)).observe(rail); } catch {}
-
-    /* ---------- Pause / Play & visibility ---------- */
-    function setPaused(paused){
-      ctrl?.setAttribute('aria-pressed', paused ? 'true' : 'false');
-      if (ctrl){
-        ctrl.textContent = paused ? '▶ Play' : '⏸ Pause';
-        ctrl.setAttribute('aria-label', paused ? 'Play live ticker' : 'Pause live ticker');
-      }
-      rail.style.animationPlayState = paused ? 'paused' : 'running';
-    }
-    ctrl?.addEventListener('click', () => setPaused(ctrl.getAttribute('aria-pressed') !== 'true'));
-    if (REDUCED || !AUTOSCROLL) setPaused(true);
-    try{
-      const viewport = root.querySelector('.lb__viewport');
-      const io = new IntersectionObserver((ents)=> ents.forEach(ent => setPaused(!ent.isIntersecting || REDUCED || !AUTOSCROLL)), { threshold:.01 });
-      viewport && io.observe(viewport);
-      addEventListener('pagehide', () => io.disconnect(), { once:true });
-    }catch{}
-
-    /* ---------- Local store ---------- */
-    const loadStore = () => {
-      try{
-        const raw = JSON.parse(localStorage.getItem(STORE_KEY) || '[]');
-        const cutoff = Date.now() - TTL*1000;
-        return raw.filter(x => (x.ts||0) > cutoff).slice(0, MAX_STORE);
-      }catch{ return []; }
-    };
-    const saveStore = (list) => { try{ localStorage.setItem(STORE_KEY, JSON.stringify(list.slice(0, MAX_STORE))); }catch{} };
-
-    /* ---------- Empty state ---------- */
-    function wireEmptyCTA(){
-      ['shoutouts-empty-cta','shoutouts-empty-cta-2'].forEach(id=>{
-        const btn = document.getElementById(id);
-        btn?.addEventListener('click', async ()=>{
-          try{
-            if (window.fc?.handleShare){ await window.fc.handleShare('ticker'); return; }
-            if (navigator.share){ await navigator.share({ title: document.title, text:'Support our season!', url: location.href }); return; }
-            await navigator.clipboard.writeText(location.href);
-          }catch{}
-        }, { passive:true });
-      });
-    }
-    function hideEmpty(){ document.getElementById('shoutouts-empty')?.remove(); }
-    function ensureEmptyState(){
-      const hasReal = !!rail.querySelector('.pill:not(.headline):not(.placeholder)');
-      const exists  = !!document.getElementById('shoutouts-empty');
-      if (!hasReal && !exists){
-        const span = document.createElement('span');
-        span.id = 'shoutouts-empty'; span.className='pill placeholder'; span.setAttribute('role','listitem');
-        span.innerHTML = 'No shoutouts yet — <button type="button" class="link-btn" id="shoutouts-empty-cta-2" aria-label="Be the first to cheer us on">be the first 🎉</button>';
-        const after = rail.querySelector('.headline');
-        rail.insertBefore(span, after ? after.nextSibling : rail.firstChild);
-      }
-      wireEmptyCTA();
-    }
-
-    /* ---------- De-dupe + render ---------- */
-    const recent = new Map();
-    const norm = s => String(s||'').trim().toLowerCase();
-    const keyOf = (sponsor,msg) => `${norm(sponsor)}|${norm(msg)}`;
-    const esc = t => String(t).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
-
-    // Prime from SSR
-    (() => {
-      const now = Date.now();
-      rail.querySelectorAll('.pill[data-sponsor][data-msg]').forEach(el=>{
-        const k = keyOf(el.dataset.sponsor, el.dataset.msg);
-        if (!recent.has(k)) recent.set(k, { ts: now, el, count: 1 });
-      });
-    })();
-
-    function renderPill({ tier='General', sponsor='Anonymous', msg='supported the team!' }, { vip=false, prepend=true }={}){
-      const badge = /platinum/i.test(tier) ? '✨' : /gold/i.test(tier) ? '🏅' : /silver/i.test(tier) ? '🎉' : /bronze/i.test(tier) ? '🥉' : '🔥';
-      const el = document.createElement('span');
-      el.className = 'pill' + (vip ? ' vip' : '');
-      el.setAttribute('role','listitem');
-      el.dataset.tier = tier; el.dataset.sponsor = sponsor; el.dataset.msg = msg;
-      el.innerHTML = `${badge} <span class="txt"><span class="who">${esc(sponsor)}</span> ${esc(msg)}</span>`;
-      (prepend ? rail.prepend(el) : rail.appendChild(el));
-      (vip ? srVIP : sr).textContent = `${sponsor} ${msg}`;
-      return el;
-    }
-
-    function addItemRaw(data){
-      if (!data) return;
-      hideEmpty();
-      const now = Date.now();
-      const tier = String(data.tier || 'General');
-      const sponsor = data.sponsor || 'Anonymous';
-      const msg = data.msg || 'supported the team!';
-      const k = keyOf(sponsor, msg);
-      const isVIP = VIP_TIERS.includes(tier.toLowerCase());
-
-      const seen = recent.get(k);
-      if (seen && now - seen.ts <= DEDUPE_MS){
-        seen.count = (seen.count||1) + 1; seen.ts = now;
-        const bump = seen.el.querySelector('.x-times') || Object.assign(document.createElement('b'), { className:'x-times' });
-        bump.textContent = ` ×${seen.count}`; bump.style.marginLeft='2px';
-        seen.el.appendChild(bump);
-        rail.prepend(seen.el);
-        return;
-      }
-
-      const el = renderPill({ tier, sponsor, msg }, { vip:isVIP, prepend:true });
-      recent.set(k, { ts: now, el, count: 1 });
-
-      const cached = loadStore();
-      cached.unshift({ sponsor, msg, tier, ts: now });
-      saveStore(cached);
-      requestAnimationFrame(tuneSpeed);
-    }
-
-    /* ---------- Clone for seamless loop ---------- */
-    function cloneLoopOnce(){
-      if (rail.__clonedOnce) return; rail.__clonedOnce = true;
-      const items = [...rail.querySelectorAll('.pill:not(.placeholder):not(.headline)')];
-      if (!items.length) return;
-      items.forEach(node => {
-        const c = node.cloneNode(true);
-        c.setAttribute('aria-hidden','true'); c.tabIndex = -1; c.dataset.clone = '1';
-        rail.appendChild(c);
-      });
-    }
-
-    /* ---------- Offline queue ---------- */
-    const offlineQueue = [];
-    const setOffline = on => offEl?.classList.toggle('show', !!on);
-    addEventListener('offline', () => setOffline(true));
-    addEventListener('online',  () => { setOffline(false); while (offlineQueue.length) addItemRaw(offlineQueue.shift()); });
-
-    /* ---------- Fetch helpers ---------- */
-    function fetchJSON(url, { timeout=10000 } = {}){
-      return new Promise((resolve, reject) => {
-        const c = new AbortController(); const id = setTimeout(() => c.abort(), timeout);
-        fetch(url, { headers:{ 'Accept':'application/json' }, signal:c.signal })
-          .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP '+r.status)))
-          .then(d => { clearTimeout(id); resolve(d); })
-          .catch(err => { clearTimeout(id); reject(err); });
-      });
-    }
-
-    /* ---------- Hydrate: cache → API ---------- */
-    async function hydrate(){
-      ensureEmptyState();
-      try{
-        const cached = loadStore(); if (cached?.length){ cached.slice().reverse().forEach(addItemRaw); }
-        const u = API.startsWith('http') ? new URL(API) : new URL(API, location.origin);
-        u.searchParams.set('team', TEAM_KEY);
-        const list = await fetchJSON(u.toString()).catch(()=>[]);
-        if (Array.isArray(list) && list.length){ list.slice().reverse().forEach(addItemRaw); }
-      }catch{} finally{
-        rail.removeAttribute('aria-busy');
-        ensureEmptyState();
-        cloneLoopOnce();
-        requestAnimationFrame(tuneSpeed);
-      }
-    }
-
-    /* ---------- Optional: Socket.IO live events ---------- */
-    try{
-      if (window.io && !window.__LB_SOCKET_BOUND__){
-        window.__LB_SOCKET_BOUND__ = true;
-        const socket = io();
-        socket.on('new_shoutout', (data) => (navigator.onLine ? addItemRaw(data) : offlineQueue.push(data)));
-      }
-    }catch{}
-
-    /* ---------- Public Event API ----------
-       window.dispatchEvent(new CustomEvent('fc:shoutout', {
-         detail: { sponsor:'Acme Co', msg:'backed the team!', tier:'Gold' }
-       }))
-    --------------------------------------- */
-    addEventListener('fc:shoutout', (e) => {
-      const d = e.detail || {};
-      (navigator.onLine ? addItemRaw : offlineQueue.push.bind(offlineQueue))(d);
-    });
-
-    // init
-    if ('requestIdleCallback' in window) requestIdleCallback(hydrate, { timeout:1200 }); else setTimeout(hydrate, 0);
-    if (REDUCED || !AUTOSCROLL) setPaused(true);
-    wireEmptyCTA();
-  })();
-  </script>
 </section>
+
+<style {{ nonce_attr() }}>
+/* Leaderboard — Agency Elite v6 (Slim) */
+.lb--slim{
+  --lb-h: 44px; --gap: .5rem; --pill-px: .7rem; --pill-py: .32rem; --fs: .84rem;
+  --rail-speed: 30s;
+  --bg:#0b0e15; --bg-rail:#0b0e15;
+  --pill:#1a1f2a; --pill-muted:#242a36;
+  --ink:#e9eef7; --muted:#ccd4df; --gold: var(--accent, #facc15);
+  --ring: color-mix(in srgb, var(--gold) 42%, transparent);
+  --radius: 999px; --shadow: 0 6px 24px rgba(0,0,0,.28);
+}
+.lb{ position:relative; padding:0; background:var(--bg); border-radius:.875rem; box-shadow:var(--shadow); overflow:hidden; }
+.lb__viewport{
+  position:relative; display:flex; align-items:center; justify-content:center;
+  height:var(--lb-h); padding:0 .5rem;
+  background:linear-gradient(180deg,#111418,#0c0f15);
+  border:1px solid rgba(255,255,255,.06);
+}
+.lb__viewport::before,.lb__viewport::after{
+  content:""; position:absolute; inset:0 auto 0 0; width:42px; pointer-events:none; z-index:2;
+  background:linear-gradient(90deg,#0c0f1500 0%, #0c0f15 100%);
+}
+.lb__viewport::after{ inset:auto 0 auto auto; transform:scaleX(-1); }
+@supports (-webkit-mask-image: linear-gradient(#000,#000)) or (mask-image: linear-gradient(#000,#000)){
+  .lb__viewport::before,.lb__viewport::after{display:none}
+  .lb__viewport{ -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
+                  mask-image:linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%); }
+}
+.lb__rail{ display:flex; align-items:center; gap:var(--gap); white-space:nowrap; will-change:transform; animation:fc-ticker var(--rail-speed) linear infinite; }
+.lb:hover .lb__rail,.lb:focus-within .lb__rail{ animation-play-state:paused; }
+
+.pill{
+  display:inline-flex; align-items:center; background:var(--pill); color:var(--ink);
+  padding:var(--pill-py) var(--pill-px); border-radius:var(--radius); font-weight:800; font-size:var(--fs); line-height:1;
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 0 0 1px rgba(0,0,0,.42);
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.pill:hover{ transform:translateY(-1px); }
+.pill .txt{ display:flex; flex-direction:column; margin-left:.45rem; }
+.pill .who{ color:var(--gold); font-weight:900; }
+.pill .msg{ color:var(--muted); font-weight:600; font-size:.78em; }
+.pill.placeholder{ background:var(--pill-muted); }
+.pill.headline{ font-weight:1000; color: color-mix(in srgb, var(--gold) 92%, #fff); letter-spacing:.01em; }
+
+.lb__controls{ display:inline-flex; align-items:center; gap:.25rem; margin-left:.25rem; }
+.ctrl{ background:var(--pill); color:var(--ink); border-radius:999px; padding:.28rem .6rem; font-size:.8rem; font-weight:900; line-height:1; border:1px solid rgba(255,255,255,.06); }
+.ctrl:hover{ background: color-mix(in srgb, var(--gold) 88%, #000); color:#0c0d10; }
+
+.brand-chip{ display:inline-flex; align-items:center; gap:.35rem; background:rgba(0,0,0,.72); color:var(--gold); padding:.26rem .55rem; border-radius:999px; font-size:.72rem; box-shadow:0 2px 6px rgba(0,0,0,.18); }
+
+/* VIP Accents */
+.pill[data-tier="Platinum"]{ background: radial-gradient(120% 140% at 30% 10%, #cce7ff22 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #b3e5fc40, 0 0 0 2px #b3e5fc26; }
+.pill[data-tier="Gold"]    { background: radial-gradient(120% 140% at 30% 10%, #ffefc426 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 55%, #000), 0 0 0 2px color-mix(in srgb, var(--gold) 28%, transparent); }
+.pill[data-tier="Silver"]  { background: radial-gradient(120% 140% at 30% 10%, #d9d9d926 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #c0c0c033, 0 0 0 2px #c0c0c020; }
+.pill[data-tier="Bronze"]  { background: radial-gradient(120% 140% at 30% 10%, #cd7f3226 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #cd7f3238, 0 0 0 2px #cd7f3220; }
+
+/* Responsive */
+@media (max-width: 780px){
+  .lb--slim{ --lb-h: 46px; --fs: .86rem; --pill-px:.68rem; --pill-py:.34rem; --gap:.5rem; --rail-speed:34s; }
+  .brand-chip{ display:none; }
+}
+
+/* Prefs */
+@media (prefers-reduced-motion: reduce){ .lb__rail{ animation:none !important; transform:none !important; } }
+@media (prefers-contrast: more){ .lb__viewport{ border-color:#ffffff26 } .pill{ box-shadow:0 0 0 1px #ffffff26, 0 1px 0 #000 inset; } }
+
+/* Marquee */
+@keyframes fc-ticker{ from{ transform:translateX(100%)} to{ transform:translateX(-100%)} }
+</style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const ROOT = document.getElementById('sponsor-leaderboard');
+  if (!ROOT || ROOT.__wired) return; ROOT.__wired = true;
+
+  const rail   = ROOT.querySelector('#ticker-rail');
+  const pauseB = ROOT.querySelector('#ticker-ctrl');
+  const speedB = ROOT.querySelector('#speed-ctrl');
+  const offlinePill = ROOT.querySelector('#offline-pill');
+  const srVip  = ROOT.querySelector('#sr-vip');
+  if (!rail) return;
+
+  const cfg = {
+    teamKey: ROOT.dataset.teamKey || 'global',
+    api: ROOT.dataset.api || '/api/shoutouts',
+    ttl: +ROOT.dataset.ttlSeconds || 86400,
+    max: +ROOT.dataset.maxStore || 64,
+    dedupeWindow: +ROOT.dataset.dedupeWindowSeconds || 900,
+    defaultSpeed: ROOT.dataset.defaultSpeed || 'normal',
+    autoscroll: ROOT.dataset.autoscroll !== '0',
+  };
+
+  const LS_KEY = `fc:shouts:${cfg.teamKey}`;
+  const now = () => Date.now();
+
+  // Store
+  const readStore = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } };
+  const writeStore = (arr) => { try { localStorage.setItem(LS_KEY, JSON.stringify(arr.slice(-cfg.max))); } catch {} };
+
+  const fmtName = (who) => (who || 'Anonymous Sponsor');
+  const tierEmoji = (tier) => ({ Platinum:'✨', Gold:'🏅', Silver:'🎉', Bronze:'🥉' }[tier] || '🎉');
+  const keyFor = (who, msg) => `${(who||'').trim().toLowerCase()}|${(msg||'').trim().toLowerCase()}`;
+
+  const pillNode = ({tier, who, msg}) => {
+    const span = document.createElement('span');
+    span.className = 'pill';
+    if (tier) span.dataset.tier = tier;
+    span.setAttribute('role','listitem');
+    span.tabIndex = -1;
+    span.innerHTML = `${tierEmoji(tier)} <span class="txt"><span class="who">${fmtName(who)}</span><span class="msg">${msg||''}</span></span>`;
+    return span;
+  };
+
+  const insertPill = (item, {toFront=false}={}) => {
+    const node = pillNode(item);
+    if (toFront) rail.insertBefore(node, rail.firstChild);
+    else rail.appendChild(node);
+
+    // ARIA announce for VIPs
+    if (item.tier && /platinum|gold/i.test(item.tier)) {
+      srVip.textContent = `${fmtName(item.who)} joined as ${item.tier}!`;
+      setTimeout(() => srVip.textContent = '', 1500);
+    }
+  };
+
+  const hydrateFromStore = () => {
+    const items = readStore().filter(i => (i.expires || 0)> now());
+    if (!items.length) return;
+    rail.querySelector('#shoutouts-empty')?.remove();
+    rail.setAttribute('aria-busy','false');
+    items.forEach(i => insertPill(i));
+    document.dispatchEvent(new CustomEvent('fc:shoutouts:updated'));
+  };
+
+  const addShout = ({who, msg, tier, ts}) => {
+    const store = readStore().filter(i => (i.expires || 0)> now());
+    const k = keyFor(who, msg);
+    if (store.some(i => i.key === k && Math.abs((ts||now()) - (i.ts||0)) < cfg.dedupeWindow*1000)) return false;
+
+    const item = { key:k, who, msg, tier, ts: ts || now(), expires: now() + cfg.ttl*1000 };
+    store.push(item);
+    writeStore(store);
+    insertPill(item, {toFront:true});
+    document.dispatchEvent(new CustomEvent('fc:shoutouts:updated'));
+    return true;
+  };
+
+  const poll = async () => {
+    try {
+      const url = new URL(cfg.api, location.href);
+      url.searchParams.set('team_key', cfg.teamKey);
+      const res = await fetch(url, {headers:{'accept':'application/json'}});
+      if (!res.ok) throw new Error('bad status');
+      const data = await res.json(); // [{who,msg,tier,ts}, ...]
+      (Array.isArray(data) ? data : []).forEach(d => addShout(d));
+      offlinePill.style.display = 'none';
+    } catch {
+      offlinePill.style.display = 'inline-flex';
+    }
+  };
+
+  // Controls
+  const setPaused = (paused) => {
+    rail.style.animationPlayState = paused ? 'paused' : 'running';
+    pauseB.setAttribute('aria-pressed', String(paused));
+    pauseB.textContent = paused ? '▶' : '⏸';
+  };
+  pauseB?.addEventListener('click', () => setPaused(rail.style.animationPlayState !== 'paused'));
+
+  const speeds = { slow:'42s', normal:'30s', fast:'20s' };
+  const nextSpeed = (s) => ({slow:'normal', normal:'fast', fast:'slow'}[s] || 'normal');
+  const applySpeed = (s) => {
+    rail.style.animationDuration = speeds[s] || speeds.normal;
+    speedB.dataset.speed = s;
+    speedB.setAttribute('aria-label', `Speed: ${s[0].toUpperCase()+s.slice(1)}`);
+  };
+  speedB?.addEventListener('click', () => applySpeed(nextSpeed(speedB.dataset.speed || cfg.defaultSpeed)));
+
+  // Reduced motion
+  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduce || !cfg.autoscroll) rail.style.animation = 'none';
+
+  // Wire pledge events from tiers
+  document.addEventListener('fc:sponsor:pledge', (e) => {
+    const d = e.detail || {};
+    const tier = d.tier || ((d.amount||0)>=10000 ? 'Platinum' : (d.amount||0)>=5000 ? 'Gold' : (d.amount||0)>=1500 ? 'Silver' : 'Bronze');
+    const who  = d.brand || d.name || 'New Sponsor';
+    const msg  = d.monthly ? 'Joined as a monthly sponsor!' : 'Backed the season!';
+    addShout({ who, msg, tier });
+  }, { passive:true });
+
+  // “Be the first” CTA → donate
+  ROOT.querySelector('#shoutouts-empty-cta')?.addEventListener('click', () => {
+    document.getElementById('hdr-donate')?.click() ||
+    document.querySelector('[data-cta="donate"]')?.click();
+  });
+
+  // Online/offline state
+  const onNet = () => offlinePill.style.display = navigator.onLine ? 'none' : 'inline-flex';
+  window.addEventListener('online',  () => { onNet(); poll(); });
+  window.addEventListener('offline', onNet);
+  onNet();
+
+  // Initial
+  hydrateFromStore();
+  poll();
+  setInterval(poll, 60000); // gentle polling
+  setPaused(false);
+  applySpeed(cfg.defaultSpeed || 'normal');
+})();
+</script>
 

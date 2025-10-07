@@ -1,0 +1,163 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ======================================================================
+   FundChamps Ultra SaaS · Modern Homepage Skeleton (Polished)
+   • Hero (neo or classic) + 3-card grid
+   • Scroll-reveal animations + tilt-hover
+   • Typography & brand tokens pulled from theme_hex
+====================================================================== #}
+{% extends "base.html" %}
+{% from "partials/_core_helpers.html" import nonce_attr %}
+
+{# ╭──────── Security nonce helper ─────────╮ #}
+{% set nonce = NONCE or (csp_nonce() if csp_nonce is defined else "") %}
+{% macro n() -%}{% if nonce %}nonce="{{ nonce }}"{% endif %}{%- endmacro %}
+
+{% set BRAND_HEX   = theme_hex  or "#facc15" %}
+{% set HERO_IMG    = HERO_IMG   or url_for('static', filename='images/connect-atx-team.jpg') %}
+{% set HREF_DONATE = HREF_DONATE or stripe_payment_link or "/donate" %}
+
+{# ─────────────── CONTENT ──────────────── #}
+{% block content %}
+
+  {# HERO partial (auto-picks classic vs neo) #}
+  {% if TEAM.template_style == "neo" %}
+    {% include "partials/hero_neo.html"   with context %}
+  {% else %}
+    {% include "partials/hero_classic.html" with context %}
+  {% endif %}
+
+  {# 3-tile feature grid (uses the pro CSS below) #}
+  <section class="feature-tiles-wrap mx-auto mt-12 max-w-6xl px-4 relative z-10">
+    {% include "partials/tiles_3grid.html"   with context %}
+  </section>
+
+{% endblock %}
+
+{# ─────────────── HEAD CSS  ─────────────── #}
+{% block extra_head %}
+<style {{ nonce_attr(nonce) }}>
+  /* ===== Brand tokens ===== */
+  :root{
+    --brand: {{ BRAND_HEX }};
+    --font-display: "Poppins", sans-serif;
+    --font-body: "Inter", sans-serif;
+  }
+
+  body { font-family: var(--font-body); color:#e5e7eb; background:#0f0f12; }
+
+  h1,h2,h3,h4,h5,h6 {
+    font-family: var(--font-display);
+    font-weight: 800;
+    letter-spacing: -0.015em;
+  }
+
+  /* ===== Hero button overrides ===== */
+  .btn-gold{
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+           bg-gradient-to-b from-[#fffbe6] to-[color:var(--brand)]
+           px-7 py-2.5 font-black text-black shadow-lg shadow-black/25
+           transition transform hover:-translate-y-[2px] hover:shadow-2xl;
+  }
+  .btn-ghost{
+    @apply inline-flex items-center justify-center gap-2 rounded-full
+           border border-white/70 bg-white/10 px-7 py-2.5
+           font-black text-white backdrop-blur transition
+           hover:bg-white/20 hover:-translate-y-[2px];
+  }
+
+  /* ===== 3-card grid layout ===== */
+  .feature-tiles-wrap{
+    display:grid;gap:2.2rem;margin-top:3.5rem;
+    grid-template-columns:1fr;
+  }
+  @media(min-width:700px){  .feature-tiles-wrap{grid-template-columns:repeat(2,1fr);} }
+  @media(min-width:1024px){ .feature-tiles-wrap{grid-template-columns:repeat(3,1fr);gap:2.4rem;} }
+
+  /* ===== Tile surface ===== */
+  .feature-tile{
+    position:relative;display:flex;flex-direction:column;
+    background:linear-gradient(135deg,#191a22 85%,#10121b 100%);
+    border-radius:1.75rem;min-height:330px;padding:2.4rem 1.6rem 2.1rem;
+    box-shadow:0 12px 38px rgba(0,0,0,.55),0 0 0 1px rgba(255,255,255,.05);
+    transition:transform .25s cubic-bezier(.62,.13,.29,.97),box-shadow .25s;
+    opacity:0; transform:translateY(30px); /* hidden until reveal */
+  }
+  .feature-tile:hover{
+    transform:translateY(-6px) scale(1.02);
+    box-shadow:0 22px 65px rgba(0,0,0,.65),0 0 0 1px var(--brand);
+  }
+
+  /* Reveal on scroll */
+  .feature-tile.visible{
+    opacity:1;
+    transform:none;
+    transition:opacity .6s ease, transform .6s ease;
+  }
+
+  /* Stagger animation delays */
+  .feature-tile[data-delay="1"] { transition-delay: .15s; }
+  .feature-tile[data-delay="2"] { transition-delay: .3s; }
+  .feature-tile[data-delay="3"] { transition-delay: .45s; }
+
+  /* Typography polish inside tiles */
+  .feature-tile h3{
+    font: 800 1.3rem/1.3 var(--font-display);
+    color: #fff;
+    margin-bottom: .6rem;
+  }
+  .feature-tile p{
+    font: 500 .97rem/1.65 var(--font-body);
+    color: #d1d5db;
+    margin-top: .25rem;
+  }
+
+</style>
+{% endblock %}
+
+{# ────────────── OPTIONAL JS  ────────────── #}
+{% block extra_scripts %}
+<script {{ n() }}>
+document.addEventListener("DOMContentLoaded", () => {
+  /* Tilt-hover only fires when the element has data-tilt (opt-in). */
+  const $img = document.querySelector("[data-tilt]");
+  if($img && !matchMedia("(prefers-reduced-motion: reduce)").matches){
+    const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+    const tilt = e=>{
+      const r=$img.getBoundingClientRect();
+      const x=(e.clientX-r.left)/r.width -.5;
+      const y=(e.clientY-r.top) /r.height-.5;
+      $img.style.transform=`perspective(900px)
+                            rotateX(${clamp(-y*6,-6,6)}deg)
+                            rotateY(${clamp( x*6,-6,6)}deg)
+                            translateY(10px)`;
+    };
+    $img.addEventListener("mousemove",tilt);
+    $img.addEventListener("mouseleave",()=>$img.style.transform="translateY(10px)");
+  }
+
+  /* Scroll reveal for tiles */
+  const observer = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      if(entry.isIntersecting){
+        entry.target.classList.add("visible");
+        observer.unobserve(entry.target);
+      }
+    });
+  },{ threshold:0.2 });
+
+  document.querySelectorAll(".feature-tile").forEach((tile,i)=>{
+    tile.setAttribute("data-delay", i);
+    observer.observe(tile);
+  });
+});
+</script>
+{% endblock %}
+

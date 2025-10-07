@@ -1,0 +1,165 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ============================================================================
+   impact_lockers_premium.html — FundChamps Elite Impact Mini (Pro)
+   - Ultra-clean, sticky rail + micro-buckets + floating CTA
+   - Apple/Nike-style glass, tight spacing, and accent color
+============================================================================ #}
+
+{% set TEAM = team or {} %}
+{% set TEAM_NAME = TEAM.team_name or TEAM.name or 'Your Club/Org' %}
+{% set CURRENCY = CURRENCY or 'USD' %}
+{% set stats = stats or {} %}
+{% set metrics = metrics or {
+  'raised': (stats.raised or 0),
+  'goal':   (stats.goal   or 50000),
+  'donors': (stats.donors or 0),
+  'kids':   (stats.kids   or 0),
+  'trips':  (stats.trips  or 0),
+  'tutor_hours': (stats.tutor_hours or 0)
+} %}
+{% set raised = (metrics.raised or 0)|int %}
+{% set goal = (metrics.goal or 1)|int %}
+{% set accent = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set pct = (100.0 * raised / (goal if goal> 0 else 1))|round(1) %}
+
+<section id="impact-rail"
+  class="impact-rail"
+  aria-label="Impact at a Glance"
+  style="--accent: {{ accent }};"
+  data-currency="{{ CURRENCY }}"
+  data-raised="{{ raised }}"
+  data-goal="{{ goal }}">
+  <!-- Floating KPI Bar -->
+  <div class="impact-rail__kpis" role="group" aria-label="Key Impact Stats">
+    <div class="ikpi"><span class="ikpi-v" data-kpi="raised">$0</span><span class="ikpi-l">Raised</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="goal">$0</span><span class="ikpi-l">Goal</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="donors">{{ metrics.donors }}</span><span class="ikpi-l">Donors</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="kids">{{ metrics.kids }}</span><span class="ikpi-l">Athletes</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="trips">{{ metrics.trips }}</span><span class="ikpi-l">Trips</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="tutor_hours">{{ metrics.tutor_hours }}</span><span class="ikpi-l">Tutor Hrs</span></div>
+    <div class="impact-rail__cta">
+      <a class="ir-btn" href="{{ safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '/impact' }}">
+        Full Impact →
+      </a>
+    </div>
+  </div>
+
+  <!-- Micro Buckets (3) -->
+  <div class="impact-rail__buckets" role="list">
+    <div class="ir-bucket" role="listitem">
+      <span class="ir-bucket-ic">✈️</span>
+      <span class="ir-bucket-l">Travel</span>
+    </div>
+    <div class="ir-bucket" role="listitem">
+      <span class="ir-bucket-ic">🏀</span>
+      <span class="ir-bucket-l">Gear</span>
+    </div>
+    <div class="ir-bucket" role="listitem">
+      <span class="ir-bucket-ic">📚</span>
+      <span class="ir-bucket-l">Tutoring</span>
+    </div>
+  </div>
+</section>
+
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+.impact-rail {
+  --accent: {{ accent }};
+  --glass: rgba(255,255,255,0.78);
+  --glass-border: #e5e7eb;
+  position: sticky; top: 0; z-index: 16;
+  margin: 0 auto 1.6rem auto;
+  padding: .8rem 0 .4rem 0;
+  background: var(--glass);
+  border-radius: 16px;
+  box-shadow: 0 3px 18px #0001, 0 0 0 1.5px var(--glass-border);
+  backdrop-filter: blur(10px) saturate(130%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1050px;
+  transition: box-shadow .19s;
+}
+.impact-rail__kpis {
+  display: flex; gap: 1.15rem; align-items: center;
+  justify-content: flex-start;
+  width: 100%; flex-wrap: wrap;
+}
+.ikpi {
+  background: rgba(245,245,245,0.52);
+  border-radius: 9px;
+  border: 1.5px solid #eee;
+  min-width: 90px;
+  padding: .5em .85em;
+  font-weight: 900;
+  font-size: 1rem;
+  display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 1px 6px #0001;
+}
+.ikpi-v { color: var(--accent); font-size: 1.04rem; font-weight: 1000; }
+.ikpi-l { color: #555; font-weight: 800; font-size: 0.82rem; }
+.impact-rail__cta {
+  margin-left: auto; margin-right: .5rem;
+}
+.ir-btn {
+  display: inline-flex; align-items: center; gap: .22em;
+  font-weight: 900; font-size: .98rem;
+  background: linear-gradient(90deg, #fffbe6 45%, var(--accent) 100%);
+  color: #18181b; border: none; border-radius: 999px;
+  padding: .48em 1.3em;
+  box-shadow: 0 2px 8px var(--accent)44;
+  transition: box-shadow .18s;
+}
+.ir-btn:hover { box-shadow: 0 4px 20px var(--accent)66; }
+
+.impact-rail__buckets {
+  display: flex; gap: 1.3rem; justify-content: center; align-items: center;
+  margin-top: .65rem;
+}
+.ir-bucket {
+  display: flex; align-items: center; gap: .38em;
+  background: #fff9; border: 1.2px solid #f3f3f3;
+  border-radius: 7px; padding: .36em .7em;
+  font-weight: 900; color: #23272f; font-size: .98rem;
+  letter-spacing: .01em;
+}
+.ir-bucket-ic { font-size: 1.2em; }
+.ir-bucket-l { font-size: .98em; }
+
+@media (max-width: 600px) {
+  .impact-rail { padding: .45rem 0 .25rem 0; }
+  .impact-rail__kpis { gap: .62rem; }
+  .ikpi { min-width: 72px; font-size: .96rem; }
+  .ir-btn { font-size: .93rem; padding: .37em 1em; }
+}
+</style>
+
+<script {{ nonce_attr() }}{ { nonce_attr() } }>
+(() => {
+  const root = document.getElementById('impact-rail'); if (!root) return;
+  const currency = root.dataset.currency || 'USD';
+  const raised = Number(root.dataset.raised || 0);
+  const goal = Number(root.dataset.goal || 1);
+  const fmt = (n)=>{ try{ return new Intl.NumberFormat(undefined,{style:'currency',currency,maximumFractionDigits:0}).format(n) }catch{ return '$'+Math.round(n).toLocaleString() } };
+  root.querySelector('[data-kpi="raised"]').textContent = fmt(raised);
+  root.querySelector('[data-kpi="goal"]').textContent = fmt(goal);
+
+  // Micro-animation for counter-up
+  const nums = root.querySelectorAll('.ikpi-v:not([data-kpi="goal"])');
+  nums.forEach(el=>{
+    const target = Number(el.textContent.replace(/[^\d]/g,''));
+    if(!target || target<10) return;
+    let s = 0; const t0=performance.now(), dur=700;
+    const step=(t)=>{ const k=Math.min(1,(t-t0)/dur); el.textContent = target>=1000 ? fmt(target*k) : Math.round(target*k).toLocaleString(); if(k<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+})();
+</script>
+

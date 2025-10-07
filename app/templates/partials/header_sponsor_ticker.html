@@ -1,13 +1,20 @@
-
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is
 defined else '') %} {% set _items = items if items is defined else [] %}
 
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6"
-  id="hdr-ticker"
+  id="sponsor-leaderboard"
   class="relative w-full overflow-hidden bg-gray-900 text-gray-100 text-sm border-t border-gray-700"
-  aria-label="Live sponsor and donor ticker"
->
+  aria-label="Live sponsor and donor ticker">
   <div class="ticker flex items-center space-x-4">
     <span class="label font-semibold text-yellow-400 whitespace-nowrap">
       Thanks to our amazing sponsors:
@@ -15,7 +22,7 @@ defined else '') %} {% set _items = items if items is defined else [] %}
 
     <div class="track" aria-live="polite" aria-atomic="false">
       <ul id="donation-ticker" class="flex space-x-8 animate-scroll">
-        {% if _items and _items|length > 0 %} {% for it in _items %}
+        {% if _items and _items|length> 0 %} {% for it in _items %}
         <li class="flex items-center space-x-2">
           <span class="emoji" aria-hidden="true">{{ it.emoji or "🏀" }}</span>
           <span class="donor font-medium text-white">{{ it.name }}</span>
@@ -26,29 +33,16 @@ defined else '') %} {% set _items = items if items is defined else [] %}
         {% endfor %} {% else %}
         <li>
           <span aria-hidden="true">🎉</span>
-          <span class="text-yellow-200 font-semibold"
-            >Be the first to donate!</span
-          >
+          <span class="text-yellow-200 font-semibold">Be the first to donate!</span>
         </li>
         {% endif %}
       </ul>
     </div>
 
-     {% if _items and _items|length > 0 %}
+    {% if _items and _items|length> 0 %}
     <div class="track" aria-hidden="true"></div>
     {% endif %}
   </div>
 </section>
 
-<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
-  document.addEventListener("DOMContentLoaded", function () {
-    const list = document.querySelector("#donation-ticker");
-    const track = list?.parentElement?.nextElementSibling;
-    if (list && track) {
-      // Clone only when real donor items exist
-      if (list.children.length > 1) {
-        track.innerHTML = list.outerHTML;
-      }
-    }
-  });
-</script>
+<script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='js/extracted/partials__header_sponsor_ticker.html__1.js', v='1.0.0') }}"></script>

@@ -1,265 +1,165 @@
-{# ===================== Impact — Pro 5.0 (tokenized, a11y, CSP-safe) ===================== #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ============================================================================
+   impact_lockers_premium.html — FundChamps Elite Impact Mini (Pro)
+   - Ultra-clean, sticky rail + micro-buckets + floating CTA
+   - Apple/Nike-style glass, tight spacing, and accent color
+============================================================================ #}
 
-<section
-  id="impact"
-  class="impact section"
-  aria-labelledby="impact-h"
-  style="--accent: {{ theme_hex|default('#facc15') }}"
-  data-raised="{{ RAISED|default(0) }}"
-  data-goal="{{ GOAL|default(50000) }}"
->
-  <div class="impact__shell">
-    <!-- Header -->
-    <header class="head">
-      <h2 id="impact-h" class="title">Your <span class="accent">Impact</span></h2>
-      <p class="sub">Where every dollar goes — live.</p>
-    </header>
+{% set TEAM = team or {} %}
+{% set TEAM_NAME = TEAM.team_name or TEAM.name or 'Your Club/Org' %}
+{% set CURRENCY = CURRENCY or 'USD' %}
+{% set stats = stats or {} %}
+{% set metrics = metrics or {
+  'raised': (stats.raised or 0),
+  'goal':   (stats.goal   or 50000),
+  'donors': (stats.donors or 0),
+  'kids':   (stats.kids   or 0),
+  'trips':  (stats.trips  or 0),
+  'tutor_hours': (stats.tutor_hours or 0)
+} %}
+{% set raised = (metrics.raised or 0)|int %}
+{% set goal = (metrics.goal or 1)|int %}
+{% set accent = (team.theme_color if team and team.theme_color else '#facc15') %}
+{% set pct = (100.0 * raised / (goal if goal> 0 else 1))|round(1) %}
 
-    <!-- KPI strip -->
-    <ul class="kpis" role="list">
-      <li class="kpi">
-        <span class="num">500+</span><span class="lab">Families Served</span>
-      </li>
-      <li class="kpi">
-        <span class="num">3.5</span><span class="lab">Team GPA</span>
-      </li>
-      <li class="kpi">
-        <span class="num">92%</span><span class="lab">College-track</span>
-      </li>
-      <li class="kpi">
-        <span class="num">$0</span><span class="lab">Player Turned Away</span>
-      </li>
-    </ul>
-
-    <!-- Overall meter -->
-    <div
-      class="meter"
-      role="meter"
-      aria-label="Progress toward goal"
-      aria-valuemin="0"
-      aria-valuemax="{{ GOAL|int if GOAL is defined else 50000 }}"
-      aria-valuenow="{{ RAISED|int if RAISED is defined else 0 }}"
-      aria-describedby="impact-meter-desc"
-    >
-      <div class="track"><div class="fill" style="--p: 0%"></div></div>
-      <div class="line tabular">
-        <b data-raised>$0</b>
-        /
-        <b data-goal>$0</b>
-        <span class="pct">• 0%</span>
-      </div>
-      <p id="impact-meter-desc" class="sr-only">Funds raised out of total goal.</p>
+<section id="impact-rail"
+  class="impact-rail"
+  aria-label="Impact at a Glance"
+  style="--accent: {{ accent }};"
+  data-currency="{{ CURRENCY }}"
+  data-raised="{{ raised }}"
+  data-goal="{{ goal }}">
+  <!-- Floating KPI Bar -->
+  <div class="impact-rail__kpis" role="group" aria-label="Key Impact Stats">
+    <div class="ikpi"><span class="ikpi-v" data-kpi="raised">$0</span><span class="ikpi-l">Raised</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="goal">$0</span><span class="ikpi-l">Goal</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="donors">{{ metrics.donors }}</span><span class="ikpi-l">Donors</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="kids">{{ metrics.kids }}</span><span class="ikpi-l">Athletes</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="trips">{{ metrics.trips }}</span><span class="ikpi-l">Trips</span></div>
+    <div class="ikpi"><span class="ikpi-v" data-kpi="tutor_hours">{{ metrics.tutor_hours }}</span><span class="ikpi-l">Tutor Hrs</span></div>
+    <div class="impact-rail__cta">
+      <a class="ir-btn" href="{{ safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '/impact' }}">
+        Full Impact →
+      </a>
     </div>
+  </div>
 
-    <!-- Ladder -->
-    {% set LADDER = LADDER|default([
-      {'amt': 1000, 'label':'Gym Week'},
-      {'amt': 5000, 'label':'Travel Slot'},
-      {'amt': 10000,'label':'Tutor Block'}
-    ]) %}
-    <div class="ladder" role="group" aria-label="Impact ladder milestones">
-      {% for rung in LADDER %}
-      <div class="rung" data-th="{{ rung.amt }}">
-        <div class="bar" aria-hidden="true"></div>
-        <div class="lbl">
-          <span class="amt">${{ '{:,.0f}'.format(rung.amt) }}</span>
-          <span class="what">{{ rung.label }}</span>
-        </div>
-      </div>
-      {% endfor %}
+  <!-- Micro Buckets (3) -->
+  <div class="impact-rail__buckets" role="list">
+    <div class="ir-bucket" role="listitem">
+      <span class="ir-bucket-ic">✈️</span>
+      <span class="ir-bucket-l">Travel</span>
     </div>
-
-    <!-- Lockers grid -->
-    <div class="grid" role="list" aria-label="Where gifts go">
-      <article class="locker" role="listitem">
-        <div class="emoji" aria-hidden="true">🎒</div>
-        <h3 class="h">Game-Day Gear</h3>
-        <p class="p">Uniforms, shoes, kits, snacks & hydration, bags, and team apparel for players in need.</p>
-      </article>
-      <article class="locker" role="listitem">
-        <div class="emoji" aria-hidden="true">🚌</div>
-        <h3 class="h">Travel & Lodging</h3>
-        <p class="p">Tournaments, showcases, hotel nights for players and families, and safe transportation.</p>
-      </article>
-      <article class="locker" role="listitem">
-        <div class="emoji" aria-hidden="true">📚</div>
-        <h3 class="h">Tutoring & Mentoring</h3>
-        <p class="p">After-practice study hall, academic coaching, and mentorship.</p>
-      </article>
-      <article class="locker" role="listitem">
-        <div class="emoji" aria-hidden="true">🩺</div>
-        <h3 class="h">Wellness</h3>
-        <p class="p">Athletic trainers, recovery tools, and nutrition support.</p>
-      </article>
-      <article class="locker" role="listitem">
-        <div class="emoji" aria-hidden="true">🏀</div>
-        <h3 class="h">Facility Time</h3>
-        <p class="p">Court rentals and skills development sessions.</p>
-      </article>
-      <article class="locker" role="listitem">
-        <div class="emoji" aria-hidden="true">🤝</div>
-        <h3 class="h">Scholarships</h3>
-        <p class="p">Financial aid so cost never benches a kid.</p>
-      </article>
+    <div class="ir-bucket" role="listitem">
+      <span class="ir-bucket-ic">🏀</span>
+      <span class="ir-bucket-l">Gear</span>
     </div>
-
-    <!-- Allocation breakdown (visual) -->
-    <div class="breakdown" role="img" aria-label="Allocation breakdown: Gear 34%, Travel 31%, Tutoring 22%, Wellness 13%">
-      <div class="seg gear" style="--pc:34%">Gear</div>
-      <div class="seg travel" style="--pc:31%">Travel</div>
-      <div class="seg tutoring" style="--pc:22%">Tutoring</div>
-      <div class="seg wellness" style="--pc:13%">Wellness</div>
-    </div>
-
-    <!-- CTAs -->
-    <div class="cta-row">
-      <a class="btn btn--gold" href="{{ HREF_DONATE|default('/donate') }}">Donate to a Need →</a>
-      <a class="btn btn--ghost" href="{{ safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '/impact' }}">See More Stories</a>
+    <div class="ir-bucket" role="listitem">
+      <span class="ir-bucket-ic">📚</span>
+      <span class="ir-bucket-l">Tutoring</span>
     </div>
   </div>
 </section>
 
-<style {{ nonce_attr() }}>
-/* ================= Impact — tokens match site system ================= */
-.impact{ color:#eaf0fa }
-.impact .accent{ color:var(--accent) }
-.impact__shell{ max-width:1200px; margin-inline:auto; padding:clamp(16px,3vw,28px) }
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+.impact-rail {
+  --accent: {{ accent }};
+  --glass: rgba(255,255,255,0.78);
+  --glass-border: #e5e7eb;
+  position: sticky; top: 0; z-index: 16;
+  margin: 0 auto 1.6rem auto;
+  padding: .8rem 0 .4rem 0;
+  background: var(--glass);
+  border-radius: 16px;
+  box-shadow: 0 3px 18px #0001, 0 0 0 1.5px var(--glass-border);
+  backdrop-filter: blur(10px) saturate(130%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 1050px;
+  transition: box-shadow .19s;
+}
+.impact-rail__kpis {
+  display: flex; gap: 1.15rem; align-items: center;
+  justify-content: flex-start;
+  width: 100%; flex-wrap: wrap;
+}
+.ikpi {
+  background: rgba(245,245,245,0.52);
+  border-radius: 9px;
+  border: 1.5px solid #eee;
+  min-width: 90px;
+  padding: .5em .85em;
+  font-weight: 900;
+  font-size: 1rem;
+  display: flex; flex-direction: column; align-items: center;
+  box-shadow: 0 1px 6px #0001;
+}
+.ikpi-v { color: var(--accent); font-size: 1.04rem; font-weight: 1000; }
+.ikpi-l { color: #555; font-weight: 800; font-size: 0.82rem; }
+.impact-rail__cta {
+  margin-left: auto; margin-right: .5rem;
+}
+.ir-btn {
+  display: inline-flex; align-items: center; gap: .22em;
+  font-weight: 900; font-size: .98rem;
+  background: linear-gradient(90deg, #fffbe6 45%, var(--accent) 100%);
+  color: #18181b; border: none; border-radius: 999px;
+  padding: .48em 1.3em;
+  box-shadow: 0 2px 8px var(--accent)44;
+  transition: box-shadow .18s;
+}
+.ir-btn:hover { box-shadow: 0 4px 20px var(--accent)66; }
 
-.head{ display:grid; gap:.35rem; margin-bottom:clamp(12px,2vw,18px) }
-.title{ margin:0; font-weight:1000; font-size:clamp(1.6rem,1.2rem + 2.2vw,2.2rem) }
-.sub{ margin:0; color:#b9c2d0 }
+.impact-rail__buckets {
+  display: flex; gap: 1.3rem; justify-content: center; align-items: center;
+  margin-top: .65rem;
+}
+.ir-bucket {
+  display: flex; align-items: center; gap: .38em;
+  background: #fff9; border: 1.2px solid #f3f3f3;
+  border-radius: 7px; padding: .36em .7em;
+  font-weight: 900; color: #23272f; font-size: .98rem;
+  letter-spacing: .01em;
+}
+.ir-bucket-ic { font-size: 1.2em; }
+.ir-bucket-l { font-size: .98em; }
 
-/* KPIs */
-.kpis{ display:grid; grid-template-columns:repeat(4,1fr); gap:clamp(10px,1.6vw,16px); padding:0; margin:clamp(8px,1.6vw,12px) 0 0; list-style:none }
-.kpi{
-  display:flex; align-items:center; justify-content:center; gap:.5rem;
-  border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:.7rem;
-  background:linear-gradient(180deg, rgba(16,18,24,.92), rgba(16,18,24,.78));
-}
-.kpi .num{ font-weight:1000; font-size:clamp(1rem,.8rem + 1.2vw,1.4rem) }
-.kpi .lab{ opacity:.9 }
-@media (max-width:760px){ .kpis{ grid-template-columns:repeat(2,1fr) } }
-
-/* Meter */
-.meter{ display:grid; gap:.5rem; margin-top:clamp(12px,2vw,18px) }
-.tabular{ font-variant-numeric:tabular-nums }
-.meter .track{
-  block-size:10px; border-radius:999px; overflow:hidden;
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14)
-}
-.meter .fill{
-  inline-size:var(--p,0%); block-size:100%;
-  background:linear-gradient(90deg,#fffbe6,var(--accent));
-  border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
-}
-.meter .line{ color:#dbe5f5 }
-
-/* Ladder */
-.ladder{ display:flex; flex-direction:column; gap:.55rem; margin-top:.3rem }
-.rung{ display:flex; align-items:center; gap:.7rem }
-.rung .bar{
-  inline-size:min(280px, 44vw); block-size:10px; border-radius:999px; position:relative; overflow:hidden;
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14)
-}
-.rung .bar::after{
-  content:""; position:absolute; inset:0; transform:scaleX(var(--fill,0)); transform-origin:left;
-  background:linear-gradient(90deg,#fffbe6,var(--accent)); transition:transform .6s cubic-bezier(.22,.9,.27,1);
-}
-.rung .lbl{ font-weight:900; display:flex; gap:.4rem }
-.rung .amt{ opacity:.95 } .rung .what{ opacity:.85 }
-
-/* Lockers grid */
-.grid{
-  display:grid; gap:clamp(12px,2vw,18px);
-  grid-template-columns:repeat(12,1fr);
-  margin-top:clamp(14px,2vw,20px);
-}
-.locker{
-  grid-column:span 4; display:grid; gap:.35rem;
-  background:linear-gradient(180deg, rgba(16,18,24,.92), rgba(16,18,24,.78));
-  border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:clamp(12px,2vw,16px);
-  box-shadow:0 14px 46px rgba(0,0,0,.45);
-}
-.emoji{ font-size:1.25rem }
-.h{ margin:.1rem 0; font-size:1.1rem; font-weight:900 }
-.p{ margin:0; color:#cbd6e4 }
-@media (max-width:980px){ .locker{ grid-column:span 6 } }
-@media (max-width:640px){ .locker{ grid-column:span 12 } }
-
-/* Allocation */
-.breakdown{
-  display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin-top:clamp(12px,2vw,18px)
-}
-.seg{
-  position:relative; padding:.65rem .75rem; border-radius:12px; text-align:center; font-weight:900;
-  border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.06);
-}
-.seg::after{
-  content:""; position:absolute; left:0; bottom:0; height:4px; width:calc(var(--pc,0) * 1%);
-  background:linear-gradient(90deg,#fffbe6,var(--accent)); border-bottom-left-radius:12px; border-bottom-right-radius:12px;
-}
-@media (max-width:760px){ .breakdown{ grid-template-columns:repeat(2,1fr) } }
-
-/* CTAs */
-.cta-row{ display:flex; flex-wrap:wrap; gap:.6rem; margin-top:clamp(14px,2vw,20px) }
-.btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:1000; text-decoration:none; padding:.7rem 1rem }
-.btn--gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
-.btn--ghost{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#eaf0fa }
-
-/* Light theme */
-.light .impact{ color:#0f172a }
-.light .sub{ color:#334155 }
-.light .kpi, .light .locker{ background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9)); border-color:rgba(0,0,0,.10); box-shadow:0 10px 26px rgba(0,0,0,.08) }
-.light .meter .track, .light .rung .bar, .light .seg{ background:rgba(0,0,0,.04); border-color:rgba(0,0,0,.12) }
-.light .btn--ghost{ color:#0f172a; border-color:rgba(0,0,0,.12) }
-
-/* Motion & HCM */
-@media (prefers-reduced-motion: reduce){
-  .meter .fill, .rung .bar::after{ transition:none }
-}
-@media (forced-colors: active){
-  .kpi, .locker, .seg, .btn, .meter .track, .rung .bar{
-    background:Canvas !important; color:CanvasText !important; border:1px solid CanvasText !important; box-shadow:none !important;
-  }
+@media (max-width: 600px) {
+  .impact-rail { padding: .45rem 0 .25rem 0; }
+  .impact-rail__kpis { gap: .62rem; }
+  .ikpi { min-width: 72px; font-size: .96rem; }
+  .ir-btn { font-size: .93rem; padding: .37em 1em; }
 }
 </style>
 
-<script {{ nonce_attr() }}>
+<script {{ nonce_attr() }}{ { nonce_attr() } }>
 (() => {
-  const root = document.getElementById('impact');
-  if (!root || window.__IMPACT_V50__) return; window.__IMPACT_V50__ = true;
+  const root = document.getElementById('impact-rail'); if (!root) return;
+  const currency = root.dataset.currency || 'USD';
+  const raised = Number(root.dataset.raised || 0);
+  const goal = Number(root.dataset.goal || 1);
+  const fmt = (n)=>{ try{ return new Intl.NumberFormat(undefined,{style:'currency',currency,maximumFractionDigits:0}).format(n) }catch{ return '$'+Math.round(n).toLocaleString() } };
+  root.querySelector('[data-kpi="raised"]').textContent = fmt(raised);
+  root.querySelector('[data-kpi="goal"]').textContent = fmt(goal);
 
-  const raised  = +(root.dataset.raised || 0);
-  const goal    = Math.max(1, +(root.dataset.goal || 1));
-  const pct     = Math.max(0, Math.min(100, (raised / goal) * 100));
-  const fmtUSD  = (n)=> new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(n);
-
-  // Meter numbers
-  try{
-    root.querySelector('[data-raised]').textContent = fmtUSD(raised);
-    root.querySelector('[data-goal]').textContent   = fmtUSD(goal);
-    root.querySelector('.pct').textContent = `• ${Math.round(pct)}%`;
-  }catch{}
-
-  // Animate meter on view
-  try{
-    const fill = root.querySelector('.meter .fill');
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent => { if (ent.isIntersecting){ fill.style.inlineSize = `${pct}%`; io.disconnect(); }});
-    }, { threshold:.2 });
-    io.observe(fill);
-  }catch{}
-
-  // Ladder fill
-  try{
-    root.querySelectorAll('.rung').forEach(r => {
-      const th = +(r.getAttribute('data-th') || 0);
-      const frac = Math.max(0, Math.min(1, th ? (raised / th) : 0));
-      r.querySelector('.bar')?.style.setProperty('--fill', String(frac));
-    });
-  }catch{}
+  // Micro-animation for counter-up
+  const nums = root.querySelectorAll('.ikpi-v:not([data-kpi="goal"])');
+  nums.forEach(el=>{
+    const target = Number(el.textContent.replace(/[^\d]/g,''));
+    if(!target || target<10) return;
+    let s = 0; const t0=performance.now(), dur=700;
+    const step=(t)=>{ const k=Math.min(1,(t-t0)/dur); el.textContent = target>=1000 ? fmt(target*k) : Math.round(target*k).toLocaleString(); if(k<1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
 })();
 </script>
 

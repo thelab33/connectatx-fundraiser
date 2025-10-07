@@ -1,18 +1,26 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %}  {% set testimonials = testimonials if testimonials is defined and
-testimonials else [ "⭐️ \"This team changed my son’s life — discipline &
-brotherhood.\"", "🙌 \"Community-driven and family-focused. Love it!\"", "🏀
-\"Best program we’ve been part of. Truly elite.\"", "💡 \"Sponsors here really
-make an impact.\"" ] %}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is
+defined else '') %} {% set testimonials = testimonials if testimonials is
+defined and testimonials else [ "⭐️ \"This team changed my son’s life —
+discipline & brotherhood.\"", "🙌 \"Community-driven and family-focused. Love
+it!\"", "🏀 \"Best program we’ve been part of. Truly elite.\"", "💡 \"Sponsors
+here really make an impact.\"" ] %}
 
 <div
   id="fc-testimonial-scrollbar"
   class="fixed top-0 left-0 z-[70] w-full hidden opacity-0 transition-opacity duration-700 ease-out"
   aria-live="polite"
   role="region"
-  aria-label="Testimonials"
->
-  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
+  aria-label="Testimonials">
+  <style {{ nonce_attr() }}>
     #fc-testimonial-scrollbar .wrap {
       background: rgba(15, 15, 15, 0.86);
       backdrop-filter: blur(6px) saturate(120%);
@@ -50,48 +58,4 @@ make an impact.\"" ] %}
   </div>
 </div>
 
-<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
-  (() => {
-    const bar = document.getElementById("fc-testimonial-scrollbar");
-    if (!bar || bar.__init) return;
-    bar.__init = true;
-
-    let lastY = window.scrollY,
-      visible = false,
-      hideTimer;
-
-    function showBar() {
-      if (!visible) {
-        bar.classList.remove("hidden");
-        requestAnimationFrame(() => bar.classList.add("opacity-100"));
-        visible = true;
-      }
-      clearTimeout(hideTimer);
-      hideTimer = setTimeout(hideBar, 3000); // auto-hide after 3s idle
-    }
-    function hideBar() {
-      if (visible) {
-        bar.classList.remove("opacity-100");
-        bar.addEventListener(
-          "transitionend",
-          () => bar.classList.add("hidden"),
-          { once: true },
-        );
-        visible = false;
-      }
-    }
-
-    window.addEventListener(
-      "scroll",
-      () => {
-        const dy = Math.abs(window.scrollY - lastY);
-        if (dy > 30) {
-          // only trigger if scrolled enough
-          showBar();
-          lastY = window.scrollY;
-        }
-      },
-      { passive: true },
-    );
-  })();
-</script>
+<script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='js/extracted/partials__testimonial_popover.html__1.js', v='1.0.0') }}"></script>

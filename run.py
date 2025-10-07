@@ -1,19 +1,22 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 from __future__ import annotations
 
 """
-FundChamps Launcher — SV-Elite (canonical, no-dupes)
-- Loads dotenv early
-- Canonicalizes FLASK_CONFIG → app.config.(Development|Testing|Production)Config
-- Accepts aliases: dev/test/prod and legacy "app.config.config.*"
-- Safe logging (color or JSON)
+FundChamps Launcher — Agency Elite (SV-Canonical)
+
+Highlights
+- Early dotenv load, config normalization (aliases: dev/test/prod)
+- Clean logging (color | json | plain), safe for prod
 - Port guard, PID file, optional browser open
 - Optional Sentry + ProxyFix
-- Socket.IO aware (default: threading; override --async-mode)
-- Minimal, idempotent autopatch (nonce-inject in partials; ensure input.css exists)
+- Socket.IO-aware (defaults to threading; flag/ENV override)
+- Idempotent autopatch: injects Jinja NONCE into partials (regex-safe)
+- Routes export for quick inspection / CI artifacts
 """
 
 import os
+import re
 import sys
 import json
 import atexit
@@ -25,11 +28,11 @@ import webbrowser
 from pathlib import Path
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Iterable
 
 from dotenv import load_dotenv
 
-# ── Optional deps
+# ───────────────────────── Optional deps ─────────────────────────
 try:
     from werkzeug.middleware.proxy_fix import ProxyFix  # type: ignore
 except Exception:
@@ -42,31 +45,45 @@ except Exception:
     sentry_sdk = None
     FlaskIntegration = None
 
-# Default Socket.IO mode
+# Default Socket.IO mode (app.extensions.socketio may override at runtime)
 os.environ.setdefault("SOCKETIO_ASYNC_MODE", "threading")
 
-# ───────────────────────── Autopatch (minimal, gated) ─────────────────────────
-def autopatch() -> None:
+
+# ───────────────────────── Autopatch (idempotent) ─────────────────────────
+def autopatch(dirs: Iterable[Path] | None = None) -> None:
     """
-    Minimal, safe preflight (idempotent):
-      - inject NONCE on <script> missing it (partials only)
-      - ensure app/static/css/input.css exists (copy from tailwind.min.css if needed)
+    Safe preflight:
+      • Inject nonce="{{ NONCE }}" into <script ...> that lack a nonce (Jinja partials)
+      • Ensure app/static/css/input.css exists (use tailwind.min.css if present)
+
     Enable with --autopatch or FC_AUTOPATCH=1
     """
     print("\033[1;36m🔧 FundChamps Preflight Autopatcher...\033[0m")
-    base = Path("app/templates/partials")
-    if base.exists():
+
+    # where to scan for partials; overridable
+    scan_dirs = list(dirs or [])
+    if not scan_dirs:
+        for d in ("app/templates/partials", "app/templates/embed"):
+            p = Path(d)
+            if p.exists():
+                scan_dirs.append(p)
+
+    # Regex: match <script ...> that does NOT already have nonce=
+    script_rx = re.compile(r"<script(?![^>]*\bnonce=)([^>]*)>", re.IGNORECASE)
+
+    def _inject_nonce(txt: str) -> str:
+        return script_rx.sub(r'<script nonce="{{ NONCE }}"\1>', txt)
+
+    for base in scan_dirs:
         for html in base.rglob("*.html"):
             try:
-                txt = html.read_text(encoding="utf-8")
-                # Only patch truly bare <script> tags; leave existing nonce/attrs alone
-                if "<script>" in txt and 'nonce="{{ NONCE }}"' not in txt:
-                    patched = txt.replace("<script>", '<script nonce="{{ NONCE }}">')
-                    if patched != txt:
-                        html.write_text(patched, encoding="utf-8")
-                        print(f"✅ NONCE injected → {html}")
+                raw = html.read_text(encoding="utf-8")
+                patched = _inject_nonce(raw)
+                if patched != raw:
+                    html.write_text(patched, encoding="utf-8")
+                    print(f"  ✅ NONCE injected → {html}")
             except Exception as e:
-                print(f"⚠️  Skipped {html}: {e}")
+                print(f"  ⚠️  Skip {html}: {e}")
 
     css_dir = Path("app/static/css")
     if css_dir.exists():
@@ -75,18 +92,24 @@ def autopatch() -> None:
         if not input_css.exists() and tw_min.exists():
             try:
                 input_css.write_text(tw_min.read_text(encoding="utf-8"), encoding="utf-8")
-                print("✅ Created input.css from tailwind.min.css")
+                print("  ✅ Created input.css from tailwind.min.css")
             except Exception as e:
-                print(f"⚠️  Could not create input.css: {e}")
+                print(f"  ⚠️  Could not create input.css: {e}")
 
     print("\033[1;32m✨ Autopatch complete.\033[0m")
+    
+    # inside autopatch() in run.py
+import subprocess, sys
+try:
+    subprocess.run([sys.executable, "tools/patch_nonce_attrs.py", "--write"], check=True)
+    print("✅ Normalized nonce attributes across templates")
+except Exception as e:
+    print(f"⚠️ Nonce patch skipped: {e}")
+
 
 # ───────────────────────── Config normalize ─────────────────────────
 def _config_dupes_warning() -> None:
-    # If both app/config.py AND app/config/config.py exist, warn (we always import 'app.config')
-    mod_file = Path("app/config.py")
-    pkg_file = Path("app/config/config.py")
-    if mod_file.exists() and pkg_file.exists():
+    if Path("app/config.py").exists() and Path("app/config/config.py").exists():
         print(
             "\033[1;33m⚠️  Detected BOTH app/config.py and app/config/config.py.\n"
             "   Canonical path is \033[1mapp.config.*\033[0m. "
@@ -94,13 +117,12 @@ def _config_dupes_warning() -> None:
             "Consider removing \033[1mapp/config.py\033[0m to avoid ambiguity.\033[0m"
         )
 
+
 def normalize_config_path(value: Optional[str]) -> str:
     """
     Returns canonical 'app.config.*' path.
-    Accepts:
-      - None (uses FLASK_CONFIG or ENV alias)
-      - 'app.config.config.DevelopmentConfig' (legacy) → 'app.config.DevelopmentConfig'
-      - aliases: dev|test|prod|development|testing|production
+    Accepts aliases: dev|test|prod|development|testing|production
+    Also collapses 'app.config.config.*' → 'app.config.*' and 'config.*' → 'app.config.*'
     """
     if not value or not str(value).strip():
         value = os.getenv("FLASK_CONFIG") or ""
@@ -118,14 +140,12 @@ def normalize_config_path(value: Optional[str]) -> str:
         return alias.get(env, "app.config.DevelopmentConfig")
 
     v = value.strip()
-    # collapse nested "app.config.config.*" → "app.config.*"
     if v.startswith("app.config.config."):
-        v = v.replace("app.config.config.", "app.config.")
-    # if someone gave plain "config.*", lift it into "app.config.*"
+        v = v.replace("app.config.config.", "app.config.", 1)
     if v.startswith("config."):
         v = v.replace("config.", "app.config.", 1)
 
-    lower = v.lower()
+    key = v.lower()
     alias = {
         "dev": "app.config.DevelopmentConfig",
         "development": "app.config.DevelopmentConfig",
@@ -134,21 +154,28 @@ def normalize_config_path(value: Optional[str]) -> str:
         "prod": "app.config.ProductionConfig",
         "production": "app.config.ProductionConfig",
     }
-    return alias.get(lower, v)
+    return alias.get(key, v)
+
 
 # ───────────────────────── Logging ─────────────────────────
 class ColorFormatter(logging.Formatter):
     COLORS = {
-        "DEBUG": "\033[1;34m",
-        "INFO": "\033[1;32m",
-        "WARNING": "\033[1;33m",
-        "ERROR": "\033[1;31m",
+        "DEBUG": "\033[36m",
+        "INFO": "\033[32m",
+        "WARNING": "\033[33m",
+        "ERROR": "\033[31m",
         "CRITICAL": "\033[1;41m",
         "RESET": "\033[0m",
     }
+
+    def __init__(self, fmt: str = "%(asctime)s %(levelname)s %(message)s"):
+        super().__init__(fmt=fmt, datefmt="%H:%M:%S")
+
     def format(self, record: logging.LogRecord) -> str:
-        msg = super().format(record)
-        return f"{self.COLORS.get(record.levelname, '')}{msg}{self.COLORS['RESET']}"
+        base = super().format(record)
+        color = self.COLORS.get(record.levelname, "")
+        return f"{color}{base}{self.COLORS['RESET']}"
+
 
 class JsonFormatter(logging.Formatter):
     def format(self, record: logging.LogRecord) -> str:
@@ -162,14 +189,31 @@ class JsonFormatter(logging.Formatter):
             payload["exc_info"] = self.formatException(record.exc_info)
         return json.dumps(payload, ensure_ascii=False)
 
-def setup_logging(debug: bool, json_mode: bool) -> None:
+
+def setup_logging(debug: bool, style: str = "color") -> None:
+    """
+    style: 'color' | 'json' | 'plain'
+    env override: LOG_STYLE
+    """
+    style = (os.getenv("LOG_STYLE") or style or "color").lower()
     handler = logging.StreamHandler(sys.stdout)
-    fmt = "[%(asctime)s] %(levelname)s %(message)s"
-    handler.setFormatter(JsonFormatter() if json_mode else ColorFormatter(fmt))
+
+    if style == "json":
+        handler.setFormatter(JsonFormatter())
+    elif style == "plain":
+        handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%H:%M:%S"))
+    else:
+        # auto fallback to plain if stdout isn't a TTY
+        if not sys.stdout.isatty():
+            handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s", "%H:%M:%S"))
+        else:
+            handler.setFormatter(ColorFormatter())
+
     root = logging.getLogger()
     root.handlers.clear()
     root.addHandler(handler)
     root.setLevel(logging.DEBUG if debug else logging.INFO)
+
 
 # ───────────────────────── CLI model ─────────────────────────
 @dataclass(frozen=True)
@@ -179,13 +223,14 @@ class RunnerConfig:
     debug: bool
     use_reloader: bool
     open_browser: bool
-    log_json: bool
+    log_style: str
     pidfile: Optional[Path]
     routes_out: Optional[Path]
     force_run: bool
     async_mode: str
     config_path: str
     do_autopatch: bool
+
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Run the FundChamps Flask app.")
@@ -198,7 +243,7 @@ def parse_args() -> argparse.Namespace:
     debug_env = os.getenv("FLASK_DEBUG", "0").lower() in {"1", "true", "yes"}
     p.add_argument("--debug", default=debug_env, action=BoolOpt or "store_true")
     p.add_argument("--no-reload", action="store_true")
-    p.add_argument("--log-json", action="store_true")
+    p.add_argument("--log-style", choices=["color", "json", "plain"], default=os.getenv("LOG_STYLE", "color"))
     p.add_argument("--open-browser", action="store_true")
     p.add_argument("--pidfile", type=Path)
     p.add_argument("--routes-out", type=Path)
@@ -211,49 +256,54 @@ def parse_args() -> argparse.Namespace:
                   help="Run safe preflight autopatcher (also FC_AUTOPATCH=1)")
     return p.parse_args()
 
+
 def make_runner_config() -> RunnerConfig:
-    args = parse_args()
-    cfg_path = normalize_config_path(args.config or os.getenv("FLASK_CONFIG"))
+    a = parse_args()
+    cfg_path = normalize_config_path(a.config or os.getenv("FLASK_CONFIG"))
     return RunnerConfig(
-        host=str(args.host),
-        port=int(args.port),
-        debug=bool(getattr(args, "debug", False)),
-        use_reloader=(bool(getattr(args, "debug", False)) and not args.no_reload),
-        open_browser=bool(args.open_browser),
-        log_json=bool(args.log_json),
-        pidfile=args.pidfile,
-        routes_out=args.routes_out,
-        force_run=bool(args.force_run),
-        async_mode=str(args.async_mode or "threading"),
+        host=str(a.host),
+        port=int(a.port),
+        debug=bool(getattr(a, "debug", False)),
+        use_reloader=(bool(getattr(a, "debug", False)) and not a.no_reload),
+        open_browser=bool(a.open_browser),
+        log_style=str(a.log_style or "color"),
+        pidfile=a.pidfile,
+        routes_out=a.routes_out,
+        force_run=bool(a.force_run),
+        async_mode=str(a.async_mode or "threading"),
         config_path=cfg_path,
-        do_autopatch=bool(args.autopatch or os.getenv("FC_AUTOPATCH", "0").lower() in {"1","true","yes"}),
+        do_autopatch=bool(a.autopatch or os.getenv("FC_AUTOPATCH", "0").lower() in {"1", "true", "yes"}),
     )
+
 
 # ───────────────────────── Helpers ─────────────────────────
 def _ssl_ctx_from_env() -> Optional[Tuple[str, str]]:
     cert, key = os.getenv("SSL_CERTFILE"), os.getenv("SSL_KEYFILE")
     return (cert, key) if cert and key else None
 
+
 def _port_in_use(host: str, port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(0.35)
         return s.connect_ex((host, port)) == 0
 
+
 def _write_pidfile(pidfile: Path) -> None:
     pidfile.write_text(str(os.getpid()), encoding="utf-8")
     atexit.register(lambda: pidfile.exists() and pidfile.unlink(missing_ok=True))
+
 
 def _open_browser_later(url: str, delay: float = 0.6) -> None:
     import threading
     threading.Timer(delay, lambda: webbrowser.open_new_tab(url)).start()
 
+
 def banner(cfg: RunnerConfig) -> None:
-    print("""
-\033[1;34m
-╭─────────────────────────────────────────────────────────────╮
-│           🏆  FundChamps Flask SaaS Launcher  🏀           │
-╰─────────────────────────────────────────────────────────────╯
-\033[0m""")
+    print(
+        "\n\033[1;34m╭─────────────────────────────────────────────────────────────╮\n"
+        "│           🏆  FundChamps Flask SaaS Launcher  🏀           │\n"
+        "╰─────────────────────────────────────────────────────────────╯\033[0m"
+    )
     print(f"\033[1;33m✨ {datetime.now():%Y-%m-%d %H:%M:%S}: Bootstrapping FundChamps...\033[0m")
     print(f"🔎 ENV:        {os.getenv('FLASK_ENV', os.getenv('ENV', 'development'))}")
     print(f"⚙️  CONFIG:     {cfg.config_path}")
@@ -262,10 +312,14 @@ def banner(cfg: RunnerConfig) -> None:
     if cfg.host in {"127.0.0.1", "0.0.0.0", "localhost"}:
         print(f"\033[1;36m💻 Local:      http://127.0.0.1:{cfg.port}\033[0m")
 
+
 def print_routes(app, debug: bool, routes_out: Optional[Path] = None) -> None:
     rows = [
-        {"rule": str(rule), "endpoint": rule.endpoint,
-         "methods": sorted((rule.methods or set()) - {"HEAD", "OPTIONS"})}
+        {
+            "rule": str(rule),
+            "endpoint": rule.endpoint,
+            "methods": sorted((rule.methods or set()) - {"HEAD", "OPTIONS"}),
+        }
         for rule in sorted(app.url_map.iter_rules(), key=lambda r: str(r))
     ]
     if routes_out:
@@ -274,10 +328,13 @@ def print_routes(app, debug: bool, routes_out: Optional[Path] = None) -> None:
             print(f"\n\033[1;35m📝 Routes written to:\033[0m {routes_out}")
         except Exception as e:
             logging.warning("Failed to write routes file: %s", e)
+
     if debug:
         print("\n\033[1;32m🔗 Routes:\033[0m")
         for r in rows:
-            print(f"  \033[1;34m{r['rule']}\033[0m → {r['endpoint']} ({','.join(r['methods'])})")
+            methods = ",".join(r["methods"])
+            print(f"  \033[1;34m{r['rule']}\033[0m → {r['endpoint']} ({methods})")
+
 
 # ───────────────────────── Env shims (Stripe keys, etc.) ─────────────────────
 def _shim_env_aliases() -> None:
@@ -286,11 +343,13 @@ def _shim_env_aliases() -> None:
     if not os.getenv("STRIPE_PUBLIC_KEY") and os.getenv("STRIPE_PUBLISHABLE_KEY"):
         os.environ["STRIPE_PUBLIC_KEY"] = os.getenv("STRIPE_PUBLISHABLE_KEY", "")
 
+
 # ───────────────────────── Build app for Flask CLI (optional) ─────────────────
 def build_app():
     """Allows: `flask --app run:build_app routes`."""
-    from app import create_app  # local import so dotenv/env is loaded first
+    from app import create_app  # defer import until after dotenv/env
     return create_app(normalize_config_path(os.getenv("FLASK_CONFIG")))
+
 
 # Export `app` for `flask --app run:app run` convenience (guarded)
 _app_should_export = os.getenv("FC_EXPORT_APP", "1").lower() in {"1", "true", "yes"}
@@ -301,6 +360,7 @@ if _app_should_export:
     except Exception:
         app = None  # type: ignore
 
+
 # ───────────────────────── Main ─────────────────────────
 def main() -> None:
     load_dotenv()
@@ -309,22 +369,25 @@ def main() -> None:
 
     cfg = make_runner_config()
     os.environ["SOCKETIO_ASYNC_MODE"] = cfg.async_mode
-    setup_logging(cfg.debug, cfg.log_json)
+    setup_logging(cfg.debug, cfg.log_style)
 
-    # Signals
+    # Signals (graceful exit)
     for sig in ("SIGINT", "SIGTERM"):
         if hasattr(signal, sig):
             signal.signal(getattr(signal, sig), lambda *_: sys.exit(0))
 
-    # Autopatch (off by default)
+    # Autopatch (opt-in)
     if cfg.do_autopatch:
         autopatch()
 
     # Sentry (optional)
     dsn = os.getenv("SENTRY_DSN")
     if dsn and sentry_sdk and FlaskIntegration:
-        sentry_sdk.init(dsn=dsn, integrations=[FlaskIntegration()],
-                        traces_sample_rate=float(os.getenv("SENTRY_TRACES", "0.0")))
+        sentry_sdk.init(
+            dsn=dsn,
+            integrations=[FlaskIntegration()],
+            traces_sample_rate=float(os.getenv("SENTRY_TRACES", "0.0")),
+        )
         logging.info("Sentry initialized")
 
     if cfg.pidfile:
@@ -344,8 +407,11 @@ def main() -> None:
         from app import create_app
         flask_app = create_app(cfg.config_path)
 
+        # Respect proxied headers if enabled
         if ProxyFix and os.getenv("TRUST_PROXY", "0").lower() in {"1", "true", "yes"}:
-            flask_app.wsgi_app = ProxyFix(flask_app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1)
+            flask_app.wsgi_app = ProxyFix(  # type: ignore[assignment]
+                flask_app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1, x_prefix=1
+            )
 
         if cfg.open_browser and cfg.host in {"127.0.0.1", "0.0.0.0", "localhost"}:
             _open_browser_later(f"http://127.0.0.1:{cfg.port}")
@@ -371,6 +437,7 @@ def main() -> None:
     except Exception as exc:
         logging.error("❌ Failed to launch FundChamps app: %s", exc, exc_info=True)
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

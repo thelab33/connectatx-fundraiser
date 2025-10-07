@@ -1,0 +1,18 @@
+sed -i '/^:root {/,/}/{ 
+  /}/a\
+\
+/* GRID-BRIDGE for legacy markup */\
+.fc-hero-enterprise {\
+  display: grid;\
+  grid-template-columns: minmax(0,1fr) minmax(360px, var(--rail-width));\
+  grid-template-areas:\
+    "overlay rail"\
+    "photo   rail";\
+  column-gap: clamp(18px, 3vw, 36px);\
+  row-gap:   clamp(10px, 1.6vw, 18px);\
+}\
+.fc-hero-overlay { grid-area: overlay; }\
+.fc-hero-photo   { grid-area: photo;   }\
+.fc-hero-rail    { grid-area: rail;    }\
+' static/css/hero.css
+

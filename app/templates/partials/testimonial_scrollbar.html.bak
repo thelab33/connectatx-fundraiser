@@ -1,4 +1,4 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
 {# =========================================================================================
    testimonial_scrollbar.html — Subtle Testimonial Scroller
    - Thin horizontal strip with sliding testimonials

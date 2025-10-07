@@ -131,6 +131,15 @@
   </style>
 
   {% block extra_head %}{% endblock %}
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 </head>
 <body class="min-h-full bg-zinc-950 text-zinc-100">
   {# Global render guard (pages can use/extend this) #}
@@ -182,6 +191,31 @@
   {% endif %}
 
   {% block extra_js %}{% endblock %}
+
+<!-- Floating Donate CTA -->
+<div class="fc-float-cta" id="floating-donate-cta" style="display:none; position:fixed;bottom:1.7rem;right:1.7rem;z-index:1999;">
+  <a class="fcx-btn fcx-btn-accent fc-pro-cta" href="{{ HREF_DONATE }}" target="_blank" rel="noopener noreferrer" data-cta="donate">
+    Donate Now →
+  </a>
+</div>
+<script>
+(() => {
+  const float = document.getElementById("floating-donate-cta");
+  const donateBtns = document.querySelectorAll("[data-cta='donate']");
+  const check = () => {
+    let donateVisible = false;
+    donateBtns.forEach(btn => {
+      const rect = btn.getBoundingClientRect();
+      if (rect.top < window.innerHeight && rect.bottom > 0) donateVisible = true;
+    });
+    float.style.display = donateVisible ? "none" : "grid";
+  };
+  window.addEventListener("scroll", check, { passive: true });
+  window.addEventListener("resize", check);
+  check();
+})();
+</script>
+
 </body>
 </html>
 

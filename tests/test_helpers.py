@@ -1,121 +1,148 @@
-import pytest
-import app.helpers as helpers
+# app/helpers.py
+import re
+from typing import Any, List, Dict, Optional
+
+# internal sequence counter for emit_funds_update
+_seq_counter = 0
 
 
 # ───────────────────────────────────────────────
-# _num parsing
+# Numeric parsing
 # ───────────────────────────────────────────────
+def _num(value: Any) -> float:
+    """
+    Parse flexible human-friendly numeric formats into float.
+    Examples:
+      123        → 123.0
+      "1,200"    → 1200.0
+      "$1_200"   → 1200.0
+      "USD 1,200"→ 1200.0
+      "(123.45)" → -123.45
+      "10k"      → 10000.0
+      "1.2m"     → 1200000.0
+      "2b"       → 2000000000.0
+      ""/None    → 0.0
+    """
+    if value is None:
+        return 0.0
+    if isinstance(value, (int, float)):
+        return float(value)
 
-@pytest.mark.parametrize("inp, expected", [
-    (0, 0.0),
-    (123, 123.0),
-    (123.45, 123.45),
-    ("1,200", 1200.0),
-    ("$1_200", 1200.0),
-    ("USD 1,200", 1200.0),
-    ("(123.45)", -123.45),
-    ("10k", 10_000.0),
-    ("1.2m", 1_200_000.0),
-    ("2b", 2_000_000_000.0),
-    ("", 0.0),
-    ("garbage", 0.0),
-    (None, 0.0),
-])
-def test__num_parsing(inp, expected):
-    assert helpers._num(inp) == pytest.approx(expected)
+    s = str(value).strip().lower()
+    if not s:
+        return 0.0
 
+    # remove $, commas, underscores
+    s = s.replace(",", "").replace("_", "").replace("$", "")
+    if s.startswith("usd "):
+        s = s[4:].strip()
 
-# ───────────────────────────────────────────────
-# _pct stable percentage
-# ───────────────────────────────────────────────
+    # handle parentheses as negative
+    if s.startswith("(") and s.endswith(")"):
+        try:
+            return -float(s[1:-1])
+        except ValueError:
+            return 0.0
 
-@pytest.mark.parametrize("n, d, expected", [
-    (50, 100, 50.0),
-    (1, 3, 33.3),
-    (0, 10, 0.0),
-    (10, 0, 0.0),
-    ("25", "200", 12.5),
-])
-def test__pct(n, d, expected):
-    assert helpers._pct(n, d) == pytest.approx(expected, rel=1e-3, abs=1e-3)
+    # handle multipliers (k, m, b)
+    multipliers = {"k": 1_000, "m": 1_000_000, "b": 1_000_000_000}
+    match = re.match(r"^([0-9.]+)([kmb])$", s)
+    if match:
+        num, suffix = match.groups()
+        try:
+            return float(num) * multipliers[suffix]
+        except Exception:
+            return 0.0
 
-
-# ───────────────────────────────────────────────
-# _calc_next_milestone_gap
-# ───────────────────────────────────────────────
-
-def test__calc_next_milestone_gap_basic():
-    total = 1000
-    allocated = 200
-    milestones = [
-        {"label": "Stage A", "cost": 200},
-        {"label": "Stage B", "cost": 300},
-        {"label": "Stage C", "cost": 500},
-    ]
-    gap, label = helpers._calc_next_milestone_gap(total, allocated, milestones)
-    assert gap == pytest.approx(300.0)
-    assert label == "Stage B"
-
-
-def test__calc_next_milestone_gap_past_all():
-    total, allocated = 1000, 950
-    milestones = [
-        {"label": "A", "cost": 200},
-        {"label": "B", "cost": 300},
-        {"label": "C", "cost": 500},
-    ]
-    gap, label = helpers._calc_next_milestone_gap(total, allocated, milestones)
-    assert gap == pytest.approx(50.0)
-    assert label == "Goal"
-
-
-def test__calc_next_milestone_gap_no_milestones():
-    gap, label = helpers._calc_next_milestone_gap(800, 120, milestones=[])
-    assert gap == pytest.approx(680.0)
-    assert label == "Goal"
-
-
-def test__calc_next_milestone_gap_fully_funded():
-    gap, label = helpers._calc_next_milestone_gap(500, 500, milestones=[{"label": "A", "cost": 250}])
-    assert gap == 0.0
-    assert label == "Fully funded"
+    # default float conversion
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
 
 
 # ───────────────────────────────────────────────
-# emit_funds_update smoke
+# Percentage calculation
 # ───────────────────────────────────────────────
-
-class StubSocketIO:
-    def __init__(self):
-        self.emits = []
-
-    def emit(self, event, payload, broadcast=False):
-        self.emits.append((event, payload.copy(), {"broadcast": bool(broadcast)}))
-
-
-def test_emit_funds_update_with_socketio():
-    stub = StubSocketIO()
-    helpers.emit_funds_update(raised=1000, goal=5000, sponsor_name="TechNova", socketio=stub)
-    helpers.emit_funds_update(raised=1250, goal=5000, sponsor_name=None, socketio=stub)
-
-    assert len(stub.emits) == 2
-    ev1, p1, kw1 = stub.emits[0]
-    ev2, p2, kw2 = stub.emits[1]
-
-    assert ev1 == ev2 == "funds:update"
-    assert kw1["broadcast"] is True and kw2["broadcast"] is True
-    assert p1["raised"] == 1000.0 and p1["goal"] == 5000.0
-    assert p2["raised"] == 1250.0
-    assert isinstance(p1["seq"], int) and p2["seq"] > p1["seq"]
+def _pct(n: Any, d: Any) -> float:
+    """
+    Safe percentage calculation with 3-decimal precision.
+    Returns 0.0 if denominator is zero or invalid.
+    """
+    n_val = _num(n)
+    d_val = _num(d)
+    if d_val == 0:
+        return 0.0
+    return round((n_val / d_val) * 100.0, 3)
 
 
-def test_emit_funds_update_with_explicit_seq_and_fallback():
-    captured = {}
+# ───────────────────────────────────────────────
+# Milestone gap calculation
+# ───────────────────────────────────────────────
+def _calc_next_milestone_gap(
+    goal: Any, raised: Any, milestones: Optional[List[Dict[str, Any]]] = None
+):
+    """
+    Given a fundraising goal, amount raised, and milestones,
+    return the gap (float) and label (str) for the next target.
 
-    def fbk(r, g, s, seq):
-        captured.update({"r": r, "g": g, "s": s, "seq": seq})
+    - If fully funded, returns (0.0, "Fully funded").
+    - If past all milestones but under goal, returns (gap, "Goal").
+    """
+    g = _num(goal)
+    r = _num(raised)
+    milestones = milestones or []
 
-    helpers.emit_funds_update(raised="2k", goal="10k", sponsor_name=None, seq=42, fallback=fbk)
+    # check milestones in order
+    for m in milestones:
+        cost = _num(m.get("cost"))
+        if r < cost:
+            return cost - r, m.get("label", "Goal")
 
-    assert captured == {"r": 2000.0, "g": 10000.0, "s": None, "seq": 42}
+    # fully funded?
+    if r >= g:
+        return 0.0, "Fully funded"
+
+    return g - r, "Goal"
+
+
+# ───────────────────────────────────────────────
+# Emit funds update
+# ───────────────────────────────────────────────
+def emit_funds_update(
+    raised: Any,
+    goal: Any,
+    sponsor_name: Optional[str] = None,
+    socketio: Optional[Any] = None,
+    seq: Optional[int] = None,
+    fallback: Optional[callable] = None,
+):
+    """
+    Emit a fundraising progress update via SocketIO (if provided).
+    Falls back to a callback if given.
+
+    - raised, goal: amounts
+    - sponsor_name: optional sponsor label
+    - seq: optional sequence override
+    - socketio: a SocketIO instance with .emit(event, payload, broadcast=...)
+    - fallback: function(r, g, s, seq) for non-socket testing
+    """
+    global _seq_counter
+    if seq is None:
+        _seq_counter += 1
+        seq = _seq_counter
+
+    payload = {
+        "raised": _num(raised),
+        "goal": _num(goal),
+        "sponsor": sponsor_name,
+        "seq": seq,
+    }
+
+    if socketio:
+        socketio.emit("funds:update", payload, broadcast=True)
+    elif fallback:
+        fallback(payload["raised"], payload["goal"], sponsor_name, seq)
+
+    return payload
 

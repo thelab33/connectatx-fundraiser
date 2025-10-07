@@ -1,0 +1,250 @@
+{# --- Reusable Tile Macro (unchanged) --- #}
+{% macro tile(icon, title, copy, href, label='Learn&nbsp;More', badge='') -%}
+  {% if badge %}<span class="badge">{{ badge }}</span>{% endif %}
+  <span class="tile-icon" aria-hidden="true">{{ icon }}</span>
+  <h3 class="tile-title">{{ title }}</h3>
+  <p  class="tile-copy">{{ copy }}</p>
+  <a href="{{ href }}"
+     class="btn btn--gold mt-4 w-max"
+     aria-label="{{ label }}: {{ title }}">{{ label }}</a>
+{%- endmacro %}
+
+{# --- Wrapper; expose --tile-min for easy tuning --- #}
+<section class="agency-tiles" aria-label="Highlights">
+  <article class="feature-tile" data-delay="0" tabindex="0">
+    <span class="badge">2025 Season</span>
+    <span class="tile-icon" aria-hidden="true">🏆</span>
+    <h3 class="tile-title">Sponsor Tiers</h3>
+    <p class="tile-copy">Unlock premium perks for brands that back your athletes.</p>
+    <a href="#tiers" class="btn--gold mt-4 w-max" aria-label="Explore Tiers: Sponsor Tiers">Explore Tiers</a>
+  </article>
+  <article class="feature-tile" data-delay="1" tabindex="0">
+    <span class="badge">Live</span>
+    <span class="tile-icon" aria-hidden="true">📊</span>
+    <h3 class="tile-title">Impact Live</h3>
+    <p class="tile-copy">Real-time progress on travel, gear, tutoring &amp; more.</p>
+    <a href="#impact" class="btn--gold mt-4 w-max" aria-label="See Impact: Impact Live">See Impact</a>
+  </article>
+  <article class="feature-tile" data-delay="2" tabindex="0">
+    <span class="badge"></span>
+    <span class="tile-icon" aria-hidden="true">📖</span>
+    <h3 class="tile-title">About the Club</h3>
+    <p class="tile-copy">Meet coaches, read our story, and join the journey.</p>
+    <a href="#about" class="btn--gold mt-4 w-max" aria-label="Read Story: About the Club">Read Story</a>
+  </article>
+</section>
+
+<style {{ nonce_attr(NONCE) }}>
+:root {
+  --accent: {{ BRAND_HEX|default('#facc15') }};
+  --tile-bg-1: rgba(30,29,43,.96);
+  --tile-bg-2: rgba(15,15,22,.94);
+  --tile-edge: color-mix(in srgb, var(--accent) 58%, transparent);
+  --tile-radius: 1.6rem;
+  --tile-shadow: 0 12px 36px rgba(0,0,0,.34);
+  --tile-shadow-hover: 0 18px 56px rgba(0,0,0,.52), 0 0 0 2.5px var(--tile-edge), 0 0 14px #facc1530;
+  --tile-gap: clamp(1.5rem, 2vw, 2.6rem);
+  --tile-min: 20rem;  /* Adjust per section or page! */
+  --tile-max: 1fr;    /* Makes sure they can grow */
+  --tile-padding: 2rem;
+  --tile-font-family: "Inter", system-ui, sans-serif;
+}
+body {
+  font-family: var(--tile-font-family);
+  margin: 0;
+  background-color: #101019;
+  color: #e9e9f0;
+}
+
+/* Tile Section */
+.agency-tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(var(--tile-min), var(--tile-max)));
+  gap: var(--tile-gap);
+  max-width: 72rem;
+  margin: 2.5rem auto;
+  padding: 0 clamp(1rem, 4vw, 2.5rem);
+  align-items: stretch;
+}
+
+/* Individual Tile */
+.feature-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  border-radius: var(--tile-radius);
+  background: linear-gradient(142deg, var(--tile-bg-1), var(--tile-bg-2));
+  box-shadow: var(--tile-shadow);
+  min-height: 350px;
+  height: 100%;
+  position: relative;
+  padding: var(--tile-padding);
+  backdrop-filter: blur(15px) saturate(1.18);
+  transition: transform 0.26s cubic-bezier(.4,.6,.32,1.08), box-shadow 0.25s cubic-bezier(.4,.6,.32,1.08), opacity 0.68s, filter 0.25s;
+  opacity: 0;
+  transform: translateY(20px);
+  outline: none;
+}
+
+.feature-tile::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, transparent 0%, var(--tile-edge) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.feature-tile:focus-visible,
+.feature-tile:hover {
+  box-shadow: var(--tile-shadow-hover);
+  transform: translateY(-6px) scale(1.025);
+  filter: saturate(1.05);
+  z-index: 2;
+}
+
+.feature-tile.visible {
+  opacity: 1;
+  transform: none;
+}
+
+.feature-tile[data-delay="1"].visible {
+  transition-delay: .09s;
+}
+
+.feature-tile[data-delay="2"].visible {
+  transition-delay: .18s;
+}
+
+.tile-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  font-size: 1.55rem;
+  margin-bottom: 1.12rem;
+  color: var(--accent);
+  transition: transform 0.24s cubic-bezier(.4,.6,.32,1.08);
+}
+
+.feature-tile:hover .tile-icon,
+.feature-tile:focus-visible .tile-icon {
+  transform: scale(1.18) rotate(-5deg);
+}
+
+/* Badge Styling */
+.badge {
+  display: inline-block;
+  font: 700 .72rem/1 "Inter", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  background: var(--accent);
+  color: #18181b;
+  padding: .25em .7em;
+  border-radius: 7px;
+  margin-bottom: .7rem;
+  box-shadow: 0 1px 8px #facc1530;
+  text-shadow: 0 2px 7px #fff6, 0 1px 0 #0002;
+}
+
+/* Tile Title */
+.tile-title {
+  font: 900 1.28rem/1.22 "Poppins", system-ui, sans-serif;
+  color: #fff;
+  margin: .2rem 0 .62rem;
+}
+
+/* Tile Copy */
+.tile-copy {
+  font: 500 1rem/1.55 "Inter", system-ui, sans-serif;
+  color: #d1d5db;
+}
+
+/* Button Styling */
+.btn--gold {
+  background: linear-gradient(90deg, #fffbe6, var(--accent) 75%);
+  color: #23241f;
+  font-weight: 900;
+  border-radius: 999px;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.07);
+  border: 1px solid rgba(0,0,0,0.11);
+  min-width: 130px;
+  transition: background .19s, color .17s, box-shadow .18s, border-color .18s;
+  padding: .75em 1.7em;
+  font-size: 1rem;
+}
+
+.btn--gold:hover {
+  background: linear-gradient(90deg, #fff7ba, var(--accent) 100%);
+  color: #181e2a;
+  box-shadow: 0 3px 14px rgba(251,227,74,0.21);
+}
+
+/* Mobile Optimization */
+@media (max-width: 900px) {
+  .agency-tiles {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-tile {
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 600px) {
+  .feature-tile {
+    padding: 1.2rem 0.7rem;
+    min-height: 140px;
+  }
+
+  .tile-title {
+    font-size: 1.08rem;
+  }
+
+  .tile-icon {
+    width: 38px;
+    height: 38px;
+    font-size: 1.1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-tile {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .tile-icon {
+    transition: none !important;
+  }
+}
+
+
+  </style>
+  <script type="module">
+/* Staggered tile reveal + a11y focus support */
+(() => {
+  const tiles   = document.querySelectorAll('.feature-tile');
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduced || !('IntersectionObserver' in window)) {
+    tiles.forEach(t => t.classList.add('visible'));
+    return;
+  }
+  const io = new IntersectionObserver(
+    entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          io.unobserve(e.target);
+        }
+      });
+    },
+    { rootMargin: '0px 0px -15% 0px' }
+  );
+  tiles.forEach(tile => io.observe(tile));
+})();
+</script>

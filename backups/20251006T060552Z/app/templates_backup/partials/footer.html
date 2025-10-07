@@ -1,0 +1,217 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# =================== Footer (SaaS/Agency/White-label Ready) =================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+
+{# ---- Configurable “Built With” signature, with safe fallback ---- #}
+{% set built_with = (
+    team.built_with_signature if team and team.built_with_signature is not none
+    else settings.built_with_signature if settings and settings.built_with_signature is defined
+    else "Built with snacks &amp; late nights."
+) %}
+
+{% set BRAND          = team.team_name if team and team.team_name else 'Your Club/Org' %}
+{% set ACCENT         = team.theme_hex if team and team.theme_hex else '#facc15' %}
+{% set YEAR           = now().year if now is defined else 2025 %}
+{% set is_501c3       = team.is_501c3 if team is defined and team.is_501c3 is defined else false %}
+{% set contact_email  = team.contact_email if team and team.contact_email else None %}
+{% set social_links   = team.social_links if team and team.social_links else {} %}
+{% set hide_powered   = team.hide_powered if team and team.hide_powered else False %}
+{% set payment_link   = footer_payment_link|default(stripe_payment_link|default(None)) %}
+{% set privacy_href   = safe_url_for('main.privacy') if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.privacy') else '/privacy' %}
+{% set terms_href     = safe_url_for('main.terms')   if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.terms')   else '/terms' %}
+{% set donate_href    = payment_link or (safe_url_for('main.donate') if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate') else '/donate') %}
+{% set tiers_href     = '#tiers' %}
+{% set stats          = stats if stats is defined else None %}
+
+<footer id="site-footer"
+        class="w-full border-t-4 bg-zinc-950 text-zinc-100 relative"
+        style="--accent: {{ ACCENT }}; border-color: var(--accent);"
+        role="contentinfo" aria-label="Site footer">
+
+  <div class="max-w-7xl mx-auto px-4 py-8 relative">
+    <!-- Halo/Glow Accent -->
+    <div class="absolute top-0 left-1/4 right-1/4 h-7 bg-[radial-gradient(ellipse_60%_55%_at_50%_60%,theme(colors.yellow.300)_0%,transparent_92%)] opacity-30 pointer-events-none -translate-y-8"></div>
+
+    <!-- Main Footer Row -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-7 mb-4">
+      <!-- Org Info + Nav -->
+      <div class="flex flex-col gap-2 min-w-[180px]">
+        <div class="flex flex-wrap items-center gap-2 text-sm font-semibold">
+          <span>© {{ YEAR }} {{ BRAND }}</span>
+          <span class="hidden md:inline-block text-yellow-400">•</span>
+          {% if is_501c3 %}
+            <span class="inline-flex items-center bg-yellow-400/20 text-yellow-400 px-2 py-0.5 rounded-full text-xs font-bold">501(c)(3) verified</span>
+          {% else %}
+            <span class="inline-flex items-center bg-yellow-400/10 text-yellow-300 px-2 py-0.5 rounded-full text-xs font-semibold">Community program</span>
+          {% endif %}
+          <span class="hidden md:inline-block text-yellow-400">•</span>
+          <a class="hover:underline text-yellow-200" href="{{ privacy_href }}">Privacy</a>
+          <a class="hover:underline text-yellow-200" href="{{ terms_href }}">Terms</a>
+          {% if stats and (stats.raised or stats.sponsors) %}
+            <span class="text-yellow-400">•</span>
+            <span class="font-extrabold text-yellow-100">
+              {% if stats.raised %}${{ '{:,.0f}'.format(stats.raised) }} raised{% endif %}
+              {% if stats.raised and stats.sponsors %}&nbsp;|&nbsp;{% endif %}
+              {% if stats.sponsors %}{{ stats.sponsors }} sponsors{% endif %}
+            </span>
+          {% endif %}
+        </div>
+        <!-- Quick Nav Links -->
+        <nav aria-label="Footer navigation">
+          <ul class="flex flex-wrap gap-2 text-xs mt-1 font-bold text-yellow-200">
+            <li><a class="hover:underline" href="#about">About</a></li>
+            <li><a class="hover:underline" href="#impact">Impact</a></li>
+            <li><a class="hover:underline" href="#tiers">Sponsor</a></li>
+            {% if contact_email %}
+              <li><a class="hover:underline" href="mailto:{{ contact_email }}?subject=Support%20{{ BRAND|urlencode }}">Contact</a></li>
+            {% endif %}
+          </ul>
+        </nav>
+      </div>
+
+      <!-- CTAs (Donate/Sponsor) -->
+      <div class="flex gap-2">
+        <a id="ftr-donate"
+           href="{{ donate_href }}"
+           class="inline-flex items-center font-bold px-5 py-2 rounded-full bg-yellow-400 text-black text-sm hover:bg-yellow-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 shadow transition">Donate</a>
+        <a href="{{ tiers_href }}"
+           class="inline-flex items-center font-bold px-5 py-2 rounded-full border border-yellow-300 bg-transparent text-yellow-300 text-sm hover:bg-yellow-300 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-400 transition">Sponsor</a>
+      </div>
+
+      <!-- Socials -->
+      {% if social_links %}
+      <div class="flex gap-3 items-center ml-1">
+        {% for name, url in social_links.items() %}
+          <a class="text-yellow-200 hover:text-yellow-400 text-lg transition" href="{{ url }}" target="_blank" rel="noopener" aria-label="Follow on {{ name|capitalize }}">
+            <i class="icon-{{ name|lower }}"></i>
+          </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Trust/Powered Row -->
+    <div class="flex flex-col sm:flex-row items-center gap-3 border-t border-zinc-800 pt-3">
+      <div class="flex items-center gap-2 font-semibold text-zinc-300 text-sm">
+        <span aria-hidden="true">🔒</span>
+        <span>Secure checkout via Stripe / PayPal. Cards: Visa · Mastercard · AmEx.</span>
+        <a class="ml-2 inline-block bg-zinc-900 text-yellow-400 rounded-full px-3 py-1 text-xs font-bold shadow hover:bg-yellow-800 transition"
+           href="https://stripe.com/docs/security/stripe"
+           target="_blank" rel="noopener noreferrer"
+           aria-label="View Stripe security details (opens in a new tab)">
+          Stripe Secure
+        </a>
+      </div>
+      {% if not hide_powered %}
+      <div class="flex items-center gap-2 ml-auto text-xs font-semibold text-zinc-400">
+        <span>Powered by</span>
+        <a href="https://fundchamps.org" class="font-bold text-yellow-300 hover:underline" target="_blank" rel="noopener">FundChamps</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Newsletter slot (hidden by default, SaaS-injectable) -->
+    <div id="newsletter-slot" class="hidden mt-7" data-slot="newsletter"></div>
+    {% if built_with %}
+      <p class="footer-builtwith text-right text-xs text-zinc-700 mt-7 italic opacity-80">
+        {{ built_with | safe }}
+      </p>
+    {% endif %}
+  </div>
+
+  <!-- Floating “Back to Top” -->
+  <button id="backtop" type="button"
+          class="fixed right-6 bottom-6 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-yellow-200 to-yellow-400 text-black font-extrabold text-2xl shadow-xl opacity-0 pointer-events-none transition-opacity duration-200"
+          aria-label="Back to top" title="Back to top">↑</button>
+  <noscript>
+    <a class="fixed right-4 bottom-4 bg-yellow-400 text-black font-bold rounded-full px-4 py-2" href="#top" aria-label="Back to top">↑ Back to top</a>
+  </noscript>
+</footer>
+<!-- Floating CTA (mobile only) -->
+<div id="footer-float-cta" class="fixed inset-x-0 bottom-0 z-40 flex justify-center md:hidden opacity-0 pointer-events-none transition-opacity">
+  <div class="mb-5 flex gap-3 bg-zinc-950/90 backdrop-blur-lg rounded-full shadow-xl px-4 py-2 border border-yellow-400/30">
+    <a href="{{ donate_href }}" class="bg-yellow-400 text-black font-bold px-5 py-2 rounded-full hover:bg-yellow-300 transition">Donate</a>
+    <a href="{{ tiers_href }}" class="border border-yellow-400 text-yellow-400 font-bold px-5 py-2 rounded-full hover:bg-yellow-400 hover:text-black transition">Sponsor</a>
+  </div>
+</div>
+
+<style {{ nonce_attr() }}>
+#site-footer {
+  background: linear-gradient(180deg, #181922 0 80%, #13141a 100%);
+  box-shadow: 0 -2px 30px rgba(0,0,0,.16);
+  border-top-width: 4px !important;
+  border-color: var(--accent, #facc15) !important;
+}
+#site-footer .icon-facebook { font-family: "Font Awesome 6 Free"; content: "\f09a"; }
+#site-footer .icon-twitter  { font-family: "Font Awesome 6 Free"; content: "\f099"; }
+#site-footer .icon-instagram{ font-family: "Font Awesome 6 Free"; content: "\f16d"; }
+#site-footer .icon-linkedin { font-family: "Font Awesome 6 Free"; content: "\f0e1"; }
+#site-footer .icon-tiktok   { font-family: "Font Awesome 6 Brands"; content: "\e07b"; }
+#site-footer .icon-facebook,
+#site-footer .icon-twitter,
+#site-footer .icon-instagram,
+#site-footer .icon-linkedin,
+#site-footer .icon-tiktok {
+  font-size: 1.55em; display: inline-block; vertical-align: middle;
+}
+.footer-builtwith {
+  text-align: right; font-size: 0.92em; color: #cbd5e1; margin-top: 1.75rem;
+  font-style: italic; opacity: 0.85; letter-spacing: -0.02em; transition: color .2s;
+}
+@media (max-width: 600px) { .footer-builtwith { text-align: left; } }
+.footer-builtwith a { color: var(--accent, #facc15); font-weight: 700; text-decoration: underline; }
+#site-footer .hide-powered { display: none !important; }
+#backtop {
+  outline: none; box-shadow: 0 6px 20px #facc1575;
+  transition: opacity .2s, box-shadow .18s;
+}
+#backtop:focus-visible, #backtop:hover {
+  box-shadow: 0 8px 28px #facc1595;
+  background: linear-gradient(135deg, #ffe066 60%, #facc15 100%);
+  color: #111;
+}
+#site-footer { opacity:0; transform:translateY(40px); transition:all .7s cubic-bezier(.2,1,.32,1);}
+#site-footer.is-in { opacity:1; transform:none; }
+</style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const el = document.getElementById('site-footer');
+  if (!el) return;
+  new IntersectionObserver(([e])=>{
+    if(e.isIntersecting) el.classList.add('is-in');
+  },{threshold:.12}).observe(el);
+})();
+</script>
+<script {{ nonce_attr() }}>
+(() => {
+  const btn = document.getElementById('backtop');
+  if (!btn) return;
+  const sc = () => {
+    btn.style.opacity = window.scrollY > 300 ? "1" : "0";
+    btn.style.pointerEvents = window.scrollY > 300 ? "auto" : "none";
+  };
+  window.addEventListener('scroll', sc, { passive:true });
+  btn.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+})();
+</script>
+<script {{ nonce_attr() }}>
+(() => {
+  const float = document.getElementById('footer-float-cta');
+  window.addEventListener('scroll',()=> {
+    if (!float) return;
+    float.style.opacity = window.scrollY > 500 ? '1' : '0';
+    float.style.pointerEvents = window.scrollY > 500 ? 'auto' : 'none';
+  }, { passive:true });
+})();
+</script>
+

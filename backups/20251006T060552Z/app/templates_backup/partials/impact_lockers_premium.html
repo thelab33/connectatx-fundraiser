@@ -1,0 +1,137 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ---------------------------------------------------------------------------
+   Impact Section • FundChamps Ultra SaaS 2025
+   - card_mode = True   →  compact tile
+   - card_mode = False  →  full-width section
+--------------------------------------------------------------------------- #}
+
+{# ---------- Safe defaults ---------- #}
+{% set card_mode = card_mode | default(False) %}
+{% set KPIS   = KPIS   | default([
+  {'label':'Families Served', 'value':500, 'suffix':'+', 'decimals':0},
+  {'label':'Team GPA',        'value':3.5, 'decimals':1},
+  {'label':'College-track',   'value':92,  'suffix':'%'},
+]) %}
+{% set RAISED = RAISED | default(0) %}
+{% set GOAL   = GOAL   | default(50000) %}
+{% set THEME  = theme_hex | default('#facc15') %}
+{% set HREF_DONATE = HREF_DONATE | default('/donate') %}
+{% set DEMO  = demo | default(False) %}
+{% set DEMO_TXT = DEMO_TXT | default("Demo Data — your program’s real impact stats go here.") %}
+{# ------------------------------------------------------------------------- #}
+
+{% if card_mode %}
+
+<section id="impact"
+   class="impact-section rounded-3xl border-2 border-elite-gold/90 bg-gradient-to-tr from-elite-black via-zinc-900/95 to-elite-gold/10 shadow-2xl
+          px-6 py-10 relative z-10 mx-auto"
+   aria-labelledby="impact-h"
+   style="--accent: {{ THEME }}; max-width:1060px;">
+
+  <header class="mb-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+    <div>
+      <h2 id="impact-h" class="text-2xl font-black tracking-tight text-elite-gold">
+        Impact <span class="text-elite-red">Live</span>
+      </h2>
+      <p class="text-sm text-elite-gray opacity-90">
+        {{ DEMO and DEMO_TXT or 'Where your gifts go, every season.' }}
+      </p>
+    </div>
+    <a href="{{ HREF_DONATE }}" class="btn gold text-sm font-bold shadow-md">Give Now</a>
+  </header>
+
+  {# Progress bar + KPI cards #}
+  <div class="mb-5 grid gap-4 grid-cols-1 sm:grid-cols-4">
+    <div class="flex flex-col items-center text-center" aria-label="Fundraiser progress">
+      <div class="w-32 h-2.5 rounded-full border-2 border-elite-gold/70 bg-zinc-900/90 overflow-hidden shadow">
+        <div class="meter-fill h-full bg-elite-gold" style="width:0"></div>
+      </div>
+      <div class="mt-2 flex items-center gap-1 text-base font-bold">
+        <span data-raised>${{ '{:,.0f}'.format(RAISED) }}</span>
+        <span class="text-elite-gray">/</span>
+        <span data-goal>${{ '{:,.0f}'.format(GOAL) }}</span>
+        <span class="pct ml-1 text-xs text-elite-gold">• 0%</span>
+      </div>
+    </div>
+    {% for k in KPIS %}
+      <div class="kpi-card rounded-xl border-2 border-elite-gold/70 bg-zinc-900/90 px-4 py-5 text-center shadow-lg">
+        <span class="num text-2xl font-black text-elite-gold animate-count"
+              data-num="{{ k.value }}"
+              {% if k.suffix   %}data-suffix="{{ k.suffix }}"{% endif %}
+              {% if k.decimals %}data-decimals="{{ k.decimals }}"{% endif %}>0</span>
+        <span class="block mt-1 text-xs uppercase text-elite-gray font-semibold">{{ k.label }}</span>
+      </div>
+    {% endfor %}
+  </div>
+
+  <details class="group mt-4">
+    <summary class="summary-link font-semibold cursor-pointer hover:text-elite-gold/90 transition">See Full Impact Breakdown</summary>
+    <div class="mt-3 text-sm text-elite-gray opacity-85">
+      <p>Put deeper metrics here – scholarships, travel miles, training hours, etc.</p>
+    </div>
+  </details>
+</section>
+
+{# -------------------------------------------------------------------------
+   Tiny tile styles  (inherits your palette – only what’s new)
+------------------------------------------------------------------------- #}
+<style {{ nonce_attr() }}>
+.impact-cardmode        { text-align:center; padding:14px 0 6px 0; }
+.impact-cardmode-title  { font-weight:900; font-size:1.1em; margin-bottom:.4em; color:#0b0b0c; }
+.impact-cardmode-kpis   { display:flex; justify-content:center; gap:1.3em; margin-bottom:.3em; }
+.impact-cardmode-kpis .num { font-weight:900; font-size:1.2em; color:var(--accent); }
+.impact-cardmode-kpis .lab { display:block; font-size:.85em; color:#666; }
+.impact-cardmode-progress { font-size:.95em; margin-bottom:.4em; color:#444; }
+.impact-cardmode-link   { font-weight:800; font-size:.95em; color:#0ea5e9; text-decoration:none; }
+.impact-cardmode-link:hover { text-decoration:underline; }
+</style>
+{% endif %}
+{# -------------------------------------------------------------------------
+   The same JS animator you had, untouched – now wrapped in `impact-section`
+------------------------------------------------------------------------- #}
+<script {{ nonce_attr() }}>
+(function() {
+  const sec = document.getElementById('impact');
+  if (!sec) return;
+
+  const fill   = sec.querySelector('.meter-fill');
+  const raised = +sec.querySelector('[data-raised]')?.textContent.replace(/[$,]/g,'') || 0;
+  const goal   = +sec.querySelector('[data-goal]')?.textContent.replace(/[$,]/g,'') || 1;
+  const pctVal = Math.min(100, Math.round(raised/goal*100));
+
+  // Fill bar
+  if (fill) { setTimeout(()=>fill.style.width = pctVal + '%', 300); }
+  const pctEl = sec.querySelector('.pct');
+  if (pctEl)  pctEl.textContent = '• ' + pctVal + '%';
+
+  // KPI counters
+  const nums = sec.querySelectorAll('.num[data-num]');
+  const animate = (el,to,dur)=>{ const d=+el.dataset.decimals||0;
+    const fmt=v=>v.toLocaleString(undefined,{minFractionDigits:d,maxFractionDigits:d});
+    if (matchMedia('(prefers-reduced-motion: reduce)').matches){el.textContent=fmt(to);return;}
+    const t0=performance.now(); const step=ts=>{
+      const p=Math.min(1,(ts-t0)/dur); const val=to*p;
+      el.textContent=fmt(val) + (el.dataset.suffix||'');
+      if(p<1)requestAnimationFrame(step);
+    };requestAnimationFrame(step);
+  };
+
+  let done=false;
+  const trigger=()=>{ if(done)return; done=true;
+    nums.forEach((el,i)=>animate(el,+el.dataset.num||0,900+i*110));
+  };
+
+  ('IntersectionObserver'in window)
+    ? new IntersectionObserver(e=>e.some(v=>v.isIntersecting)&&trigger(),{threshold:.3}).observe(sec)
+    : trigger();
+})();
+</script>
+

@@ -1,0 +1,18 @@
+{# QR Code Modal (press K to open command palette; buttons can open QR via data-open-qr) #}
+<div id="fc-qr" hidden aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="fc-qr-title">
+  <div class="fc-card">
+    <div class="fc-grid">
+      <div class="fc-qrbox">
+        <img id="fc-qr-img" src="{{ qr_image_url|default('/static/qr/sample.png') }}" alt="QR code to donate" width="144" height="144" decoding="async" />
+      </div>
+      <div>
+        <h3 id="fc-qr-title" style="margin:.1rem 0 0.4rem">Scan to Give</h3>
+        <p style="margin:0 0 .5rem">Point your camera at the code to open a secure checkout. Or press <kbd>D</kbd> to donate.</p>
+        <div style="display:flex;gap:.5rem;align-items:center;flex-wrap:wrap">
+          <a class="fc-btn fc-btn-primary" href="{{ stripe_payment_link|default('#donate') }}" {% if stripe_payment_link %} target="_blank" rel="noopener" {% else %} data-open-donate-modal {% endif %}>Donate</a>
+          <button type="button" class="fc-btn" data-close>Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

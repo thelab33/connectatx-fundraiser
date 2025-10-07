@@ -1,3 +1,12 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
 defined else '') %} {% set _team = team if team is defined and team else none %}
 {% set TEAM_NAME = (_team.team_name if _team and _team.team_name else 'Connect

@@ -1,0 +1,468 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+<dialog
+  id="newsletter-modal"
+  class="fixed inset-0 z-[12000] flex hidden items-center justify-center bg-black/85 backdrop-blur-lg transition-opacity duration-500 opacity-0 pointer-events-none"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="newsletter-title"
+  tabindex="-1"
+>
+  <div
+    id="newsletter-box"
+    class="relative w-[95vw] max-w-sm rounded-3xl bg-zinc-900 p-6 sm:p-8 text-center font-geist text-yellow-100 shadow-2xl ring-4 ring-amber-400/40 ring-offset-4 ring-offset-zinc-900 opacity-0 scale-95 transition-transform duration-300 ease-out"
+    role="document"
+    tabindex="0"
+  >
+    <!-- Close button -->
+    <button
+      id="newsletter-close"
+      aria-label="Close newsletter signup"
+      class="absolute top-3 right-3 z-10 rounded-full bg-black/30 hover:bg-black/60 text-yellow-200 hover:text-yellow-100 w-11 h-11 flex items-center justify-center focus:ring-4 ring-amber-400 focus:outline-none"
+      type="button"
+    >
+      <span aria-hidden="true" class="text-3xl select-none">&times;</span>
+    </button>
+
+    <!-- Animated Basketball SVG -->
+    <div
+      class="mx-auto mb-5 flex justify-center cursor-pointer"
+      tabindex="0"
+      role="img"
+      aria-label="Spinning basketball icon"
+    >
+      <span
+        id="newsletter-ball"
+        class="inline-block h-16 w-16"
+        aria-hidden="true"
+      >
+        <svg
+          viewBox="0 0 48 48"
+          fill="none"
+          class="h-16 w-16 animate-spin-slow"
+          aria-hidden="true"
+        >
+          <circle
+            cx="24"
+            cy="24"
+            r="22"
+            fill="#FBBF24"
+            stroke="#F59E0B"
+            stroke-width="3"
+          />
+          <path d="M24 2v44M2 24h44" stroke="#78350F" stroke-width="2" />
+          <path
+            d="M10 10c9 9 19 29 28 28M38 10C29 19 9 29 10 38"
+            stroke="#92400E"
+            stroke-width="2"
+          />
+        </svg>
+      </span>
+    </div>
+
+    <!-- Heading & onboarding tooltip -->
+    <h2
+      id="newsletter-title"
+      class="mb-2 text-3xl font-extrabold text-yellow-300 flex flex-col items-center gap-1 tracking-tight relative group"
+    >
+      Stay in the Loop with
+      <span class="text-amber-400" aria-live="polite">
+        {{ team.team_name or "Connect ATX Elite" }}
+      </span>
+      <span
+        class="text-xs font-normal text-amber-200 block max-w-xs absolute top-full left-1/2 -translate-x-1/2 mt-1 rounded bg-yellow-900/90 px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity text-center pointer-events-none select-none"
+        role="tooltip"
+      >
+        Get exclusive updates &amp; help our team shine! ✨
+      </span>
+    </h2>
+
+    <p class="mb-8 text-base opacity-90 max-w-[90%] mx-auto">
+      Get
+      <strong class="font-bold text-yellow-200"
+        >exclusive updates, game invites,</strong
+      >
+      and ways to help
+      <strong>{{ team.team_name or "Connect ATX Elite" }}</strong> shine.<br />
+      <span class="font-semibold text-yellow-200"
+        >One email a month, no spam.</span
+      >
+    </p>
+
+    <!-- Form -->
+    <form
+      id="newsletter-form"
+      novalidate
+      autocomplete="off"
+      aria-describedby="newsletter-desc"
+      class="relative"
+      role="form"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      <span id="newsletter-desc" class="sr-only"
+        >Email address field and subscribe button</span
+      >
+      <div class="relative flex items-center justify-center w-[90%] mx-auto">
+        <input
+          id="newsletter-email"
+          name="email"
+          type="email"
+          placeholder="your@email.com"
+          required
+          autocomplete="email"
+          class="peer w-full rounded-full bg-yellow-50 py-3 px-5 text-zinc-900 shadow-sm opacity-90 focus:ring-2 focus:ring-yellow-300 outline-none transition"
+          aria-describedby="email-error"
+          aria-required="true"
+          aria-invalid="false"
+          inputmode="email"
+        />
+        <span
+          class="absolute right-5 top-1/2 -translate-y-1/2 text-2xl text-yellow-400 peer-focus:text-amber-500 select-none"
+          aria-hidden="true"
+          >🏀</span
+        >
+      </div>
+
+      <!-- Invite a friend (optional) -->
+      <input
+        id="newsletter-invite"
+        name="invite"
+        type="email"
+        placeholder="Friend’s email (optional)"
+        class="mt-3 w-full rounded-full bg-yellow-50 py-2 px-5 text-zinc-900 opacity-80 shadow-sm"
+        inputmode="email"
+        aria-label="Invite a friend"
+      />
+
+      <!-- Error message -->
+      <p
+        id="email-error"
+        class="mt-2 min-h-[1.25rem] text-sm font-bold text-red-600 sr-only"
+        role="alert"
+        aria-live="assertive"
+      ></p>
+
+      <!-- Submit button -->
+      <button
+        type="submit"
+        class="mt-6 relative overflow-hidden rounded-full bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 px-10 py-3 font-bold text-zinc-900 shadow-lg transition-all duration-300 ease-in-out basketball-btn-glow focus-visible:ring-4 focus-visible:ring-yellow-400 active:scale-95"
+        aria-live="polite"
+      >
+        Subscribe
+        <span
+          id="swish-confetti"
+          class="absolute left-1/2 top-1/2 pointer-events-none opacity-0 text-3xl -translate-x-1/2 -translate-y-1/2 transition-opacity duration-700 select-none"
+          aria-hidden="true"
+          >🏆🎉</span
+        >
+      </button>
+
+      <!-- Thank you message -->
+      <p
+        id="newsletter-thankyou"
+        aria-live="polite"
+        class="mt-6 hidden text-lg font-semibold tracking-wide text-cyan-400 animate-pulse select-none"
+      >
+        Swish! Never miss an invite—welcome to the fam!
+      </p>
+
+      <!-- Opt-out button -->
+      <button
+        id="newsletter-nothanks"
+        type="button"
+        class="mt-4 block mx-auto text-sm text-yellow-300 hover:underline focus:underline focus:outline-none select-none"
+        tabindex="0"
+      >
+        No thanks, maybe later
+      </button>
+    </form>
+  </div>
+</dialog>
+
+<style>
+  #newsletter-modal:not(.hidden) {
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.4s;
+  }
+  #newsletter-box.animate-popIn {
+    opacity: 1 !important;
+    transform: scale(1) !important;
+  }
+  #newsletter-box.animate-popOut {
+    opacity: 0 !important;
+    transform: scale(0.95) !important;
+  }
+  .animate-spin-slow {
+    animation: spin 3.8s linear infinite;
+  }
+  @keyframes spin {
+    100% {
+      transform: rotate(360deg);
+    }
+  }
+  .ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple 600ms linear forwards;
+    pointer-events: none;
+    background-color: rgba(251, 191, 36, 0.4);
+  }
+  @keyframes ripple {
+    to {
+      transform: scale(4);
+      opacity: 0;
+    }
+  }
+  .bounce-temp {
+    animation: bounce 600ms ease forwards;
+  }
+  @keyframes bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-10%);
+    }
+  }
+  #email-error:not(:empty) {
+    display: block !important;
+  }
+  .confetti-piece {
+    position: fixed;
+    width: 8px;
+    height: 8px;
+    border-radius: 2px;
+    opacity: 0.9;
+    pointer-events: none;
+    z-index: 15000;
+    filter: drop-shadow(0 0 1px #fff9) drop-shadow(0 0 2px #facc15aa);
+    animation: confetti-spin 8s linear infinite;
+  }
+  @keyframes confetti-spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+
+<script type="module">
+  (() => {
+    const modal = document.getElementById("newsletter-modal");
+    const box = document.getElementById("newsletter-box");
+    const closeBtn = document.getElementById("newsletter-close");
+    const form = document.getElementById("newsletter-form");
+    const emailInp = document.getElementById("newsletter-email");
+    const friendInp = document.getElementById("newsletter-invite");
+    const errEl = document.getElementById("email-error");
+    const thanksEl = document.getElementById("newsletter-thankyou");
+    const confettiEmoji = document.getElementById("swish-confetti");
+    const noThanks = document.getElementById("newsletter-nothanks");
+    const ball = document.getElementById("newsletter-ball");
+    let lastFocus = null,
+      debounceTimeout = null;
+
+    const validEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+    function openModal() {
+      lastFocus = document.activeElement;
+      modal.classList.remove("hidden");
+      modal.style.opacity = "1";
+      box.classList.remove("animate-popOut");
+      box.classList.add("animate-popIn");
+      modal.showModal?.();
+      document.body.style.overflow = "hidden";
+      emailInp.focus();
+      window.dispatchEvent(new CustomEvent("newsletterModalViewed"));
+    }
+
+    function closeModal() {
+      box.classList.remove("animate-popIn");
+      box.classList.add("animate-popOut");
+      modal.style.opacity = "0";
+      setTimeout(() => {
+        modal.close?.();
+        modal.classList.add("hidden");
+        document.body.style.overflow = "";
+        errEl.textContent = "";
+        errEl.classList.add("sr-only");
+        thanksEl.classList.add("hidden");
+        form.reset();
+        confettiEmoji.style.opacity = 0;
+        emailInp.disabled = false;
+        form
+          .querySelector('button[type="submit"]')
+          .classList.remove("opacity-60", "pointer-events-none");
+        lastFocus?.focus();
+      }, 350);
+    }
+
+    emailInp.addEventListener("input", () => {
+      clearTimeout(debounceTimeout);
+      debounceTimeout = setTimeout(() => {
+        const val = emailInp.value.trim();
+        if (!val) {
+          errEl.textContent = "";
+          emailInp.setAttribute("aria-invalid", "false");
+        } else if (!validEmail(val)) {
+          errEl.textContent = "Please enter a valid email address.";
+          errEl.classList.remove("sr-only");
+          emailInp.setAttribute("aria-invalid", "true");
+        } else {
+          errEl.textContent = "";
+          errEl.classList.add("sr-only");
+          emailInp.setAttribute("aria-invalid", "false");
+        }
+      }, 400);
+    });
+
+    if (
+      !sessionStorage.getItem("newsletter_shown") &&
+      !sessionStorage.getItem("newsletter_optout")
+    ) {
+      setTimeout(() => {
+        openModal();
+        sessionStorage.setItem("newsletter_shown", "1");
+      }, 10000);
+    }
+
+    closeBtn.addEventListener("click", closeModal);
+    noThanks.addEventListener("click", (e) => {
+      e.preventDefault();
+      sessionStorage.setItem("newsletter_optout", "1");
+      closeModal();
+      window.dispatchEvent(new CustomEvent("newsletterModalOptout"));
+    });
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !modal.classList.contains("hidden"))
+        closeModal();
+    });
+
+    modal.addEventListener("keydown", (e) => {
+      if (e.key !== "Tab") return;
+      const focusables = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      const first = focusables[0],
+        last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    });
+
+    form
+      .querySelector('button[type="submit"]')
+      .addEventListener("click", (e) => {
+        const btn = e.currentTarget;
+        const ripple = document.createElement("span");
+        ripple.className = "ripple-effect";
+        btn.appendChild(ripple);
+        const rect = btn.getBoundingClientRect();
+        ripple.style.left = `${e.clientX - rect.left}px`;
+        ripple.style.top = `${e.clientY - rect.top}px`;
+        setTimeout(() => ripple.remove(), 600);
+      });
+
+    ball.addEventListener("click", () => {
+      ball.classList.add("bounce-temp");
+      setTimeout(() => ball.classList.remove("bounce-temp"), 600);
+    });
+    ball.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        ball.click();
+      }
+    });
+
+    function launchConfetti() {
+      const confettiCount = 24;
+      const colors = ["#FBBF24", "#FACC15", "#FFD700", "#FFC107", "#FFEB3B"];
+      const btn = form.querySelector('button[type="submit"]');
+      const rect = btn.getBoundingClientRect();
+      for (let i = 0; i < confettiCount; i++) {
+        const confetti = document.createElement("div");
+        confetti.className = "confetti-piece";
+        confetti.style.backgroundColor =
+          colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.left = `${rect.left + rect.width / 2}px`;
+        confetti.style.top = `${rect.top + rect.height / 2}px`;
+        document.body.appendChild(confetti);
+        const angle = Math.random() * 2 * Math.PI;
+        const velocity = Math.random() * 120 + 50;
+        confetti.animate(
+          [
+            { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
+            {
+              transform: `translate(${Math.cos(angle) * velocity}px, ${Math.sin(angle) * velocity}px) rotate(${Math.random() * 360}deg)`,
+              opacity: 0,
+            },
+          ],
+          { duration: 1500, easing: "ease-out", fill: "forwards" },
+        );
+        setTimeout(() => confetti.remove(), 1600);
+      }
+    }
+
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const email = emailInp.value.trim(),
+        invite = friendInp.value.trim();
+      if (!validEmail(email)) {
+        errEl.textContent = "Please enter a valid email address.";
+        errEl.classList.remove("sr-only");
+        box.classList.add("ring-red-400");
+        setTimeout(() => box.classList.remove("ring-red-400"), 600);
+        return;
+      }
+      errEl.classList.add("sr-only");
+      emailInp.disabled = true;
+      form
+        .querySelector('button[type="submit"]')
+        .classList.add("opacity-60", "pointer-events-none");
+      confettiEmoji.style.opacity = 1;
+      form
+        .querySelector('button[type="submit"]')
+        .classList.add("animate-bounce");
+      setTimeout(
+        () =>
+          form
+            .querySelector('button[type="submit"]')
+            .classList.remove("animate-bounce"),
+        900,
+      );
+
+      // API placeholder — replace with your backend call
+      setTimeout(() => {
+        thanksEl.classList.remove("hidden");
+        launchConfetti();
+        window.dispatchEvent(
+          new CustomEvent("newsletterSubscribed", {
+            detail: { email, invite },
+          }),
+        );
+        setTimeout(closeModal, 1700);
+        confettiEmoji.style.opacity = 0;
+      }, 950);
+    });
+  })();
+</script>

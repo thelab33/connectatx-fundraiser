@@ -1,12 +1,19 @@
- {% extends "admin/base.html" %} {% set NONCE = NONCE if
-NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %} {% block
-title %}Dashboard – Sponsor Admin | {{ super() }}{% endblock %} {% block content
-%}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% extends "admin/base.html" %} {% set NONCE = NONCE if NONCE is defined else
+(csp_nonce if csp_nonce is defined else '') %} {% block title %}Dashboard –
+Sponsor Admin | {{ super() }}{% endblock %} {% block content %}
 <h2 class="mb-8 flex items-center gap-3 text-3xl font-extrabold">
   <span aria-hidden="true">🏆</span>
   Admin Dashboard
 </h2>
-
 
 <div class="mb-10 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
   {% set tr = stats.total_raised or 0 %} {% set sc = stats.sponsor_count or 0 %}
@@ -14,36 +21,31 @@ title %}Dashboard – Sponsor Admin | {{ super() }}{% endblock %} {% block conte
   %}
 
   <div
-    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-gold via-yellow-100 to-white p-6 text-zinc-900 shadow-xl"
-  >
+    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-gold via-yellow-100 to-white p-6 text-zinc-900 shadow-xl">
     <div class="animate-pulse text-5xl font-black">${{ tr | commafy }}</div>
     <div class="text-lg font-semibold">Total Raised</div>
   </div>
 
   <div
-    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-yellow-400 via-gold/70 to-white p-6 text-zinc-900 shadow-xl"
-  >
+    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-yellow-400 via-gold/70 to-white p-6 text-zinc-900 shadow-xl">
     <div class="animate-sparkle text-5xl font-black">{{ sc | commafy }}</div>
     <div class="text-lg font-semibold">Sponsors</div>
   </div>
 
   <div
-    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-zinc-900 via-yellow-200 to-gold p-6 text-zinc-900 shadow-xl"
-  >
+    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-zinc-900 via-yellow-200 to-gold p-6 text-zinc-900 shadow-xl">
     <div class="animate-slide-up text-5xl font-black">${{ ga | commafy }}</div>
     <div class="text-lg font-semibold">Goal</div>
   </div>
 
   <div
-    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-red-300 via-yellow-100 to-gold p-6 text-zinc-900 shadow-xl"
-  >
+    class="flex flex-col items-center rounded-xl bg-gradient-to-br from-red-300 via-yellow-100 to-gold p-6 text-zinc-900 shadow-xl">
     <div class="text-5xl font-black">{{ ps | commafy }}</div>
     <div class="text-lg font-semibold">Pending Approval</div>
   </div>
 </div>
 
- {% set pct = ((tr / (ga or 1)) * 100) |
-round(1) %}
+{% set pct = ((tr / (ga or 1)) * 100) | round(1) %}
 <div class="mb-10">
   <div class="mb-1 flex items-center justify-between">
     <span class="text-sm font-medium text-gold">Progress</span>
@@ -59,19 +61,16 @@ round(1) %}
           hsl(var(--brand) / 0.8)
         );
       "
-      style="width: {{ pct }}%;"
-    ></div>
+      style="width: {{ pct }}%;"></div>
   </div>
 </div>
-
 
 <section class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 mb-10">
   <h3 class="mb-3 font-semibold">Latest Sponsors</h3>
   <div class="overflow-x-auto">
     <table
       class="min-w-full overflow-hidden rounded-xl bg-zinc-800/80 shadow"
-      role="table"
-    >
+      role="table">
       <thead>
         <tr class="bg-yellow-400/90 text-zinc-900">
           <th class="p-3 text-left">Name</th>
@@ -92,8 +91,7 @@ round(1) %}
           </td>
           <td class="p-2">
             <span
-              class="rounded-full px-2 py-1 {% if s.status == 'approved' %}bg-green-200 text-green-900 {% elif s.status == 'pending' %}bg-yellow-200 text-yellow-900 {% else %}bg-red-200 text-red-900{% endif %}"
-            >
+              class="rounded-full px-2 py-1 {% if s.status == 'approved' %}bg-green-200 text-green-900 {% elif s.status == 'pending' %}bg-yellow-200 text-yellow-900 {% else %}bg-red-200 text-red-900{% endif %}">
               {{ s.status|capitalize }}
             </span>
           </td>
@@ -103,13 +101,11 @@ round(1) %}
             <form
               action="{{ url_for('admin.approve_sponsor', sponsor_id=s.id) }}"
               method="POST"
-              class="inline"
-            >
+              class="inline">
               {{ form.hidden_tag() }}
               <button
                 type="submit"
-                class="rounded bg-gold px-3 py-1 text-zinc-900"
-              >
+                class="rounded bg-gold px-3 py-1 text-zinc-900">
                 Approve
               </button>
             </form>
@@ -128,14 +124,12 @@ round(1) %}
   </div>
 </section>
 
-
 <section>
   <h3 class="mb-3 font-semibold">Latest Transactions</h3>
   <div class="overflow-x-auto">
     <table
       class="min-w-full overflow-hidden rounded-xl bg-zinc-800/80 shadow"
-      role="table"
-    >
+      role="table">
       <thead>
         <tr class="bg-yellow-200 text-zinc-900">
           <th class="p-3 text-left">Sponsor</th>
@@ -166,16 +160,13 @@ round(1) %}
   </div>
 </section>
 
-
 <div class="mt-8 flex justify-end">
   <a
     href="{{ url_for('admin.export_payouts') }}"
-    class="rounded-lg bg-yellow-400 px-6 py-2 font-bold text-zinc-900 shadow transition hover:bg-yellow-300"
-  >
+    class="rounded-lg bg-yellow-400 px-6 py-2 font-bold text-zinc-900 shadow transition hover:bg-yellow-300">
     ⬇ Export Approved Payouts (CSV)
   </a>
 </div>
-
 
 <div class="mt-10 text-center text-xs text-zinc-500">
   ⭐️ Pro tip: Get real-time sponsor alerts in Slack — ask your dev to enable

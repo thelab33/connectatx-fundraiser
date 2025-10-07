@@ -1,0 +1,38 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# FUNDCHAMPS-HERO-AUTO #}
+{% extends "base.html" %}
+{% from "components/hero_banner.html" import hero_banner %}
+
+{% block title %}Home – {{ team_name }}{% endblock %}
+
+{% block content %}
+  {{ hero_banner(
+    idp='hero-1',
+    theme_hex=theme_hex,
+    team_name=team_name,
+    title=title,
+    title_2=title_2,
+    subtitle=subtitle,
+    panel_title=panel_title,
+    panel_title_2=panel_title_2,
+    href_donate=href_donate,
+    href_impact=href_impact,
+    href_sponsor=href_sponsor,
+    text_keyword=text_keyword,
+    text_short=text_short,
+    raised=raised,
+    goal=goal,
+    deadline=deadline,
+    currency=currency,
+    hero_src=url_for('static', filename='img/team-hero.jpg'),
+    qr_src=url_for('static', filename='img/qr.png')
+  ) }}
+{% endblock %}

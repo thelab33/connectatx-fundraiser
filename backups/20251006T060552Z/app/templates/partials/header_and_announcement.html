@@ -1,0 +1,645 @@
+{# =========================
+   Header — FundChamps Elite • Pro v2.1
+   ========================= #}
+{% set NONCE    = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
+{% set _team    = team if team is defined and team else none %}
+
+{% set platform_name  = platform_name if platform_name is defined and platform_name else 'FundChamps' %}
+{% set platform_url   = platform_url if platform_url is defined and platform_url else '/' %}
+{% set _p_logo_svg    = 'images/fundchamps-logo.svg' %}
+{% set platform_logo_svg = (url_for('static', filename=_p_logo_svg) if url_for is defined else '/static/' ~ _p_logo_svg) %}
+
+{% set team_name   = _team.team_name if _team and _team.team_name is defined else 'Connect ATX Elite' %}
+{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
+{% set stripe_payment_link = (stripe_payment_link|default('', true)) %}
+{% set HREF_DONATE = HREF_DONATE if HREF_DONATE is defined and HREF_DONATE else (stripe_payment_link if stripe_payment_link else '#donate') %}
+{% set end_date = end_date|default('', true) %}
+
+{# --- Fundraiser math with guards --- #}
+{% set _fr  = (funds_raised|default(0, true))|float %}
+{% set _fg0 = (fundraising_goal|default(10000, true))|float %}
+{% set _fg  = (1.0 if _fg0 <= 0 else _fg0) %}
+{% set _raw = (_fr / _fg * 100.0) %}
+{% set pct  = 0.0 if _raw < 0 else (100.0 if _raw> 100 else _raw) %}
+{% set pctRounded = pct|round(1) %}
+
+{% set _logo = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
+{% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
+
+{% if stripe_payment_link %}
+<link rel="preconnect" href="https://js.stripe.com" crossorigin>
+{% endif %}
+
+<header id="{{ _hdr_id }}"
+        class="fc-header"
+        role="banner"
+        data-accent="{{ brand_color }}"
+        style="--accent:{{ brand_color }};">
+  <div class="hdr-grid">
+    <!-- Crest -->
+    <a href="{{ platform_url }}" class="crest" aria-label="{{ platform_name }} home" data-analytics="nav:brand" rel="noopener">
+      <img src="{{ platform_logo_svg }}" alt="" class="crest-logo" loading="eager"/>
+      <span class="crest-meta">
+        <small class="powered">POWERED&nbsp;BY</small>
+        <span class="word">Fund<span>Champs</span></span>
+      </span>
+    </a>
+
+    <!-- Central: Meter + Actions -->
+    <div class="hub" role="group" aria-label="Fundraiser status and actions">
+      <div id="hdr-meter"
+           class="meter"
+           role="meter"
+           aria-valuemin="0" aria-valuemax="100"
+           aria-valuenow="{{ pctRounded }}"
+           aria-label="Fundraising progress">
+        <div class="track" aria-hidden="true">
+          <div class="fill" style="width:{{ pctRounded }}%"></div>
+        </div>
+        <span class="pct">{{ pct|round(0) }}%</span>
+      </div>
+
+      <div class="kpis hide-sm" aria-live="polite">
+        <span class="pill" title="Raised to date">
+          <strong id="hdr-total-pill" data-total="{{ _fr|round|int }}">${{ _fr|round|int }}</strong>
+        </span>
+        <span class="pill" title="Goal"><span>Goal:</span> ${{ _fg0|round|int }}</span>
+        <span class="pill" id="hdr-deadline" data-countdown="{{ end_date|e }}"></span>
+      </div>
+
+      <div class="cta" role="group" aria-label="Primary actions">
+        <a href="#tiers" class="btn btn-ghost hide-sm" data-analytics="cta:sponsor">Sponsor a Champion</a>
+        <a href="{{ HREF_DONATE }}" class="btn btn-donate pulse" id="hdr-donate" data-analytics="cta:donate-header" rel="noopener">Donate Now</a>
+        <button id="hdr-share" class="btn btn-lite btn-sm" aria-label="Share this fundraiser"
+          data-analytics="cta:share"
+          data-share='{{ {
+            "title":"Support "~team_name,
+            "text":"Every dollar moves a kid forward — join us!",
+            "url":(request.base_url if request is defined else "/")
+          }|tojson|e }}'>
+          Share
+        </button>
+        <button id="theme-toggle" class="btn btn-lite btn-sm" aria-label="Toggle theme" data-analytics="cta:theme">
+          <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor"
+               stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"
+               aria-hidden="true">
+            <g class="sun">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1"  x2="12" y2="3"/>
+              <line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22"  x2="5.64" y2="5.64"/>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3"  y2="12"/>
+              <line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </g>
+            <path class="moon" d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79Z" style="display:none"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Team side -->
+    <a href="{{ home_url|default('/') }}" class="team-link" aria-label="{{ team_name }} home" data-analytics="nav:team" rel="noopener">
+      <img src="{{ logoSrc }}" alt="" class="team-logo" loading="eager"/>
+      <span class="team-chip">{{ team_name }}</span>
+    </a>
+
+    <!-- Mobile burger (hooked to your site menu if present) -->
+    <button id="menu-toggle"
+            class="burger"
+            aria-label="Open menu"
+            aria-expanded="false"
+            aria-controls="site-menu">
+      <span class="burger-line"></span>
+    </button>
+  </div>
+
+  <!-- Sticky donate bar (mobile) -->
+  <div class="sticky-donate" aria-hidden="true">
+    <div class="bar">
+      <div class="progress" aria-hidden="true"><i style="width:{{ pctRounded }}%" id="sticky-progress"></i></div>
+      <span class="pill"> {{ pct|round(0) }}% </span>
+      <a href="{{ HREF_DONATE }}" class="btn btn-donate btn-sm" data-analytics="cta:donate-sticky" rel="noopener">Donate</a>
+    </div>
+  </div>
+</header>
+
+<script {{ nonce_attr() }}>
+/* Pro Header runtime — CSP-safe, no external deps */
+(function(){
+  const qs = (s, r=document)=>r.querySelector(s);
+  const elShare = qs('#hdr-share'); const elTheme = qs('#theme-toggle');
+  const elDeadline = qs('#hdr-deadline'); const elFill = qs('#hdr-meter .fill');
+  const sticky = qs('#sticky-progress'); const donateBtn = qs('#hdr-donate');
+  const stickyWrap = qs('.sticky-donate');
+
+  /* Respect system theme + persist */
+  const KEY='fc-theme';
+  const applyTheme=t=>document.documentElement.dataset.theme=t;
+  const saved = localStorage.getItem(KEY);
+  if(saved){ applyTheme(saved); }
+  else {
+    // Init to OS preference for first load
+    const prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    applyTheme(prefersLight ? 'light':'dark');
+  }
+  elTheme?.addEventListener('click', ()=>{
+    const next = (document.documentElement.dataset.theme === 'dark') ? 'light' : 'dark';
+    applyTheme(next); localStorage.setItem(KEY, next);
+  });
+
+  /* Share: Web Share API → clipboard fallback */
+  elShare?.addEventListener('click', async () => {
+    const data = JSON.parse(elShare.getAttribute('data-share') || '{}');
+    try {
+      if(navigator.share){ await navigator.share(data); }
+      else {
+        await navigator.clipboard.writeText(data.url || location.href);
+        elShare.textContent = 'Copied'; setTimeout(()=>elShare.textContent='Share', 1200);
+      }
+    } catch(_) {}
+  });
+
+  /* Deadline countdown */
+  const iso = elDeadline?.getAttribute('data-countdown');
+  if(iso){
+    const end = new Date(iso);
+    if(!isNaN(end.getTime())){
+      const tick = ()=>{
+        const d = Math.max(0, end - new Date());
+        const days = Math.floor(d/86400000);
+        const hrs  = Math.floor((d%86400000)/3600000);
+        elDeadline.textContent = days>0 ? `${days}d ${hrs}h left` : (d>0 ? `Ends today` : `Closed`);
+      };
+      tick(); setInterval(tick, 3600000);
+    }
+  }
+
+  /* Progressive meter animation on first paint */
+  requestAnimationFrame(()=> {
+    const w = elFill?.style?.width || '0%';
+    if(elFill){ elFill.style.width = w; }
+    if(sticky){ sticky.style.width = w; }
+  });
+
+  /* Optional: smooth scroll on donate for hash target */
+  donateBtn?.addEventListener('click', (e)=>{
+    if(donateBtn.getAttribute('href') === '#donate'){
+      const t = document.getElementById('donate') || document.querySelector('[data-donate]');
+      if(t){ e.preventDefault(); t.scrollIntoView({behavior:'smooth', block:'start'}); }
+    }
+  });
+
+  /* Toggle sticky bar a11y visibility for mobile only */
+  const mq = window.matchMedia('(max-width: 860px)');
+  const syncStickyA11y = () => stickyWrap?.setAttribute('aria-hidden', mq.matches ? 'false' : 'true');
+  syncStickyA11y();
+  mq.addEventListener?.('change', syncStickyA11y);
+
+  /* Light analytics hook (replace with real) */
+  const send = (name, detail={})=>{
+    window.dispatchEvent(new CustomEvent('fc:analytics', { detail:{ name, ...detail }}));
+  };
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest('[data-analytics]');
+    if(el){ send(el.getAttribute('data-analytics')); }
+  });
+})();
+</script>
+
+<style {{ nonce_attr() }}>
+/* =========================
+   Pro Header v2.1 — FundChamps
+   - WCAG AA contrast
+   - Fluid by default (no max width)
+   - Motion/Data-Saver aware
+   ========================= */
+
+/* ---- Theme tokens ---- */
+:root{
+  --bg:#0b0b0e; --surface:#121217; --text:#f7f7fa; --muted:#b8b8c7;
+  --fcx-accent: var(--accent, #facc15);   /* use a distinct var, avoid recursion */
+  --ring: color-mix(in srgb, var(--fcx-accent) 35%, transparent);
+  --ok:#22c55e; --danger:#ef4444;
+
+  /* Layout control: set to e.g. 1440px if you want a cap */
+  --fcx-shell-max: none;
+  --fcx-gutter: clamp(14px, 5vw, 36px);
+}
+
+@media (prefers-color-scheme: light){
+  :root{ --bg:#ffffff; --surface:#f7f7fb; --text:#0e0e11; --muted:#4b4b57; }
+}
+
+/* Optional tenant theme toggle via [data-theme] */
+html[data-theme="light"]{
+  --bg:#ffffff; --surface:#f7f7fb; --text:#0e0e11; --muted:#4b4b57;
+}
+html[data-theme="dark"]{
+  --bg:#0b0b0e; --surface:#121217; --text:#f7f7fa; --muted:#b8b8c7;
+}
+
+/* ---- Section shells (fluid) ---- */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: var(--fcx-shell-max); width:100%;
+  margin-inline:auto; margin-bottom:3rem;
+  padding-inline: var(--fcx-gutter);
+}
+
+/* ---- Header ---- */
+.fc-header {
+  background: var(--bg); color: var(--text);
+  border-bottom: 1px solid color-mix(in srgb, #fff 6%, transparent);
+}
+.fc-header .hdr-grid{
+  max-width: var(--fcx-shell-max); margin:0 auto;
+  padding:10px var(--fcx-gutter);
+  display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center;
+}
+
+/* ---- Brand / team ---- */
+.crest{display:flex; gap:10px; align-items:center; text-decoration:none; color:inherit}
+.crest-logo{width:36px; height:auto; display:block}
+.crest-meta{line-height:1.05}
+.crest-meta .powered{font-size:.62rem; letter-spacing:.12em; opacity:.7}
+.crest-meta .word{font-weight:800}
+.crest-meta .word> span{color:var(--fcx-accent)}
+
+.team-link{display:flex; align-items:center; gap:10px; color:inherit; text-decoration:none}
+.team-logo{width:36px; height:36px; object-fit:cover; border-radius:.6rem; background:#00000020}
+.team-chip{font-weight:700; font-size:.9rem; padding:.35rem .6rem; border-radius:.6rem; background:var(--surface)}
+
+/* ---- Hub ---- */
+.hub{display:grid; grid-template-columns: 1fr auto; gap:12px; align-items:center}
+.meter{display:flex; gap:10px; align-items:center; min-width:220px}
+.meter .track{position:relative; flex:1; height:8px; background:#00000033; border-radius:999px; overflow:hidden}
+.meter .fill{
+  height:100%; width:0%;
+  background:linear-gradient(90deg, var(--fcx-accent), color-mix(in srgb, var(--fcx-accent) 60%, #fff 0%));
+  transition:width .6s ease;
+}
+.meter .pct{min-width:40px; text-align:right; font-variant-numeric: tabular-nums}
+
+.pill{font-weight:700; font-variant-numeric: tabular-nums; padding:.35rem .6rem; border-radius:.6rem; background:var(--surface)}
+.kpis{display:flex; gap:8px; align-items:center; color:var(--muted); font-size:.85rem}
+.kpis strong{color:var(--text)}
+
+/* ---- Buttons ---- */
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.4rem;
+  padding:.66rem 1rem; border-radius:.8rem; font-weight:700; line-height:1; text-decoration:none; border:1px solid transparent
+}
+.btn:focus-visible{outline:2px solid var(--ring); outline-offset:2px}
+.btn-donate{background:var(--fcx-accent); color:#0b0b0e}
+.btn-ghost{background:transparent; color:var(--text); border-color:color-mix(in srgb, #fff 15%, transparent)}
+.btn-lite{background:#ffffff10; color:var(--text); border-color:#ffffff1a}
+.btn-sm{padding:.4rem .6rem; border-radius:.6rem; font-size:.85rem}
+.pulse{box-shadow:0 0 0 0 color-mix(in srgb, var(--fcx-accent) 40%, transparent); animation:pulse 2.25s ease-out infinite}
+@keyframes pulse{
+  0%{box-shadow:0 0 0 0 color-mix(in srgb, var(--fcx-accent) 45%, transparent)}
+  70%{box-shadow:0 0 0 16px color-mix(in srgb, var(--fcx-accent) 0%, transparent)}
+  100%{box-shadow:0 0 0 0 color-mix(in srgb, var(--fcx-accent) 0%, transparent)}
+}
+@media (prefers-reduced-motion: reduce){ .pulse{animation:none} .meter .fill{transition:none} }
+@media (prefers-reduced-data: reduce){ .pulse{animation:none} }
+
+/* ---- Burger / responsive ---- */
+.burger{display:none; width:42px; height:42px; border-radius:.6rem; border:1px solid #ffffff20; background:#ffffff0f}
+.burger-line,
+.burger-line::before,
+.burger-line::after{display:block; width:18px; height:2px; margin:0 auto; background:currentColor; position:relative; border-radius:2px}
+.burger-line::before,.burger-line::after{content:""; position:absolute; left:0}
+.burger-line::before{top:-6px}.burger-line::after{top:6px}
+
+.hide-sm{display:inline-flex}
+@media (max-width: 860px){
+  .fc-header .hdr-grid{grid-template-columns: auto 1fr auto}
+  .hide-sm{display:none}
+  .burger{display:inline-grid; place-items:center}
+  .hub{grid-template-columns: 1fr}
+}
+
+/* ---- Sticky mobile donate ---- */
+.sticky-donate{
+  position:sticky; bottom:0; inset-inline:0;
+  background:color-mix(in oklab, var(--bg) 92%, black 8%);
+  border-top:1px solid #ffffff12; padding:.6rem clamp(12px,5vw,18px);
+  display:none; z-index:40;
+}
+.sticky-donate .bar{display:flex; align-items:center; gap:10px}
+.sticky-donate .progress{flex:1; height:8px; border-radius:999px; background:#00000033; overflow:hidden}
+.sticky-donate .progress> i{display:block; height:100%; width:0%; background:var(--fcx-accent)}
+@media (max-width: 860px){ .sticky-donate{display:block} }
+
+/* ---- Utilities ---- */
+[data-countdown]{font-variant-numeric: tabular-nums}
+.visually-hidden{position:absolute !important; clip:rect(1px,1px,1px,1px); clip-path:inset(50%); width:1px; height:1px; overflow:hidden; white-space:nowrap; border:0; padding:0}
+</style>
+<script {{ nonce_attr() }}>
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const on = (el, ev, fn, opts) => el && el.addEventListener(ev, fn, opts);
+const raf = (fn) => requestAnimationFrame(fn);
+const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const prefersReducedData   = matchMedia('(prefers-reduced-data: reduce)').matches;
+
+const analytics = (name, detail = {}) => {
+  try { window.dispatchEvent(new CustomEvent('fc:analytics', { detail: { name, ...detail }})); }
+  catch (_) {}
+};
+
+/* ------------------------------
+   THEME (header)
+------------------------------ */
+function initThemeToggle() {
+  const KEY = 'fc-theme';
+  const btn = $('#theme-toggle');
+  const apply = (t) => { document.documentElement.dataset.theme = t; };
+  const saved = localStorage.getItem(KEY);
+  if (saved) apply(saved);
+  else apply(matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+
+  on(btn, 'click', () => {
+    const next = (document.documentElement.dataset.theme === 'dark') ? 'light' : 'dark';
+    apply(next); localStorage.setItem(KEY, next);
+    analytics('theme_toggled', { theme: next });
+  });
+}
+
+/* ------------------------------
+   SHARE (header)
+------------------------------ */
+function initShare() {
+  const el = $('#hdr-share');
+  if (!el) return;
+  on(el, 'click', async () => {
+    const data = JSON.parse(el.getAttribute('data-share') || '{}');
+    try {
+      if (navigator.share && !prefersReducedData) {
+        await navigator.share(data);
+      } else {
+        await navigator.clipboard.writeText(data.url || location.href);
+        const prev = el.textContent;
+        el.textContent = 'Copied';
+        setTimeout(() => (el.textContent = prev), 1200);
+      }
+      analytics('share_clicked');
+    } catch (_) {}
+  }, { passive: true });
+}
+
+/* ------------------------------
+   STICKY DONATE (mobile only)
+------------------------------ */
+function initStickyDonate() {
+  const wrap = $('.sticky-donate');
+  if (!wrap) return;
+  const mq = matchMedia('(max-width: 860px)');
+  const sync = () => wrap.setAttribute('aria-hidden', mq.matches ? 'false' : 'true');
+  sync();
+  mq.addEventListener?.('change', sync);
+}
+
+/* ------------------------------
+   HOTKEYS (guard typing)
+   D = donate, S = share, M = monthly toggle
+------------------------------ */
+function initHotkeys() {
+  const isTyping = (e) => {
+    const t = e.target;
+    return t && (t.isContentEditable || /^(input|textarea|select)$/i.test(t.tagName));
+  };
+  on(document, 'keydown', (e) => {
+    if (isTyping(e) || e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey) return;
+
+    const k = e.key?.toLowerCase();
+    if (k === 'd') {
+      const donate = $('[data-donate-cta]') || $('#hdr-donate');
+      if (donate) donate.focus();
+    } else if (k === 's') {
+      $('#hdr-share')?.click();
+    } else if (k === 'm') {
+      $('[data-monthly]')?.click();
+    }
+  }, { passive: true });
+}
+
+/* ------------------------------
+   SCOREBOARD / DONATE builder
+------------------------------ */
+function initScoreboard() {
+  const aside = $('.fcx-scoreboard');
+  if (!aside) return;
+
+  // SSR dataset
+  const GOAL   = Number(aside.dataset.goal || '0');
+  let   RAISED = Number(aside.dataset.raised || '0');
+  const BASE   = aside.dataset.donateUrl || '/donate';
+  const TEAM   = aside.dataset.team || '';
+  const CAMPA  = aside.dataset.campaign || '';
+
+  const chipsWrap  = $('.fcx-chips');
+  const donateCTA  = $('[data-donate-cta]');
+  const monthlyChk = $('[data-monthly]');
+  const raisedEl   = $('.fcx-raised');      // live region
+  const meterFill  = $('.fcx-track .fcx-fill');
+  const meterDom   = $('meter.fcx-meter');
+  const sticky     = $('#sticky-progress');
+
+  let selected = null; // amount number
+  let monthly = false;
+
+  function fmt(n) {
+    return '$' + Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 });
+  }
+  function pct() {
+    const p = GOAL> 0 ? Math.min(100, Math.max(0, (RAISED / GOAL) * 100)) : 0;
+    return Math.round(p);
+  }
+  function buildUrl() {
+    const url = new URL(BASE, location.origin);
+    if (CAMPA) url.searchParams.set('campaign', CAMPA);
+    if (selected) url.searchParams.set('amount', String(selected));
+    if (monthly)  url.searchParams.set('interval', 'month');
+    if (TEAM)     url.searchParams.set('team', TEAM);
+    return url.toString();
+  }
+  function updateCTA() {
+    if (!donateCTA) return;
+    donateCTA.setAttribute('href', buildUrl());
+    const amt = donateCTA.querySelector('.fcx-amt');
+    if (amt) amt.textContent = selected ? ` ${fmt(selected)}` : '';
+  }
+  function updateMeter() {
+    const p = pct();
+    if (meterDom) meterDom.value = RAISED;
+    raf(() => {
+      meterFill && (meterFill.style.width = p + '%');
+      sticky && (sticky.style.width = p + '%');
+    });
+  }
+
+  // quick chips
+  if (chipsWrap) {
+    on(chipsWrap, 'click', (e) => {
+      const b = e.target.closest('.fcx-chip-btn');
+      if (!b) return;
+      selected = Number(b.dataset.amt || '0');
+      $$('.fcx-chip-btn', chipsWrap).forEach(x => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
+      updateCTA();
+      analytics('amount_selected', { amount: selected });
+    });
+  }
+
+  // monthly
+  if (monthlyChk) {
+    on(monthlyChk, 'change', () => {
+      monthly = !!monthlyChk.checked;
+      updateCTA();
+      analytics('monthly_toggled', { monthly });
+    });
+  }
+
+  // Progressive enhancement: if any runtime updates happen (e.g., live socket),
+  // expose a small API to update RAISED without reloading.
+  window.fcScoreboard = {
+    add(amount = 0) {
+      RAISED = Math.max(0, RAISED + Number(amount || 0));
+      if (raisedEl) raisedEl.textContent = fmt(RAISED);
+      updateMeter();
+    },
+    set(amount = 0) {
+      RAISED = Math.max(0, Number(amount || 0));
+      if (raisedEl) raisedEl.textContent = fmt(RAISED);
+      updateMeter();
+    }
+  };
+
+  // initial paint
+  updateCTA();
+  updateMeter();
+}
+
+/* ------------------------------
+   TIERS: filters & compare popovers
+------------------------------ */
+function initTiers() {
+  const root = $('#tiers');
+  if (!root) return;
+
+  const grid = root.querySelector('.grid, #tiers-grid') || root;
+  const filters = root.querySelector('.filters');
+
+  // Filters
+  on(filters, 'click', (e) => {
+    const btn = e.target.closest('.chip.ctrl');
+    if (!btn) return;
+    const val = btn.dataset.filter;
+    $$('.chip.ctrl', filters).forEach(b => b.classList.toggle('is-active', b === btn));
+    $$('.card', grid).forEach(card => {
+      const badge  = (card.dataset.badge || '').toLowerCase();
+      const pop    = card.dataset.popular === '1';
+      const open   = card.dataset.open === '1';
+      let show = true;
+      if (val === 'VIP') show = badge === 'vip';
+      else if (val === 'Popular') show = pop;
+      else if (val === 'Open') show = open;
+      // 'all' shows everything
+      card.hidden = !show;
+    });
+    analytics('tier_filter', { filter: val });
+  });
+
+  // Compare popovers
+  const openers = $$('.compare-btn', root);
+  let lastTrigger = null;
+
+  function closePopover(pop) {
+    if (!pop) return;
+    pop.hidden = true;
+    lastTrigger?.setAttribute('aria-expanded', 'false');
+    lastTrigger = null;
+  }
+  function openPopover(pop, trigger) {
+    if (!pop) return;
+    pop.hidden = false;
+    trigger?.setAttribute('aria-expanded', 'true');
+    lastTrigger = trigger;
+  }
+
+  on(root, 'click', (e) => {
+    const btn = e.target.closest('.compare-btn');
+    if (!btn) return;
+    const card = btn.closest('.card');
+    const key  = card?.dataset?.tier || btn.getAttribute('data-compare');
+    const pop  = root.querySelector(`.compare-popover[data-for="${key}"]`);
+    if (!pop) return;
+
+    if (pop.hidden) openPopover(pop, btn); else closePopover(pop);
+    analytics('compare_toggle', { tier: key, open: String(!pop.hidden) });
+  });
+
+  on(document, 'click', (e) => {
+    const pop = $('.compare-popover:not([hidden])');
+    if (!pop) return;
+    if (!e.target.closest('.compare-popover') && !e.target.closest('.compare-btn')) {
+      closePopover(pop);
+    }
+  });
+
+  on(document, 'keydown', (e) => {
+    if (e.key === 'Escape') {
+      const pop = $('.compare-popover:not([hidden])');
+      if (pop) { closePopover(pop); lastTrigger?.focus(); }
+    }
+  });
+}
+
+/* ------------------------------
+   COUNTDOWN (header) — already present in header block,
+   here as a no-op guard if header script is removed.
+------------------------------ */
+function ensureDeadline() {
+  const el = $('#hdr-deadline');
+  if (!el || el.textContent) return; // header embedded script already filled it
+  const iso = el.getAttribute('data-countdown');
+  if (!iso) return;
+  const end = new Date(iso);
+  if (Number.isNaN(end.getTime())) return;
+  const tick = () => {
+    const d = Math.max(0, end - new Date());
+    const days = Math.floor(d/86400000);
+    const hrs  = Math.floor((d%86400000)/3600000);
+    el.textContent = days>0 ? `${days}d ${hrs}h left` : (d>0 ? `Ends today` : `Closed`);
+  };
+  tick(); setInterval(tick, 3600000);
+}
+
+/* ------------------------------
+   BOOT
+------------------------------ */
+function boot() {
+  initThemeToggle();
+  initShare();
+  initStickyDonate();
+  initHotkeys();
+  initScoreboard();
+  initTiers();
+  ensureDeadline();
+  analytics('runtime_ready');
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  boot();
+}
+
+/* Expose for tests */
+window.FundChamps = { boot };
+
+</script>

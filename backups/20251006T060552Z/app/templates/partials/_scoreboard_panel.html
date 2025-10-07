@@ -1,0 +1,136 @@
+{# _scoreboard_panel.html — Enterprise Panel (SSR + progressive UX) #}
+{% import 'partials/_fmt.html' as fmt %}
+{% set TEAM_NAME  = TEAM_NAME  or (team.name or team.team_name or 'Connect ATX Elite') %}
+{% set DONATE_URL = DONATE_URL
+  or (HREF_DONATE if HREF_DONATE is defined and HREF_DONATE else
+      (stripe_payment_link if stripe_payment_link else
+       (safe_url_for('main.donate') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate'))) %}
+{% set GOAL      = (fundraising_goal if fundraising_goal else GOAL if GOAL is defined else 50000)|int %}
+{% set RAISED    = (funds_raised if funds_raised else RAISED if RAISED is defined else 0)|int %}
+{% set PCT       = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %}
+{% set PCT_CLAMP = 0 if PCT < 0 else (100 if PCT>100 else PCT) %}
+{% set HREF_IMPACT  = (safe_url_for('main.impact')  if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact') %}
+{% set HREF_SPONSOR = (safe_url_for('main.become_sponsor') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.become_sponsor')) else '/become-sponsor') %}
+{# Optional matching campaign #}
+{% set MATCH = match or (campaign.match if (campaign is defined and campaign and campaign.match) else None) %}
+{% set MATCH_RATE     = (MATCH.rate if MATCH and MATCH.rate else 0)|float %}
+{% set MATCH_CAP      = (MATCH.cap  if MATCH and MATCH.cap  else 0)|int %}
+{% set MATCH_DEADLINE = (MATCH.deadline if MATCH and MATCH.deadline else '') %}
+{% set LOCALE         = locale or 'en-US' %}
+
+<aside class="fcx-scoreboard"
+       data-goal="{{ GOAL|int }}"
+       data-raised="{{ RAISED|int }}"
+       data-donate-url="{{ DONATE_URL|e }}"
+       data-team="{{ TEAM_NAME|e }}"
+       data-campaign="{{ (campaign.slug if campaign is defined and campaign.slug else (team.slug if team is defined and team.slug else 'general'))|e }}"
+       data-locale="{{ LOCALE }}"
+       data-match-rate="{{ MATCH_RATE }}"
+       data-match-cap="{{ MATCH_CAP }}"
+       data-match-deadline="{{ MATCH_DEADLINE }}"
+       role="region" aria-label="Fundraising scoreboard">
+
+  {# Match Booster (progressively enhanced by JS) #}
+  <div class="fcx-match" hidden>
+    <span class="fcx-match__pill">Matching Gift</span>
+    <span class="fcx-match__msg">
+      Today your <b>$100</b> becomes <b id="fcx-match-boost">$150</b>.
+      <em id="fcx-match-ends"></em>
+    </span>
+  </div>
+
+  <div class="fcx-panel__inner">
+    <div class="fcx-brand" aria-hidden="true"><span class="fcx-chip fcx-chip--sm">{{ TEAM_NAME }}</span></div>
+
+    <h2 class="fcx-title">
+      <span>Be the Assist.</span>
+      <span class="fcx-accent">Fund Their Win.</span>
+    </h2>
+
+    {% if SUBTITLE %}<p class="fcx-sub">{{ SUBTITLE }}</p>{% endif %}
+    <p class="fcx-scan-hint" aria-hidden="true">Scan to give — or press <kbd>D</kbd></p>
+
+    <section class="fcx-score" aria-live="polite" aria-atomic="true">
+      <div class="fcx-money tabular" role="status">
+        <span class="fcx-raised" id="fcx-raised-display">{{ fmt.money(RAISED) if fmt.money is defined else ('$' ~ '{:,.0f}'.format(RAISED)) }}</span>
+        <span class="fcx-sep">/</span>
+        <span class="fcx-goal">{{ fmt.money(GOAL) if fmt.money is defined else ('$' ~ '{:,.0f}'.format(GOAL)) }}</span>
+        <span class="fcx-pct">• <span id="fcx-pct-display">{{ '{:.0f}'.format(PCT_CLAMP) }}</span>%</span>
+      </div>
+
+      <div class="fcx-timer">
+        <span class="fcx-label">Goal ends in</span>
+        <time class="fcx-value" id="fcx-deadline" aria-live="polite">{{ (days_left if days_left is defined else '30 days') }}</time>
+      </div>
+    </section>
+
+    <div class="fcx-meter-wrap">
+      <meter class="fcx-meter" min="0" max="{{ GOAL|int }}" value="{{ RAISED|int }}" id="fcx-meter">
+        {{ '{:.0f}'.format(PCT_CLAMP) }}% of goal
+      </meter>
+      <div class="fcx-track" role="presentation" aria-hidden="true">
+        <div class="fcx-fill" id="fcx-fill" style="width:{{ '{:.0f}'.format(PCT_CLAMP) }}%"></div>
+      </div>
+    </div>
+
+    <div class="fcx-chips" role="group" aria-label="Quick donation amounts">
+      {% set chips = quick_amounts if quick_amounts is defined and quick_amounts else [25,50,100] %}
+      {% for q in chips %}
+        <button class="fcx-chip-btn" type="button" data-amt="{{ q }}" aria-label="Donate ${{ q }}">+${{ q }}
+          <em>· {{ '1 team meal' if q==25 else ('1 jersey piece' if q==50 else '1 week of gym time') }}</em>
+        </button>
+      {% endfor %}
+    </div>
+
+    <div class="fcx-sticky">
+      <div class="fcx-cta">
+        <a class="fcx-btn fcx-btn-accent"
+           href="{{ DONATE_URL }}" target="_blank" rel="noopener noreferrer"
+           data-donate-cta id="fcx-donate-cta" data-analytics="cta:donate">
+          Donate <span class="fcx-amt" aria-hidden="true"></span> →
+        </a>
+
+        <button class="fcx-btn fcx-btn-lite" id="fcx-pr-btn" hidden aria-label="Pay quickly with a saved card"
+                data-analytics="cta:payment-request">Pay • Apple/Google</button>
+
+        <label class="fcx-toggle">
+          <input name="monthly" type="checkbox" data-monthly aria-label="Make this a monthly donation" />
+          <span>Make it monthly</span>
+        </label>
+      </div>
+
+      <span class="sr-only" id="fcx-donate-tip">Tip: Press D to donate. Hotkey disabled while typing.</span>
+      <p class="fcx-note">Every <b>$100</b> ≈ a week of gym time. <span id="fcx-gap-hint"></span></p>
+    </div>
+
+    <nav class="fcx-sec" aria-label="Scoreboard secondary actions">
+      <a class="fcx-btn fcx-btn-ghost fcx-btn--sm" href="{{ DONATE_URL }}" target="_blank" rel="noopener" data-analytics="cta:skip-to-donate">Skip to Donate</a>
+      <a class="fcx-btn fcx-btn-ghost fcx-btn--sm" href="{{ HREF_IMPACT }}" data-analytics="cta:impact">Impact</a>
+      <a class="fcx-btn fcx-btn-ghost fcx-btn--sm" href="{{ HREF_SPONSOR }}" data-analytics="cta:become-sponsor">Become a Sponsor</a>
+      <button class="fcx-btn fcx-btn-ghost fcx-btn--sm" type="button" data-share data-analytics="cta:share">Share</button>
+    </nav>
+
+    <div class="fcx-ladder" aria-label="Milestones">
+      {% for rung in [1000, 5000, 10000] %}
+        {% set rungPct = (100.0 * (RAISED if rung>0 else 0) / rung)|round(0, 'floor') %}
+        <div class="fcx-rung" data-threshold="{{ rung }}">
+          <div class="fcx-bar" style="width:{{ 0 if RAISED==0 else (100 if RAISED>=rung else rungPct) }}%"></div>
+          <div class="fcx-lbl">
+            <span class="fcx-amt">{{ '$' ~ '{:,.0f}'.format(rung) }}</span>
+            <span class="fcx-what">{{ 'Gym Week' if rung==1000 else ('Travel Slot' if rung==5000 else 'Tutor Block') }}</span>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="fcx-ticker" data-src="/api/donors" role="region" aria-label="Recent supporters" aria-live="polite">
+      <div class="fcx-ticker__rail" id="fcx-ticker-rail"></div>
+      <button class="fcx-ticker__pause" type="button" aria-pressed="false" aria-label="Pause scrolling">❚❚</button>
+    </div>
+
+    {% if TEXT_KEYWORD and TEXT_SHORT %}
+      <p class="fcx-sms">📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.</p>
+    {% endif %}
+  </div>
+</aside>
+

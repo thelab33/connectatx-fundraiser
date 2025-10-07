@@ -1,4 +1,12 @@
-
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 <section id="tiers" class="section">
   <div class="sf-container">
     <h2 class="sf-h2 mb-1">Sponsorship Tiers</h2>
@@ -25,9 +33,7 @@
           <div class="text-2xl font-black">
             <span class="text-zinc-300">$</span>{{ t.price if t.price else '—'
             }}
-            <span class="text-sm text-zinc-400 font-medium"
-              >{{ 'one-time' if t.price else 'name your gift' }}</span
-            >
+            <span class="text-sm text-zinc-400 font-medium">{{ 'one-time' if t.price else 'name your gift' }}</span>
           </div>
           <ul class="text-sm text-zinc-300 space-y-1">
             {% for p in t.perks %}
@@ -37,14 +43,11 @@
           <div class="pt-2 flex gap-2">
             <a
               href="{{ url_for('main.donate') }}?tier={{ t.name|lower }}"
-              class="sf-btn sf-btn-primary w-full"
-              >Become a {{ t.name }} Sponsor</a
-            >
+              class="sf-btn sf-btn-primary w-full">Become a {{ t.name }} Sponsor</a>
             <button
               class="sf-btn sf-btn-ghost"
               data-analytics="cta:tiers:share"
-              data-share='{"title":"Support {{ team.team_name if team else "our team" }}","url":"{{ request.base_url if request is defined else "/" }}"}'
-            >
+              data-share='{"title":"Support {{ team.team_name if team else "our team" }}","url":"{{ request.base_url if request is defined else "/" }}"}'>
               Share
             </button>
           </div>

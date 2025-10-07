@@ -1,7 +1,16 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 
 
 {% extends "admin/base.html" %}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
 
 {% block title %}Sponsors Management | {{ super() }}{% endblock %}
 
@@ -32,31 +41,7 @@
     </form>
 
     
-    <script {{ nonce_attr() }} nonce="{{ NONCE }}">
-      document.addEventListener("DOMContentLoaded", function(){
-        const searchInput = document.querySelector('input[name="q"]');
-        const statusSelect = document.querySelector('select[name="status"]');
-        const rows = document.querySelectorAll("tbody tr[data-sponsor]");
-
-        function filterRows() {
-          const term = searchInput.value.toLowerCase();
-          const status = statusSelect.value;
-          rows.forEach(row => {
-            const name = row.dataset.name.toLowerCase();
-            const email = row.dataset.email.toLowerCase();
-            const rowStatus = row.dataset.status.toLowerCase();
-            const matchText = (!term || name.includes(term) || email.includes(term));
-            const matchStatus = (!status || rowStatus === status);
-            row.style.display = (matchText && matchStatus) ? "" : "none";
-          });
-        }
-
-        if (searchInput && statusSelect) {
-          searchInput.addEventListener("input", filterRows);
-          statusSelect.addEventListener("change", filterRows);
-        }
-      });
-    </script>
+    <script { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } type="module" src="{{ url_for('static', filename='js/extracted/admin__sponsors.html__1.js', v='1.0.0') }}"></script>
   </div>
 
   

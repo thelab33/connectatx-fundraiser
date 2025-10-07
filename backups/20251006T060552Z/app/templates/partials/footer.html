@@ -1,0 +1,279 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ========================
+   Footer — Agency Elite v4
+   • White-label ready, A11y/Perf hardened
+   • Motion/Save-Data aware, no global ID sprawl
+   ======================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+
+{# Config + safe fallbacks #}
+{% set BRAND          = team.team_name if team and team.team_name else 'Your Club/Org' %}
+{% set ACCENT         = team.theme_hex if team and team.theme_hex else '#facc15' %}
+{% set YEAR           = now().year if now is defined else 2025 %}
+{% set is_501c3       = team.is_501c3 if team is defined and team.is_501c3 is defined else false %}
+{% set contact_email  = team.contact_email if team and team.contact_email else None %}
+{% set social_links   = team.social_links if team and team.social_links else {} %}
+{% set hide_powered   = team.hide_powered if team and team.hide_powered else False %}
+{% set payment_link   = footer_payment_link|default(stripe_payment_link|default(None)) %}
+{% set privacy_href   = safe_url_for('main.privacy') if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.privacy') else '/privacy' %}
+{% set terms_href     = safe_url_for('main.terms')   if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.terms')   else '/terms' %}
+{% set donate_href    = payment_link or (safe_url_for('main.donate') if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate') else '/donate') %}
+{% set tiers_href     = '#tiers' %}
+{% set stats          = stats if stats is defined else None %}
+{% set built_with = (
+    team.built_with_signature if team and team.built_with_signature is not none
+    else settings.built_with_signature if settings and settings.built_with_signature is defined
+    else "Built with snacks &amp; late nights."
+) %}
+
+<footer id="site-footer" class="fc-footer" role="contentinfo"
+        aria-label="Site footer" style="--accent: {{ ACCENT }}">
+
+  <div class="ft__inner">
+
+    <!-- Halo / accent rail -->
+    <div class="ft__halo" aria-hidden="true"></div>
+
+    <!-- Top row: org + nav + ctas + socials -->
+    <div class="ft__top">
+      <div class="ft__org">
+        <div class="ft__legal">
+          <span>© {{ YEAR }} {{ BRAND }}</span>
+          <span class="sep" aria-hidden="true">•</span>
+          {% if is_501c3 %}
+            <span class="pill pill--verified" title="IRS 501(c)(3) verified">501(c)(3) verified</span>
+          {% else %}
+            <span class="pill">Community program</span>
+          {% endif %}
+          <span class="sep" aria-hidden="true">•</span>
+          <a href="{{ privacy_href }}" class="ft__link">Privacy</a>
+          <a href="{{ terms_href }}" class="ft__link">Terms</a>
+
+          {% if stats and (stats.raised or stats.sponsors) %}
+            <span class="sep" aria-hidden="true">•</span>
+            <span class="ft__stats">
+              {% if stats.raised %}${{ '{:,.0f}'.format(stats.raised) }} raised{% endif %}
+              {% if stats.raised and stats.sponsors %} | {% endif %}
+              {% if stats.sponsors %}{{ stats.sponsors }} sponsors{% endif %}
+            </span>
+          {% endif %}
+        </div>
+
+        <nav class="ft__nav" aria-label="Footer navigation">
+          <a href="#about"  class="ft__link">About</a>
+          <a href="#impact" class="ft__link">Impact</a>
+          <a href="#tiers"  class="ft__link">Sponsor</a>
+          {% if contact_email %}
+            <a href="mailto:{{ contact_email }}?subject=Support%20{{ BRAND|urlencode }}" class="ft__link">Contact</a>
+          {% endif %}
+        </nav>
+      </div>
+
+      <div class="ft__cta">
+        <a id="ftr-donate" href="{{ donate_href }}" class="btn btn--gold" data-cta="donate">Donate</a>
+        <a href="{{ tiers_href }}" class="btn btn--ghost">Sponsor</a>
+      </div>
+
+      {% if social_links %}
+      <div class="ft__social" aria-label="Social links">
+        {% for name, url in social_links.items() %}
+          <a href="{{ url }}" target="_blank" rel="noopener"
+             aria-label="Follow on {{ name|capitalize }}" class="ft__icon">
+            <i class="icon-{{ name|lower }}" aria-hidden="true"></i>
+          </a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Trust / Powered row -->
+    <div class="ft__trust">
+      <div class="ft__secure">
+        <span aria-hidden="true">🔒</span>
+        <span>Secure checkout via Stripe / PayPal. Cards: Visa · Mastercard · AmEx.</span>
+        <a href="https://stripe.com/docs/security/stripe" target="_blank" rel="noopener"
+           class="badge" aria-label="View Stripe security (opens in a new tab)">Stripe Secure</a>
+      </div>
+
+      {% if not hide_powered %}
+      <div class="ft__powered">
+        <span>Powered by</span>
+        <a href="https://fundchamps.org" target="_blank" rel="noopener">FundChamps</a>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Newsletter slot (optional) -->
+    <div id="newsletter-slot" class="ft__newsletter" data-slot="newsletter" hidden></div>
+
+    {% if built_with %}
+      <p class="ft__builtwith">{{ built_with | safe }}</p>
+    {% endif %}
+  </div>
+</footer>
+
+<!-- Back to top -->
+<button id="backtop" type="button" class="ft__backtop" aria-label="Back to top" title="Back to top">↑</button>
+
+<!-- Floating mobile CTA -->
+<div id="footer-float-cta" class="ft__float">
+  <div class="ft__float__inner">
+    <a href="{{ donate_href }}" class="btn btn--gold" data-cta="donate">Donate</a>
+    <a href="{{ tiers_href }}"  class="btn btn--ghost">Sponsor</a>
+  </div>
+</div>
+
+<style {{ nonce_attr() }}>
+/* ===== Footer • Agency Elite v4 ===== */
+.fc-footer{
+  background: linear-gradient(180deg,#0e1116 0%,#0b0e13 100%);
+  border-top: 4px solid var(--accent);
+  color:#e8ebf3;
+  position:relative;
+}
+.ft__inner{max-width:88rem;margin-inline:auto;padding:1.25rem 1rem;position:relative}
+.ft__halo{position:absolute;left:20%;right:20%;top:-10px;height:28px;
+  background:radial-gradient(ellipse 60% 55% at 50% 60%, color-mix(in srgb,var(--accent) 75%, #fff0) 0%, transparent 92%);
+  opacity:.28; pointer-events:none}
+
+.ft__top{display:grid;grid-template-columns:1fr auto auto;gap:1rem;align-items:center;margin-bottom:.5rem}
+@media (max-width:960px){.ft__top{grid-template-columns:1fr;gap:.75rem}}
+.ft__org{display:flex;flex-direction:column;gap:.35rem}
+.ft__legal{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;font:800 .9rem/1.2 "Inter"}
+.ft__legal .sep{color:color-mix(in srgb,var(--accent) 88%, #fff2)}
+.pill{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .6rem;border-radius:999px;font:900 .7rem/1 "Inter";
+  background:rgba(250,204,21,.14); color:color-mix(in srgb,var(--accent) 92%, #111)}
+.pill--verified{background:rgba(34,197,94,.16); color:#a7f3d0}
+
+.ft__nav{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.15rem}
+.ft__link{color:#ffeaa6;font:800 .8rem/1 "Inter"; text-decoration:none}
+.ft__link:hover{color:var(--accent); text-decoration:underline}
+
+.ft__cta{display:flex;gap:.5rem;justify-content:flex-start}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:.72rem 1.4rem;font:900 .9rem/1 "Inter"}
+.btn--gold{background:linear-gradient(180deg,#fffde9 0%, var(--accent) 96%); color:#111; border:2px solid var(--accent);
+  text-transform:uppercase; letter-spacing:.02em; transition:transform .18s cubic-bezier(.2,.9,.35,1.2), box-shadow .18s}
+.btn--gold:hover{transform:translateY(-2px); box-shadow:0 14px 30px rgba(0,0,0,.28)}
+.btn--ghost{background:transparent;border:1px solid color-mix(in srgb,var(--accent) 55%, #fff2); color:#eef1f7}
+.btn--ghost:hover{background:color-mix(in srgb,var(--accent) 12%, transparent)}
+
+.ft__social{display:flex;gap:.6rem}
+.ft__icon{color:#ffeaa6;font-size:1.2rem}
+.ft__icon:hover{color:#fff}
+
+.ft__trust{display:flex;gap:.8rem;align-items:center;border-top:1px solid rgba(255,255,255,.06); padding-top:.65rem}
+@media (max-width:780px){.ft__trust{flex-direction:column;align-items:flex-start}}
+.ft__secure{display:flex;align-items:center;gap:.6rem;font:700 .86rem/1.2 "Inter";color:#cfd6e2}
+.ft__secure .badge{background:#0f141c;border:1px solid rgba(255,255,255,.12);color:var(--accent);
+  padding:.25rem .6rem;border-radius:999px;font:900 .72rem/1 "Inter"}
+.ft__powered{margin-left:auto;display:flex;align-items:center;gap:.4rem;color:#bfc7d6;font:800 .78rem/1 "Inter"}
+.ft__powered a{color:#ffeaa6;text-decoration:none}
+.ft__powered a:hover{color:var(--accent);text-decoration:underline}
+
+.ft__builtwith{text-align:right;color:#98a2b3;font:italic 700 .75rem/1.3 "Inter";opacity:.85;margin-top:.8rem}
+
+/* Back to top */
+.ft__backtop{
+  position:fixed; right:1rem; bottom:1rem; z-index:50; width:52px; height:52px; border-radius:999px;
+  background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 80%, #fff) 60%, var(--accent));
+  color:#0b0b0c; font:900 1.4rem/1 "Inter";
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 12px 26px rgba(0,0,0,.35);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.ft__backtop.is-visible{opacity:1; pointer-events:auto}
+
+/* Floating mobile CTA */
+.ft__float{position:fixed; inset-inline:0; bottom:0; display:flex; justify-content:center; z-index:40;
+  opacity:0; pointer-events:none; transition:opacity .2s ease}
+.ft__float__inner{margin-bottom:.9rem; display:flex; gap:.5rem; background:#0b0f16cc; backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.08); border-radius:999px; padding:.4rem .5rem; box-shadow:0 14px 34px rgba(0,0,0,.38)}
+@media (min-width:768px){ .ft__float{display:none} }
+.ft__float.is-visible{opacity:1; pointer-events:auto}
+
+/* Focus + motion safe */
+:where(.fc-footer a, .fc-footer button, .ft__float a):focus-visible{
+  outline:none; box-shadow:0 0 0 2px #000, 0 0 0 4px var(--accent)
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition:none !important; animation:none !important}
+}
+</style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const backTop = document.getElementById('backtop');
+  const floatCta = document.getElementById('footer-float-cta');
+  const footer   = document.getElementById('site-footer');
+
+  if (!footer || (footer.__wired)) return; footer.__wired = true;
+
+  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const saveData = navigator.connection?.saveData;
+
+  // Helpers
+  const show = (el, on) => el && el.classList.toggle('is-visible', !!on);
+
+  // Reveal Back-to-top after modest scroll; hide when footer in view
+  const toggleByScroll = () => {
+    const y = window.scrollY || document.documentElement.scrollTop;
+    show(backTop, y> 280);
+  };
+
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      // When footer is visible, hide floating CTA so it doesn't clash
+      if (e.target === footer && floatCta){
+        const hideCTA = e.isIntersecting && e.intersectionRatio> 0.01;
+        show(floatCta, !hideCTA && window.innerWidth < 768 && window.scrollY> 220);
+      }
+    });
+  }, { rootMargin: "0px 0px -40% 0px", threshold: [0, .01, .1] });
+  io.observe(footer);
+
+  // Initial & scroll
+  toggleByScroll();
+  window.addEventListener('scroll', toggleByScroll, { passive: true });
+
+  // Back to top behavior
+  backTop?.addEventListener('click', () => {
+    if (prefersReduce || saveData) { window.scrollTo(0,0); return; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Floating CTA: only if donate button is not visible
+  const donateTargets = [
+    document.getElementById('ftr-donate'),
+    document.getElementById('hdr-donate'),
+    document.querySelector('[data-cta="donate"]')
+  ].filter(Boolean);
+
+  const vis = el => {
+    const r = el.getBoundingClientRect();
+    return r.top < window.innerHeight && r.bottom> 0;
+  };
+
+  const checkFloat = () => {
+    const anyDonateVisible = donateTargets.some(vis);
+    const y = window.scrollY || 0;
+    show(floatCta, !anyDonateVisible && y> 220 && window.innerWidth < 768);
+  };
+
+  window.addEventListener('scroll', checkFloat, { passive: true });
+  window.addEventListener('resize', checkFloat, { passive: true });
+  checkFloat();
+
+  // Public hook
+  document.dispatchEvent(new CustomEvent('fc:footer:ready'));
+})();
+</script>
+

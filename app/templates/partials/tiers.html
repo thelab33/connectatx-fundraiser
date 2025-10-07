@@ -1,6 +1,7 @@
-{# ===================== Sponsorship Tiers — Pro 5.0 (self-contained) ===================== #}
+{# ===================== Sponsorship Tiers — Pro 5.1 (self-contained, CSP-safe) ===================== #}
+{# CSP nonce macro (honors NONCE or callable csp_nonce()) #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
 
 {# Routes & helpers #}
 {% set _sf = (safe_url_for is defined) and safe_url_for %}
@@ -24,14 +25,17 @@
    "perks":["Tailored benefits","Personalized impact"],"badge":None,"cta":"Build a Package"}
 ] %}
 
+{# Optional JSON endpoint to poll inventory: e.g. /api/tiers?campaign=slug -> [{key,left}] #}
+{% set TIERS_SRC = TIERS_SRC if TIERS_SRC is defined else (safe_url_for('api.tiers') if _sf and _has and has_endpoint('api.tiers') else '/api/tiers') %}
+
 <section
   id="tiers"
-  class="tiers"
+  class="tiers fcx-section"
   role="region"
   aria-labelledby="tiers-heading"
   itemscope itemtype="https://schema.org/OfferCatalog"
-  style="--accent: {{ theme_hex|default('#facc15') }}"
->
+  data-src-tiers="{{ TIERS_SRC }}"
+  style="--accent: {{ theme_hex|default('#facc15') }}">
   <meta itemprop="name" content="Sponsorship Tiers">
 
   <div class="tiers__shell">
@@ -39,20 +43,31 @@
     <header class="head">
       <h2 id="tiers-heading" class="title">Sponsorship <span class="accent">Tiers</span></h2>
       <p class="sub">Choose your level and fuel the season. Every tier includes recognition and a signed thank-you certificate.</p>
-
-      <!-- Filters -->
-      <div class="filters" role="group" aria-label="Tier filters">
-        <button type="button" class="chip ctrl is-active" data-filter="all" aria-pressed="true">All</button>
-        <button type="button" class="chip ctrl" data-filter="VIP">VIP</button>
-        <button type="button" class="chip ctrl" data-filter="Popular">Popular</button>
-        <button type="button" class="chip ctrl" data-filter="Open">Open Spots</button>
+      <!-- Filters + Sort + Compare -->
+      <div class="head__controls" role="group" aria-label="Tier controls">
+        <div class="filters" role="group" aria-label="Tier filters">
+          <button type="button" class="chip ctrl is-active" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" class="chip ctrl" data-filter="VIP">VIP</button>
+          <button type="button" class="chip ctrl" data-filter="Popular">Popular</button>
+          <button type="button" class="chip ctrl" data-filter="Open">Open Spots</button>
+        </div>
+        <div class="sorter">
+          <label for="tier-sort" class="sorter__label">Sort</label>
+          <select id="tier-sort" class="sorter__select" aria-label="Sort tiers">
+            <option value="featured">Featured</option>
+            <option value="price_desc">Price: High → Low</option>
+            <option value="price_asc">Price: Low → High</option>
+            <option value="availability">Availability</option>
+          </select>
+        </div>
+        <button type="button" class="compare-all" data-compare-all aria-expanded="false" aria-controls="tiers-compare">Compare all</button>
       </div>
     </header>
 
     <!-- Grid -->
     <div class="grid" role="list">
       {% for t in TIERS %}
-      {% set __open = (t.left is none) or (t.left|int > 0) %}
+      {% set __open = (t.left is none) or (t.left|int> 0) %}
       <article
         class="card{% if t.popular %} is-popular{% endif %}{% if t.badge %} has-ribbon{% endif %}{% if not __open %} is-soldout{% endif %}"
         role="listitem"
@@ -61,8 +76,8 @@
         data-popular="{{ '1' if t.popular else '0' }}"
         data-badge="{{ t.badge or '' }}"
         data-open="{{ '1' if __open else '0' }}"
-        itemscope itemtype="https://schema.org/Offer"
-      >
+        data-amount="{{ t.amount if t.amount is not none else '' }}">
+
         {% if t.badge %}
           <span class="ribbon" aria-hidden="true">{{ t.badge }}</span>
           <meta itemprop="category" content="{{ t.badge }}">
@@ -73,12 +88,26 @@
         <div class="card__head">
           <span class="emoji" aria-hidden="true">{{ t.emoji }}</span>
           <h3 class="h" id="tier-{{ loop.index }}-h" itemprop="name">{{ t.key }}</h3>
-
+          <!-- Tooltip/Popover Compare Icon -->
+          <button class="compare-btn" tabindex="0" aria-label="Compare {{ t.key }} benefits" data-compare="{{ t.key }}">?</button>
           <span class="badge"
                 {% if t.left is not none %}data-left="{{ t.left }}"{% endif %}
                 aria-label="{{ __open and ((t.left|string) ~ ' sponsorships available') or 'Sold out' }}">
             {{ __open and ((t.left is not none) and (t.left ~ ' left') or 'Open') or 'Sold out' }}
           </span>
+        </div>
+        <!-- Compare Popover -->
+        <div class="compare-popover" data-for="{{ t.key }}" hidden>
+          <strong>Why {{ t.key }}?</strong>
+          <ul>
+            {% for p in t.perks %}
+              <li>{{ p }}</li>
+            {% endfor %}
+            {% if t.key == "Platinum" %}<li>🔥 Top billing on all marketing & signage</li>{% endif %}
+            {% if t.key == "Gold" %}<li>💼 Premium recognition</li>{% endif %}
+            {% if t.key == "Silver" %}<li>🏅 Honored at season events</li>{% endif %}
+            {% if t.key == "Bronze" %}<li>🙌 Perfect for local supporters</li>{% endif %}
+          </ul>
         </div>
 
         <p class="price">
@@ -117,14 +146,26 @@
           itemprop="url"
           {% if not __open %}data-disabled="1" aria-disabled="true"{% endif %}
           data-analytics="cta_click"
-          data-analytics-meta='{{ {"where":"tiers","tier":t.key,"popular":t.popular,"badge":t.badge}|tojson }}'
-        >
+          data-analytics-meta='{{ {"where":"tiers","tier":t.key,"popular":t.popular,"badge":t.badge}|tojson }}'>
           {% if __open %}
             {{ t.cta or ('Sponsor ' ~ t.key ~ ' →') }}
           {% else %}
             Join Waitlist
           {% endif %}
         </a>
+
+        <!-- Share Row -->
+        <div class="share-row">
+          <a class="share-btn" href="https://twitter.com/intent/tweet?text={{ t.key }}%20Sponsor!%20{{ share_url|default(request.url) }}" target="_blank" aria-label="Share {{ t.key }} on X">🐦</a>
+          <a class="share-btn" href="https://www.linkedin.com/shareArticle?mini=true&url={{ share_url|default(request.url) }}" target="_blank" aria-label="Share on LinkedIn">💼</a>
+          <a class="share-btn" href="mailto:?subject={{ t.key }}%20Sponsorship&body=Support%20us%20at%20{{ share_url|default(request.url) }}" target="_blank" aria-label="Share via Email">✉️</a>
+          <button type="button" class="share-btn copy" data-url="{{ share_url|default(request.url) }}#tiers?filter={{ t.key }}" aria-label="Copy tier link">📋</button>
+        </div>
+
+        <!-- Urgency/Scarcity Badge -->
+        {% if t.left is not none and t.left|int < 3 and t.left|int> 0 %}
+          <span class="scarcity-badge">🔥 Almost Gone!</span>
+        {% endif %}
 
         {% if t.popular %}
           <small class="urgency">⭐ Most chosen by sponsors</small>
@@ -158,57 +199,62 @@
     </footer>
   </div>
 
-  {# Structured data for full list #}
-  <script type="application/ld+json" {{ nonce_attr() }}>
-  {
-    "@context": "https://schema.org",
-    "@type": "OfferCatalog",
-    "name": "Sponsorship Tiers",
-    "itemListElement": [
-      {% for t in TIERS %}
-      {
-        "@type": "Offer",
-        "name": "{{ t.key }}",
-        "price": "{{ t.amount or 0 }}",
-        "priceCurrency": "USD",
-        "availability": "{{ ((t.left is none) or (t.left|int>0)) and 'https://schema.org/InStock' or 'https://schema.org/OutOfStock' }}",
-        {% if t.left is not none %}"inventoryLevel": "{{ t.left }}",{% endif %}
-        "category": "{{ t.badge or (t.popular and 'Popular' or '') }}"
-      }{% if not loop.last %},{% endif %}
-      {% endfor %}
-    ]
-  }
-  </script>
+  <!-- Compare Drawer -->
+  <div id="tiers-compare" class="tiers-compare" hidden role="dialog" aria-modal="true" aria-labelledby="tiers-compare-title">
+    <div class="tiers-compare__sheet" role="document">
+      <header class="tiers-compare__head">
+        <h3 id="tiers-compare-title">Compare Tiers</h3>
+        <button type="button" class="tiers-compare__close" aria-label="Close">✕</button>
+      </header>
+      <div class="tiers-compare__body" id="tiers-compare-body" aria-live="polite"></div>
+    </div>
+    <div class="tiers-compare__backdrop" data-close></div>
+  </div>
 </section>
 
 <style {{ nonce_attr() }}>
-/* ================= Tiers — Enterprise tokens ================= */
+/* ================= SaaS Pro Section Polish ================= */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+
+/* ================= Tiers — Enterprise tokens & Flex Upgrades ================= */
 .tiers{ color:#eaf0fa; }
 .tiers .accent{ color: var(--accent) }
 .tiers__shell{ max-width:1200px; margin-inline:auto; padding:clamp(16px, 3vw, 28px) }
 .head{ display:grid; gap:.45rem; margin-bottom:clamp(14px, 2.2vw, 22px) }
 .title{ font-size:clamp(1.6rem,1.2rem + 2.2vw,2.2rem); font-weight:1000; margin:0 }
 .sub{ color:#b9c2d0; margin:0 }
-.filters{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.3rem }
+.head__controls{ display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; justify-content:space-between }
+.filters{ display:flex; flex-wrap:wrap; gap:.5rem; }
+.sorter{ display:flex; align-items:center; gap:.4rem }
+.sorter__label{ font-weight:800; color:#b9c2d0 }
+.sorter__select{ appearance:none; background:#ffffff10; color:#eaf0fa; border:1px solid #ffffff24; border-radius:.6rem; padding:.4rem .6rem; font-weight:800 }
+.compare-all{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25); border-radius:.6rem; padding:.45rem .7rem; font-weight:1000 }
+
 .ctrl{
   display:inline-flex; align-items:center; gap:.45rem;
   padding:.4rem .7rem; border-radius:10px; border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.06); color:#eaf0fa; font-weight:800;
+  cursor:pointer;
 }
 .ctrl.is-active, .ctrl[aria-pressed="true"]{
   background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border-color:rgba(0,0,0,.25)
 }
 
 .grid{ display:grid; gap:clamp(12px, 2vw, 18px); grid-template-columns: repeat(12, 1fr) }
-@media (min-width: 980px){ .grid > .card{ grid-column: span 4 } }
+@media (min-width: 980px){ .grid> .card{ grid-column: span 4 } }
 @media (max-width: 979.98px) and (min-width: 680px){
-  .grid{ grid-template-columns: repeat(8, 1fr) } .grid > .card{ grid-column: span 4 }
+  .grid{ grid-template-columns: repeat(8, 1fr) } .grid> .card{ grid-column: span 4 }
 }
 @media (max-width: 679.98px){
-  .grid{ grid-template-columns: repeat(4, 1fr) } .grid > .card{ grid-column: span 4 }
+  .grid{ grid-template-columns: repeat(4, 1fr) } .grid> .card{ grid-column: span 4 }
 }
 
-/* Card */
+/* --- Card --- */
 .card{
   display:flex; flex-direction:column; gap:.7rem;
   border-radius:16px; padding:clamp(14px, 2vw, 18px);
@@ -236,7 +282,7 @@
   box-shadow:0 8px 24px rgba(0,0,0,.35);
 }
 
-.card__head{ display:flex; align-items:center; justify-content:space-between; gap:.8rem }
+.card__head{ display:flex; align-items:center; justify-content:space-between; gap:.8rem; position:relative }
 .emoji{ font-size:1.3rem }
 .h{ font-size:1.15rem; font-weight:900; margin:0 }
 .badge{
@@ -257,6 +303,7 @@
   display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
   border-radius:999px; font-weight:1000; text-decoration:none; padding:.7rem 1rem;
   transition: transform .06s ease, background .2s ease, border-color .2s ease;
+  cursor:pointer;
 }
 .btn:active{ transform: translateY(1px) }
 .btn--gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
@@ -264,6 +311,16 @@
 .card.is-soldout .btn{ pointer-events:none; opacity:.7 }
 
 .urgency{ color:#fde68a }
+.scarcity-badge {
+  color: #f43f5e;
+  font-weight: bold;
+  margin-left: 10px;
+  font-size: .93em;
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: 0.5; }
+}
 .spots{ display:flex; align-items:center; gap:.5rem }
 .spots .track{
   inline-size:100%; block-size:8px; border-radius:999px; overflow:hidden;
@@ -277,6 +334,42 @@
 .foot{ display:grid; justify-items:center; gap:.6rem; margin-top:clamp(12px, 2vw, 20px) }
 .note{ color:#b9c2d0; margin:0 }
 
+/* --- Flex Upgrades (Popover, Compare, Share) --- */
+.compare-btn {
+  margin-left: 6px; background: none; border: none; color: var(--accent); font-weight: 900;
+  font-size: 1.1em; cursor: pointer; border-radius: 50%; padding: 0 .5em;
+  transition: background .15s; position: relative;
+}
+.compare-btn:focus, .compare-btn:hover { background: rgba(250,204,21,0.2); }
+.compare-popover {
+  display: block; position: absolute; top: 38px; left: 0; min-width: 200px;
+  background: #23272e; color: #fff; border-radius: 10px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  z-index: 20; padding: 1em 1.25em; font-size: .97em; border: 1px solid var(--accent);
+  pointer-events: none; opacity: 0; transition: opacity .18s cubic-bezier(.4,1,.5,1);
+}
+.compare-btn:focus + .compare-popover,
+.compare-btn:hover + .compare-popover,
+.compare-popover.open { opacity: 1; pointer-events: auto; }
+
+/* --- Share Row --- */
+.share-row { margin-top: 7px; display: flex; gap: 8px; }
+.share-btn { color: var(--accent); font-size: 1.1em; background: none; border: none; cursor: pointer; transition: color .18s; text-decoration: none; }
+.share-btn:hover { color: #fde047; }
+
+/* --- Compare Drawer --- */
+.tiers-compare[hidden]{ display:none }
+.tiers-compare{ position:fixed; inset:0; z-index:80; display:grid; grid-template-rows:1fr }
+.tiers-compare__backdrop{ position:absolute; inset:0; background:#0008; backdrop-filter: blur(2px) }
+.tiers-compare__sheet{ position:relative; margin: auto; width:min(1100px,96vw); max-height:86vh; overflow:auto; background:#0f1218; color:#fff; border:1px solid #ffffff22; border-radius:16px; box-shadow:0 24px 60px #000a }
+.tiers-compare__head{ display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid #ffffff1a }
+.tiers-compare__head h3{ margin:0; font-weight:1000 }
+.tiers-compare__close{ background:#ffffff12; border:1px solid #ffffff22; color:#fff; border-radius:8px; padding:.35rem .6rem; font-weight:900 }
+.tiers-compare__body{ padding:14px 16px; }
+.tiers-table{ width:100%; border-collapse:separate; border-spacing:0; font-variant-numeric:tabular-nums }
+.tiers-table th, .tiers-table td{ border-bottom:1px solid #ffffff12; padding:.6rem .5rem; text-align:left }
+.tiers-table thead th{ position:sticky; top:0; background:#0f1218; box-shadow:0 1px 0 #ffffff12 inset }
+.tiers-table .ok{ color:var(--accent); font-weight:900 }
+
 /* Light mode */
 .light .tiers{ color:#0f172a }
 .light .sub{ color:#334155 }
@@ -284,66 +377,586 @@
 .light .ctrl.is-active{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border-color:rgba(0,0,0,.25) }
 .light .card{ background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9)); border-color:rgba(0,0,0,.10); box-shadow:0 14px 38px rgba(0,0,0,.1) }
 .light .badge, .light .btn--ghost{ border-color:rgba(0,0,0,.12) }
+.light .compare-popover { background: #fffbe6; color: #222; border-color: var(--accent); }
+.light .tiers-compare__sheet{ background:#fff; color:#0b0f15 }
+.light .tiers-table thead th{ background:#fff }
+</style>
+
+<style {{ nonce_attr() }}>
+/* ===== Apple × Nike Add-On (cards) ===== */
+:root{
+  --fc-font: ui-sans-serif, system-ui, -apple-system, "SF Pro Display", Inter, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
+}
+.tiers, .tiers *{ font-family: var(--fc-font) }
+
+/* Card: elevated surface with interactive spotlight + diagonal swoosh */
+.card{
+  --glow: color-mix(in srgb, var(--accent) 45%, #fff0);
+  --spot-x: 50%;
+  --spot-y: 50%;
+  --tiltX: 0deg;
+  --tiltY: 0deg;
+  background:
+    radial-gradient(120% 140% at var(--spot-x) var(--spot-y), #ffffff12, #0000 40%),
+    linear-gradient(180deg, rgba(16,18,24,.92), rgba(16,18,24,.82));
+  transform:
+    rotateX(var(--tiltX)) rotateY(var(--tiltY)) translateZ(0);
+  will-change: transform, background-position;
+}
+
+/* Subtle grain to avoid banding on large gradients */
+.card::before{
+  content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none;
+  background:
+    linear-gradient(115deg, #fff1 0%, #fff0 26%, #fff1 48%, #fff0 68%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' viewBox='0 0 48 48'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0 0 .05'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: soft-light; opacity:.5; border:1px solid #ffffff10;
+}
+
+/* Nike-style “swoosh” band (diagonal energy) */
+.card::after{
+  content:""; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
+  background:
+    conic-gradient(from 220deg at -10% 120%,
+      transparent 0 55%, color-mix(in srgb, var(--accent) 22%, #fff0) 60%,
+      color-mix(in srgb, var(--accent) 12%, #fff0) 72%, transparent 78%);
+  mask: linear-gradient(92deg, transparent 0 12%, #000 22% 78%, transparent 88% 100%);
+  filter: blur(8px) saturate(1.1);
+  opacity:.9;
+}
+
+/* Popular ribbon stays, but tighten */
+.ribbon{ letter-spacing:.02em }
+
+/* Headline & price refinement */
+.h{ letter-spacing:.1px }
+.price{ font-size: clamp(1.6rem, 1.1rem + 1.4vw, 2.1rem) }
+.price .cur{ opacity:.5 }
+
+/* Glass chips/badges */
+.badge, .ctrl, .btn--ghost{
+  backdrop-filter: saturate(1.05) blur(6px);
+  background: linear-gradient(180deg, #ffffff12, #ffffff08);
+  box-shadow: inset 0 0 0 1px #ffffff20;
+}
+
+/* CTA: pill with gentle inner glow */
+.btn--gold{
+  position:relative; isolation:isolate;
+  box-shadow:
+    0 10px 28px color-mix(in srgb, var(--accent) 26%, #0000),
+    inset 0 0 0 1px rgba(0,0,0,.18);
+}
+.btn--gold::after{
+  content:""; position:absolute; inset:2px; border-radius:999px; pointer-events:none;
+  background: radial-gradient(150% 120% at 10% 10%, #fff6, transparent 60%);
+  mix-blend-mode: screen; opacity:.75;
+}
+.btn--gold:hover{ transform: translateY(-1px) scale(1.01) }
+
+/* Micro-interaction on hover (subtle lift + glow ring) */
+.card:hover{
+  box-shadow:
+    0 22px 70px rgba(0,0,0,.55),
+    0 0 0 1px #ffffff14,
+    0 0 0 2px #ffffff08 inset,
+    0 16px 60px var(--glow);
+}
+
+/* Compare popover – glassier */
+.compare-popover{
+  backdrop-filter: saturate(1.05) blur(8px);
+  background: linear-gradient(180deg,#12151bEE,#0d1016EE);
+  border-color:#ffffff26;
+}
+
+/* Spots meter – thinner, more Apple-y */
+.spots .track{ block-size:6px }
+.spots .fill{ background: linear-gradient(90deg, #fffbe6, var(--accent)) }
+
+/* Reduce heavy emoji footprint */
+.emoji{ filter: drop-shadow(0 1px 0 #0008) }
+
+/* Respect user prefs */
+@media (prefers-reduced-motion: reduce){
+  .card, .btn--gold{ transition:none !important; animation:none !important; transform:none !important }
+  .card::after{ display:none }
+}
+</style>
+
+<style {{ nonce_attr() }}>
+/* ===== Mobile polish ===== */
+:root { --touch-target: 44px; }
+
+@media (max-width: 680px){
+  /* App Store-style horizontal rail */
+  .grid{
+    display:flex; gap:12px; overflow-x:auto; padding:6px 6px 12px;
+    scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+  }
+  .grid::after{ content:""; flex:0 0 6px; } /* end padding */
+  .grid > .card{
+    flex: 0 0 86%; min-width: 86%;
+    scroll-snap-align: start; scroll-margin: 12px;
+  }
+
+  /* Tighten card internals */
+  .card{ padding: 14px; border-radius: 14px; box-shadow: 0 14px 40px rgba(0,0,0,.44); }
+  .card::after{ opacity:.65; filter: blur(6px); } /* softer swoosh */
+  .card:hover{ transform:none; } /* no hover lift on touch */
+
+  /* Type scale + spacing */
+  .h{ font-size: 1.05rem; }
+  .price{ font-size: clamp(1.35rem, 5vw, 1.7rem); }
+  .perks{ gap:.32rem }
+
+  /* Tap targets */
+  .btn, .ctrl, .compare-btn, .share-btn{ min-height: var(--touch-target); }
+  .btn{ width:100%; } /* full-width CTA */
+  .ctrl{ padding:.5rem .75rem }
+
+  /* Controls stack */
+  .head__controls{ gap:.5rem; justify-content:flex-start }
+  .sorter{ width:100% } .sorter__select{ width:100% }
+
+  /* Compare: use the drawer instead of tiny popovers */
+  .compare-popover{ display:none !important; }
+}
+
+/* Make chips and ghost buttons “glassy” but readable on phones */
+@media (max-width: 480px){
+  .badge, .ctrl, .btn--ghost{
+    backdrop-filter: saturate(1.05) blur(10px);
+    background: linear-gradient(180deg, #1118, #1116);
+    box-shadow: inset 0 0 0 1px #ffffff22;
+  }
+}
+
+/* Bottom sticky donate bar (appears only on small screens) */
+.tiers-mobile-cta[hidden]{ display:none !important; }
+.tiers-mobile-cta{
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 70;
+  padding: 10px max(12px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  display: grid; gap: 8px; background: linear-gradient(180deg, #0b0f14E6, #0b0f14F6); 
+  backdrop-filter: saturate(1.1) blur(8px); border-top: 1px solid #ffffff14;
+}
+.tiers-mobile-cta .cta{
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  border-radius: 999px; font-weight: 1000; text-decoration: none; padding:.85rem 1rem;
+  background: linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; 
+  border:1px solid rgba(0,0,0,.25); box-shadow: 0 10px 26px color-mix(in srgb, var(--accent) 26%, #0000);
+}
+.tiers-mobile-cta .sub{
+  color:#cbd5e1; text-align:center; font-size:.9rem;
+}
+
+/* Touch optimizations */
+.tiers *{ -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+</style>
+
+{# Apple × Nike Vibe Pack — Add-on for tiers_pro.html (CSP-safe) #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+
+<!-- Drop this file AFTER tiers_pro.html. It does not change your markup. -->
+<style {{ nonce_attr() }}>
+/* ========== Card Surface: spotlight, swoosh, glass chips ========== */
+.card{
+  --accent-card: var(--accent);
+  --spot-x: 50%; --spot-y: 50%;
+  --tiltX: 0deg; --tiltY: 0deg;
+  background:
+    radial-gradient(120% 140% at var(--spot-x) var(--spot-y), #ffffff12, #0000 40%),
+    linear-gradient(180deg, rgba(16,18,24,.94), rgba(16,18,24,.82));
+  transform: rotateX(var(--tiltX)) rotateY(var(--tiltY)) translateZ(0);
+  will-change: transform, background-position;
+}
+.card::before{ /* soft grain + inner highlight */
+  content:""; position:absolute; inset:-1px; border-radius:inherit; pointer-events:none;
+  background:
+    linear-gradient(115deg, #fff1 0%, #fff0 26%, #fff1 48%, #fff0 68%),
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/><feComponentTransfer><feFuncA type='table' tableValues='0 0 0 .05'/></feComponentTransfer></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  mix-blend-mode: soft-light; opacity:.5; border:1px solid #ffffff12;
+}
+.card::after{ /* Nike-esque diagonal energy band */
+  content:""; position:absolute; inset:-2px; border-radius:inherit; pointer-events:none;
+  background: conic-gradient(from 220deg at -10% 120%, transparent 0 55%, color-mix(in srgb, var(--accent-card) 22%, #fff0) 60%, color-mix(in srgb, var(--accent-card) 12%, #fff0) 72%, transparent 78%);
+  mask: linear-gradient(92deg, transparent 0 12%, #000 22% 78%, transparent 88% 100%);
+  filter: blur(8px) saturate(1.05); opacity:.9;
+}
+.card:hover{ box-shadow: 0 22px 70px rgba(0,0,0,.55), 0 0 0 1px #ffffff14, 0 16px 60px color-mix(in srgb, var(--accent-card) 30%, #0000); }
+
+/* Accents flow from --accent-card */
+.perks li::before{ color: var(--accent-card); }
+.ribbon{ background: linear-gradient(180deg, #fffbe6, var(--accent-card)); }
+.btn--gold{ background: linear-gradient(180deg, #fffbe6, var(--accent-card)); box-shadow: 0 10px 28px color-mix(in srgb, var(--accent-card) 28%, #0000); }
+.btn--gold::after{ content:""; position:absolute; inset:2px; border-radius:999px; background: radial-gradient(150% 120% at 10% 10%, #fff6, transparent 60%); mix-blend-mode: screen; opacity:.75; pointer-events:none }
+
+/* Compact icon strip at card bottom (if present) */
+.card .icon-row{ opacity:.7; filter:saturate(.9); gap:.45rem }
+
+/* Popover becomes glassy */
+.compare-popover{ backdrop-filter: saturate(1.05) blur(8px); background: linear-gradient(180deg,#12151bEE,#0d1016EE); border-color:#ffffff26; }
+
+/* Sold-out tone down */
+.card.is-soldout{ opacity:.8; filter:saturate(.85) }
+
+/* ====== Mobile specifics (app-store rail & safe-area) ====== */
+@media (max-width: 680px){
+  .grid{ display:flex; gap:12px; overflow-x:auto; padding:6px 6px 12px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch }
+  .grid > .card{ flex:0 0 86%; min-width:86%; scroll-snap-align:start; scroll-margin:12px }
+  .card{ padding:14px; border-radius:14px; box-shadow:0 14px 40px rgba(0,0,0,.44) }
+  .card::after{ opacity:.6; filter:blur(6px) }
+  .btn{ width:100%; min-height:44px }
+  .compare-popover{ display:none !important }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .card, .btn--gold{ transition:none !important; animation:none !important; transform:none !important }
+  .card::after{ display:none }
+}
 </style>
 
 <script {{ nonce_attr() }}>
 (() => {
   const root = document.getElementById('tiers');
-  if (!root || window.__TIERS_V50__) return; window.__TIERS_V50__ = true;
+  if (!root || window.__TIERS_VIBE__) return; window.__TIERS_VIBE__ = true;
+  const isCoarse = () => matchMedia('(pointer: coarse)').matches;
+  const prefersReduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  const filterButtons = [...root.querySelectorAll('.ctrl')];
-  const cards = [...root.querySelectorAll('.card')];
+  const cards = Array.from(root.querySelectorAll('.card'));
 
-  function applyFilter(kind){
+  /* 1) Map tier → accent (overrides --accent-card per card) */
+  const ACCENTS = {
+    platinum: '#e5e7eb', // cool silver
+    gold:     '#f6c646',
+    silver:   '#cbd5e1',
+    bronze:   '#f59e0b',
+    custom:   '#a78bfa'
+  };
+  cards.forEach(c => {
+    const t = (c.dataset.tier||'').toLowerCase();
+    const clr = ACCENTS[t];
+    if (clr) c.style.setProperty('--accent-card', clr);
+  });
+
+  /* 2) Pointer spotlight + micro tilt (desktop only) */
+  if (!isCoarse() && !prefersReduced()){
     cards.forEach(card => {
-      const isVIP = /platinum|gold/i.test(card.dataset.tier || '');
+      let r = card.getBoundingClientRect();
+      const updateRect = () => { r = card.getBoundingClientRect(); };
+      const onMove = (e) => {
+        const x = (e.clientX ?? (e.touches?.[0]?.clientX || 0)) - r.left;
+        const y = (e.clientY ?? (e.touches?.[0]?.clientY || 0)) - r.top;
+        const px = Math.max(0, Math.min(1, x/r.width));
+        const py = Math.max(0, Math.min(1, y/r.height));
+        card.style.setProperty('--spot-x', (px*100).toFixed(2)+'%');
+        card.style.setProperty('--spot-y', (py*100).toFixed(2)+'%');
+        const tiltX = (py - .5) * -6, tiltY = (px - .5) * 6;
+        card.style.setProperty('--tiltX', tiltX.toFixed(2)+'deg');
+        card.style.setProperty('--tiltY', tiltY.toFixed(2)+'deg');
+      };
+      const onLeave = () => { card.style.setProperty('--spot-x','50%'); card.style.setProperty('--spot-y','50%'); card.style.setProperty('--tiltX','0deg'); card.style.setProperty('--tiltY','0deg'); };
+      card.addEventListener('pointerenter', updateRect, { passive:true });
+      window.addEventListener('resize', updateRect, { passive:true });
+      card.addEventListener('pointermove', onMove, { passive:true });
+      card.addEventListener('pointerleave', onLeave, { passive:true });
+    });
+  }
+
+  /* 3) Haptic tap on CTA (coarse only) */
+  if (isCoarse() && 'vibrate' in navigator){
+    root.addEventListener('click', (e)=>{
+      const a = e.target.closest('.btn');
+      if (a) { try { navigator.vibrate(8); } catch(_){} }
+    }, { passive:true });
+  }
+})();
+</script>
+
+
+<script {{ nonce_attr() }}>
+(() => {
+  const root = document.getElementById('tiers');
+  if (!root || window.__TIERS_V51__) return; window.__TIERS_V51__ = true;
+
+  const $ = (s, el=root) => el.querySelector(s);
+  const $$ = (s, el=root) => Array.from(el.querySelectorAll(s));
+  const on = (el, ev, fn, opts) => el && el.addEventListener(ev, fn, opts);
+  const fmtMoney = (n)=> '$' + Number(n||0).toLocaleString();
+
+  const filterButtons = $$('.ctrl');
+  const grid = $('.grid');
+  let cards = $$('.card');
+
+  // 1) Filter logic
+  function applyFilter(kind) {
+    cards.forEach(card => {
+      const tier = (card.dataset.tier||'').toLowerCase();
+      const isVIP = /platinum|gold/.test(tier);
       const isPopular = card.dataset.popular === '1';
       const isOpen = card.dataset.open === '1';
-
       let show = true;
       if (kind === 'VIP') show = isVIP;
       else if (kind === 'Popular') show = isPopular;
       else if (kind === 'Open') show = isOpen;
-
       card.style.display = show ? '' : 'none';
     });
   }
-
   filterButtons.forEach(btn => {
-    btn.addEventListener('click', () => {
+    on(btn, 'click', () => {
       filterButtons.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-pressed','false'); });
       btn.classList.add('is-active'); btn.setAttribute('aria-pressed','true');
       applyFilter(btn.dataset.filter || 'all');
     }, { passive:true });
   });
 
-  // Enhance payment links with interval context if hero monthly toggle exists
-  try{
-    const monthly = document.getElementById('{{ IDP|default("fundraiser-hero") }}-monthly');
-    cards.forEach(card => {
-      const cta = card.querySelector('[data-payment-link]');
-      if (!cta) return;
-      cta.addEventListener('click', () => {
-        try{
-          const url = new URL(cta.href, location.origin);
-          if (monthly) url.searchParams.set('interval', monthly.checked ? 'month' : 'one_time');
-          url.searchParams.set('src','tiers');
-          url.searchParams.set('tier', card.dataset.tier || '');
-          cta.href = url.toString();
-        }catch{}
-      }, { passive:true });
-    });
-  }catch{}
+  // 2) Sort logic
+  const sortSelect = $('#tier-sort');
+  function keyForAmount(card){ const a = card.dataset.amount; return a === '' || a === null ? null : Number(a); }
+  function applySort(mode){
+    const list = [...cards];
+    if (mode === 'price_desc') list.sort((a,b)=> (keyForAmount(b)??-1) - (keyForAmount(a)??-1));
+    else if (mode === 'price_asc') list.sort((a,b)=> (keyForAmount(a)??1e9) - (keyForAmount(b)??1e9));
+    else if (mode === 'availability') list.sort((a,b)=> (b.dataset.open==='1') - (a.dataset.open==='1'));
+    else list.sort((a,b)=> (b.classList.contains('is-popular')?1:0) - (a.classList.contains('is-popular')?1:0));
+    list.forEach(card => grid.appendChild(card));
+    cards = list;
+  }
+  on(sortSelect, 'change', ()=> applySort(sortSelect.value));
 
-  // Optional hash filter: /#tiers?filter=VIP
-  try{
-    const params = new URLSearchParams(location.hash.includes('?') ? location.hash.split('?')[1] : '');
+  // 3) Monthly toggle influence on payment links
+  const monthly = document.getElementById('{{ IDP|default("fundraiser-hero") }}-monthly');
+  cards.forEach(card => {
+    const cta = card.querySelector('[data-payment-link]');
+    if (!cta) return;
+    on(cta, 'click', e => {
+      try {
+        const url = new URL(cta.href, location.origin);
+        if (monthly) url.searchParams.set('interval', monthly.checked ? 'month' : 'one_time');
+        url.searchParams.set('src','tiers');
+        url.searchParams.set('tier', card.dataset.tier || '');
+        cta.href = url.toString();
+      } catch {}
+    }, { passive:true });
+  });
+
+  // 4) Deep-link filter (support /#tiers?filter=VIP)
+  try {
+    const hash = location.hash;
+    const params = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
     const f = params.get('filter');
-    if (f){
+    if (f) {
       const match = filterButtons.find(b => (b.dataset.filter||'all').toLowerCase() === f.toLowerCase());
       match?.click();
     }
-  }catch{}
+  } catch {}
+
+  // 5) Share copy buttons
+  on(root, 'click', (e)=>{
+    const btn = e.target.closest('.share-btn.copy');
+    if (!btn) return;
+    e.preventDefault();
+    const url = btn.getAttribute('data-url');
+    if (!url) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(()=>{ btn.textContent='✔'; setTimeout(()=> btn.textContent='📋', 1000); });
+    } else { prompt('Copy link:', url); }
+  });
+
+  // 6) Compare popovers per card
+  on(root, 'click', (e)=>{
+    const c = e.target.closest('.compare-btn');
+    if (!c) return;
+    const pop = c.nextElementSibling;
+    if (pop && pop.classList.contains('compare-popover')) pop.classList.toggle('open');
+  });
+  on(root, 'focusin', (e)=>{ if (e.target.classList.contains('compare-btn')) e.target.nextElementSibling?.classList.add('open'); });
+  on(root, 'focusout', (e)=>{ if (e.target.classList.contains('compare-btn')) setTimeout(()=> e.target.nextElementSibling?.classList.remove('open'), 120); });
+
+  // 7) Compare-all drawer
+  const cmpBtn = $('[data-compare-all]');
+  const cmp = document.getElementById('tiers-compare');
+  const cmpBody = document.getElementById('tiers-compare-body');
+  const cmpClose = cmp?.querySelector('.tiers-compare__close');
+  function buildCompare(){
+    if (!cmpBody) return;
+    const allPerks = new Set();
+    cards.forEach(card=> $$('.perks li', card).forEach(li=> allPerks.add(li.textContent.trim())));
+    const tiers = cards.map(card=>({
+      name: card.dataset.tier,
+      price: keyForAmount(card),
+      open: card.dataset.open==='1',
+      popular: card.dataset.popular==='1'
+    }));
+    const perks = [...allPerks];
+    const thead = ['Perk', ...tiers.map(t=> t.name + (t.popular?' ★':''))].map(h=>`<th>${h}</th>`).join('');
+    const rows = perks.map(p=>{
+      const cells = tiers.map(t=>{
+        const has = !!cards.find(c=> c.dataset.tier===t.name && $$('.perks li', c).some(li=> li.textContent.trim()===p));
+        return `<td class="${has?'ok':''}">${has?'✓':''}</td>`;
+      }).join('');
+      return `<tr><th scope="row">${p}</th>${cells}</tr>`;
+    }).join('');
+    cmpBody.innerHTML = `<table class="tiers-table"><thead><tr>${thead}</tr></thead><tbody>${rows}</tbody></table>`;
+  }
+  function openCompare(){ buildCompare(); cmp.hidden=false; cmpBtn.setAttribute('aria-expanded','true'); document.body.style.overflow='hidden'; }
+  function closeCompare(){ cmp.hidden=true; cmpBtn.setAttribute('aria-expanded','false'); document.body.style.overflow=''; }
+  on(cmpBtn, 'click', openCompare);
+  on(cmp, 'click', (e)=>{ if (e.target.matches('[data-close], .tiers-compare__close')) closeCompare(); });
+  on(document, 'keydown', (e)=>{ if (e.key==='Escape' && !cmp.hidden) closeCompare(); });
+
+  // 8) Live inventory sync (poll + event). Expected JSON: [{key,left}]
+  const src = root.getAttribute('data-src-tiers');
+  async function refreshInventory(){
+    if (!src) return; try{
+      const u = new URL(src, location.origin); u.searchParams.set('campaign', '{{ (campaign.slug if campaign is defined and campaign.slug else (team.slug if team is defined and team.slug else 'general')) }}');
+      const res = await fetch(u.toString(), { headers:{'accept':'application/json'} });
+      if(!res.ok) return; const data = await res.json();
+      if(!Array.isArray(data)) return;
+      data.forEach(row=> updateTierLeft(String(row.key||row.tier||''), Number(row.left)));
+    }catch{}
+  }
+  function updateTierLeft(name, left){
+    const card = cards.find(c=> (c.dataset.tier||'').toLowerCase() === String(name||'').toLowerCase());
+    if(!card) return;
+    const open = !(Number.isFinite(left) && left<=0);
+    card.dataset.open = open ? '1':'0';
+    card.classList.toggle('is-soldout', !open);
+    const badge = card.querySelector('.badge');
+    if (badge){
+      if (Number.isFinite(left)) { badge.setAttribute('data-left', String(left)); badge.textContent = open ? (left>0 ? `${left} left` : 'Open') : 'Sold out'; }
+      badge.setAttribute('aria-label', open ? (Number.isFinite(left) ? `${left} sponsorships available` : 'Open') : 'Sold out');
+    }
+    const meter = card.querySelector('.spots .fill');
+    if (meter && Number.isFinite(left)) meter.style.setProperty('--left', left);
+  }
+  // Poll every minute; also allow external events
+  if (src) setInterval(refreshInventory, 60000), refreshInventory();
+  window.addEventListener('fc:tier:update', (e)=>{ const {tier,left} = (e.detail||{}); updateTierLeft(tier,left); });
+
+  // 9) Animate scarcity badges on load
+  setTimeout(() => { $$('.scarcity-badge').forEach(b=> b.classList.add('active')); }, 250);
+
+  // 10) Basic analytics hook
+  on(root, 'click', (e)=>{
+    const cta = e.target.closest('[data-analytics]');
+    if (!cta) return; window.dataLayer = window.dataLayer || []; window.dataLayer.push({ event: cta.getAttribute('data-analytics'), meta: cta.getAttribute('data-analytics-meta') || '', ts: Date.now() });
+  });
+
+  // Initial sort to featured
+  applySort('featured');
 })();
 </script>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const root = document.getElementById('tiers');
+  if (!root || window.__TIERS_POLISH__) return; window.__TIERS_POLISH__ = true;
+  const cards = Array.from(root.querySelectorAll('.card'));
+  const prefersReduced = window.matchMedia && (matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  // Disable interactive tilt on touch devices to avoid jank
+  const isTouch = () => matchMedia('(pointer: coarse)').matches;
+
+  function attach(card){
+    if (!card) return;
+    let r = card.getBoundingClientRect();
+    const updateRect = () => { r = card.getBoundingClientRect(); };
+
+    const onMove = (e) => {
+      if (prefersReduced || isTouch()) return;
+      const x = (e.clientX ?? (e.touches?.[0]?.clientX || 0)) - r.left;
+      const y = (e.clientY ?? (e.touches?.[0]?.clientY || 0)) - r.top;
+      // Spotlight position
+      const px = Math.max(0, Math.min(1, x / r.width));
+      const py = Math.max(0, Math.min(1, y / r.height));
+      card.style.setProperty('--spot-x', (px*100).toFixed(2) + '%');
+      card.style.setProperty('--spot-y', (py*100).toFixed(2) + '%');
+      // Tilt: small, premium
+      const tiltX = (py - .5) * -6; // deg
+      const tiltY = (px - .5) *  6; // deg
+      card.style.setProperty('--tiltX', tiltX.toFixed(2) + 'deg');
+      card.style.setProperty('--tiltY', tiltY.toFixed(2) + 'deg');
+    };
+    const onLeave = () => {
+      card.style.setProperty('--spot-x','50%');
+      card.style.setProperty('--spot-y','50%');
+      card.style.setProperty('--tiltX','0deg');
+      card.style.setProperty('--tiltY','0deg');
+    };
+
+    card.addEventListener('pointerenter', updateRect, { passive:true });
+    window.addEventListener('resize', updateRect, { passive:true });
+    card.addEventListener('pointermove', onMove, { passive:true });
+    card.addEventListener('pointerleave', onLeave, { passive:true });
+  }
+
+  cards.forEach(attach);
+})();
+</script>
+<script {{ nonce_attr() }}>
+(() => {
+  const root = document.getElementById('tiers');
+  if (!root || window.__TIERS_MOBILE__) return; window.__TIERS_MOBILE__ = true;
+
+  const isCoarse = () => matchMedia('(pointer: coarse)').matches;
+  const prefersReduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* 1) Disable tilt/spotlight on touch to avoid jank */
+  if (isCoarse() || prefersReduced()){
+    root.querySelectorAll('.card').forEach(c=>{
+      c.style.setProperty('--tiltX','0deg');
+      c.style.setProperty('--tiltY','0deg');
+      c.style.setProperty('--spot-x','50%');
+      c.style.setProperty('--spot-y','50%');
+      c.onpointermove = null;
+    });
+  }
+
+  /* 2) Sticky bottom donate bar (reads donate URL from the first payment link or /donate) */
+  const donateURL =
+    root.getAttribute('data-donate') ||
+    root.querySelector('[data-payment-link]')?.href?.split('?')[0] ||
+    '/donate';
+
+  // Only mount on small screens
+  const mq = matchMedia('(max-width: 680px)');
+  function mountBar(){
+    if (!mq.matches) return unmountBar();
+    if (document.querySelector('.tiers-mobile-cta')) return;
+
+    const bar = document.createElement('div');
+    bar.className = 'tiers-mobile-cta';
+    bar.innerHTML = `
+      <a class="cta" href="${donateURL}?src=tiers_mobile">Sponsor a Champion</a>
+      <div class="sub">Tap a tier above or use the quick sponsor button.</div>
+    `;
+    document.body.appendChild(bar);
+
+    // Hide when user opens compare drawer (if present)
+    const cmp = document.getElementById('tiers-compare');
+    if (cmp){
+      const toggle = () => bar.hidden = !cmp.hidden ? true : false;
+      const obs = new MutationObserver(toggle);
+      obs.observe(cmp, { attributes:true, attributeFilter:['hidden'] });
+    }
+  }
+  function unmountBar(){
+    const el = document.querySelector('.tiers-mobile-cta');
+    if (el) el.remove();
+  }
+  mq.addEventListener('change', () => mq.matches ? mountBar() : unmountBar());
+  mountBar();
+
+  /* 3) Make chip row horizontally scrollable on very small screens */
+  const filters = root.querySelector('.filters');
+  if (filters){
+    filters.style.overflowX = 'auto';
+    filters.style.webkitOverflowScrolling = 'touch';
+  }
+})();
+</script>
+
+
 

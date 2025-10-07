@@ -1,0 +1,156 @@
+{# =========================
+   Header — Elite Max v5.0 (Widgets-ready, multi-slot)
+   ========================= #}
+{% if nonce_attr is not defined %}
+  {% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else (csp_nonce() if csp_nonce is defined else '')) %}
+  {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+{% endif %}
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/fc-tokens.css') if url_for is defined else '/static/css/fc-tokens.css' }}" />
+<link rel="stylesheet" href="{{ url_for('static', filename='css/fc-widgets.css') if url_for is defined else '/static/css/fc-widgets.css' }}" />
+
+{% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
+{% set _team    = team if team is defined and team else none %}
+
+{% set platform_name  = platform_name if platform_name is defined and platform_name else 'FundChamps' %}
+{% set platform_url   = platform_url if platform_url is defined and platform_url else '/' %}
+{% set _p_logo_svg    = 'images/fundchamps-logo.svg' %}
+{% set platform_logo_svg = (url_for('static', filename=_p_logo_svg) if url_for is defined else '/static/' ~ _p_logo_svg) %}
+
+{% set team_name   = _team.team_name if _team and _team.team_name is defined else 'Connect ATX Elite' %}
+{% set campaign_slug = (_team.slug if _team and _team.slug else slug if slug is defined else team_name|replace(' ', '-')|lower) %}
+{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color else '#facc15') %}
+{% set stripe_payment_link = (stripe_payment_link if stripe_payment_link is defined and stripe_payment_link else '') %}
+{% set deadline_iso = (_team.deadline if _team and _team.deadline else deadline if deadline is defined else '') %}
+{% set announcement_html = announcement_html if announcement_html is defined else '' %}
+
+{% set funds_raised     = (funds_raised if funds_raised is defined else 0) | float %}
+{% set fundraising_goal = (fundraising_goal if fundraising_goal is defined and fundraising_goal else 10000) | float %}
+{% set _den  = (fundraising_goal if fundraising_goal > 0 else 1) %}
+{% set _raw  = (funds_raised / _den * 100.0) %}
+{% set pct   = 0 if _raw < 0 else (100 if _raw > 100 else _raw) %}
+{% set pct_1 = pct|round(1) %}
+{% set pct_0 = pct|round(0) %}
+
+{% set _logo = (_team.logo if _team and _team.logo else 'images/logo.webp') %}
+{% set logoSrc = (_logo if _logo.startswith('http') else (url_for('static', filename=_logo.lstrip('/')) if url_for is defined else '/static/' ~ _logo.lstrip('/'))) %}
+
+{% if stripe_payment_link %}<link rel="preconnect" href="https://js.stripe.com" crossorigin>{% endif %}
+
+<header id="{{ _hdr_id }}" role="banner" class="fc-header sticky top-0 z-50 border-b border-white/10 print:hidden" style="--fc-accent: {{ brand_color }};" data-campaign="{{ campaign_slug }}" data-goal="{{ fundraising_goal|round(0) }}" data-raised="{{ funds_raised|round(0) }}">
+
+  {# Slot 0: Enterprise ticker (closable handled by widget). Use include to render. #}
+  {% include "partials/widgets/announcement_ticker.html" ignore missing with context %}
+
+  <style {{ nonce_attr() }}>
+    #{{ _hdr_id }}{ isolation:isolate; background:linear-gradient(180deg,rgb(0 0 0/.82),rgb(0 0 0/.66)); -webkit-backdrop-filter:blur(14px) saturate(140%); backdrop-filter:blur(14px) saturate(140%); color:var(--fc-fg) }
+    #{{ _hdr_id }} .hdr-grid{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:.75rem; }
+    #{{ _hdr_id }} .fc-brand{ display:inline-flex; align-items:center; gap:.55rem; color:inherit; text-decoration:none; }
+    #{{ _hdr_id }} .fc-brand .logo{ height:clamp(40px,4.5vw,56px); width:auto; border-radius:.6rem; background:#00000020 }
+    #{{ _hdr_id }} .fc-brand .word{ font-weight:900; letter-spacing:-.02em; font-size:clamp(18px,1.9vw,28px); color:var(--fc-fg) }
+    #{{ _hdr_id }} .team-chip{ position:relative; padding:.42rem .72rem; border-radius:1rem; background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)), linear-gradient(90deg,var(--fc-accent),#fff7cc); color:#0b0c0f; font-weight:900; letter-spacing:-.02em; font-size:clamp(15px,1.4vw,20px); }
+    #{{ _hdr_id }} .team-logo{ height:40px; width:40px; object-fit:cover; border-radius:.9rem; background:#00000020 }
+
+    .hdr-center{ display:flex; align-items:center; justify-content:center; gap:.9rem; min-width:0; }
+    .hdr-meter{ display:flex; align-items:center; gap:.6rem; min-width:0 }
+    .hdr-meter progress{ width: clamp(120px, 24vw, 260px); height:10px; appearance:none; border:none; border-radius:9999px; overflow:hidden; background:rgb(255 255 255/12%); box-shadow:inset 0 0 0 1px rgb(255 255 255/9%); accent-color: var(--fc-accent); }
+    .hdr-meter .pct{ font-variant-numeric:tabular-nums; font-size:12px; color:#fde68a; min-width:3.2ch; text-align:right; }
+    .hdr-amount{ font-size:.85rem; color:var(--fc-muted) }
+
+    .fc-btn-primary{ background:linear-gradient(180deg,#fde047,#facc15); color:#0b0b0c; box-shadow:0 10px 30px rgba(250,204,21,.28); transition:transform .22s ease }
+    .fc-btn-primary:hover{ transform:translateY(-1px) scale(1.015) }
+
+    @media (max-width:520px){ .team-chip{ display:none } }
+    #{{ _hdr_id }}.is-compact .hdr-meter{ display:none }
+  </style>
+
+  <div class="fc-container">
+    <div class="hdr-grid px-4 lg:px-6 py-3">
+      <!-- Left: Brand -->
+      <a href="{{ platform_url }}" class="fc-brand" aria-label="{{ platform_name }} home">
+        <img src="{{ platform_logo_svg }}" alt="{{ platform_name }} logo" class="logo" loading="eager" decoding="async" fetchpriority="high" />
+        <span class="word" hidden>{{ platform_name }}</span>
+      </a>
+
+      <!-- Center: Meter + CTA -->
+      <div class="hdr-center">
+        <div id="hdr-meter" class="hdr-meter" role="group" aria-label="Fundraising progress">
+          <progress id="hdr-progress" value="{{ pct_1 }}" max="100" aria-label="Progress"></progress>
+          <span class="pct" id="hdr-percent" aria-hidden="true">{{ pct_0 }}%</span>
+          <span class="fc-visually-hidden">Raised {{ funds_raised|round(0) }} of {{ fundraising_goal|round(0) }}</span>
+          <span class="hdr-amount" id="hdr-amount" aria-hidden="true">${{ funds_raised|round(0) }} / ${{ fundraising_goal|round(0) }}</span>
+        </div>
+        <a {% if stripe_payment_link %} href="{{ stripe_payment_link }}" target="_blank" rel="noopener"
+           {% else %} href="#donate" data-open-donate-modal {% endif %}
+           class="fc-btn fc-btn-primary" id="hdr-donate" aria-label="Sponsor securely">
+          <span class="lbl">💛 Sponsor A Champion</span>
+        </a>
+        <button class="fc-btn" id="hdr-share" aria-label="Share this campaign">Share</button>
+        <button class="fc-btn" data-open-qr aria-label="Open QR">QR</button>
+      </div>
+
+      <!-- Right: Team -->
+      <a href="{{ home_url|default('/') }}" class="flex items-center gap-3 justify-self-end" aria-label="{{ team_name }} home">
+        <img src="{{ logoSrc }}" alt="{{ team_name }} logo" class="team-logo" loading="eager" decoding="async" />
+        <span class="team-chip">{{ team_name }}</span>
+      </a>
+    </div>
+  </div>
+
+  {# Slot 1: sponsor ribbon below header (optional include) #}
+  {% if sponsors is defined and sponsors %}
+  <div class="fc-container" style="padding-bottom:.5rem">
+    {% include "partials/widgets/sponsor_ribbon.html" ignore missing with context %}
+  </div>
+  {% endif %}
+
+  <script type="module" src="{{ url_for('static', filename='js/fc-widgets.js') if url_for is defined else '/static/js/fc-widgets.js' }}"></script>
+  <script {{ nonce_attr() }}>
+    (()=>{
+      'use strict';
+      const root = document.getElementById('{{ _hdr_id }}');
+      const donate = document.getElementById('hdr-donate');
+      const share  = document.getElementById('hdr-share');
+      const prog   = document.getElementById('hdr-progress');
+      const pctTxt = document.getElementById('hdr-percent');
+      const amtTxt = document.getElementById('hdr-amount');
+      const sticky = document.getElementById('sticky-progress');
+      const deadline = '{{ deadline_iso }}';
+      const fmt = (n, c='USD', l=navigator.language||'en-US') => new Intl.NumberFormat(l, { style:'currency', currency:c, maximumFractionDigits:0 }).format(Math.max(0, Number(n)||0));
+
+      // Compact label <= 420px
+      const mql = matchMedia('(max-width:420px)'); const sync=()=> root.classList.toggle('is-compact', mql.matches); sync(); mql.addEventListener?.('change', sync);
+
+      function setPct(p, raised, goal){
+        const clamped = Math.max(0, Math.min(100, Number(p)||0));
+        if (prog) prog.value = clamped;
+        if (pctTxt) pctTxt.textContent = Math.round(clamped) + '%';
+        if (sticky) sticky.style.width = clamped + '%';
+        if (amtTxt && (raised!=null || goal!=null)){
+          const r = (raised!=null) ? raised : (root?.dataset.raised||0);
+          const g = (goal!=null) ? goal : (root?.dataset.goal||1);
+          amtTxt.textContent = fmt(r) + ' / ' + fmt(g);
+        }
+      }
+      (function(){ const raised = Number(root?.dataset.raised||0); const goal = Math.max(1, Number(root?.dataset.goal||1)); setPct((raised/goal)*100, raised, goal); })();
+
+      // Countdown marker in ticker when deadline present
+      (function(){ if(!deadline) return; try{ const end = new Date(deadline); if(isNaN(end)) return; const diff=()=>{ const ms = end - new Date(); if (ms<=0) return 'Campaign ended'; const d=Math.floor(ms/86400000), h=Math.floor((ms%86400000)/3600000); return `${d}d ${h}h left`; }; document.addEventListener('fc:ticker:toggle',()=>{}); }catch(e){} })();
+
+      // Share
+      share?.addEventListener('click', async ()=>{
+        const data = { title: document.title, text: '{{ team_name }} — Fundraiser', url: location.href };
+        try{
+          if (navigator.share) await navigator.share(data);
+          else if (navigator.clipboard && location.protocol.startsWith('http')){ await navigator.clipboard.writeText(data.url); const prev=share.textContent; share.textContent='Copied'; setTimeout(()=>share.textContent=prev,1200); }
+          else { window.prompt('Copy this link:', location.href); }
+        }catch(_){}
+      }, { passive:true });
+
+      window.FundChampsHeader = Object.assign(window.FundChampsHeader||{}, {
+        setProgress({ raised, goal }){ const g = Math.max(1, Number(goal ?? root?.dataset.goal||1)); const r = Math.max(0, Number(raised ?? root?.dataset.raised||0)); root.dataset.goal = g; root.dataset.raised = r; const p = (r/g)*100; setPct(p, r, g); },
+        setCTA({ label, href }){ const lbl = donate?.querySelector('.lbl'); if (label && lbl){ lbl.textContent = label; } if (href && donate) donate.setAttribute('href', href); }
+      });
+    })();
+  </script>
+</header>

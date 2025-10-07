@@ -1,0 +1,101 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# templates/macros.html #} {# Reusable CTA + Share helpers. Import in any
+partial with: {% import 'macros.html' as fc with context %} #} {# Defaults with
+safe fallbacks #} {% set _team = team or {} %} {% set team_name =
+_team.team_name or "Connect ATX Elite" %} {% set theme_color = _team.theme_color
+or "#facc15" %} {% set stripe_link = stripe_payment_link or "" %} {# Build a
+base CTA href. If Stripe link exists, use that; else anchor to donate intent. #}
+{% macro cta_href(where="site", tier=None, amount=None, monthly=None) -%} {%- if
+stripe_link %} {{ stripe_link }} {%- else %} #intent-donate {%- endif -%} {%-
+endmacro %} {# Render a CTA anchor pre-wired for JS router and analytics. #} {%
+macro cta_btn(label, where, tier=None, amount=None, monthly=None, classes="",
+id=None, aria_label=None) -%} {%- set href = cta_href(where, tier, amount,
+monthly) -%}
+<a
+  href="{{ href }}"
+  class="{{ classes }}"
+  {%-
+  if
+  id
+  %}
+  id="{{ id }}"
+  {%
+  endif
+  %}
+  role="button"
+  {%-
+  if
+  aria_label
+  %}
+  aria-label="{{ aria_label }}"
+  {%
+  endif
+  %}
+  data-cta
+  data-where="{{ where }}"
+  {%-
+  if
+  tier
+  %}
+  data-tier="{{ tier }}"
+  {%
+  endif
+  %}
+  {%-
+  if
+  amount
+  %}
+  data-amount="{{ amount }}"
+  {%
+  endif
+  %}
+  {%-
+  if
+  monthly
+  is
+  not
+  none
+  %}
+  data-monthly="{{ 1 if monthly else 0 }}"
+  {%
+  endif
+  %}
+>
+  {{- label -}}
+</a>
+{%- endmacro %} {# Render a button that triggers the share orchestrator. #} {%
+macro share_btn(label, area="header", classes="", anchor=None, id=None) -%}
+<button
+  type="button"
+  class="{{ classes }}"
+  {%-
+  if
+  id
+  %}
+  id="{{ id }}"
+  {%
+  endif
+  %}
+  data-share
+  data-area="{{ area }}"
+  {%-
+  if
+  anchor
+  %}
+  data-anchor="{{ anchor }}"
+  {%
+  endif
+  %}
+  aria-label="Share this page"
+>
+  {{- label -}}
+</button>
+{%- endmacro %}

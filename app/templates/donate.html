@@ -1,17 +1,24 @@
- {% extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
-(csp_nonce() if csp_nonce is defined else '') %} {% set team_name =
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% extends "base.html" %} {% set NONCE = NONCE if NONCE is defined else
+(csp_nonce if csp_nonce is defined else '') %} {% set team_name =
 team.team_name if team and team.team_name else "Connect ATX Elite" %} {% block
 content %}
 <section
-  class="relative min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white"
->
+  class="relative min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 text-white">
   <div class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6">
     <div class="mx-auto max-w-3xl px-6 py-16 sm:py-24">
       <!-- Title / Branding -->
       <header class="mb-10 text-center">
         <h1
-          class="text-4xl sm:text-5xl font-extrabold tracking-tight text-yellow-400"
-        >
+          class="text-4xl sm:text-5xl font-extrabold tracking-tight text-yellow-400">
           {{ team_name }} — Fundraiser
         </h1>
         <p class="mx-auto mt-3 max-w-prose text-lg sm:text-xl text-neutral-300">
@@ -21,8 +28,7 @@ content %}
 
       <!-- Primary CTA (opens modal) -->
       <div
-        class="rounded-2xl border border-yellow-400/15 bg-neutral-800/70 p-8 sm:p-10 shadow-xl"
-      >
+        class="rounded-2xl border border-yellow-400/15 bg-neutral-800/70 p-8 sm:p-10 shadow-xl">
         <div class="grid gap-6 sm:grid-cols-[1fr_auto] sm:items-center">
           <p class="text-neutral-200">
             Your gift powers gym time, travel, academics, and gear for our
@@ -31,8 +37,7 @@ content %}
           <a
             href="{{ url_for('main.donate') }}"
             data-open-donate-modal
-            class="inline-flex items-center justify-center rounded-xl bg-yellow-400 px-6 py-3 font-extrabold text-neutral-900 hover:bg-yellow-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-yellow-500/40 transition"
-          >
+            class="inline-flex items-center justify-center rounded-xl bg-yellow-400 px-6 py-3 font-extrabold text-neutral-900 hover:bg-yellow-300 focus:outline-none focus-visible:ring-4 focus-visible:ring-yellow-500/40 transition">
             💸 Donate Now
           </a>
         </div>
@@ -51,14 +56,12 @@ content %}
         <div class="mt-6 flex flex-wrap justify-center gap-4">
           <a
             href="{{ url_for('main.home') }}#share"
-            class="inline-flex items-center rounded-lg bg-neutral-700 px-5 py-3 hover:bg-neutral-600 transition"
-          >
+            class="inline-flex items-center rounded-lg bg-neutral-700 px-5 py-3 hover:bg-neutral-600 transition">
             🔗 Share
           </a>
           <a
             href="{{ url_for('main.become_sponsor') }}"
-            class="inline-flex items-center rounded-lg bg-neutral-700 px-5 py-3 hover:bg-neutral-600 transition"
-          >
+            class="inline-flex items-center rounded-lg bg-neutral-700 px-5 py-3 hover:bg-neutral-600 transition">
             🤝 Become a Sponsor
           </a>
         </div>
@@ -66,15 +69,8 @@ content %}
     </div>
   </div>
 
-  
   <span id="sr-live" class="sr-only" aria-live="polite"></span>
 </section>
 
- 
-<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
-  window.requestAnimationFrame(() => {
-    if (typeof window.openDonationModal === "function")
-      window.openDonationModal();
-  });
-</script>
+<script { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } type="module" src="{{ url_for('static', filename='js/extracted/donate.html__1.js', v='1.0.0') }}"></script>
 {% endblock %}

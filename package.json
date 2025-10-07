@@ -1,7 +1,7 @@
 {
   "name": "connectatx-fundraiser",
   "version": "1.0.0",
-  "description": "Production-ready Flask app for Connect ATX Elite / FundChamps. Modular app factory, SQLAlchemy, Socket.IO, TailwindCSS, and clean blueprints.",
+  "description": "Production-ready Flask SaaS for youth teams, schools, and nonprofits. Modular app factory, SQLAlchemy, Socket.IO, TailwindCSS, and premium blueprints.",
   "private": true,
   "type": "module",
   "main": "eslint.config.js",
@@ -18,13 +18,14 @@
     "js:watch": "esbuild app/static/js/app.entry.js --bundle --sourcemap --outfile=app/static/js/app.bundle.js --format=esm --watch",
     "js:build": "esbuild app/static/js/app.entry.js --bundle --sourcemap --outfile=app/static/js/app.bundle.js --format=esm",
     "js:build:prod": "cross-env NODE_ENV=production esbuild app/static/js/app.entry.js --bundle --minify --outfile=app/static/js/app.bundle.js --format=esm",
-    "css:build": "cross-env NODE_ENV=production postcss app/static/css/input.css -o app/static/css/app.min.css --env production",
+    "build:css": "NODE_ENV=production postcss app/static/css/input.css -o app/static/css/app.min.css",
+    "dev:css": "postcss app/static/css/input.css -o app/static/css/app.min.css --watch",
     "css:watch": "postcss app/static/css/input.css -o app/static/css/app.min.css --watch",
     "tw:build": "tailwindcss -c tailwind.config.js -i app/static/css/input.css -o app/static/css/app.min.css --minify",
     "css:verify": "node -e \"const fs=require('fs'); const s=fs.statSync('app/static/css/app.min.css').size; console.log('CSS size', s, 'bytes');\"",
     "css:budget": "node -e \"const fs=require('fs'); const s=fs.statSync('app/static/css/app.min.css').size; if(s>250000){console.error('❌ CSS over 250KB'); process.exit(1);} console.log('✅ CSS within budget');\"",
-    "css:assert": "node -e \"const fs=require('fs'); const p='app/static/css/app.min.css'; const css=fs.readFileSync(p,'utf8'); let ok=true; if(/@import\\b/i.test(css)){console.error('❌ @import left in output (imports not inlined)'); ok=false;} const req=['.fc-header-grid','.__sentinel-header','#sponsor-leaderboard.fc-leaderband','.hero-shell']; for(const sel of req){ if(!css.includes(sel)){ console.error('❌ Missing selector in bundle:', sel); ok=false; } } if(!ok) process.exit(1); console.log('✅ Required selectors present & imports inlined');\"",
-    "build:fast": "cross-env NODE_ENV=production npm run css:build && npm run js:build:prod && npm run css:verify && npm run css:budget && npm run css:assert",
+    "css:assert": "node -e \"const fs=require('fs'); const p='app/static/css/app.min.css'; const css=fs.readFileSync(p,'utf8'); let ok=true; if(/@import\\\\b/i.test(css)){console.error('❌ @import left in output (imports not inlined)'); ok=false;} const req=['.fc-header-grid','.__sentinel-header','#sponsor-leaderboard.fc-leaderband','.hero-shell']; for(const sel of req){ if(!css.includes(sel)){ console.error('❌ Missing selector in bundle:', sel); ok=false; } } if(!ok) process.exit(1); console.log('✅ Required selectors present & imports inlined');\"",
+    "build:fast": "cross-env NODE_ENV=production npm run tw:build && npm run js:build:prod && npm run css:verify && npm run css:budget && npm run css:assert",
     "build": "npm run clean:dist && npm run build:fast",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
@@ -38,14 +39,21 @@
     "security": "npm audit --audit-level=high || true",
     "audit:deps": "npm outdated || echo \"✅ All dependencies up to date!\"",
     "audit:css": "bash -lc \"test -x ./audit_css.sh && ./audit_css.sh app/static/css --templates app/templates || echo 'ℹ️ audit_css.sh not present/executable'\"",
-    "verify:wiring": "bash -lc \"test -x ./verify_wiring.sh && ./verify_wiring.sh app/static/css/app.min.css app/templates app/static/js || echo 'ℹ️ verify_wiring.sh not present/executable'\""
+    "verify:wiring": "bash -lc \"test -x ./verify_wiring.sh && ./verify_wiring.sh app/static/css/app.min.css app/templates app/static/js || echo 'ℹ️ verify_wiring.sh not present/executable'\"",
+    "upscale": "bash scripts/upscale.sh",
+    "sw": "workbox generateSW workbox.config.cjs",
+    "sitemap:gen": "node scripts/gen-sitemap.mjs",
+    "images": "node scripts/img-optimize.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
+    "@squoosh/cli": "^0.7.3",
     "@stylistic/eslint-plugin": "^2.13.0",
-    "@tailwindcss/forms": "^0.5.7",
-    "@tailwindcss/typography": "^0.5.15",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.19",
     "autoprefixer": "^10.4.21",
+    "critical": "^7.2.1",
     "cross-env": "^7.0.3",
     "cssnano": "^6.1.2",
     "esbuild": "^0.25.10",
@@ -56,26 +64,31 @@
     "eslint-plugin-n": "^17.0.0",
     "eslint-plugin-promise": "^6.1.1",
     "eslint-plugin-unused-imports": "^4.2.0",
+    "globby": "^14.1.0",
     "husky": "^9.1.7",
+    "lightningcss": "^1.30.1",
     "lint-staged": "^15.5.2",
     "npm-run-all": "^4.1.5",
     "postcss": "^8.5.6",
-    "postcss-cli": "^11.0.0",
+    "postcss-cli": "^11.0.1",
     "postcss-import": "^16.1.1",
     "postcss-nested": "^6.2.0",
     "postcss-safe-parser": "^7.0.0",
     "prettier": "^3.3.3",
     "prettier-plugin-jinja-template": "^1.3.2",
     "prettier-plugin-tailwindcss": "^0.6.8",
+    "purgecss": "^7.0.2",
+    "pwa-asset-generator": "^8.1.2",
     "rimraf": "^5.0.10",
+    "sharp": "^0.34.4",
     "stylelint": "^16.24.0",
     "stylelint-config-prettier": "^9.0.5",
     "stylelint-config-standard": "^39.0.0",
-    "tailwindcss": "^3.4.14"
+    "svgo": "^4.0.0",
+    "tailwindcss": "^3.4.14",
+    "workbox-cli": "^7.3.0"
   },
   "lint-staged": {
-    "$schema": "https://json.schemastore.org/lintstagedrc.json",
-    "concurrent": false,
     "*.{js,cjs,mjs,ts,tsx,jsx,css,html,jinja,jinja2,json,yml,yaml,md}": [
       "prettier --write"
     ]
@@ -88,7 +101,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/thelab33/connectatx-fundraiser.git"
+    "url": "https://github.com/thelab33/connectatx-fundraiser.git"
   },
   "bugs": {
     "url": "https://github.com/thelab33/connectatx-fundraiser/issues"
@@ -248,7 +261,6 @@
     "global-prefix": "^3.0.0",
     "globals": "^14.0.0",
     "globalthis": "^1.0.4",
-    "globby": "^11.1.0",
     "globjoin": "^0.1.4",
     "globrex": "^0.1.2",
     "gopd": "^1.2.0",
@@ -474,7 +486,6 @@
     "supports-hyperlinks": "^3.2.0",
     "supports-preserve-symlinks-flag": "^1.0.0",
     "svg-tags": "^1.0.0",
-    "svgo": "^3.3.2",
     "table": "^6.9.0",
     "tapable": "^2.2.3",
     "thenby": "^1.3.4",
@@ -513,3 +524,6 @@
     "yocto-queue": "^0.1.0"
   }
 }
+
+    
+

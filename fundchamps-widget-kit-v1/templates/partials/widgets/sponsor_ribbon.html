@@ -1,0 +1,8 @@
+{# Sponsor Leaderboard Ribbon (tier-aware) #}
+<div class="fc-sponsor-ribbon" id="fc-sponsors" role="group" aria-label="Sponsors">
+  {% for s in sponsors|default([]) %}
+    <a href="{{ s.href|default('#') }}" target="_blank" rel="noopener" aria-label="{{ s.tier|default('Sponsor') }} — {{ s.name }}">
+      <img src="{{ s.logo }}" alt="{{ s.name }}" loading="lazy" decoding="async" />
+    </a>
+  {% endfor %}
+</div>

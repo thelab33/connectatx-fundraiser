@@ -1,0 +1,20 @@
+{# Announcement Ticker (enterprise-ready) #}
+<div id="fc-ticker" class="fc-ticker" role="status" aria-live="polite" data-src="{{ ticker_feed_url|default('') }}">
+  <div class="fc-container" style="display:flex;gap:.75rem;align-items:center;width:100%">
+    <span class="fc-pill" aria-hidden="true">Live</span>
+    <div class="fc-items" aria-label="Announcements"></div>
+    <div class="fc-controls" aria-label="Ticker controls">
+      <span class="fc-chip"><span aria-hidden="true">📝</span> <span data-count>0</span></span>
+      <button type="button" data-prev aria-label="Previous">⟨</button>
+      <button type="button" data-pause aria-pressed="false" aria-label="Pause">⏸</button>
+      <button type="button" data-next aria-label="Next">⟩</button>
+      {% if show_powered_by|default(true) %}
+      <a href="{{ platform_url|default('/') }}" class="fc-chip" target="_blank" rel="noopener" aria-label="Powered by {{ platform_name|default('FundChamps') }}">⚡ Powered by {{ platform_name|default('FundChamps') }}</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{# Optional inline data fallback (array of {pill, text, icon, href}) #}
+{% if ticker_items is defined %}
+<script id="fc-ticker-data" type="application/json" {{ nonce_attr() }}>{{ ticker_items|tojson }}</script>
+{% endif %}

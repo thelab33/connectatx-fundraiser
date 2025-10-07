@@ -1,0 +1,454 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ===========================================================================
+   Tiers Partial · FundChamps Ultra SaaS 2025
+   ---------------------------------------------------------------------------
+   • card_mode = False (default) → full sponsorship grid with filters & JS
+   • card_mode = True            → tiny summary tile for the Neo homepage
+   ========================================================================== #}
+
+{# ---------- Runtime options & safe defaults ---------- #}
+{% set card_mode = card_mode | default(False) %}
+
+{# ---------- URL helpers (safe in console / tests) ---------- #}
+{% set _sf  = (safe_url_for is defined) and safe_url_for %}
+{% set _has = (has_endpoint  is defined) and has_endpoint %}
+
+{% set HREF_DONATE = HREF_DONATE | default(
+  stripe_payment_link
+  if (stripe_payment_link is defined and stripe_payment_link)
+  else (_sf and _has('main.donate') and safe_url_for('main.donate')) or '/donate'
+) %}
+
+{# ---------- Sample data (removed at build-time by backend) ---------- #}
+{% set TIERS = TIERS | default([
+  {'key':'Platinum','emoji':'🏆','amount':5000,'left':2,'badge':'VIP','popular':False},
+  {'key':'Gold',    'emoji':'🥇','amount':2500,'left':4,'badge':'Popular','popular':True},
+  {'key':'Silver',  'emoji':'🥈','amount':1000,'left':8},
+  {'key':'Bronze',  'emoji':'🥉','amount':500 ,'left':12},
+  {'key':'Custom',  'emoji':'✨','amount':None,'left':None}
+]) %}
+{# -------------------------------------------------------------------- #}
+
+{% if card_mode %}
+{# =====================================================================
+   ─── T I L E   M O D E  (mini summary for Neo strip) ──────────────────
+   ===================================================================== #}
+<div class="tiers-cardmode">
+  <h3 class="tiers-cardmode-title">Sponsor&nbsp;Tiers</h3>
+
+  <ul class="tiers-cardmode-list">
+    {% for t in TIERS[:3] %}
+      <li class="item">
+        <span class="emoji">{{ t.emoji }}</span>
+        <span class="name">{{ t.key }}</span>
+        <span class="amt">
+          {{ t.amount is not none and ('$' ~ '{:,.0f}'.format(t.amount)) or 'Custom' }}
+        </span>
+      </li>
+    {% endfor %}
+    <li class="item more"><a href="#tiers">…see all</a></li>
+  </ul>
+
+  <a href="#tiers" class="tiers-cardmode-cta">Explore Tiers →</a>
+</div>
+
+{# ---- Tiny footprint CSS (only when tile is rendered) ---------------- #}
+<style {{ nonce_attr() }}>
+.tiers-cardmode            { text-align:center; padding:14px 0 6px }
+.tiers-cardmode-title      { font:900 1.1rem 'Inter',sans-serif; margin:.4em 0; color:#0b0b0c }
+.tiers-cardmode-list       { list-style:none; margin:0 0 .5em; padding:0 }
+.tiers-cardmode-list .item { display:flex; justify-content:center; gap:.35em; font-size:.95rem }
+.tiers-cardmode-list .emoji{ font-size:1.05em }
+.tiers-cardmode-list .more a{ font-weight:700; color:#0ea5e9; text-decoration:none }
+.tiers-cardmode-list .more a:hover{ text-decoration:underline }
+.tiers-cardmode-cta        { display:inline-block; margin-top:.3em; padding:.45em 1.3em;
+                              border-radius:999px; font-weight:800; font-size:.95rem;
+                              background:linear-gradient(90deg,#fffbe6 10%,#facc15 95%);
+                              color:#101010; box-shadow:0 2px 8px #facc1520 }
+.tiers-cardmode-cta:hover  { background:#facc15; color:#fff }
+</style>
+
+{% else %}
+{# =====================================================================
+   ─── F U L L   S E C T I O N  (original rich grid) ────────────────────
+   ===================================================================== #}
+
+{# ---------- Header (filters, mode toggle) ---------- #}
+<div class="fc-tiers-grid grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+  {% for t in TIERS %}
+    {% set open   = (t.left is none) or (t.left|int > 0) %}
+    {% set low    = open and (t.left is not none) and (t.left|int <= 3) %}
+    {% set monthly = t.amount and (t.amount / 12)|round(0,'ceil') %}
+    {% set popular = t.popular or (t.badge and t.badge|lower == 'vip') %}
+    <article
+      class="
+        fc-tier-card group relative flex flex-col justify-between
+        bg-neutral-950/98 border rounded-2xl p-6 shadow-xl transition-all
+        {{ open and 'hover:-translate-y-1 hover:shadow-2xl' or 'opacity-70 grayscale' }}
+        {{ popular and 'ring-2 ring-brand/60' or 'border-zinc-700' }}
+        {{ low and 'animate-pulse border-yellow-400/80' }}
+      "
+      aria-label="{{ t.key }} Tier"
+      data-tier="{{ t.key }}"
+      data-flags="{{ t.badge or '' }} {{ popular and 'Popular' or '' }}"
+    >
+      <!-- Ribbon badge (VIP/Popular) -->
+      {% if t.badge %}
+        <span class="absolute top-4 left-4 bg-yellow-400 text-black font-black rounded-full px-3 py-1 text-xs shadow">
+          {{ t.badge }}
+        </span>
+      {% elif popular %}
+        <span class="absolute top-4 left-4 bg-cyan-400 text-black font-black rounded-full px-3 py-1 text-xs shadow">
+          Most Chosen
+        </span>
+      {% endif %}
+
+      <!-- Card Header -->
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-2xl">{{ t.emoji }}</span>
+        <h3 class="font-black text-lg tracking-tight">{{ t.key }}</h3>
+        {% if not open %}
+          <span class="ml-2 text-xs font-bold text-red-500 bg-red-100/20 px-2 py-1 rounded-full">Sold Out</span>
+        {% elif low %}
+          <span class="ml-2 text-xs font-bold text-yellow-400 bg-yellow-100/10 px-2 py-1 rounded-full animate-pulse">
+            {{ t.left }} left
+          </span>
+        {% elif t.left is not none %}
+          <span class="ml-2 text-xs font-medium text-zinc-400 bg-white/5 px-2 py-1 rounded-full">
+            {{ t.left }} left
+          </span>
+        {% endif %}
+      </div>
+
+      <!-- Price -->
+      <div class="mb-4">
+        {% if t.amount %}
+          <div class="flex items-end gap-2">
+            <span class="text-3xl font-black text-brand">${{ '{:,.0f}'.format(t.amount) }}</span>
+            <span class="text-sm text-zinc-300 font-semibold">one-time</span>
+          </div>
+          {% if monthly %}
+            <div class="text-sm text-zinc-400 font-semibold">or ${{ '{:,.0f}'.format(monthly) }}/mo</div>
+          {% endif %}
+        {% else %}
+          <span class="text-lg font-black text-cyan-400">Custom</span>
+        {% endif %}
+      </div>
+
+      <!-- Perks (expandable, see below for JS) -->
+      {% if t.perks %}
+      <ul class="mb-4 space-y-1 text-sm text-zinc-300">
+        {% for p in t.perks %}
+          <li>✓ {{ p }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <!-- CTA Button -->
+      <a
+        class="mt-auto block w-full font-black py-2 rounded-full transition
+               {{ open and 'bg-brand text-black hover:bg-yellow-400/90 shadow-lg' or 'bg-zinc-700 text-zinc-300 cursor-not-allowed opacity-60 pointer-events-none' }}"
+        href="{{ HREF_DONATE }}?tier={{ t.key }}{% if t.amount %}&amount={{ t.amount }}{% endif %}"
+        aria-label="{{ open and 'Sponsor ' ~ t.key or 'Join waitlist for ' ~ t.key }}"
+        {% if not open %} aria-disabled="true" tabindex="-1" {% endif %}
+      >
+        {{ open and (t.cta or ('Sponsor ' ~ t.key ~ ' →')) or 'Join Wait-list' }}
+      </a>
+
+      {% if popular %}
+        <small class="block mt-2 text-xs text-yellow-300 font-bold">⭐ Most chosen by sponsors</small>
+      {% elif low %}
+        <small class="block mt-2 text-xs text-yellow-200">Hurry — almost gone!</small>
+      {% elif not open %}
+        <small class="block mt-2 text-xs text-red-400">Sold out — join the wait-list!</small>
+      {% endif %}
+    </article>
+  {% endfor %}
+</div>
+
+
+{# ---------- Lean structured data for SEO ---------- #}
+<script type="application/ld+json" {{ nonce_attr() }}>
+{
+  "@context":"https://schema.org",
+  "@type":"OfferCatalog",
+  "name":"Sponsorship Tiers",
+  "itemListElement":[
+    {% for t in TIERS -%}
+      {
+        "@type":"Offer",
+        "name":"{{ t.key }}",
+        "price":"{{ t.amount or 0 }}",
+        "priceCurrency":"USD",
+        "availability":"{{ ((t.left is none) or (t.left|int>0)) and 'https://schema.org/InStock' or 'https://schema.org/OutOfStock' }}"
+      }{{ not loop.last and ',' or '' }}
+    {%- endfor %}
+  ]
+}
+</script>
+
+{# ---------- Your original ticker / JS remains unchanged ---------- #}
+{% endif %}
+
+  {# ----------------------- Minimal tile CSS --------------------------- #}
+{% if card_mode %}
+<style {{ nonce_attr() }}>
+.tiers-cardmode            { text-align:center; padding:14px 0 6px; }
+.tiers-cardmode-title      { font:900 1.1rem/1.2 'Inter',sans-serif; margin-bottom:.4em; color:#0b0b0c; }
+.tiers-cardmode-list       { list-style:none; margin:0 0 .5em; padding:0; }
+.tiers-cardmode-list .item { display:flex; justify-content:center; gap:.4em; font-size:.97rem; }
+.tiers-cardmode-list .emoji{ font-size:1.05em; }
+.tiers-cardmode-list .more a{ font-weight:700; color:#0ea5e9; text-decoration:none; }
+.tiers-cardmode-list .more a:hover{ text-decoration:underline; }
+.tiers-cardmode-cta        { display:inline-block; margin-top:.3em; padding:.45em 1.2em;
+                              border-radius:999px; font-weight:800; font-size:.97rem;
+                              background:linear-gradient(90deg,#fffbe6 10%,#facc15 95%);
+                              color:#101010; box-shadow:0 2px 8px #facc1520; }
+.tiers-cardmode-cta:hover  { background:#facc15; color:#fff; }
+</style>
+{% endif %}
+
+<style {{ nonce_attr() }}>
+/* ==========================================================================
+   FundChamps Tiers — Enterprise SaaS 2025+
+   Agency-Polished, Fully Tokenized, White-Label Ready
+   ========================================================================== */
+.fc-tiers-cardmode {
+  padding: 12px 0 2px 0;
+  font-size: 0.98em;
+  text-align: center;
+}
+.fc-tiers-cardmode-title {
+  font-weight: 900;
+  font-size: 1.15em;
+  margin-bottom: 0.45em;
+  color: #0b0b0c;
+}
+.fc-tiers-cardmode-list {
+  list-style: none;
+  margin: 0 0 0.6em 0;
+  padding: 0;
+}
+.fc-tiers-cardmode-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.55em;
+  padding: 0.18em 0;
+  font-size: 1.03em;
+}
+.fc-tiers-cardmode-item .tier-emoji { font-size: 1.12em; }
+.fc-tiers-cardmode-more { font-size: .98em; color: #888; }
+.fc-tiers-cardmode-link {
+  color: #0ea5e9;
+  font-weight: bold;
+  text-decoration: none;
+}
+.fc-tiers-cardmode-link:hover { text-decoration: underline; }
+.fc-tiers-cardmode-cta {
+  margin-top: 0.4em;
+  padding: 0.52em 1.2em;
+  border-radius: 999px;
+  background: linear-gradient(90deg,#fffbe6 10%, #facc15 97%);
+  color: #101010;
+  font-weight: 800;
+  font-size: 1em;
+  text-decoration: none;
+  display: inline-block;
+  box-shadow: 0 2px 8px #facc1522;
+}
+.fc-tiers-cardmode-cta:hover {
+  background: #facc15;
+  color: #fff;
+}
+
+</style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  // ==== 1. Guard for hot reload / partials ====
+  if (window.__LB_AGENCY__) return; window.__LB_AGENCY__ = true;
+
+  // ==== 2. Element handles ====
+  const root    = document.getElementById('sponsor-leaderboard');
+  const rail    = document.getElementById('ticker-rail');
+  if (!root || !rail) return;
+
+  const ctrl    = document.getElementById('ticker-ctrl');
+  const speedC  = document.getElementById('speed-ctrl');
+  const srLive  = document.getElementById('sr-shout');
+  const srVIP   = document.getElementById('sr-vip');
+  const offline = document.getElementById('offline-pill');
+
+  // ==== 3. Config: Everything is data-attribute for SaaS/flex ====
+  const cfg = {
+    reduced     : matchMedia('(prefers-reduced-motion: reduce)').matches || navigator.connection?.saveData,
+    autoscroll  : root.dataset.autoscroll !== '0',
+    vipTiers    : (root.dataset.vipTiers || 'Platinum,Gold').split(',').map(x => x.trim().toLowerCase()),
+    ttl         : (+root.dataset.ttlSeconds || 86400) * 1000,
+    maxStore    : +root.dataset.maxStore || 48,
+    dedupeWin   : (+root.dataset.dedupeWindowSeconds || 600) * 1000,
+    teamKey     : root.dataset.teamKey || 'global',
+    api         : root.dataset.api   || '/api/shoutouts',
+    spdMap      : { slow:32, normal:24, fast:16 },
+    defaultSpd  : (root.dataset.defaultSpeed || 'normal').toLowerCase()
+  };
+  const storeKey = `fc_lb_agency:${cfg.teamKey}`;
+  const recent = new Map(); // Dedupe tracker
+
+  // ==== 4. Utility fns ====
+  const esc = s => String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmtKey = (who, msg) => `${who.toLowerCase().trim()}|${msg.toLowerCase().trim()}`;
+  const pillTpl = ({tier='General', sponsor, msg}) => {
+    const badge =
+      /platinum/i.test(tier) ? '✨' : /gold/i.test(tier) ? '🏅' :
+      /silver/i.test(tier)   ? '🎉' : /bronze/i.test(tier) ? '🥉' : '🔥';
+    return `${badge}
+      <span class="txt"><span class="who">${esc(sponsor)}</span> <span class="msg">${esc(msg)}</span></span>`;
+  };
+
+  // ==== 5. Speed Control ====
+  function setSpeed(mode) {
+    const m = cfg.spdMap[mode] ? mode : 'normal';
+    rail.style.setProperty('--speed-s', cfg.spdMap[m] + 's');
+    speedC.dataset.speed = m;
+    speedC.setAttribute('aria-label', `Speed: ${m.charAt(0).toUpperCase() + m.slice(1)}`);
+  }
+  setSpeed(cfg.reduced ? 'slow' : cfg.defaultSpd);
+
+  speedC?.addEventListener('click', () => {
+    const order = ['slow','normal','fast'];
+    setSpeed(order[(order.indexOf(speedC.dataset.speed)+1)%order.length]);
+    tuneSpeed();
+  }, { passive: true });
+
+  // ==== 6. Pause/Resume marquee ====
+  function pause(on) {
+    ctrl?.setAttribute('aria-pressed', on);
+    rail.style.animationPlayState = on ? 'paused' : 'running';
+    ctrl.textContent = on ? '▶ Play' : '⏸ Pause';
+  }
+  ctrl?.addEventListener('click', () => pause(ctrl.getAttribute('aria-pressed') !== 'true'), { passive:true });
+  if (cfg.reduced || !cfg.autoscroll) pause(true);
+
+  // Pause when out of viewport (sticky nav, mobile, etc)
+  try {
+    const vp = root.querySelector('.lb__viewport');
+    new IntersectionObserver(([e]) =>
+      pause(!e.isIntersecting || cfg.reduced || !cfg.autoscroll), { threshold: .02 }
+    ).observe(vp);
+  } catch {}
+
+  // ==== 7. Add sponsor item (dedupe, animate, a11y, VIP pulse) ====
+  function addItem({ tier = 'General', sponsor = 'Anonymous', msg = 'supported the team!' }) {
+    const key = fmtKey(sponsor, msg);
+    const now = Date.now();
+
+    // Dedupe: bump and increment counter
+    if (recent.has(key) && now - recent.get(key).ts < cfg.dedupeWin) {
+      const rec = recent.get(key); rec.ts = now; rec.count++;
+      let bump = rec.el.querySelector('.x-times');
+      if (!bump) bump = Object.assign(document.createElement('b'), { className: 'x-times' });
+      bump.textContent = ` ×${rec.count}`;
+      rec.el.appendChild(bump);
+      rail.prepend(rec.el);
+      return;
+    }
+
+    // Create pill element
+    const el = document.createElement('span');
+    const vip = cfg.vipTiers.includes(tier.toLowerCase());
+    el.className = 'pill' + (vip ? ' vip' : ''); el.role = 'listitem'; el.dataset.tier = tier;
+    el.innerHTML = pillTpl({ tier, sponsor, msg });
+    rail.prepend(el);
+
+    // Dedupe and a11y live region
+    recent.set(key, { ts: now, el, count: 1 });
+    srLive.textContent = `${sponsor} ${msg}`;
+    if (vip) srVIP.textContent = `${sponsor} made a VIP ${tier} gift!`;
+
+    // Local cache with TTL
+    try {
+      const cached = JSON.parse(localStorage.getItem(storeKey) || '[]').filter(x => now - x.ts < cfg.ttl);
+      cached.unshift({ tier, sponsor, msg, ts: now });
+      localStorage.setItem(storeKey, JSON.stringify(cached.slice(0, cfg.maxStore)));
+    } catch {}
+
+    tuneSpeed(); cloneLoop();
+  }
+
+  // ==== 8. Placeholder if empty ====
+  function ensurePlaceholder() {
+    if (rail.querySelector('.pill:not(.placeholder):not(.headline)')) {
+      document.getElementById('shoutouts-empty')?.remove(); return;
+    }
+    if (document.getElementById('shoutouts-empty')) return;
+    const p = document.createElement('span');
+    p.id = 'shoutouts-empty'; p.className = 'pill placeholder'; p.role = 'listitem';
+    p.innerHTML = 'No shoutouts yet — <button type="button" class="link-btn" id="share-cta">be the first 🎉</button>';
+    rail.insertBefore(p, rail.querySelector('.headline')?.nextSibling || rail.firstChild);
+    p.querySelector('#share-cta').onclick = async () => {
+      try {
+        await (navigator.share
+          ? navigator.share({ title: document.title, url: location.href })
+          : navigator.clipboard.writeText(location.href));
+      } catch {}
+    };
+  }
+
+  // ==== 9. Adaptive speed for content width ====
+  function tuneSpeed() {
+    const viewport = root.querySelector('.lb__viewport'); if (!viewport) return;
+    const ratio = (rail.scrollWidth / (viewport.clientWidth || 1)) / 2;
+    const base = cfg.spdMap[speedC?.dataset.speed || 'normal'] || 24;
+    rail.style.setProperty('--speed-s', (Math.max(.93, Math.min(2.4, ratio)) * base) + 's');
+  }
+  new ResizeObserver(tuneSpeed).observe(rail);
+  addEventListener('resize', tuneSpeed, { passive: true });
+
+  // ==== 10. Seamless Loop (agency touch: clones, a11y) ====
+  function cloneLoop() {
+    if (rail.__cloned) return; rail.__cloned = true;
+    rail.querySelectorAll('.pill:not(.placeholder):not(.headline)').forEach(n => {
+      const c = n.cloneNode(true); c.setAttribute('aria-hidden', 'true'); c.tabIndex = -1; rail.appendChild(c);
+    });
+  }
+
+  // ==== 11. Offline / online support ====
+  const queue = [];
+  function setOffline(on) { offline?.classList.toggle('show', on); }
+  addEventListener('offline', () => setOffline(true));
+  addEventListener('online', () => { setOffline(false); while (queue.length) addItem(queue.shift()); });
+
+  // ==== 12. Hydrate: cache first, then API ====
+  (async () => {
+    // From localStorage (oldest first)
+    try { (JSON.parse(localStorage.getItem(storeKey) || '[]')).reverse().forEach(addItem); } catch {}
+    // From API (oldest first)
+    try {
+      const u = new URL(cfg.api, location.origin); u.searchParams.set('team', cfg.teamKey);
+      const list = await fetch(u).then(r => r.ok ? r.json() : []);
+      if (Array.isArray(list)) list.reverse().forEach(addItem);
+    } catch {}
+    ensurePlaceholder(); rail.removeAttribute('aria-busy'); cloneLoop(); tuneSpeed();
+  })();
+
+  // ==== 13. Event API (socket/manual) for SaaS flex ====
+  addEventListener('fc:shoutout', e =>
+    (navigator.onLine ? addItem : queue.push.bind(queue))(e.detail || {})
+  );
+
+  // ==== 14. Expose public API for runtime (SaaS agency flex) ====
+  window.FundChampsSponsorLB = window.FundChampsSponsorLB || {};
+  window.FundChampsSponsorLB[root.id] = { addItem, ensurePlaceholder, tuneSpeed, setSpeed, pause };
+})();
+</script>
+

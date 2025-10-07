@@ -1,3 +1,12 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 {# partials/_fmt.html — Shared formatting helpers (CSP-safe, robust) #} {# Money
 --------------------------------------------------------------- #} {# Usage:
 fmt.roll_money(12345) -> $12,345 fmt.roll_money(12345, decimals=2) -> $12,345.00
@@ -7,8 +16,8 @@ symbol='$', decimals=0, abbr=False) -%} {# sanitize -> float #} {%- set n = (v
 if v is number else
 (v|string)|replace('$','')|replace('%','')|replace(',','')|replace(' ',
 '')|float) -%} {%- set neg = n < 0 -%} {%- set n = (-n) if neg else n -%} {%- if
-abbr and n >= 1000 -%} {%- set units = [('T', 1000000000000), ('B', 1000000000),
-('M', 1000000), ('K', 1000)] -%} {%- for suf, val in units if n >= val -%} {%-
+abbr and n>= 1000 -%} {%- set units = [('T', 1000000000000), ('B', 1000000000),
+('M', 1000000), ('K', 1000)] -%} {%- for suf, val in units if n>= val -%} {%-
 set short = n / val -%} {%- set s =
 '{:,.1f}'.format(short).rstrip('0').rstrip('.') -%} {{- (neg and '-' or '') ~
 symbol ~ s ~ suf -}} {%- endfor -%} {%- else -%} {{- (neg and '-' or '') ~

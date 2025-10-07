@@ -1,33 +1,40 @@
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
-defined else '') %}  {% set
-__nonce = (csp_nonce() if csp_nonce is defined else (NONCE if NONCE is defined
-else '')) %} {% set asset_version = asset_version|default(None) %} {% set
-brand_color = (team.theme_color if team and team.theme_color else '#facc15') %}
-{% set donate_href = donate_href|default('/donate') %}  {% set
-impact = impact if impact is defined and impact else [ {'label': 'Players
-Enrolled', 'value': 16}, {'label': 'Honor Roll Scholars', 'value': 11},
-{'label': 'Tournaments Played', 'value': 12}, {'label': 'Years Running',
-'value': 3} ] %} {% set challenge_text = (challenge.text if challenge is defined
-and challenge and challenge.text else "We’re working to secure consistent gym
-space and cover rising tournament travel costs so every kid gets a fair shot.")
-%} {% set impact_bullets = (challenge.impact if challenge is defined and
-challenge and challenge.impact else [ "Secure consistent gym space", "Support
-tournament travel", "Provide gear & team meals", "Fund academic programs" ]) %}
-{% set coaches = (about.coaches if about is defined and about and about.coaches
-else [ {'name':'Coach Rodriguez','role':'Assistant
-Coach','img':'images/coaches/rodriguez.jpg'}, {'name':'Coach
-Smith','role':'Assistant Coach','img':'images/coaches/smith.jpg'},
-{'name':'Coach Taylor','role':'Assistant
-Coach','img':'images/coaches/taylor.jpg'} ]) %}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is
+defined else '') %} {% set __nonce = (csp_nonce if csp_nonce is defined else
+(NONCE if NONCE is defined else '')) %} {% set asset_version =
+asset_version|default(None) %} {% set brand_color = (team.theme_color if team
+and team.theme_color else '#facc15') %} {% set donate_href =
+donate_href|default('/donate') %} {% set impact = impact if impact is defined
+and impact else [ {'label': 'Players Enrolled', 'value': 16}, {'label': 'Honor
+Roll Scholars', 'value': 11}, {'label': 'Tournaments Played', 'value': 12},
+{'label': 'Years Running', 'value': 3} ] %} {% set challenge_text =
+(challenge.text if challenge is defined and challenge and challenge.text else
+"We’re working to secure consistent gym space and cover rising tournament travel
+costs so every kid gets a fair shot.") %} {% set impact_bullets =
+(challenge.impact if challenge is defined and challenge and challenge.impact
+else [ "Secure consistent gym space", "Support tournament travel", "Provide gear
+& team meals", "Fund academic programs" ]) %} {% set coaches = (about.coaches if
+about is defined and about and about.coaches else [ {'name':'Coach
+Rodriguez','role':'Assistant Coach','img':'images/coaches/rodriguez.jpg'},
+{'name':'Coach Smith','role':'Assistant
+Coach','img':'images/coaches/smith.jpg'}, {'name':'Coach
+Taylor','role':'Assistant Coach','img':'images/coaches/taylor.jpg'} ]) %}
 
 <section
   class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6"
   id="impact-challenge-coaches"
   class="relative bg-zinc-950/95 py-12 text-white md:py-16"
   aria-labelledby="impactcc-heading"
-  style="--fc-brand: {{ brand_color }};"
->
-  <style {{ nonce_attr() }}nonce="{{ NONCE }}">
+  style="--fc-brand: {{ brand_color }};">
+  <style {{ nonce_attr() }}>
     /* ===== Scope: #impact-challenge-coaches ===== */
     #impact-challenge-coaches::before {
       content: "";
@@ -41,7 +48,7 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
       pointer-events: none;
       z-index: 0;
     }
-    #impact-challenge-coaches > * {
+    #impact-challenge-coaches> * {
       position: relative;
       z-index: 1;
     }
@@ -137,19 +144,16 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
       Program Impact, Challenge, and Coaches
     </h2>
 
-    
     <ul
       class="grid grid-cols-2 gap-4 md:grid-cols-4"
       role="list"
-      aria-label="Program impact statistics"
-    >
+      aria-label="Program impact statistics">
       {% for s in impact %}
       <li
         class="fc-card p-5 text-center"
         role="listitem"
         tabindex="0"
-        aria-label="{{ s.value }} {{ s.label }}"
-      >
+        aria-label="{{ s.value }} {{ s.label }}">
         <div class="text-3xl font-extrabold text-yellow-400">
           <span class="count" data-target="{{ (s.value or 0)|int }}">0</span>
         </div>
@@ -158,22 +162,18 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
       {% endfor %}
     </ul>
 
-    
     <div class="mt-12 grid grid-cols-1 items-start gap-10 lg:grid-cols-2">
-      
       <section
         class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 fc-card p-7 md:p-8"
         aria-labelledby="challenge-heading"
-        aria-describedby="challenge-desc"
-      >
+        aria-describedby="challenge-desc">
         <header class="mb-3">
           <h3 id="challenge-heading" class="text-2xl font-bold text-yellow-300">
             The Challenge We Face
           </h3>
           <p
             id="challenge-desc"
-            class="mt-1 text-zinc-300 text-base sm:text-lg leading-relaxed"
-          >
+            class="mt-1 text-zinc-300 text-base sm:text-lg leading-relaxed">
             {{ challenge_text }}
           </p>
         </header>
@@ -199,22 +199,18 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
             href="{{ donate_href }}"
             class="inline-flex items-center justify-center rounded-full bg-yellow-400 px-5 py-2.5 font-bold text-black ring-2 ring-yellow-300/30 hover:bg-yellow-300 focus-visible:ring-4 focus-visible:ring-yellow-300"
             data-open-donate-modal
-            aria-label="Open donation modal"
-          >
+            aria-label="Open donation modal">
             Donate Now
           </a>
         </div>
       </section>
 
-      
       <section
         class="mx-auto w-[min(92rem,96vw)] px-3 sm:px-6 fc-card p-7 md:p-8"
-        aria-labelledby="coaches-heading"
-      >
+        aria-labelledby="coaches-heading">
         <h3
           id="coaches-heading"
-          class="mb-4 text-2xl font-bold text-yellow-300"
-        >
+          class="mb-4 text-2xl font-bold text-yellow-300">
           Coaches
         </h3>
 
@@ -230,8 +226,7 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
             itemtype="https://schema.org/Person"
             itemprop="coach"
             role="listitem"
-            tabindex="0"
-          >
+            tabindex="0">
             <img
               alt="{{ c.name }} headshot"
               decoding="async"
@@ -244,12 +239,8 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
             />
             <span
               class="block text-lg font-semibold text-yellow-300"
-              itemprop="name"
-              >{{ c.name }}</span
-            >
-            <span class="text-sm text-zinc-400" itemprop="jobTitle"
-              >{{ c.role|default('Coach') }}</span
-            >
+              itemprop="name">{{ c.name }}</span>
+            <span class="text-sm text-zinc-400" itemprop="jobTitle">{{ c.role|default('Coach') }}</span>
           </li>
           {% endfor %}
         </ul>
@@ -259,45 +250,5 @@ Coach','img':'images/coaches/taylor.jpg'} ]) %}
 </section>
 
 {% if script_open is defined %}{{ script_open() }}{% else %}
-<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
-  {% endif %}
-  (() => {
-    const root = document.getElementById('impact-challenge-coaches'); if (!root || root.__init) return; root.__init = true;
-
-    // Impact counters (animate once on visibility, reduced-motion aware)
-    const counters = root.querySelectorAll('.count[data-target]');
-    if (counters.length) {
-      const reduced = (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) ||
-                      (navigator.connection && navigator.connection.saveData === true);
-      const io = new IntersectionObserver((entries, obs) => {
-        if (!entries.some(en => en.isIntersecting)) return;
-        counters.forEach(el => {
-          const target = Math.max(0, parseInt(el.dataset.target || '0', 10));
-          if (reduced) { el.textContent = String(target); return; }
-          let n = 0, step = Math.max(1, Math.ceil(target / 80));
-          const id = setInterval(() => {
-            n += step;
-            if (n >= target) { n = target; clearInterval(id); }
-            el.textContent = String(n);
-          }, 20);
-        });
-        obs.disconnect();
-      }, { threshold: .35 });
-      io.observe(root);
-    }
-
-    // Donation modal contract (no inline handlers)
-    root.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-open-donate-modal]'); if (!btn) return;
-      try {
-        if (typeof window.openDonationModal === 'function') {
-          e.preventDefault();
-          window.openDonationModal();
-          window.dispatchEvent(new CustomEvent('fc:donate:open'));
-        }
-      } catch(_) {}
-    });
-  })();
-  {% if script_close is defined %}{{ script_close() }}{% else %}
-</script>
+<script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='js/extracted/partials__impact_challenge_coaches_premium.html__1.js', v='1.0.0') }}"></script>
 {% endif %}

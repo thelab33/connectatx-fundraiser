@@ -1,0 +1,15 @@
+{# Command Palette (⌨ K to open, D donate, S share, L leaderboard, P pause ticker) #}
+<div id="fc-cmd" hidden role="dialog" aria-modal="true" aria-labelledby="fc-cmd-title">
+  <div class="fc-card">
+    <h3 id="fc-cmd-title" style="margin:0 0 .5rem">Quick actions</h3>
+    <input type="text" placeholder="Type to filter (Donate, Share, Pause…)" aria-label="Filter commands"/>
+    <ul aria-label="Commands"></ul>
+    <div style="display:flex;justify-content:flex-end;padding:.25rem .2rem;gap:.5rem">
+      <span class="fc-chip">D Donate</span>
+      <span class="fc-chip">S Share</span>
+      <span class="fc-chip">L Leaderboard</span>
+      <span class="fc-chip">P Pause ticker</span>
+      <button class="fc-btn" data-close>Close</button>
+    </div>
+  </div>
+</div>

@@ -1,10 +1,18 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
 {% import 'partials/_fmt.html' as fmt %} {# Impact — Scoreboard Wall (refined)
 #}
 <section
   id="impact"
   class="impact-board section container"
-  aria-labelledby="impact-h"
->
+  aria-labelledby="impact-h">
   <header class="head">
     <h2 id="impact-h">Your <span class="accent">Impact</span></h2>
     <p class="sub">Where every dollar goes — live.</p>
@@ -13,20 +21,16 @@
   <!-- 1) KPIs -->
   <ul class="kpis" role="list">
     <li>
-      <span class="num" data-kpi="families">500+</span
-      ><span class="lab">Families</span>
+      <span class="num" data-kpi="families">500+</span><span class="lab">Families</span>
     </li>
     <li>
-      <span class="num" data-kpi="gpa">3.5</span
-      ><span class="lab">Team GPA</span>
+      <span class="num" data-kpi="gpa">3.5</span><span class="lab">Team GPA</span>
     </li>
     <li>
-      <span class="num" data-kpi="college">92%</span
-      ><span class="lab">College-track</span>
+      <span class="num" data-kpi="college">92%</span><span class="lab">College-track</span>
     </li>
     <li>
-      <span class="num" data-kpi="turned-away">$0</span
-      ><span class="lab">Turned Away</span>
+      <span class="num" data-kpi="turned-away">$0</span><span class="lab">Turned Away</span>
     </li>
   </ul>
 
@@ -39,8 +43,7 @@
     aria-valuemax="{{ GOAL|int }}"
     aria-valuenow="{{ RAISED|int }}"
     aria-describedby="impact-meter-desc"
-    aria-valuetext="{{ fmt.roll_pct(PCT_CLAMP) }}% of goal"
-  >
+    aria-valuetext="{{ fmt.roll_pct(PCT_CLAMP) }}% of goal">
     <div class="track"><div class="fill" style="--p: 0%"></div></div>
     <div class="line tabular">
       <b data-raised>{{ fmt.roll_money(RAISED) }}</b>
@@ -61,8 +64,7 @@
     <div class="rung" data-th="{{ rung.amt }}">
       <div class="bar" aria-hidden="true"></div>
       <div class="lbl">
-        <span class="amt">${{ '{:,.0f}'.format(rung.amt) }}</span
-        ><span class="what">{{ rung.label }}</span>
+        <span class="amt">${{ '{:,.0f}'.format(rung.amt) }}</span><span class="what">{{ rung.label }}</span>
       </div>
     </div>
     {% endfor %}
@@ -144,65 +146,4 @@
   .sr-only{ position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0 }
 </style>
 
-<script {{ nonce_attr() }}>
-  (() => {
-    const root = document.getElementById('impact'); if (!root) return;
-    const fill = root.querySelector('.meter .fill');
-    const rungs = Array.from(root.querySelectorAll('.rung'));
-    const raisedEl = root.querySelector('[data-raised]');
-    const goalEl = root.querySelector('[data-goal]');
-
-    const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-    function animateWhenVisible(target, run){
-      const go = () => run();
-      if (!('IntersectionObserver' in window)) return go();
-      const io = new IntersectionObserver((ents) => {
-        ents.forEach(e => { if (e.isIntersecting) { run(); io.disconnect(); } });
-      }, {threshold: .35});
-      io.observe(target);
-    }
-
-    function paintMeter(pct){
-      if (!fill) return;
-      fill.style.setProperty('--p', clamp(pct, 0, 100) + '%');
-    }
-
-    function lightRungs(raised){
-      rungs.forEach(r => {
-        const th = Number(r.dataset.th) || 0;
-        const hit = th ? clamp(raised / th, 0, 1) : 0;
-        r.style.setProperty('--hit', hit);
-      });
-    }
-
-    // Initial animation from server-side numbers
-    const svrRaised = Number({{ RAISED|int }});
-    const svrGoal   = Math.max(1, Number({{ GOAL|int }}));
-    const svrPct    = clamp((svrRaised / svrGoal) * 100, 0, 100);
-
-    animateWhenVisible(fill || root, () => {
-      paintMeter(svrPct);
-      lightRungs(svrRaised);
-    });
-
-    // Optional hydration from /api/totals (safe no-op if missing)
-    (async () => {
-      try{
-        const r = await fetch('/api/totals', {headers:{Accept:'application/json'}});
-        if (!r.ok) return;
-        const j = await r.json();
-        const raised = Number(j.raised || 0);
-        const goal   = Math.max(1, Number(j.goal || 0));
-        const pct    = clamp((raised / goal) * 100, 0, 100);
-
-        const fmtUSD = (n) => new Intl.NumberFormat(undefined, {style:'currency', currency:'USD', maximumFractionDigits:0}).format(n);
-        if (raisedEl) raisedEl.textContent = fmtUSD(raised);
-        if (goalEl)   goalEl.textContent   = fmtUSD(goal);
-
-        paintMeter(pct);
-        lightRungs(raised);
-      }catch{/* ignore */ }
-    })();
-  })();
-</script>
+<script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='js/extracted/partials__impact_board.html__1.js', v='1.0.0') }}"></script>

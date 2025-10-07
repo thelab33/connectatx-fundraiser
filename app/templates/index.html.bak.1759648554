@@ -1,0 +1,188 @@
+{# ============================================================================
+  index.html — FundChamps Elite (Nike × Apple Pro, Clean Tier UI)
+============================================================================ #}
+{% extends "base.html" %}
+{% import 'partials/_fmt.html' as fmt %}
+{% from 'partials/_core_helpers.html' import nonce_attr %}
+
+{# ---------- Feature flags ---------- #}
+{% set _q   = request.args if request is defined else {} %}
+{% set _OFF = ['0','false','off','no','disable'] %}
+{% set SHOW_TIERS  = (show_tiers  if show_tiers  is defined else (_q.get('tiers','1')  |lower not in _OFF)) %}
+
+{# ---------- Fundraising math (safe defaults) ---------- #}
+{% set GOAL       = (fundraising_goal if fundraising_goal else 50000)|int %}
+{% set RAISED     = (funds_raised if funds_raised else 0)|int %}
+{% set PCT        = (100.0 * RAISED / (GOAL if GOAL> 0 else 1))|round(1) %}
+{% set PCT_CLAMP  = 0 if PCT < 0 else (100 if PCT> 100 else PCT) %}
+
+{% block title %}{{ fundraiser_title or 'FundChamps | Connect ATX Elite' }}{% endblock %}
+{% block h1 %}{% endblock %}
+
+{% block content %}
+
+  <!-- ===== 1) Hero Section: Your Conversion Engine ===== -->
+  <section class="fcx-section--hero">
+    {% include "partials/hero_classic.html" ignore missing with context %}
+  </section>
+
+  <!-- ===== 2) Tiers (Sponsor Levels) ===== -->
+  {% if SHOW_TIERS %}
+    <section class="fcx-section--tiers">
+      {% include "partials/tiers.html" ignore missing with context %}
+    </section>
+  {% endif %}
+
+  <!-- ===== 3) Impact (Sticky, Above the Fold) ===== -->
+  <section id="impact" class="fcx-section fcx-section--tight container" aria-label="Impact">
+    <header class="fcx-sec-head">
+      <h2 class="fcx-sec-title">Impact</h2>
+      <nav class="fcx-sec-actions" aria-label="Impact actions">
+        <a class="fcx-link" href="{{ safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#' }}">
+          Open full Impact page →
+        </a>
+      </nav>
+    </header>
+    <div class="fcx-sec-body">
+      {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+    </div>
+  </section>
+
+  <!-- ===== 4) About Section ===== -->
+  <section id="about" class="fcx-section fcx-section--tight container" aria-label="About our program">
+    <header class="fcx-sec-head">
+      <h2 class="fcx-sec-title">About Our Program</h2>
+      <nav class="fcx-sec-actions" aria-label="About actions">
+        <a class="fcx-link" href="{{ safe_url_for('main.about') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.about')) else '#' }}">
+          Read the full story →
+        </a>
+      </nav>
+    </header>
+    <div class="fcx-sec-body">
+      {% include "partials/about_section.html" ignore missing with context %}
+    </div>
+  </section>
+{% endblock %}
+
+{# ======================== MODERN PRODUCT CSS THEME ======================== #}
+<style {{ nonce_attr() }}>
+:root {
+  --fcx-bg: #f8fafc;
+  --fcx-dark: #18181b;
+  --fcx-brand: #1a1a1a;
+  --fcx-accent: {{ THEME_HEX|default('#facc15') }};
+  --fcx-radius: 22px;
+  --fcx-shadow: 0 8px 32px rgba(16,18,24,.16), 0 1.5px 8px #0001;
+  --fcx-glass: rgba(255,255,255,0.76);
+  --fcx-glass-strong: rgba(255,255,255,0.92);
+}
+body {
+  background: var(--fcx-bg);
+  font-family: 'Inter', 'SF Pro Display', Arial, sans-serif;
+  color: var(--fcx-brand);
+  letter-spacing: -.012em;
+  min-height: 100vh;
+}
+.fcx-section, .fcx-card, .fcx-tier-block, .fcx-impact-strip, .fcx-about-card {
+  border-radius: var(--fcx-radius);
+  box-shadow: var(--fcx-shadow);
+  background: var(--fcx-glass);
+  backdrop-filter: blur(12px) saturate(120%);
+  margin-bottom: 2.6rem;
+}
+.fcx-section--hero { margin-bottom: 3.6rem; }
+.fcx-section--tiers { margin-bottom: 2.7rem; }
+.fcx-sec-title, .fcx-tagline {
+  font-size: clamp(2rem, 2.2vw + 1.3rem, 2.8rem);
+  font-weight: 1000;
+  letter-spacing: -.02em;
+  color: var(--fcx-dark);
+  margin-bottom: 0.18em;
+}
+.fcx-link {
+  color: var(--fcx-accent); font-weight: 900;
+  text-underline-offset: 3px;
+  border-radius: 0.6em;
+  background: rgba(250,204,21,0.09);
+  padding: .25em .9em;
+  border: 1.5px solid rgba(250,204,21,0.22);
+  transition: background .19s;
+}
+.fcx-link:hover { background: rgba(250,204,21,0.16); }
+.fcx-btn, .btn, .fcx-btn-accent {
+  border-radius: 999px;
+  font-weight: 1000;
+  padding: .9em 2em;
+  border: none;
+  background: linear-gradient(90deg,#fffbe6 45%,var(--fcx-accent) 100%);
+  color: #161616;
+  box-shadow: 0 6px 28px #facc1550;
+  font-size: 1.19rem;
+  position: relative;
+  transition: box-shadow .21s, background .22s, color .12s;
+  overflow: hidden;
+}
+.fcx-btn-accent::after {
+  content:"";position:absolute;inset:0;
+  background: linear-gradient(120deg,transparent 40%,rgba(255,255,255,.22) 50%,transparent 60%);
+  border-radius: 999px;
+  animation: sheen 2.3s cubic-bezier(.6,.2,.4,1) infinite;
+  pointer-events: none;
+  mask: linear-gradient(90deg,transparent,white 16% 84%,transparent);
+}
+@keyframes sheen{0%{transform:translateX(-80%);}100%{transform:translateX(180%);}}
+.fcx-card, .fcx-tier-block .card {
+  background: var(--fcx-glass-strong);
+  border: 1px solid #e3e7ec;
+  transition: transform .16s cubic-bezier(.4,1.8,.4,1), box-shadow .23s;
+}
+.fcx-card:hover, .fcx-tier-block .card:hover { transform:translateY(-5px) scale(1.015); }
+.fcx-impact-strip, .fcx-about-card { background: var(--fcx-glass); }
+.fcx-section--tight { max-width: 1100px; margin-left: auto; margin-right: auto; }
+
+{# ---- MICRO IMPACT / ABOUT ---- #}
+.fcx-impact-strip.micro-impact { ... } /* unchanged, keep your existing micro-impact styles */
+.fcx-about-card.micro-about { ... } /* unchanged, keep your about section microcard styles */
+
+@media (max-width:650px){
+  .fcx-impact-strip.micro-impact, .fcx-about-card.micro-about{flex-direction:column; gap:.7em; padding:1.1em;}
+  .about-pillars{gap:.5em;}
+}
+@media (max-width: 640px){
+  .fcx-section, .fcx-card, .fcx-tier-block, .fcx-impact-strip, .fcx-about-card { border-radius: 17px; }
+  .fcx-sec-title, .fcx-tagline { font-size: 1.45rem }
+}
+</style>
+
+<!-- ====== INTERACTION & MICRO-ANIMATION ====== -->
+<script {{ nonce_attr() }}>
+(() => {
+  // Hero progress bar animation
+  const bar = document.querySelector('.fcx-progress-bar-inner');
+  if (bar) {
+    setTimeout(() => {
+      bar.style.width = '{{ PCT_CLAMP }}%';
+    }, 360);
+  }
+  // Magnetic card hover (Nike “lift”)
+  document.querySelectorAll('.fcx-card, .fcx-tier-block .card').forEach(card => {
+    card.addEventListener('mousemove', e => {
+      card.style.transform = `translateY(-6px) scale(1.025)`;
+      card.style.boxShadow = "0 20px 60px #facc1540, 0 3px 10px #0001";
+    });
+    card.addEventListener('mouseleave', e => {
+      card.style.transform = '';
+      card.style.boxShadow = '';
+    });
+  });
+  // Sponsor ticker demo (if present)
+  const ticker = document.querySelector('.fcx-sponsor-ticker');
+  if (ticker) {
+    setInterval(() => {
+      ticker.classList.add('active');
+      setTimeout(()=>ticker.classList.remove('active'),600);
+    }, 6000);
+  }
+})();
+</script>
+

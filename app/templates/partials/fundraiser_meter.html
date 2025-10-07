@@ -1,14 +1,23 @@
- {% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is
 defined else '') %} {% set theme_hex = theme_hex|default('#facc15') %} {% set
 team_name = (team.team_name if team and team.team_name else 'Connect ATX Elite')
 %} {% set catch_line = catch_phrase if catch_phrase is defined and catch_phrase
-else 'Fuel the Season, Fund the Future' %}  {% set
-_fr = (funds_raised|string)|replace('$','')|replace(',','')|float if
-funds_raised is defined else 0.0 %} {% set _fg =
+else 'Fuel the Season, Fund the Future' %} {% set _fr =
+(funds_raised|string)|replace('$','')|replace(',','')|float if funds_raised is
+defined else 0.0 %} {% set _fg =
 (fundraising_goal|string)|replace('$','')|replace(',','')|float if
 fundraising_goal is defined and fundraising_goal else 10000.0 %} {% set _goal =
-(_fg if _fg > 0 else 1.0) %} {% set _pct_raw = 100.0 * (_fr / _goal) %} {% set
-_pct = (0 if _pct_raw < 0 else (100 if _pct_raw > 100 else _pct_raw)) | round(1)
+(_fg if _fg> 0 else 1.0) %} {% set _pct_raw = 100.0 * (_fr / _goal) %} {% set
+_pct = (0 if _pct_raw < 0 else (100 if _pct_raw> 100 else _pct_raw)) | round(1)
 %} {% set deadline_dt = fundraiser_deadline|default('') %} {% set
 stripe_payment_link = (stripe_payment_link if stripe_payment_link is defined and
 stripe_payment_link else '') %}
@@ -29,8 +38,7 @@ stripe_payment_link else '') %}
       <div
         class="fp-count__num tabular"
         id="fp-ct-{{ key|lower }}"
-        aria-label="{{ key }}"
-      >
+        aria-label="{{ key }}">
         00
       </div>
       <div class="fp-count__lbl">{{ key }}</div>
@@ -70,8 +78,7 @@ stripe_payment_link else '') %}
           aria-valuemin="0"
           aria-valuemax="100"
           aria-valuenow="{{ ('%.1f' % _pct) }}"
-          aria-label="Fundraising progress"
-        >
+          aria-label="Fundraising progress">
           <div class="pm__track" aria-hidden="true"></div>
           <div id="fp-bar" class="pm__fill" style="width: {{ _pct }}%"></div>
           <div class="pm__ticks" aria-hidden="true"></div>
@@ -80,26 +87,19 @@ stripe_payment_link else '') %}
 
         <div class="fp-between">
           <div>
-            <span class="sr-only">Progress:</span
-            ><span id="fp-pct" class="fp-pct tabular"
-              >{{ ('%.1f' % _pct) }}</span
-            >% funded
+            <span class="sr-only">Progress:</span><span id="fp-pct" class="fp-pct tabular">{{ ('%.1f' % _pct) }}</span>% funded
           </div>
           <div>
             Deadline:
             <time
               id="fp-deadline"
               class="fp-deadline"
-              datetime="{{ deadline_dt or '' }}"
-              >{{ deadline_dt or '' }}</time
-            >
+              datetime="{{ deadline_dt or '' }}">{{ deadline_dt or '' }}</time>
           </div>
         </div>
 
         <div class="fp-chips" aria-hidden="true">
-          {% for m in [25,50,75,100] %}<span class="chip" data-m="{{ m }}"
-            >🎯 {{ m }}%</span
-          >{% endfor %}
+          {% for m in [25,50,75,100] %}<span class="chip" data-m="{{ m }}">🎯 {{ m }}%</span>{% endfor %}
         </div>
 
         <div id="fp-next" class="fp-next" aria-live="polite">
@@ -130,8 +130,7 @@ stripe_payment_link else '') %}
         stripe_payment_link
         %}data-open-donate-modal{%
         endif
-        %}
-      >
+        %}>
         💛 Fuel the Season
       </a>
 
@@ -147,19 +146,16 @@ stripe_payment_link else '') %}
             padding: 0.6rem 0.7rem;
           "
           data-amount="{{ amt }}"
-          aria-label="Quick donate {{ amt }} dollars"
-        >
+          aria-label="Quick donate {{ amt }} dollars">
           <span class="sr-only">Donate</span>${{ amt }}<span class="sr-only">
-            now</span
-          >
+            now</span>
         </button>
         {% endfor %}
       </div>
 
       <div class="fp-paybox">
         <div class="fp-payrow">
-          <span>Payments Secured • PCI-DSS</span
-          ><span>Apple/Google Pay • Card</span>
+          <span>Payments Secured • PCI-DSS</span><span>Apple/Google Pay • Card</span>
         </div>
       </div>
     </aside>
@@ -177,7 +173,7 @@ stripe_payment_link else '') %}
   </div>
 </div>
 
-<style {{ nonce_attr() }}nonce="{{ NONCE }}">
+<style {{ nonce_attr() }}>
   .tabular {
     font-variant-numeric: tabular-nums;
   }
@@ -515,94 +511,4 @@ stripe_payment_link else '') %}
   }
 </style>
 
-<script {{ nonce_attr() }} {{ nonce_attr() }}nonce="{{ NONCE }}">
-  (() => {
-    if (window.__fpPanel) return; window.__fpPanel = true;
-    const $ = (s, r=document) => r.querySelector(s);
-
-    // Countdown (defaults: if no deadline, we leave zeros or derive from page if you prefer)
-    (function(){
-      const rootDeadline = document.getElementById('fc-hero')?.dataset?.deadline || '';
-      const ddl = {{ deadline_dt|tojson }} || rootDeadline || '';
-      if (!ddl) return; // keep the cells if not configured
-      const target = new Date(ddl); if (isNaN(target)) return;
-      const pad = v => String(v).padStart(2,'0');
-      const set = (id,val) => { const el = $('#'+id); if (el) el.textContent = val; };
-      const tick = () => {
-        const t = Math.max(0, target.getTime() - Date.now());
-        const dd = Math.floor(t/86400000),
-              hh = Math.floor((t%86400000)/3600000),
-              mm = Math.floor((t%3600000)/60000),
-              ss = Math.floor((t%60000)/1000);
-        set('fp-ct-days', String(dd));
-        set('fp-ct-hrs',  pad(hh));
-        set('fp-ct-min',  pad(mm));
-        set('fp-ct-sec',  pad(ss));
-      };
-      tick(); setInterval(tick, 1000);
-      const dl = $('#fp-deadline');
-      if (dl && !{{ (deadline_dt|default('')) and 'true' or 'false' }}){
-        try{ dl.dateTime = target.toISOString(); dl.textContent = target.toISOString().slice(0,19).replace('T',' '); }catch{}
-      }
-    })();
-
-    // Meter updater (listens to global fc:meter:update as well)
-    (function(){
-      const nf = new Intl.NumberFormat(undefined,{ maximumFractionDigits:0 });
-      const fmt$ = n => '$' + nf.format(Math.round(+n||0));
-      const bar   = $('#fp-bar');
-      const pctEl = $('#fp-pct');
-      const raisedEl = $('#fp-raised');
-      const goalEl   = $('#fp-goal');
-      const nextEl   = $('#fp-next');
-
-      function nextText(r,g){
-        if(!g) return 'Great momentum — keep it rolling!';
-        const T=[.25,.5,.75,1], p=g?(r/g):0;
-        for(const t of T){ if(p<t) return `Only ${fmt$((g*t)-r)} to reach ${Math.round(t*100)}%`; }
-        return 'Great momentum — keep it rolling!';
-      }
-
-      function setMeter(r,g){
-        const R=+r||0, G=Math.max(0,+g||0), P=Math.max(0,Math.min(100,G?(R/G*100):0));
-        if (bar)     bar.style.width = P.toFixed(1) + '%';
-        if (pctEl)   pctEl.textContent = P.toFixed(1);
-        if (raisedEl)raisedEl.textContent = fmt$(R);
-        if (goalEl)  goalEl.textContent   = fmt$(G);
-        document.querySelectorAll('.chip').forEach(c=>{
-          const m=+c.dataset.m||0, hit=P>=m;
-          c.style.background = hit ? 'rgba(250,204,21,.9)' : 'rgba(255,255,255,.06)';
-          c.style.color      = hit ? '#111827' : '';
-          c.style.boxShadow  = hit ? '0 0 0 3px rgba(250,204,21,.25)' : '';
-        });
-        nextEl && (nextEl.textContent = nextText(R,G));
-        const sr = document.getElementById('sr-live');
-        if (sr) sr.textContent = `Progress: ${P.toFixed(1)}% funded — ${fmt$(R)} raised of ${fmt$(G)}.`;
-      }
-
-      setMeter({{ _fr|round(0) }}, {{ _goal|round(0) }});
-      addEventListener('fc:meter:update', ev => { const d=ev.detail||{}; setMeter(d.raised,d.goal); }, {passive:true});
-    })();
-
-    // Payment link aware quick-donate
-    async function getCfg(){
-      try{
-        const r = await fetch('/api/payments/config', { headers: { accept: 'application/json' } });
-        if (!r.ok) throw 0; return await r.json();
-      }catch{ return {}; }
-    }
-    async function pay(amount){
-      const c = await getCfg(); const link = c.payment_link_url || c.link || {{ stripe_payment_link|tojson }};
-      const cents = Math.max(0, Math.round((Number(amount)||0)*100));
-      if (link){
-        const sep = link.includes('?') ? '&' : '?';
-        location.assign(`${link}${sep}client_reference_id=${encodeURIComponent(String(cents||0))}&utm_source=site&utm_medium=panel&utm_campaign=fundraiser`);
-      }else{
-        location.assign('/donate?amount=' + encodeURIComponent(String(amount||0)));
-      }
-    }
-    document.querySelectorAll('#fundraiser-panel [data-amount]').forEach(b=>{
-      b.addEventListener('click',()=>pay(+b.getAttribute('data-amount')||0),{passive:true});
-    });
-  })();
-</script>
+<script {{ nonce_attr() }}type="module" src="{{ url_for('static', filename='js/extracted/partials__fundraiser_meter.html__1.js', v='1.0.0') }}"></script>

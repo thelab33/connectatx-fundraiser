@@ -1,0 +1,195 @@
+{% extends "base.html" %}
+{% import 'partials/_fmt.html' as fmt %}
+{% from 'partials/_core_helpers.html' import nonce_attr %}
+
+{# =========================
+   Page-level config & toggles
+   ========================= #}
+{# Container cap (tenant override): e.g. "1160px" or "none" #}
+{% set SHELL_MAX = (team.shell_max if team is defined and team.shell_max is defined else shell_max|default(None, true)) %}
+
+{# Query helpers #}
+{% set _q   = request.args if request is defined else {} %}
+{% set _OFF = ['0','false','off','no','disable'] %}
+
+{# Section toggles (context wins; else query; else defaults) #}
+{% set SHOW_SCOREBOARD = (show_scoreboard if show_scoreboard is defined
+                          else (_q.get('panel','1')|lower not in _OFF)) %}
+{% set SHOW_TIERS      = (show_tiers if show_tiers is defined
+                          else (_q.get('tiers','1')|lower not in _OFF)) %}
+{% set SHOW_IMPACT     = (show_impact if show_impact is defined
+                          else (_q.get('impact','1')|lower not in _OFF)) %}
+{% set SHOW_ABOUT      = (show_about if show_about is defined
+                          else (_q.get('about','1')|lower not in _OFF)) %}
+
+{# Hero choice: classic (default) or cinematic rotator #}
+{% set HERO_PARTIAL = hero_partial if hero_partial is defined
+                      else ('partials/hero_cinematic.html' if (_q.get('hero','classic') == 'cinematic') else 'partials/hero_classic.html') %}
+
+{# Fundraiser math (guarded) #}
+{% set GOAL       = (fundraising_goal if fundraising_goal else 50000)|int %}
+{% set RAISED     = (funds_raised if funds_raised else 0)|int %}
+{% set PCT        = (100.0 * RAISED / (GOAL if GOAL>0 else 1))|round(1) %}
+{% set PCT_CLAMP  = 0 if PCT < 0 else (100 if PCT>100 else PCT) %}
+
+{% block title %}{{ fundraiser_title or 'FundChamps | Connect ATX Elite' }}{% endblock %}
+{% block h1 %}{% endblock %}
+
+{% block content %}
+<div class="fcx-main" id="home" data-route="home">
+  <!-- ================= HERO ================= -->
+  <section id="hero" class="band band--hero" role="region" aria-labelledby="hero-title">
+    <h2 id="hero-title" class="sr-only">Fundraiser Highlight</h2>
+    <div class="shell shell--hero" data-animate="fade-up">
+      {% include HERO_PARTIAL ignore missing with context %}
+      {% if SHOW_SCOREBOARD %}
+        {# stand-alone scoreboard just below the hero #}
+        {% include "partials/_scoreboard_panel.html" ignore missing with context %}
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ================ TIERS ================= -->
+  {% if SHOW_TIERS %}
+  <section id="tiers" class="band band--tiers" role="region" aria-labelledby="tiers-title">
+    <h2 id="tiers-title" class="sr-only">Sponsorship Tiers</h2>
+    <div class="shell shell--tiers" data-animate="fade-up" data-animate-delay="60">
+      {% include "partials/tiers.html" ignore missing with context %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ================ IMPACT ================ -->
+  {% if SHOW_IMPACT %}
+  <section id="impact" class="band band--impact" role="region" aria-labelledby="impact-title">
+    <div class="shell shell--tight" data-animate="fade-up" data-animate-delay="90">
+      <header class="sec-head">
+        <h2 id="impact-title" class="sec-title">Impact</h2>
+        <nav class="sec-actions" aria-label="Impact actions">
+          <a class="fcx-link" href="{{ safe_url_for('main.impact') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#' }}"
+             data-analytics="nav:impact-full">Open full Impact page →</a>
+        </nav>
+      </header>
+      <div class="sec-body">
+        {% include "partials/impact_lockers_premium.html" ignore missing with context %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ================= ABOUT ================= -->
+  {% if SHOW_ABOUT %}
+  <section id="about" class="band band--about" role="region" aria-labelledby="about-title">
+    <div class="shell shell--tight" data-animate="fade-up" data-animate-delay="120">
+      <header class="sec-head">
+        <h2 id="about-title" class="sec-title">About Our Program</h2>
+        <nav class="sec-actions" aria-label="About actions">
+          <a class="fcx-link" href="{{ safe_url_for('main.about') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.about')) else '#' }}"
+             data-analytics="nav:about-full">Read the full story →</a>
+        </nav>
+      </header>
+      <div class="sec-body">
+        {% include "partials/about_section.html" ignore missing with context %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</div>
+{% endblock %}
+
+{# -------------------------------------------
+  Page Rhythm (full-bleed bands; no h-scroll)
+  ------------------------------------------- #}
+<style {{ nonce_attr() }}>
+:root{
+  /* Allow per-tenant override from context */
+  {% if SHELL_MAX %}--fcx-shell-max: {{ SHELL_MAX }};{% endif %}
+  --fcx-gutter: clamp(14px, 5vw, 36px);
+  --band-gap: clamp(20px, 3.5vw, 44px);
+  --band-gap-tight: clamp(16px, 3vw, 36px);
+  --band-vpad: clamp(24px, 5.2vw, 64px);
+  --band-vpad-tight: clamp(20px, 4.6vw, 52px);
+  --hero-bg: radial-gradient(120% 80% at 50% -18%, rgba(8,9,13,.85) 0, rgba(6,7,10,.92) 60%, transparent 100%);
+  --tiers-bg: linear-gradient(180deg, rgba(15,17,24,.6), rgba(12,14,20,.7));
+  --impact-bg: linear-gradient(180deg, rgba(10,12,18,.65), rgba(8,10,16,.8));
+  --about-bg: linear-gradient(180deg, rgba(8,10,16,.6), rgba(6,8,12,.75));
+}
+
+/* Prevent tiny overflow with full-bleed bands */
+html{ overflow-x: clip; }
+
+.fcx-main{ width:100%; }
+
+/* Full-bleed bands (avoid 100vw scrollbars on macOS) */
+.band{
+  position: relative;
+  left: 50%;
+  right: 50%;
+  margin-left: -50vw;
+  margin-right: -50vw;
+  width: 100vw;
+  margin-bottom: var(--band-gap);
+}
+.band--hero  { background: var(--hero-bg); }
+.band--tiers { background: var(--tiers-bg); }
+.band--impact{ background: var(--impact-bg); }
+.band--about { background: var(--about-bg); }
+
+/* Contained shells honoring the global cap */
+.shell{
+  max-width: var(--fcx-shell-max, none);
+  width: 100%;
+  margin-inline: auto;
+  padding-inline: var(--fcx-gutter);
+  padding-block: var(--band-vpad);
+}
+.shell--tight { padding-block: var(--band-vpad-tight); }
+.shell--hero  { padding-block: max(22px, var(--band-vpad)); }
+.shell--tiers { padding-block: max(20px, var(--band-vpad)); }
+
+/* Section headings */
+.sec-head{
+  display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
+  margin-bottom: clamp(10px, 2.2vw, 18px);
+}
+.sec-title{ font: 900 clamp(1.2rem, 1.4rem + .7vw, 1.6rem)/1.1 system-ui; color: CanvasText; }
+.sec-actions .fcx-link{ font-weight:800; text-underline-offset:2px }
+
+/* Animate-in hooks */
+@media (prefers-reduced-motion: no-preference){
+  [data-animate]{ opacity:0; transform: translateY(12px); transition: opacity .35s ease, transform .35s ease; }
+  [data-animate].is-in{ opacity:1; transform:none; }
+  [data-animate][data-animate-delay="60"]  { transition-delay:.06s }
+  [data-animate][data-animate-delay="90"]  { transition-delay:.09s }
+  [data-animate][data-animate-delay="120"] { transition-delay:.12s }
+}
+
+/* Honor data-saver */
+@media (prefers-reduced-data: reduce){
+  [data-animate]{ opacity:1 !important; transform:none !important; transition:none !important; }
+}
+
+/* Anchor offset for sticky headers */
+:target{ scroll-margin-top: 76px; }
+@media (max-width:860px){ :target{ scroll-margin-top: 64px } }
+</style>
+
+<script {{ nonce_attr() }}>
+/* Fade-in observer (respects reduced-motion/data) */
+(() => {
+  const prefersMotion = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const prefersData   =  matchMedia('(prefers-reduced-data: reduce)').matches;
+  if (!prefersMotion || prefersData || !('IntersectionObserver' in window)) {
+    document.querySelectorAll('[data-animate]').forEach(el => el.classList.add('is-in'));
+    return;
+  }
+  const els = document.querySelectorAll('[data-animate]');
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+    });
+  }, { rootMargin: '0px 0px -10% 0px', threshold: .1 });
+  els.forEach(el => io.observe(el));
+})();
+</script>
+

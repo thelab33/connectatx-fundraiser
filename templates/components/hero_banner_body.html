@@ -1,0 +1,108 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# FUNDCHAMPS-HERO-AUTO #}
+<header class="hero__left" role="region" aria-labelledby="{{ idp }}-headline">
+  <figure class="hero__media">
+    <picture>
+      {% if hero_src_avif %}<source type="image/avif" srcset="{{ hero_src_avif }}">{% endif %}
+      {% if hero_src_webp %}<source type="image/webp" srcset="{{ hero_src_webp }}">{% endif %}
+      <img src="{{ hero_src }}" alt="{{ team_name }} team photo" class="hero__img" decoding="async" fetchpriority="high"
+           sizes="(max-width: 950px) 100vw, 60vw"
+           srcset="{% if hero_src_800 %}{{ hero_src_800 }} 800w,{% endif %}
+                   {% if hero_src_1200 %}{{ hero_src_1200 }} 1200w,{% endif %}
+                   {% if hero_src_1600 %}{{ hero_src_1600 }} 1600w,{% endif %}
+                   {% if hero_src_2000 %}{{ hero_src_2000 }} 2000w{% endif %}">
+    </picture>
+
+    <figcaption class="hero__overlay hero__overlay--centered">
+      <span class="chip" id="{{ idp }}-headline">{{ team_name }}</span>
+      <h1 class="tagline"><span>{{ title }}</span> <span class="accent">{{ title_2 }}</span></h1>
+      <p class="sub" id="{{ idp }}-deck">{{ subtitle }}</p>
+
+      <ul class="kpis" aria-label="Team stats">
+        <li><span class="kpi-val"><b>35+</b></span><span class="kpi-label">Games Played</span></li>
+        <li><span class="kpi-val"><b>5</b></span><span class="kpi-label">Championships</span></li>
+        <li><span class="kpi-val"><b>120+</b></span><span class="kpi-label">Training Hours / Week</span></li>
+      </ul>
+
+      <nav class="cta" aria-label="Hero Actions">
+        <a href="{{ href_impact }}" class="btn btn--ghost" data-cta="impact">🏀 Back Our Ballers</a>
+        <a href="{{ href_donate }}" id="{{ idp }}-donate" class="btn btn--gold pulse" data-cta="donate" target="_blank" rel="noopener noreferrer" aria-label="Donate to {{ team_name }}">
+          ⛹️ Fuel the Season <span class="amt" aria-hidden="true"></span>
+        </a>
+      </nav>
+
+      <div class="hero-trust">
+        <span class="tax-badge">100% TAX DEDUCTIBLE</span>
+        <span class="secure-badge">SECURE VIA STRIPE / PAYPAL</span>
+      </div>
+
+      <div class="qr-hero">
+        <img id="{{ idp }}-qr" src="{{ qr_src }}" alt="QR code to donate to {{ team_name }}" width="98" height="98" decoding="async" loading="lazy" />
+        <div class="qr-cap"><b>Scan to give</b> — or press <kbd>D</kbd></div>
+      </div>
+    </figcaption>
+  </figure>
+</header>
+
+<aside class="scoreboard" aria-labelledby="{{ idp }}-panel-title" role="complementary">
+  <div class="panel__inner">
+    <div class="brand"><span class="chip chip--sm">{{ team_name }}</span></div>
+    <h2 id="{{ idp }}-panel-title" class="title"><span>{{ panel_title }}</span> <span class="accent">{{ panel_title_2 }}</span></h2>
+    <p class="sub">Direct support for gear, travel, coaching, and tutoring—every dollar moves a kid forward.</p>
+    <p class="scan-hint" aria-hidden="true">Scan to give — or press <kbd>D</kbd></p>
+
+    <section class="score" aria-label="Fundraising progress">
+      <div class="money tabular" aria-live="polite">
+        <span class="raised" data-role="raised">{{ raised|roll_money(currency) }}</span>
+        <span class="sep" aria-hidden="true">/</span>
+        <span class="goal" data-role="goal">{{ goal|roll_money(currency) }}</span>
+        <span class="pct" data-role="pct">• {{ ((raised/goal)*100)|clamp_pct|roll_pct }}%</span>
+      </div>
+      <div class="timer"><span class="label">Goal ends in</span><time id="{{ idp }}-deadline" class="value" data-deadline="{{ deadline }}" aria-live="polite">—</time></div>
+    </section>
+
+    <div class="meter-wrap">
+      <meter class="meter" min="0" max="{{ goal|int }}" value="{{ raised|int }}" aria-describedby="{{ idp }}-panel-title">{{ ((raised/goal)*100)|clamp_pct|roll_pct }}% of goal</meter>
+      <div class="track" aria-hidden="true"><div class="fill" style="--p: {{ ((raised/goal)*100)|clamp_pct }}%"></div></div>
+    </div>
+
+    <div class="chips" role="group" aria-label="Quick donation amounts">
+      <button class="chip-btn" type="button" data-amt="25" aria-pressed="false">+$25 <em>· 1 team meal</em></button>
+      <button class="chip-btn" type="button" data-amt="50" aria-pressed="false">+$50 <em>· 1 jersey piece</em></button>
+      <button class="chip-btn" type="button" data-amt="100" aria-pressed="false">+$100 <em>· 1 week of gym time</em></button>
+    </div>
+
+    <div class="sticky">
+      <div class="cta">
+        <a id="{{ idp }}-donate" class="btn btn--gold" href="{{ href_donate }}" target="_blank" rel="noopener noreferrer" data-cta="donate">Donate <span class="amt" aria-hidden="true"></span> →</a>
+        <label class="toggle"><input id="{{ idp }}-monthly" name="monthly" type="checkbox" /><span>Make it monthly</span></label>
+      </div>
+      <span id="{{ idp }}-donate-kbd" class="sr-only">Tip: Press D to donate. Hotkey is disabled while typing.</span>
+      <p class="note">Every <b>$100</b> ≈ a week of gym time.</p>
+    </div>
+
+    <nav class="sec" aria-label="Secondary actions">
+      <a class="btn btn--ghost btn--sm" href="{{ href_donate }}" target="_blank" rel="noopener noreferrer">Skip to Donate</a>
+      <a class="btn btn--ghost btn--sm" href="{{ href_impact }}">Impact</a>
+      <a class="btn btn--ghost btn--sm" href="{{ href_sponsor }}">Become a Sponsor</a>
+      <button class="btn btn--ghost btn--sm" type="button" id="{{ idp }}-share" aria-controls="{{ idp }}-share-live" aria-expanded="false">Share</button>
+      <span id="{{ idp }}-share-live" class="sr-only" aria-live="polite"></span>
+    </nav>
+
+    <div class="ladder" role="group" aria-label="Impact ladder milestones">
+      <div class="rung" data-threshold="1000"><div class="bar"></div><div class="lbl"><span class="amt">$1,000</span><span class="what">Gym Week</span></div></div>
+      <div class="rung" data-threshold="5000"><div class="bar"></div><div class="lbl"><span class="amt">$5,000</span><span class="what">Travel Slot</span></div></div>
+      <div class="rung" data-threshold="10000"><div class="bar"></div><div class="lbl"><span class="amt">$10,000</span><span class="what">Tutor Block</span></div></div>
+    </div>
+
+    <p class="sms">📱 Text <b>{{ text_keyword }}</b> to <b>{{ text_short }}</b> to give.</p>
+  </div>
+</aside>

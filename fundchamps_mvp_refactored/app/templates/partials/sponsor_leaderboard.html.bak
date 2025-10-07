@@ -76,7 +76,7 @@
   <!-- Visually hidden polite region for screen readers -->
   <p class="sr-only" aria-live="polite" id="sr-shout">{{ _seed[0].sponsor ~ ' ' ~ _seed[0].msg if _seed and _seed[0] else 'Shoutouts ready.' }}</p>
   <div class="fc-ticker__viewport">
-    <div class="fc-ticker__rail fc-marquee" role="list" id="ticker-rail">
+    <div class="fc-ticker__rail fc-marquee" role="list" id="ticker-rail-legacy">
       {# Seed from server (optional) #}
       {% for s in _seed %}
         {% set t = (s.tier or 'General')|string %}

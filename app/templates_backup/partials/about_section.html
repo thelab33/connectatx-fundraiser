@@ -1,0 +1,96 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+<section id="about"
+   class="about-section rounded-3xl border-2 border-elite-gold/90 bg-gradient-to-tr from-elite-black via-zinc-900/95 to-elite-gold/10 shadow-2xl
+          px-6 py-10 sm:px-10 sm:py-14 lg:px-16 lg:py-16 max-w-6xl mx-auto relative z-30 -mt-8"
+   aria-label="About {{ BRAND }}">
+
+  <div class="flex flex-col lg:flex-row gap-10 items-center lg:items-stretch">
+    <!-- Media Column -->
+    <div class="relative flex-1 min-w-[220px] max-w-md flex items-center justify-center overflow-hidden">
+      {% if ABOUT_VIDEO and team.about_pro_enabled %}
+        <video class="aspect-[4/3] w-full rounded-2xl object-cover border-2 border-elite-gold/50 shadow-xl"
+          src="{{ ABOUT_VIDEO }}" poster="{{ ABOUT_IMG }}" autoplay loop muted playsinline></video>
+        <span class="absolute left-3 top-3 badge bg-elite-gold/95 text-black font-black shadow">Meet Us</span>
+      {% else %}
+        <img class="aspect-[4/3] w-full rounded-2xl object-cover border-2 border-elite-gold/30 shadow-xl"
+          src="{{ ABOUT_IMG }}" alt="About {{ BRAND }}" loading="lazy" />
+        {% if not team.about_pro_enabled %}
+          <span class="absolute left-3 top-3 badge bg-black/80 text-elite-gold font-black shadow">Upgrade for Video</span>
+        {% endif %}
+      {% endif %}
+    </div>
+    <!-- Content Column -->
+    <div class="flex-1 flex flex-col justify-between min-w-[260px]">
+      <div>
+        <h2 class="flex items-center gap-2 mb-2 text-2xl sm:text-3xl font-black tracking-tight text-elite-gold drop-shadow">
+          About {{ BRAND }}
+          {% if team.about_pro_enabled %}
+            <span class="badge agency bg-cyan-400 text-black font-bold ml-1">PRO</span>
+          {% endif %}
+        </h2>
+        <p class="mb-2 text-lg font-semibold text-white/95">{{ TEAM_SLOGAN }}</p>
+        <p class="mb-3 text-elite-gray">{{ ABOUT_TEXT }}</p>
+        <!-- KPIs -->
+        <div class="my-2 flex flex-wrap gap-8">
+          {% for k in KPIS %}
+            <span class="flex flex-col items-center min-w-[70px]">
+              <span class="num text-2xl sm:text-3xl font-extrabold text-elite-gold animate-count" data-count-to="{{ k.value }}" {% if k.suffix %}data-suffix="{{ k.suffix }}"{% endif %}>{{ k.value }}</span>
+              <span class="lab text-xs sm:text-sm text-elite-gray font-semibold">{{ k.label }}</span>
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+      <!-- CTAs -->
+      <div class="mt-6 flex flex-wrap gap-3">
+        <a href="{{ HREF_DONATE | default('/donate') }}"
+           class="btn gold font-black shadow-xl hover:scale-105 transition">Donate</a>
+        <a href="{{ HREF_IMPACT | default('#impact') }}"
+           class="btn border border-elite-gold/60 font-bold hover:bg-elite-gold/10">See Impact</a>
+      </div>
+      <!-- Expandable Story -->
+      <details class="mt-5 group">
+        <summary class="summary-link font-semibold cursor-pointer hover:text-elite-gold/90 transition">Read Our Full Story</summary>
+        <div class="mt-2 text-[15px] leading-relaxed text-white/85">
+          <p>{{ ABOUT_FULL }}</p>
+        </div>
+      </details>
+    </div>
+  </div>
+  <!-- Partner Logos -->
+  {% if PARTNER_LOGOS %}
+    <div class="mt-9 flex flex-wrap justify-center gap-5 opacity-90">
+      {% for logo in PARTNER_LOGOS %}
+        <img src="{{ logo }}" alt="Partner logo"
+          class="h-8 sm:h-10 max-w-[110px] object-contain grayscale hover:grayscale-0 opacity-80 hover:opacity-100 transition" loading="lazy">
+      {% endfor %}
+    </div>
+  {% endif %}
+</section>
+<script {{ nonce_attr() }}>
+document.querySelectorAll('.animate-count').forEach(el => {
+  const to = +el.dataset.countTo || 0;
+  const suffix = el.dataset.suffix || '';
+  let started = false;
+  const start = () => {
+    if (started) return; started = true;
+    let c = 0, step = Math.max(1, to / 50), decimals = +(el.dataset.decimals || 0);
+    const run = () => {
+      c += step;
+      if (c >= to) { el.textContent = to.toFixed(decimals) + suffix; return; }
+      el.textContent = (decimals ? c.toFixed(decimals) : Math.round(c)) + suffix;
+      requestAnimationFrame(run);
+    };
+    run();
+  };
+  // Only animate when visible
+  new IntersectionObserver(([e]) => e.isIntersecting && start(), { threshold: .5 }).observe(el);
+});
+</script>

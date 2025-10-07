@@ -1,0 +1,116 @@
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/fc-hero-sv-elite-6.2.html
+   • 'fc-hero-img' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/templates/components/hero_banner_body.html
+   • '{{ idp }}-donate' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates_backup/partials/meter_strip.html
+   • '{{ strip_id }}' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates_backup/partials/sponsor_leaderboard.html
+   • 'shoutouts-empty' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates_backup/partials/sponsor_form.html
+   • 'donor-email' occurs 2×
+   • 'sponsor-donation-amount' occurs 2×
+   • 'sponsor-donor-name' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates_backup/partials/macros.html
+   • '{{ id }}' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates/base.html
+   • 'site-header-sentinel' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates/partials/sponsor_form.html
+   • 'donor-email' occurs 2×
+   • 'sponsor-donation-amount' occurs 2×
+   • 'sponsor-donor-name' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/app/templates/partials/macros.html
+   • '{{ id }}' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/sv_elite_legendary_sections/sponsor_leaderboard.html
+   • 'shoutouts-empty' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/fundchamps_mvp_refactored/app/templates/partials/meter_strip.html
+   • '{{ strip_id }}' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/fundchamps_mvp_refactored/app/templates/partials/sponsor_form.html
+   • 'donor-email' occurs 2×
+   • 'sponsor-donation-amount' occurs 2×
+   • 'sponsor-donor-name' occurs 2×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/fundchamps_mvp_refactored/app/templates/macros/sections.html
+   • '{{ id }}' occurs 6×
+⚠️ Duplicate IDs in file: /home/cyberboyz/connectatx-fundraiser/starforge-elite/templates/_hero_picture_refactor.html.jinja
+   • 'fc-hero-img' occurs 2×
+⚠️ Invalid id '#' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '__fc-bands' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'back-{{ loop.index }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'flip-{{ loop.index }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'fp-ct-{{ key|lower }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'kpi-fragment-<cid
+  >' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'kpi-fragment-{{ _cid or' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'kpi-fragment-{{ cid }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'panel-{{ z.id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'tab-{{ z.id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'tier-{{ loop.index }}-benefits' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'tier-{{ loop.index }}-desc' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id 'tier-{{ loop.index }}-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ ID or' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ ID }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-deadline' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-deck' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-donate' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-donate-kbd' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-headline' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-monthly' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-panel-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-qr' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-share' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ IDP }}-share-live' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ ID|e }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}-goal' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}-help' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}-pct' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}-raised' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}-sr' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _alloc_id }}-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _cid or' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _hdr_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ _id }}-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ aid }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ cid }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id }}-heading' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}-grid' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}-heading' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}-monthly' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}-sort' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}-tier-{{ loop.index }}-benefits' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ id_attr }}-tier-{{ loop.index }}-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-deadline' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-deck' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-donate' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-donate-kbd' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-headline' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-monthly' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-panel-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-qr' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-share' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ idp }}-share-live' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ label_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ price_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ qid }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-count' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-nudge' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-search' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-spotlight' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-sw' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-sw-desc' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-sw-title' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-toggle' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-total' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ sponsors_hub_id }}-wall-heading' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ strip_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ strip_id }}-fill' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ strip_id }}-goal' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ strip_id }}-pct' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ strip_id }}-raised' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Invalid id '{{ team_id }}' (violates pattern ^[A-Za-z][A-Za-z0-9_\-:.]*$)
+⚠️ Active scope must contain exactly one #ticker-rail; found 2

@@ -1,5 +1,0 @@
-
-  app/static/js/bundle.min.js ─── 10.1kb ─ 100.0%
-   ├ app/static/js/app.entry.js ── 6.0kb ── 59.2%
-   └ app/static/js/payments.js ─── 3.3kb ── 32.7%
-      └ app/static/js/app.entry.js

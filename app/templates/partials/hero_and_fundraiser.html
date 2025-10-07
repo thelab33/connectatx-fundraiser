@@ -1,806 +1,340 @@
-{# ===================== Scoreboard Hero — Pro 5.0 ===================== #}
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ===========================================================================
+   FundChamps Enterprise Hero — Refactored & Polished Agency Production (2025+)
+   • Responsive split layout: headline, wordmark, KPIs, CTAs, photo, donor rail, wave
+   • Fully macro-driven, themeable, A11Y-first, animation-ready
+   ========================================================================== #}
+
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
 {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
 
-{% if roll_money is not defined %}
-{% macro roll_money(v, symbol='$') -%}
-  {%- set n = (v if v is number else (v|string)|replace('$','')|replace(',','')|float) -%}
-  {{- symbol }}{{ '{:,.0f}'.format(n) -}}
+{# --- Macros (Reusable Components) --- #}
+{% macro render_kpis(kpis) -%}
+  <ul class="hero-kpis" aria-label="Team statistics">
+    {% for k in kpis %}
+      <li>
+        <b aria-hidden="true">{{ k.val }}</b>
+        <span aria-label="{{ k.label }}">{{ k.label }}</span>
+      </li>
+    {% endfor %}
+  </ul>
 {%- endmacro %}
-{% endif %}
 
-{% if roll_pct is not defined %}
-{% macro roll_pct(v) -%}
-  {%- set n = (v if v is number else (v|string)|replace('%','')|float) -%}
-  {{ '{:.0f}'.format(n) -}}
+{% macro render_ctas(href_donate, href_impact, team) -%}
+  <nav class="hero-ctas" aria-label="Primary fundraiser actions">
+    <a href="{{ href_impact }}"
+       class="btn btn-ghost"
+       aria-label="See impact for {{ team }}"
+       data-cta="impact">
+      Experience Impact
+    </a>
+    <a href="{{ href_donate }}"
+       class="btn btn-gold pulse"
+       aria-label="Donate to {{ team }}"
+       data-cta="donate">
+      Donate Now
+    </a>
+  </nav>
 {%- endmacro %}
-{% endif %}
 
-{# IDs & inputs #}
-{% set IDP        = IDP|default('fundraiser-hero') %}
-{% set FCID       = (IDP ~ '-media') %}
-{% set TEAM_NAME  = (team.name if team and team.name else team.team_name if team and team.team_name else 'Connect ATX Elite') %}
-{% set TITLE      = fundraiser_title   or 'Fuel the Season.' %}
-{% set TITLE_2    = fundraiser_title_2 or 'Fund the Future.' %}
-{% set SUBTITLE   = meta_description   or 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
-{% set GOAL       = (fundraising_goal or GOAL_USD or 50000)|int %}
-{% set RAISED     = (funds_raised or 0)|int %}
-{% set PCT        = (100.0 * (RAISED if GOAL>0 else 0) / (GOAL if GOAL>0 else 1))|round(1) %}
-{% set PCT_CLAMP  = (0 if PCT < 0 else (100 if PCT > 100 else PCT)) %}
-{% set THEME_HEX  = theme_hex|default('#facc15') %}
-{% set TEXT_KEYWORD = TEXT_KEYWORD or 'ELITE' %}
-{% set TEXT_SHORT   = TEXT_SHORTCODE or '44321' %}
-{% set HREF_IMPACT  = (safe_url_for('main.impact')  if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.impact')) else '#impact-v2') %}
-{% set HREF_SPONSOR = (safe_url_for('main.become_sponsor') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.become_sponsor')) else '/become-sponsor') %}
-{% set _hero_src    = (hero_image_url or team.hero_bg or team.hero_image or team.team_photo or team.photo_url or 'images/hero/hero-1920.avif') %}
-{% set hero_src     = (_hero_src if '://' in _hero_src else (url_for('static', filename=_hero_src.lstrip('/')) if url_for is defined else '/static/' ~ _hero_src.lstrip('/'))) %}
+{# --- Data Inputs & Defaults --- #}
+{% set TEAM_NAME   = team.name|default(team.team_name)|default('Connect ATX Elite') %}
+{% set TITLE       = fundraiser_title      or 'Fuel the Season.' %}
+{% set TITLE_2     = fundraiser_title_2    or 'Fund the Future.' %}
+{% set SUBTITLE    = meta_description      or 'Direct support for gear, travel, and tutoring—every dollar moves a kid forward.' %}
+{% set GOAL        = (fundraising_goal or 50000)|int %}
+{% set RAISED      = (funds_raised      or 0)|int %}
+{% set THEME_HEX   = theme_hex            or '#facc15' %}
+{% set HREF_DONATE = HREF_DONATE          or '/donate' %}
+{% set HREF_IMPACT = HREF_IMPACT          or '#impact' %}
+{% set HERO_IMG    = HERO_IMG             or url_for('static', filename='images/hero-team.jpg') %}
+{% set DONORS      = donors               or [] %}
 
-<section
-  id="{{ IDP }}"
-  class="hero"
-  data-raised="{{ RAISED }}"
-  data-goal="{{ GOAL }}"
-  data-deadline="{{ DEADLINE or '' }}"
-  style="--accent: {{ THEME_HEX }};"
-  aria-label="Fundraiser hero and scoreboard"
->
-  <div class="hero__shell">
-    <!-- LEFT: Media -->
-    <figure id="{{ FCID }}" class="hero__media" role="group" aria-label="Team photo">
-      <img
-        src="{{ hero_src }}"
-        alt="{{ TEAM_NAME }} team photo"
-        loading="eager"
-        decoding="async"
-        fetchpriority="high"
-      />
-      <figcaption class="hero__overlay">
-        <span class="chip">{{ TEAM_NAME }}</span>
-        <h2 class="tagline">
-          <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
-        </h2>
-      </figcaption>
+{# KPI Defaults #}
+{% set KPIS = KPIS|default([
+  {'val':'35+','label':'Games Played'},
+  {'val':'5','label':'Championships'},
+  {'val':'120+','label':'Training Hrs / Week'}
+]) %}
 
-      <!-- QR coin (optional) -->
-      <aside class="qr" role="group" aria-label="Scan to give">
-        <img id="{{ IDP }}-qr" alt="QR code to donate" width="132" height="132" decoding="async" loading="lazy" />
-        <div class="qr__cap"><b>Scan to give</b> — or press <kbd>D</kbd></div>
+<section id="{{ ID or 'hero-section' }}"
+         class="fc-hero-enterprise"
+         style="--brand-color:{{ THEME_HEX }};"
+         aria-labelledby="hero-title">
+
+  <!-- Cinematic Wordmark -->
+  <div class="hero-wordmark" aria-hidden="true">{{ TITLE_2|upper }}</div>
+
+  <!-- Content Grid -->
+  <div class="hero-grid">
+
+    <!-- Left: Text, KPIs & CTAs -->
+    <div class="hero-overlay">
+      <span class="hero-chip">{{ TEAM_NAME }}</span>
+      <h1 id="hero-title" class="hero-title">
+        {{ TITLE }} <span class="hero-accent">{{ TITLE_2 }}</span>
+      </h1>
+      <p class="hero-subtitle">{{ SUBTITLE }}</p>
+      {{ render_kpis(KPIS) }}
+      {{ render_ctas(HREF_DONATE, HREF_IMPACT, TEAM_NAME) }}
+    </div>
+
+    <!-- Right: Photo & Donor Rail -->
+    <div class="hero-right">
+      <div class="photo-spotlight"></div>
+      <figure class="hero-photo">
+        <img src="{{ HERO_IMG }}"
+             alt="{{ TEAM_NAME }} team"
+             loading="eager" />
+      </figure>
+
+      <aside class="hero-rail" aria-labelledby="goal-label">
+        <h2 id="goal-label">Season Goal</h2>
+        <div class="rail-progress"
+             role="meter"
+             aria-valuemin="0"
+             aria-valuemax="{{ GOAL }}"
+             aria-valuenow="{{ RAISED }}">
+          <b class="rail-bar"
+             data-goal="{{ GOAL }}"
+             data-raised="{{ RAISED }}"></b>
+        </div>
+        <p class="rail-tally">
+          <span class="raised">${{ '{:,.0f}'.format(RAISED) }}</span>
+          of ${{ '{:,.0f}'.format(GOAL) }}
+        </p>
+        <div class="rail-wall" aria-label="Top donors">
+          {% for d in DONORS[:3] %}
+            <div class="donor-entry">
+              🎉 {{ d.name }} <strong>${{ '{:,.0f}'.format(d.amount) }}</strong>
+            </div>
+          {% else %}
+            <em>No donors yet — <strong>be the first!</strong></em>
+          {% endfor %}
+        </div>
       </aside>
-    </figure>
+    </div>
 
-    <!-- RIGHT: Scoreboard Panel -->
-    <header class="panel" aria-labelledby="{{ IDP }}-title" aria-describedby="{{ IDP }}-desc">
-      <div class="panel__inner">
-        <div class="brand"><span class="chip chip--sm">{{ TEAM_NAME }}</span></div>
-
-        <h1 id="{{ IDP }}-title" class="title">
-          <span>{{ TITLE }}</span> <span class="accent">{{ TITLE_2 }}</span>
-        </h1>
-        <p id="{{ IDP }}-desc" class="sub">{{ SUBTITLE }}</p>
-
-        <!-- Score row -->
-        <div class="score">
-          <div class="money tabular">
-            <span class="raised" data-role="raised">{{ roll_money(RAISED) }}</span>
-            <span class="sep">/</span>
-            <span class="goal" data-role="goal">{{ roll_money(GOAL) }}</span>
-            <span class="pct" data-role="pct">• {{ roll_pct(PCT_CLAMP) }}%</span>
-          </div>
-          <div class="timer">
-            <span class="label">Goal ends in</span>
-            <span id="{{ IDP }}-deadline" class="value">—</span>
-          </div>
-        </div>
-
-        <!-- Progress meter -->
-        <div
-          class="meter"
-          role="meter"
-          aria-valuemin="0"
-          aria-valuemax="{{ GOAL|int }}"
-          aria-valuenow="{{ RAISED|int }}"
-          aria-valuetext="{{ roll_pct(PCT_CLAMP) }}% of goal"
-        >
-          <div class="track"><div class="fill" style="--p: {{ PCT_CLAMP }}%"></div></div>
-        </div>
-
-        <!-- Quick-add chips -->
-        <div class="chips" role="group" aria-label="Quick add amounts">
-          <button class="chip-btn" type="button" data-amt="25"  aria-pressed="false">+$25 <em>· 1 team meal</em></button>
-          <button class="chip-btn" type="button" data-amt="50"  aria-pressed="false">+$50 <em>· 1 jersey piece</em></button>
-          <button class="chip-btn" type="button" data-amt="100" aria-pressed="false">+$100 <em>· 1 week of gym time</em></button>
-        </div>
-
-        <!-- Sticky donate (mobile-first) -->
-        <div class="sticky">
-          <div class="cta">
-            <a
-              id="{{ IDP }}-donate"
-              class="btn btn--gold"
-              href="{{ HREF_DONATE }}"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Donate to {{ TEAM_NAME }}"
-              aria-keyshortcuts="D"
-              aria-describedby="{{ IDP }}-donate-kbd"
-            >Donate <span class="amt"></span> →</a>
-
-            <label class="toggle">
-              <input id="{{ IDP }}-monthly" name="monthly" type="checkbox" />
-              <span>Make it monthly</span>
-            </label>
-
-            <span id="{{ IDP }}-donate-kbd" class="sr-only">Tip: Press D to donate. Hotkey is disabled while typing.</span>
-            <p class="note">Every <b>$100</b> ≈ a week of gym time.</p>
-          </div>
-        </div>
-
-        <!-- Secondary actions -->
-        <nav class="sec">
-          <a class="btn btn--ghost btn--sm" href="{{ HREF_DONATE }}" target="_blank" rel="noopener">Skip to Donate</a>
-          <a class="btn btn--ghost btn--sm" href="{{ HREF_IMPACT }}">Impact</a>
-          <a class="btn btn--ghost btn--sm" href="{{ HREF_SPONSOR }}">Become a Sponsor</a>
-          <button class="btn btn--ghost btn--sm" type="button" id="{{ IDP }}-share">Share</button>
-          <span id="{{ IDP }}-share-live" class="sr-only" aria-live="polite"></span>
-        </nav>
-
-        <!-- Impact ladder -->
-        <div class="ladder" role="group" aria-label="Impact ladder milestones">
-          <div class="rung" data-threshold="1000">
-            <div class="bar"></div>
-            <div class="lbl"><span class="amt">$1,000</span><span class="what">Gym Week</span></div>
-          </div>
-          <div class="rung" data-threshold="5000">
-            <div class="bar"></div>
-            <div class="lbl"><span class="amt">$5,000</span><span class="what">Travel Slot</span></div>
-          </div>
-          <div class="rung" data-threshold="10000">
-            <div class="bar"></div>
-            <div class="lbl"><span class="amt">$10,000</span><span class="what">Tutor Block</span></div>
-          </div>
-        </div>
-
-        <p class="sms">📱 Text <b>{{ TEXT_KEYWORD }}</b> to <b>{{ TEXT_SHORT }}</b> to give.</p>
-      </div>
-    </header>
   </div>
+
+  <!-- SVG Wave Divider -->
+  <svg class="hero-wave"
+       viewBox="0 0 1440 320"
+       preserveAspectRatio="none"
+       aria-hidden="true">
+    <path fill="currentColor" d="M0,224L48,197.3…Z"></path>
+  </svg>
+
+  <!-- Floating Donate Button -->
+  <a href="{{ HREF_DONATE }}"
+     class="btn btn-gold floating-donate pulse"
+     aria-label="Donate now">
+    Donate
+  </a>
 </section>
 
 <style {{ nonce_attr() }}>
-/* =============== Scoreboard Hero — Enterprise tokens =============== */
-.hero{ color:#eef2f7; container-type:inline-size; }
-.hero__shell{
-  max-width:1200px; margin-inline:auto; padding:clamp(14px,2.5vw,22px);
-  display:grid; grid-template-columns:minmax(44%,1fr) minmax(40%,560px);
-  align-items:stretch; gap:clamp(14px, 2.2vw, 22px);
-}
-@media (max-width:980px){ .hero__shell{ grid-template-columns:1fr } }
+/* ================= FundChamps Hero — Agency/Enterprise ULTRA ================= */
+/* Agency polish: animated CTA, sticky donate bar, donor wall, white-label switch */
+/* Core grid, glass rail, motion guards, a11y, and color system */
 
-.hero__media{
-  grid-column:1; position:relative; border-radius:18px; overflow:hidden;
-  border:1px solid rgba(255,255,255,.14); background:#111;
-}
-.hero__media img{
-  inline-size:100%; block-size:100%; aspect-ratio:16/9;
-  object-fit:cover; filter:saturate(1.04) contrast(1.04) brightness(.9);
-}
-.hero__overlay{
-  position:absolute; inset:auto 0 0 0; display:grid; gap:.5rem;
-  padding:1rem 1.2rem clamp(40px, 12vh, 140px);
-  background:linear-gradient(180deg, transparent, rgba(0,0,0,.86));
-}
-.chip{
-  display:inline-flex; align-items:center; gap:.45rem;
-  padding:.32rem .7rem; border-radius:.7rem;
-  background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.14);
-  font-weight:900;
-}
-.tagline{
-  margin:0; font-weight:1000; text-transform:uppercase; text-wrap:balance;
-  line-height:.98; letter-spacing:-.01em; font-size:clamp(1.5rem,1.2rem + 3.2vw,3.2rem);
-}
-.tagline .accent{ color:var(--accent) }
-@media (max-width:680px){ .hero__overlay{ padding-block-end: clamp(16px, 4vh, 72px) } }
+.fc-hero-enterprise{
+  --brand-accent: {{ THEME_HEX|default('#facc15') }};
+  --ghost-mark: #fff;
+  --wordmark-color: var(--ghost-mark);
+  --glass-bg: linear-gradient(120deg, rgba(28,25,38,.92) 70%, rgba(25,23,38,.93) 100%);
+  --glass-border: 1.7px solid rgba(255,255,255,.08);
+  --cta-shadow: 0 4px 14px rgba(250,204,21,.19);
+  --focus: 2px solid var(--brand-accent);
+  --rail-width: 420px;
+  --photo-pos: right 45% center;
+  --gold: #facc15;
+  --danger: #ef4444;
 
-.qr{
-  position:absolute; left:1rem; bottom:1rem; display:grid; gap:.35rem;
-  padding:.6rem; border-radius:16px; background:rgba(0,0,0,.76);
-  border:1px solid rgba(255,255,255,.14); box-shadow:0 14px 40px rgba(0,0,0,.45);
+  position:relative; isolation:isolate; z-index:10;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(360px,var(--rail-width));
+  grid-template-areas:"overlay rail" "photo rail";
+  column-gap:clamp(18px,3vw,36px);
+  row-gap:clamp(10px,1.6vw,18px);
+  min-height:510px;
+  padding:clamp(22px,4vw,60px);
+  background:linear-gradient(120deg,#191726 77%,#191821 100%);
+  border-radius:2.2rem;
+  box-shadow:0 14px 58px rgba(0,0,0,.19), 0 2px 8px rgba(0,0,0,.08);
+  overflow:hidden;
+  margin-bottom:2.5rem;
 }
-.qr img{ inline-size:132px; block-size:132px; image-rendering:crisp-edges }
-.qr__cap{ font-size:.85rem; color:#e5e7eb }
-@media (max-width:520px){ .qr{ display:none } }
+.fc-hero-enterprise[data-wordmark="accent"]{ --wordmark-color: var(--brand-accent); }
+.fc-hero-enterprise[data-wordmark="off"] .fc-hero-wordmark{ display:none; }
 
-.panel{ grid-column:2; display:flex; }
-.panel__inner{
-  display:flex; flex-direction:column; gap:.65rem;
-  border:1px solid rgba(255,255,255,.14); border-radius:18px;
-  padding:clamp(14px,2.2vw,20px);
-  background:linear-gradient(180deg,rgba(15,16,20,.9),rgba(15,16,20,.72));
-  box-shadow:0 22px 80px rgba(0,0,0,.5);
+@media (max-width:1100px){
+  .fc-hero-enterprise{ --rail-width:400px; min-height:380px; padding:clamp(12px,3vw,36px); }
 }
-.chip--sm{ font-size:.85rem; padding:.26rem .6rem; border-radius:.6rem; background:rgba(255,255,255,.10) }
-.title{ margin:.1rem 0 .16rem; font-weight:1000; line-height:1.02; font-size:clamp(1.9rem,1rem + 2.6vw,2.6rem) }
-.title .accent{ color:var(--accent) }
-.sub{ color:#dbe5f5 }
-
-.score{ display:flex; align-items:flex-end; justify-content:space-between; gap:.8rem; flex-wrap:wrap }
-.tabular{ font-variant-numeric:tabular-nums }
-.money{ font-weight:1000; font-size:clamp(1.2rem,.9rem + 1.8vw,1.8rem) }
-.money .sep{ opacity:.7; padding:0 .35rem }
-.money .pct{ opacity:.9; font-weight:800; margin-left:.4rem }
-.timer{ display:flex; align-items:center; gap:.5rem }
-.timer .value{
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
-  padding:.28rem .55rem; border-radius:.6rem; font-weight:900;
+@media (max-width:900px){
+  .fc-hero-enterprise{
+    grid-template-columns:1fr;
+    grid-template-areas:"overlay" "photo" "rail";
+    min-height:320px; padding:clamp(5px,2vw,18px);
+  }
+}
+@media (max-width:650px){
+  .fc-hero-enterprise{
+    border-radius:0!important; min-height:280px;
+    box-shadow:0 2px 20px rgba(0,0,0,.10);
+    padding:.2rem .1rem 1.6rem .1rem;
+  }
 }
 
-/* Meter */
-.meter .track{
-  block-size:10px; border-radius:999px; overflow:hidden;
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+/* Wordmark (agency accent, big, ghost) */
+.fc-hero-wordmark{
+  position:absolute; inset:auto 0 8% 0; z-index:1; text-align:center;
+  font: 1000 clamp(6rem,15vw,16rem)/1 var(--font-display, inherit);
+  letter-spacing:.07em; text-transform:uppercase; white-space:nowrap;
+  color:var(--wordmark-color); opacity:.15; filter:blur(.9px);
+  text-shadow:0 4px 24px #facc1550;
+  mix-blend-mode:overlay; pointer-events:none; user-select:none;
 }
-.meter .fill{
-  inline-size:var(--p,0%); block-size:100%;
-  background:linear-gradient(90deg,#fffbe6,var(--accent));
-  border-radius:999px; transition:inline-size .9s cubic-bezier(.22,.9,.27,1);
+@media (max-width:900px){ .fc-hero-wordmark{ font-size:clamp(2.4rem,12vw,5.6rem); inset:auto 0 5% 0; } }
+
+/* Photo */
+.fc-hero-photo{
+  grid-area:photo; position:relative; z-index:2; min-width:0; min-height:230px;
+  display:flex; align-items:flex-end; justify-content:end; overflow:hidden;
+  aspect-ratio:4/3; border-radius:1.25rem; background:#23232b;
+  box-shadow:0 10px 38px rgba(0,0,0,.14); margin-left:auto;
+}
+.fc-hero-photo img{
+  width:100%; height:100%; object-fit:cover; object-position:var(--photo-pos);
+  border-radius:1.25rem; box-shadow:0 4px 18px rgba(0,0,0,.11);
+}
+@media (max-width:900px){ .fc-hero-photo{ margin:0 auto 1rem; border-radius:1.1rem; aspect-ratio:3/2; } }
+@media (max-width:650px){ .fc-hero-photo, .fc-hero-photo img{ border-radius:0; aspect-ratio:5/3; } }
+
+/* Overlay headline/KPIs/CTA */
+.fc-hero-overlay{ grid-area:overlay; display:flex; flex-direction:column; justify-content:center; z-index:4; padding-right:clamp(1rem,4vw,3rem); gap:.9rem; }
+.fc-chip.team{
+  display:inline-block; font-weight:900; border-radius:999px; padding:.3em 1.1em; font-size:1rem; margin-bottom:.45rem;
+  color:#101010; background:linear-gradient(90deg,#facc15 70%,#fffbe6 98%); box-shadow:0 1.5px 10px #facc1530;
+}
+.fc-hero-title{
+  font-size:clamp(2.3rem,1.5rem + 2vw,2.98rem); font-weight:1000; color:#fff;
+  letter-spacing:-.015em; line-height:1.09; margin-bottom:.18em; text-shadow:0 3px 12px rgba(24,24,27,.22);
+}
+.fc-hero-title .accent{ color:var(--brand-accent); font-style:italic; text-shadow:0 2px 14px #facc1531; }
+.fc-hero-sub{ color:#e6e9ed; font-size:1.12rem; font-weight:600; margin-bottom:.18em; opacity:.97; text-shadow:0 1px 6px #18181b22; }
+.fc-hero-kpis{ display:flex; gap:2.4rem; margin:1.2em 0 .6em; padding:0; list-style:none; }
+.fc-hero-kpis li{ display:flex; flex-direction:column; gap:.13em; color:#fff; font-size:1.1em; }
+.fc-hero-kpis b{ color:var(--brand-accent); font-size:1.39em; font-weight:1000; }
+
+/* CTA Buttons — animated gold shimmer */
+.fc-hero-cta{ display:flex; gap:1.1em; margin-top:.7em; flex-wrap:wrap; }
+.fc-hero-cta .btn{
+  border-radius:999px; font-size:1.04rem; font-weight:900; letter-spacing:-.01em; padding:.82em 2em;
+  box-shadow:var(--cta-shadow); transition:transform .18s, box-shadow .22s, filter .17s, color .17s, background .17s, background-position .22s;
+}
+.fc-hero-cta .btn:hover{ transform:translateY(-2px); }
+.fc-hero-cta .btn.ghost{ background:transparent; color:var(--brand-accent); border:1.3px solid var(--brand-accent); }
+.fc-hero-cta .btn.ghost:hover{ background:var(--brand-accent); color:#18181b; filter:brightness(1.1); }
+.fc-hero-cta .btn.gold{
+  background:linear-gradient(90deg,#fffbe6 10%, #facc15 90%);
+  background-size: 200% 100%;
+  color:#101010; border:1.2px solid rgba(250,204,21,.72);
+  box-shadow:0 4px 16px #facc153a;
+}
+.fc-hero-cta .btn.gold:hover {
+  background-position: right center;
+  box-shadow: 0 0 0 3px #facc1580, 0 8px 28px #facc1525;
+  color: #18181b;
 }
 
-/* Quick-add chips */
-.chips{
-  display:flex; gap:0; border:1px solid rgba(255,255,255,.14);
-  border-radius:.8rem; overflow:hidden; background:rgba(255,255,255,.06)
+/* Sticky donate bar (mobile) */
+@media (max-width: 700px) {
+  .fc-sticky-donate {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 9999;
+    background: linear-gradient(90deg, #191726 80%, #2c2a3a 100%);
+    padding: .7em 1em .6em 1em; display: flex; justify-content: center;
+    box-shadow: 0 -3px 16px #0006; border-top: 1px solid #facc151c;
+    animation: stickyIn .33s;
+  }
+  @keyframes stickyIn { from {transform:translateY(100%);} to {transform:none;} }
 }
+
+/* Donation rail */
+.fc-hero-rail{
+  grid-area:rail; background:var(--glass-bg); border:var(--glass-border);
+  border-radius:1.35rem; box-shadow:0 6px 38px rgba(0,0,0,.19);
+  display:flex; flex-direction:column; gap:.9rem;
+  padding:2.2rem 2.1rem 2.2rem 1.7rem; min-width:330px; max-width:var(--rail-width);
+  margin-left:auto; z-index:7; animation:fadeInRail .7s;
+}
+@supports (backdrop-filter:blur(1px)){ .fc-hero-rail{ backdrop-filter:blur(18px) saturate(1.05); } }
+@keyframes fadeInRail{ from{ opacity:0; transform:translateY(24px) } to{ opacity:1; transform:none } }
+
+.fc-donor-head{ margin-bottom:.7em; }
+.fc-donor-head .fc-chip.team{ margin-bottom:.18em; font-size:.97em; }
+.fc-rail-title{ font-size:1.22rem; font-weight:900; color:#fff; letter-spacing:-.01em; margin-bottom:.05em; }
+.fc-rail-title span{ color:var(--brand-accent); }
+.fc-rail-sub{ color:#e2e8f0; font-size:1rem; font-weight:600; margin-bottom:.3em; opacity:.92; }
+
+.fc-pay-tabs{ display:flex; gap:.53em; padding:.16em; border-radius:999px; background:rgba(255,255,255,.09); border:1px solid rgba(255,255,255,.08); }
+.pay-tab{
+  appearance:none; background:none; border:none; cursor:pointer; outline:none;
+  color:#fff; font-weight:900; font-size:.98em; border-radius:999px; padding:.51em 1.6em;
+  transition:background .14s, color .13s, box-shadow .14s;
+}
+.pay-tab.is-active,.pay-tab[aria-selected="true"]{ background:linear-gradient(90deg,#fffbe6,var(--brand-accent) 80%); color:#111; box-shadow:0 2px 10px #facc1516; }
+.pay-tab:focus{ outline:2px solid var(--brand-accent); }
+
+.fc-rail-progress{ display:flex; align-items:center; gap:.6em; font-size:1.09em; font-weight:900; color:var(--brand-accent); }
+.fc-rail-progress .raised,.fc-rail-progress .goal{ color:#fff; font-size:1.13em; }
+.fc-rail-progress .divider{ color:#e2e8f0; font-size:1.16em; }
+.fc-rail-progress .pct{ color:var(--brand-accent); font-size:.97em; font-weight:900; }
+.fc-rail-progress .meter{
+  flex:1 1 60px; min-width:84px; height:.9em; margin:.7em 0 .2em 0; border-radius:99em; overflow:hidden;
+  background:rgba(255,255,255,.08); border:1.1px solid rgba(250,204,21,.08); box-shadow:0 2px 8px rgba(0,0,0,.12);
+}
+.fc-rail-progress .meter b{
+  display:block; height:100%; width:0%; border-radius:999px;
+  background:linear-gradient(90deg,#fffbe6 10%, var(--brand-accent) 90%);
+  transition:width .7s cubic-bezier(.67,.18,.41,1);
+}
+.fc-rail-progress .mini{ display:block; color:#ffe175; font-size:.88em; font-weight:600; margin-top:.13em; }
+
+.fc-rail-chips{ display:flex; gap:.45em; margin-bottom:.45em; flex-wrap:wrap; }
 .chip-btn{
-  flex:1 1 0; border:0; border-right:1px solid rgba(255,255,255,.14);
-  padding:.6rem .9rem; font-weight:1000; background:transparent; color:#eef2f7;
+  background:#19181f; color:var(--brand-accent);
+  border:1.3px solid var(--brand-accent); border-radius:999px;
+  font-weight:900; font-size:1.02em; padding:.41em 1.08em; cursor:pointer;
+  transition:background .15s, color .13s;
 }
-.chip-btn:last-child{ border-right:0 }
-.chip-btn em{ opacity:.9; font-style:normal; margin-left:.25rem; font-weight:600; font-size:.9em }
-.chip-btn[aria-pressed="true"]{
-  color:#0b0f15; background:linear-gradient(180deg,#fffbe6,var(--accent));
-  border-color:rgba(0,0,0,.22);
+.chip-btn:hover,.chip-btn:focus{ background:var(--brand-accent); color:#18181b; outline:none; filter:brightness(1.09); }
+
+.btn.donate-btn{
+  width:100%; background:linear-gradient(90deg,#fffbe6,#facc15 90%); color:#18181b;
+  font-weight:900; font-size:1.05em; border-radius:999px; border:1.3px solid var(--brand-accent);
+  box-shadow:0 2px 8px #facc1527; padding:.92em 2em;
+  transition:background .13s, color .13s, box-shadow .17s;
 }
 
-/* CTA / Sticky */
-.btn{ display:inline-flex; align-items:center; justify-content:center; gap:.45rem; border-radius:999px; font-weight:1000; text-decoration:none; padding:.85rem 1.1rem }
-.btn--gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
-.btn--ghost{ background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14); color:#eaf0fa }
-.btn--sm{ padding:.55rem .8rem; font-weight:900 }
-.note{ grid-column:1/-1; text-align:center; color:#fde68a }
-.toggle{ display:inline-flex; align-items:center; gap:.4rem; user-select:none }
-.toggle input{ accent-color: var(--accent) }
+label.monthly{ display:flex; align-items:center; gap:.43em; margin:.1em 0; cursor:pointer; user-select:none; color:#ffe175; font-size:.95em; font-weight:600; }
+label.monthly input[type="checkbox"]{ accent-color:var(--brand-accent); width:1.1em; height:1.1em; border-radius:6px; margin-right:.5em; }
 
-.sticky{ position:relative }
-@media (max-width:780px){
-  .sticky{
-    position:sticky; bottom:8px; z-index:20; padding:6px; border-radius:14px;
-    backdrop-filter:saturate(115%) blur(6px);
-    background:linear-gradient(180deg,rgba(7,9,12,.85),rgba(7,9,12,.78));
-    border:1px solid rgba(255,255,255,.14);
-  }
-  .sticky .btn--gold{ inline-size:100% }
-}
+.ladder{ display:flex; flex-direction:column; gap:.23em; margin-top:.53em; }
+.rung{ display:flex; align-items:center; gap:.5em; font-size:.97em; font-weight:900; color:var(--brand-accent); }
+.rung small{ color:#ffe175; font-size:.91em; font-weight:700; }
 
-/* Impact ladder */
-.ladder{ margin-top:.35rem; padding-top:.6rem; border-top:1px dashed rgba(255,255,255,.14); display:flex; flex-direction:column; gap:.6rem }
-.rung{ display:flex; align-items:center; gap:.7rem }
-.rung .bar{
-  inline-size:180px; max-inline-size:40vw; block-size:10px;
-  border-radius:999px; position:relative; overflow:hidden;
-  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
-}
-.rung .bar::after{
-  content:""; position:absolute; inset:0;
-  transform:scaleX(var(--fill,0)); transform-origin:left;
-  background:linear-gradient(90deg,#fffbe6,var(--accent));
-  transition:transform .6s cubic-bezier(.22,.9,.27,1);
-}
-.rung .lbl{ display:flex; gap:.4rem; font-weight:900 }
-.rung .lbl .amt{ opacity:.95 } .rung .lbl .what{ opacity:.85 }
+.trust-row{ display:flex; align-items:center; gap:.6em; margin-top:1.1em; font-size:.95em; color:#ffe175; opacity:.92; }
+.trust-row img{ height:18px; border-radius:.35em; background:#fff; box-shadow:0 2px 8px rgba(0,0,0,.06); }
+.w9-link{ color:var(--brand-accent); font-weight:900; margin-left:.45em; text-decoration:underline; }
+.w9-link:hover{ color:#fffbe6; }
 
-/* Light theme compatibility */
-.light .hero{ color:#0f172a }
-.light .panel__inner{
-  background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,.86));
-  border:1px solid rgba(0,0,0,.10); box-shadow:0 18px 50px rgba(0,0,0,.08);
-}
-.light .sub{ color:#334155 }
-.light .chip-btn{ color:#111; border-color:rgba(0,0,0,.12) }
-.light .btn--ghost{ color:#111; border-color:rgba(0,0,0,.12); background:rgba(0,0,0,.04) }
-.light .meter .track{ background:rgba(0,0,0,.08); border-color:rgba(0,0,0,.10) }
-
-/* Motion & HCM */
-@media (prefers-reduced-motion: reduce){
-  .meter .fill, .rung .bar::after{ transition:none }
-}
-@media (forced-colors: active){
-  .hero__media, .panel__inner, .chip-btn, .btn, .qr{
-    background:Canvas !important; color:CanvasText !important;
-    border:1px solid CanvasText !important; box-shadow:none !important;
-  }
-}
 </style>
-
-<script {{ nonce_attr() }}>
-(() => {
-  const root = document.getElementById('{{ IDP }}');
-  if (!root || window.__HERO_V50__) return; window.__HERO_V50__ = true;
-
-  const raisedEl = root.querySelector('[data-role="raised"]');
-  const goalEl   = root.querySelector('[data-role="goal"]');
-  const pctEl    = root.querySelector('[data-role="pct"]');
-  const fillEl   = root.querySelector('.meter .fill');
-  const chips    = [...root.querySelectorAll('.chip-btn')];
-  const donate   = document.getElementById('{{ IDP }}-donate');
-  const monthly  = document.getElementById('{{ IDP }}-monthly');
-  const shareBtn = document.getElementById('{{ IDP }}-share');
-  const shareLive= document.getElementById('{{ IDP }}-share-live');
-  const deadlineEl = document.getElementById('{{ IDP }}-deadline');
-
-  const RAISED = +(root.dataset.raised || 0);
-  const GOAL   = +(root.dataset.goal   || 1);
-  const PCT    = Math.max(0, Math.min(100, (RAISED/GOAL)*100 || 0));
-  const DEADLINE = root.dataset.deadline; // ISO optional
-
-  // Money format
-  const money = (n) => (new Intl.NumberFormat('en-US',{ style:'currency', currency:'USD', maximumFractionDigits:0 }).format(n));
-
-  // Update UI values once DOM is ready
-  try {
-    raisedEl.textContent = money(RAISED);
-    goalEl.textContent   = money(GOAL);
-    pctEl.textContent    = `• ${Math.round(PCT)}%`;
-    fillEl.style.setProperty('--p', `${PCT}%`);
-  } catch {}
-
-  // Animate meter on visibility
-  try{
-    const io = new IntersectionObserver((ents)=>{
-      ents.forEach(ent => {
-        if (ent.isIntersecting){
-          fillEl.style.inlineSize = `${PCT}%`;
-          io.disconnect();
-        }
-      });
-    }, { threshold: .3 });
-    io.observe(fillEl);
-  }catch{}
-
-  // Ladder fill based on thresholds
-  try{
-    const rungs = [...root.querySelectorAll('.rung')];
-    rungs.forEach(r => {
-      const th = +(r.getAttribute('data-threshold') || 0);
-      const frac = Math.max(0, Math.min(1, RAISED / th || 0));
-      r.querySelector('.bar')?.style.setProperty('--fill', String(frac));
-    });
-  }catch{}
-
-  // Quick-add chips affect Donate button label & href amount param
-  function setAmt(amt){
-    const el = donate.querySelector('.amt');
-    if (el) el.textContent = amt ? money(amt) : '';
-    try{
-      const url = new URL(donate.href, location.origin);
-      if (amt){ url.searchParams.set('amount', String(amt)); } else { url.searchParams.delete('amount'); }
-      url.searchParams.set('interval', monthly?.checked ? 'month' : 'one_time');
-      donate.href = url.toString();
-    }catch{}
-  }
-  chips.forEach(btn=>{
-    btn.addEventListener('click', () => {
-      const isOn = btn.getAttribute('aria-pressed') === 'true';
-      chips.forEach(b => b.setAttribute('aria-pressed','false'));
-      if (!isOn){
-        btn.setAttribute('aria-pressed','true');
-        setAmt(+btn.dataset.amt || 0);
-      } else {
-        setAmt(0);
-      }
-    }, { passive:true });
-  });
-  monthly?.addEventListener('change', ()=> {
-    const active = chips.find(b => b.getAttribute('aria-pressed') === 'true');
-    setAmt(active ? +active.dataset.amt : 0);
-  }, { passive:true });
-
-  // Keyboard shortcut D (unless typing in an input/textarea/contenteditable)
-  addEventListener('keydown', (e) => {
-    const typing = /INPUT|TEXTAREA/.test(document.activeElement?.tagName) || document.activeElement?.isContentEditable;
-    if (!typing && (e.key === 'd' || e.key === 'D')){
-      donate?.focus();
-      donate?.click();
-    }
-  });
-
-  // Share button
-  shareBtn?.addEventListener('click', async () => {
-    try{
-      if (navigator.share){
-        await navigator.share({ title: document.title, text: 'Support our season!', url: location.href });
-        shareLive.textContent = 'Shared.';
-      } else {
-        await navigator.clipboard.writeText(location.href);
-        shareLive.textContent = 'Link copied.';
-      }
-    }catch{}
-  }, { passive:true });
-
-  // Deadline countdown (if ISO provided)
-  function tickDeadline(){
-    if (!DEADLINE) return;
-    try{
-      const end = new Date(DEADLINE).getTime();
-      if (!isFinite(end)) return;
-      const now = Date.now();
-      const ms = Math.max(0, end - now);
-      const s = Math.floor(ms/1000);
-      const d = Math.floor(s/86400);
-      const h = Math.floor((s%86400)/3600);
-      const m = Math.floor((s%3600)/60);
-      const out = d>0 ? `${d}d ${h}h` : (h>0 ? `${h}h ${m}m` : `${m}m`);
-      deadlineEl.textContent = out;
-      if (ms === 0){ clearInterval(timer); deadlineEl.textContent = 'Ended'; }
-    }catch{}
-  }
-  let timer = null;
-  if (DEADLINE){
-    tickDeadline();
-    timer = setInterval(tickDeadline, 30_000);
-    addEventListener('pagehide', () => clearInterval(timer), { once:true });
-  }
-})();
-</script>
-
-<script {{ nonce_attr() }} type="module">
-  (() => {
-    const root = document.getElementById({{ IDP|tojson }}); if (!root) return;
-    const $  = (s, r=root)=>r.querySelector(s);
-    const $$ = (s, r=root)=>Array.from(r.querySelectorAll(s));
-
-    const donate   = $('#{{ IDP }}-donate');
-    const amtOut   = donate?.querySelector('.amt');
-    const monthly  = $('#{{ IDP }}-monthly');
-    const shareBtn = $('#{{ IDP }}-share');
-    const shareLive= $('#{{ IDP }}-share-live');
-    const deadlineOut = $('#{{ IDP }}-deadline');
-
-    // --- decorate URL with UTMs/params (stable)
-    function decorate(url, extra={}) {
-      try{
-        const u=new URL(url, location.origin), cur=new URL(location.href);
-        for (const k of ['utm_source','utm_medium','utm_campaign','utm_content']){
-          const v=cur.searchParams.get(k); if (v && !u.searchParams.get(k)) u.searchParams.set(k,v);
-        }
-        if(!u.searchParams.get('utm_source'))  u.searchParams.set('utm_source','hero');
-        if(!u.searchParams.get('utm_content')) u.searchParams.set('utm_content', extra.content||'cta');
-        if(extra.amount) u.searchParams.set('amount', String(extra.amount));
-        if(extra.freq)   u.searchParams.set('freq',   String(extra.freq));
-        return u.toString();
-      }catch{ return url; }
-    }
-    const ensureDecorated = ()=>{ if (donate) donate.href = decorate(donate.href); };
-    donate?.addEventListener('pointerenter', ensureDecorated, {once:true, passive:true});
-    donate?.addEventListener('focus',        ensureDecorated, {once:true, passive:true});
-    donate?.addEventListener('click',        ensureDecorated, {once:true, passive:true});
-
-    // --- segmented chips selection
-    $$('.chip-btn[data-amt]').forEach(btn=>{
-      btn.addEventListener('click', ()=>{
-        const amt = btn.getAttribute('data-amt');
-        $$('.chip-btn').forEach(b=>b.setAttribute('aria-pressed','false'));
-        btn.setAttribute('aria-pressed','true');
-        if (amtOut) amtOut.textContent = ` + $${amt}`;
-        if (donate) donate.href = decorate(donate.href, {
-          amount: amt,
-          freq: (localStorage.getItem('fc_monthly')==='1' ? 'monthly' : undefined)
-        });
-        donate?.setAttribute('aria-label', `Donate $${amt} to {{ TEAM_NAME }}`);
-      }, {passive:true});
-    });
-
-    // --- remember monthly toggle
-    if (monthly){
-      const init = localStorage.getItem('fc_monthly')==='1';
-      monthly.checked = init;
-      if (donate) donate.href = decorate(donate.href, { freq: init ? 'monthly' : undefined });
-      monthly.addEventListener('change', ()=>{
-        const on = monthly.checked; localStorage.setItem('fc_monthly', on?'1':'0');
-        if (donate) donate.href = decorate(donate.href, { freq: on ? 'monthly' : undefined });
-      }, {passive:true});
-    }
-
-    // --- share
-    shareBtn?.addEventListener('click', async ()=>{
-      try{
-        const payload = { title: '{{ (TITLE ~ " " ~ TITLE_2)|e }}', text: '{{ SUBTITLE|e }}', url: location.href };
-        if (navigator.share) await navigator.share(payload); else await navigator.clipboard.writeText(payload.url);
-        if (shareLive){ shareLive.textContent='Link copied'; setTimeout(()=>shareLive.textContent='', 1800); }
-      }catch{}
-    });
-
-    // --- hotkey D (not while typing)
-    addEventListener('keydown',(e)=>{
-      const tag=(e.target?.tagName||'').toLowerCase();
-      if ((e.key==='d'||e.key==='D') && !/input|textarea|select/.test(tag)){ donate?.click(); }
-    },{passive:true});
-
-    // --- deadline ticker (“period timer”)
-    const deadline = root.getAttribute('data-deadline')||'';
-    const rel = new Intl.RelativeTimeFormat(navigator.language||'en-US',{numeric:'auto'});
-    function tick(){
-      if (!deadline){ deadlineOut && (deadlineOut.textContent='—'); return; }
-      const end=new Date(deadline), diff=(+end) - Date.now();
-      if (Number.isNaN(+end)){ deadlineOut.textContent='—'; return; }
-      if (diff<=0){ deadlineOut.textContent='now'; return; }
-      const s=diff/1000|0, m=s/60|0, h=m/60|0, d=h/24|0;
-      deadlineOut.textContent = d?rel.format(d,'day'): h?rel.format(h,'hour'): rel.format(m,'minute');
-    }
-    tick(); setInterval(tick, 30_000);
-
-    // --- QR inherits decorated CTA
-    try{
-      const qrImg = $('#{{ IDP }}-qr');
-      if (qrImg){
-        ensureDecorated();
-        const u = new URL(donate?.href || {{ HREF_DONATE|tojson }}, location.origin);
-        if(!u.searchParams.get('utm_medium'))  u.searchParams.set('utm_medium','qr');
-        if(!u.searchParams.get('utm_content')) u.searchParams.set('utm_content','qr');
-        qrImg.src = `https://api.qrserver.com/v1/create-qr-code/?size=264x264&margin=0&data=${encodeURIComponent(u.toString())}`;
-      }
-    }catch{}
-
-    // --- Animate meter on view
-    (function animateFill(){
-      const fill = root.querySelector('.meter .fill'); if (!fill) return;
-      const pct = parseFloat(getComputedStyle(fill).getPropertyValue('--p')||'0');
-      fill.style.width='0%';
-      try{
-        const io=new IntersectionObserver(([ent])=>{
-          if (ent.isIntersecting){ fill.style.width = pct + '%'; io.disconnect(); }
-        },{threshold:.3});
-        io.observe(fill); addEventListener('pagehide',()=>io.disconnect(),{once:true});
-      }catch{ fill.style.width = pct + '%'; }
-    })();
-
-    // --- Light ladder rungs (and animate bar fill) based on totals
-    function updateRungs(raised){
-      $$('.ladder .rung').forEach(r=>{
-        const need = +r.getAttribute('data-threshold')||0;
-        const pct  = Math.max(0, Math.min(1, raised / Math.max(need,1)));
-        r.style.setProperty('--fill', pct.toString());
-      });
-    }
-    updateRungs(parseFloat(root.getAttribute('data-raised')||'0'));
-
-    // --- Hydrate from /api/totals (quietly)
-    (async function hydrate(){
-      try{
-        const res = await fetch('/api/totals', {headers:{'Accept':'application/json'}});
-        if(!res.ok) return;
-        const j = await res.json();
-        const raised = Number(j?.raised ?? j?.total ?? {{ RAISED }});
-        const goal   = Number(j?.goal ?? {{ GOAL }});
-        const pct    = Math.max(0, Math.min(100, (raised/Math.max(1,goal))*100));
-
-        // numbers
-        const cur = new Intl.NumberFormat(undefined,{style:'currency',currency:'USD',maximumFractionDigits:0});
-        $('.money [data-role="raised"]').textContent = cur.format(raised);
-        $('.money [data-role="goal"]').textContent   = cur.format(goal);
-        $('.money [data-role="pct"]').textContent    = `• ${Math.round(pct)}%`;
-
-        // meter
-        const fill = root.querySelector('.meter .fill'); if (fill) fill.style.width = pct + '%';
-
-        // ladder
-        updateRungs(raised);
-      }catch{}
-    })();
-  })();
-</script>
-
-<script {{ nonce_attr() }} type="module">
-  (() => {
-    "use strict";
-    const rootId = {{ IDP|tojson }};
-    const root   = document.getElementById(rootId);
-    if (!root) return;
-
-    /* ---------- shorthands ---------- */
-    const $  = (s, r=root) => r.querySelector(s);
-    const $$ = (s, r=root) => Array.from(r.querySelectorAll(s));
-    const reduce = matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-
-    /* ---------- config from data-* ---------- */
-    const goal   = +root.getAttribute("data-goal")   || 0;
-    const raised = +root.getAttribute("data-raised") || 0;
-    const deadline = root.getAttribute("data-deadline") || "";
-    const teamName = {{ (TEAM_NAME or 'Team')|tojson }};
-
-    /* ---------- formatters ---------- */
-    const fmtMoney = (n) => {
-      try { return new Intl.NumberFormat(navigator.language||"en-US",{style:"currency",currency:"USD",maximumFractionDigits:0}).format(n); }
-      catch { return "$" + Math.round(n).toLocaleString(); }
-    };
-    const relfmt = new Intl.RelativeTimeFormat(navigator.language||"en-US",{numeric:"auto"});
-
-    /* ---------- UTM decoration ---------- */
-    function decorate(url, extra={}){
-      try{
-        const u = new URL(url, location.origin);
-        const cur = new URL(location.href);
-        // carry page utms if missing
-        ["utm_source","utm_medium","utm_campaign","utm_content"].forEach(k=>{
-          const v = cur.searchParams.get(k);
-          if (v && !u.searchParams.get(k)) u.searchParams.set(k,v);
-        });
-        // defaults for hero
-        if (!u.searchParams.get("utm_source"))  u.searchParams.set("utm_source","hero");
-        if (!u.searchParams.get("utm_medium"))  u.searchParams.set("utm_medium","site");
-        if (!u.searchParams.get("utm_campaign"))u.searchParams.set("utm_campaign","fundchamps");
-        if (!u.searchParams.get("utm_content")) u.searchParams.set("utm_content","cta");
-        // extras
-        Object.entries(extra).forEach(([k,v])=>{
-          if (v!=null && v!=="") u.searchParams.set(k, String(v));
-        });
-        return u.pathname + (u.search||"") + (u.hash||"");
-      }catch{ return url; }
-    }
-
-    /* ---------- DOM hooks ---------- */
-    const donateBtn = $("#"+rootId+"-donate") || $(".cta .btn.gold", root);
-    const donateAmtLabel = $(".cta .btn.gold .amt", root) || $(".hero-amt-label", root);
-    const monthlyTgl = $('.toggle input[name="recurring"]', root) || $("#recurring", root);
-    const chipBtns = $$(".chip-btn[data-amt]", root);
-    const meterFill = $(".meter .fill", root);
-    const marks = $$(".hm-marks li,[data-k]", root); // optional if present
-    const raisedEl = $(".money .raised, .hm-raised", root);
-    const goalEl   = $(".money .goal,   .hm-goal", root);
-    const pctEl    = $(".money .pct,    .hm-pct", root);
-    const cdOut    = $(".timer .value", root) || $("#"+rootId+"-deadline-inline");
-    const qrImg    = $(".qr-coin img, #"+rootId+"-qr", root);
-
-    /* ---------- values ---------- */
-    const pct = goal>0 ? Math.max(0, Math.min(1, raised/goal)) : 0;
-
-    /* ---------- numbers + meter ---------- */
-    function renderNumbers(){
-      if (raisedEl) raisedEl.textContent = fmtMoney(raised);
-      if (goalEl)   goalEl.textContent   = fmtMoney(goal);
-      if (pctEl)    pctEl.textContent    = Math.round(pct*100) + "%";
-    }
-    function renderMeter(){
-      if (!meterFill) return;
-      const target = Math.round(pct*100) + "%";
-      if (reduce){
-        meterFill.style.width = target;
-      }else{
-        meterFill.style.width = "0%";
-        try{
-          const io = new IntersectionObserver(([ent])=>{
-            if (!ent?.isIntersecting) return;
-            meterFill.style.width = target;
-            io.disconnect();
-          }, {threshold:.25, rootMargin:"0px 0px -20% 0px"});
-          io.observe(meterFill);
-          addEventListener("pagehide", ()=>io.disconnect(), {once:true});
-        }catch{ meterFill.style.width = target; }
-      }
-      // mark ticks (25/50/75/100) if present
-      marks.forEach(li=>{
-        const k = +(li.getAttribute("data-k")||li.textContent.replace("%",""));
-        if (k && pct*100 >= k) li.classList.add("reached");
-      });
-    }
-
-    /* ---------- ladder rungs sync ---------- */
-    function renderLadder(){
-      $$(".ladder .rung", root).forEach(r=>{
-        const amt = +r.getAttribute("data-amt") || 0;
-        const f = goal>0 ? Math.max(0, Math.min(1, amt/goal)) : 0;
-        r.style.setProperty("--fill", String(f));
-        const bar = r.querySelector(".bar");
-        if (bar) bar.style.setProperty("--fill", String(f));
-        // write friendly label if missing
-        const lblAmt = r.querySelector(".lbl .amt");
-        if (lblAmt && !lblAmt.textContent.trim()) lblAmt.textContent = fmtMoney(amt);
-      });
-    }
-
-    /* ---------- chips → decorate CTA ---------- */
-    function applyCTA({amount, freq}={}){
-      if (!donateBtn) return;
-      const href = donateBtn.getAttribute("href") || {{ (HREF_DONATE or '/donate')|tojson }};
-      donateBtn.setAttribute("href", decorate(href, {
-        amount: amount||"",
-        freq:   freq|| (monthlyTgl?.checked ? "monthly" : "")
-      }));
-      // external processors → open in new tab
-      try{
-        const abs = new URL(donateBtn.href, location.origin).href;
-        if (/^https?:\/\/(buy\.stripe\.com|checkout\.stripe\.com)/i.test(abs) || /paypal\.com/i.test(abs)){
-          donateBtn.target = "_blank";
-          donateBtn.rel = "nofollow noopener noreferrer";
-        }
-      }catch{}
-    }
-    function setPressed(btn){
-      chipBtns.forEach(b=>b.setAttribute("aria-pressed","false"));
-      btn?.setAttribute("aria-pressed","true");
-    }
-
-    chipBtns.forEach(b=>{
-      b.setAttribute("role","button");
-      b.setAttribute("aria-pressed","false");
-      b.addEventListener("click", ()=>{
-        const amt = +b.getAttribute("data-amt") || 0;
-        setPressed(b);
-        applyCTA({amount: amt});
-        if (donateAmtLabel) donateAmtLabel.textContent = " + " + fmtMoney(amt);
-        if (donateBtn) donateBtn.setAttribute("aria-label", `Donate ${fmtMoney(amt)} to ${teamName}`);
-      }, {passive:true});
-    });
-
-    monthlyTgl?.addEventListener("change", ()=>applyCTA({}), {passive:true});
-
-    // seed once on intent
-    donateBtn?.addEventListener("pointerenter", ()=>applyCTA({}), {passive:true, once:true});
-    donateBtn?.addEventListener("focus",        ()=>applyCTA({}), {passive:true, once:true});
-    donateBtn?.addEventListener("click",        ()=>applyCTA({}), {passive:true, once:true});
-
-    /* ---------- preconnect on intent ---------- */
-    const preconnectOnce = (()=>{ let done=false; return ()=>{ if (done) return; done=true;
-      [["dns-prefetch","//checkout.stripe.com"],["preconnect","https://checkout.stripe.com"],["preconnect","https://js.stripe.com"],["preconnect","https://www.paypal.com"]]
-        .forEach(([rel,href])=>{ try{ const l=document.createElement("link"); l.rel=rel; l.href=href; l.crossOrigin="anonymous"; document.head.appendChild(l); }catch{}; });
-    };})();
-    donateBtn?.addEventListener("pointerenter", preconnectOnce, {passive:true});
-    donateBtn?.addEventListener("focus",        preconnectOnce, {passive:true});
-
-    /* ---------- countdown ---------- */
-    (function countdown(){
-      if (!cdOut) return;
-      if (!deadline){ cdOut.textContent = "—"; return; }
-      const end = new Date(deadline);
-      if (isNaN(+end)){ cdOut.textContent = "—"; return; }
-      const tick = ()=>{
-        const diff = +end - Date.now();
-        if (diff <= 0){ cdOut.textContent = "now"; return; }
-        const m = Math.floor(diff/60000);
-        const h = Math.floor(m/60);
-        const d = Math.floor(h/24);
-        cdOut.textContent = d ? relfmt.format(d,"day") : h ? relfmt.format(h,"hour") : relfmt.format(m,"minute");
-      };
-      tick();
-      const id = setInterval(tick, 30_000);
-      addEventListener("pagehide", ()=>clearInterval(id), {once:true});
-    })();
-
-    /* ---------- QR coin ---------- */
-    (function qr(){
-      if (!qrImg) return;
-      applyCTA({}); // ensure CTA decorated first
-      const href = donateBtn?.href || {{ (HREF_DONATE or '/donate')|tojson }};
-      const url = new URL(href, location.origin);
-      if (!url.searchParams.get("utm_medium"))  url.searchParams.set("utm_medium","qr");
-      if (!url.searchParams.get("utm_content")) url.searchParams.set("utm_content","qr-coin");
-      const src = `https://api.qrserver.com/v1/create-qr-code/?size=264x264&margin=0&data=${encodeURIComponent(url.toString())}`;
-      qrImg.src = src; qrImg.alt = "Scan to donate";
-      qrImg.decoding = "async"; qrImg.loading = "lazy";
-    })();
-
-    /* ---------- hotkey D ---------- */
-    addEventListener("keydown", (e)=>{
-      const t=(e.target?.tagName||"").toLowerCase();
-      if ((e.key==="d"||e.key==="D") && !/input|textarea|select/.test(t)) donateBtn?.click();
-    }, {passive:true});
-
-    /* ---------- boot ---------- */
-    renderNumbers();
-    renderMeter();
-    renderLadder();
-
-    // zero-state: avoid rolling nonsense
-    if (raised === 0 && raisedEl) raisedEl.textContent = "$0";
-  })();
-</script>

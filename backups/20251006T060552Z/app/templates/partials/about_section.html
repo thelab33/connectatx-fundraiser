@@ -1,0 +1,83 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# partials/about_mini.html — Agency Elite (Nike/Apple) Polished v2.0 #}
+<section id="fcx-about-mini" class="fcx-about" aria-labelledby="about-title"
+         style="--accent: {{ (team.theme_color if team and team.theme_color else '#facc15') }};">
+  <div class="fcx-about__shell">
+    <h2 id="about-title" class="fcx-about__h">{{ team.team_name or 'Our Program' }}</h2>
+    <p class="fcx-about__lead">
+      {{ about_lead or "We build confident student-athletes through competition, community, and character." }}
+    </p>
+
+    <ul class="fcx-pillars" role="list">
+      <li class="fcx-pillar" role="listitem">🏅 <b>Excellence</b> — compete with intent and respect.</li>
+      <li class="fcx-pillar" role="listitem">🧠 <b>Academics</b> — classroom comes first.</li>
+      <li class="fcx-pillar" role="listitem">🤝 <b>Community</b> — win the day together.</li>
+      <li class="fcx-pillar" role="listitem">💛 <b>Character</b> — integrity on and off the floor.</li>
+    </ul>
+
+    {% set staff3 = (staff or [])[:3] %}
+    {% if staff3 and staff3|length %}
+      <div class="fcx-staff" role="list" aria-label="Coaches & Staff">
+        {% for s in staff3 %}
+          <div class="fcx-chip" role="listitem" title="{{ s.role or '' }}">
+            <span class="fcx-chip__dot">{{ (s.initials or (s.name[0] if s.name else '?')) }}</span>
+            <span class="fcx-chip__text"><b>{{ s.name }}</b> <em>{{ s.role }}</em></span>
+          </div>
+        {% endfor %}
+        <a class="fcx-link" href="{{ safe_url_for('main.about') if (safe_url_for is defined and has_endpoint is defined and has_endpoint('main.about')) else '/about' }}">View all →</a>
+      </div>
+    {% endif %}
+  </div>
+</section>
+
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+.fcx-about{ --ink:CanvasText; --sub:GrayText; color:var(--ink) }
+.fcx-about__shell{ width:min(1050px,98vw); margin-inline:auto; padding:clamp(12px,2.3vw,16px) }
+.fcx-about__h{ font:1000 clamp(1.08rem,1.7vw,1.3rem)/1.12 "Poppins", system-ui }
+.fcx-about__lead{ color:var(--sub); font-weight:700; max-width:64ch; margin-top:.18em }
+.fcx-pillars{ display:flex; gap:.4rem; flex-wrap:wrap; margin:.45rem 0 0; padding:0; list-style:none }
+.fcx-pillar{ background:color-mix(in srgb, Canvas 90%, transparent); border:1px solid color-mix(in srgb, CanvasText 11%, transparent);
+  padding:.5rem .75rem; border-radius:.7rem; font-weight:800; font-size:.99rem; box-shadow:0 2px 8px #0001 }
+.fcx-staff{ margin-top:.62rem; display:flex; gap:.5rem; align-items:center; flex-wrap:wrap }
+.fcx-chip{ display:inline-flex; gap:.43rem; align-items:center; padding:.42rem .6rem; border-radius:.7rem;
+  border:1px solid color-mix(in srgb, CanvasText 13%, transparent); background:color-mix(in srgb, Canvas 88%, transparent) }
+.fcx-chip__dot{ width:22px; height:22px; border-radius:50%; display:grid; place-items:center; font:900 .8rem/1 "Inter"; color:#111;
+  background:var(--accent) }
+.fcx-chip__text em{ color:var(--sub); font-style:normal; font-weight:700; margin-left:.32rem }
+.fcx-link{ font-weight:1000; color:var(--accent); text-underline-offset:2px }
+@media(max-width:620px){ .fcx-about__shell{ padding:10px 2vw } .fcx-pillars{ gap:.3rem } }
+</style>
+
+<script {{ nonce_attr() }}{ { nonce_attr() } }>
+(() => {
+  const root = document.getElementById('fcx-about-mini');
+  if (!root || root.__wired) return; root.__wired = true;
+  // Animate reveal for pillars/staff
+  if ('IntersectionObserver' in window) {
+    const els = root.querySelectorAll('.fcx-pillar, .fcx-staff .fcx-chip');
+    els.forEach(el => {
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(7px)';
+      el.style.transition = 'opacity .28s cubic-bezier(.46,.11,.34,.98), transform .25s cubic-bezier(.4,1.7,.6,1.2)';
+    });
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (!e.isIntersecting) return;
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'none';
+        io.unobserve(e.target);
+      });
+    }, { rootMargin: '0px 0px -8% 0px', threshold: 0.13 });
+    els.forEach(el => io.observe(el));
+  }
+})();
+</script>
+

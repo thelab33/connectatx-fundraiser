@@ -1,0 +1,259 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ===========================================================================
+   FundChamps Glass Header · Ultra SaaS v2.1
+   • Sticky, backdrop-blur “frosted” bar
+   • Works even when some backend vars are missing
+   • Mobile slide-in menu + share button
+   • Live total pill auto-syncs with FC-Hero if present
+   ========================================================================== #}
+
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+
+{# ---------- Safe helpers ---------- #}
+{% set _sf  = (safe_url_for is defined) and safe_url_for %}
+{% set _has = (has_endpoint  is defined) and has_endpoint %}
+{% macro href(ep, fallback='/') -%}{{ (_sf and _has(ep) and _sf(ep)) or fallback }}{%- endmacro %}
+
+{# ---------- Brand / theme ---------- #}
+{% set PLATFORM     = PLATFORM_NAME | default('FundChamps') %}
+{% set TEAM         = team | default({}) %}
+{% set TEAM_NAME    = TEAM.team_name | default('Connect ATX Elite') %}
+{% set ACCENT_HEX   = theme_hex | default('#facc15') %}
+{% set CREST_RAW    = TEAM.logo_url or TEAM.logo or TEAM.favicon or '/static/brand/fallback-crest.svg' %}
+{% set CREST_SRC    = ('://' in CREST_RAW) and CREST_RAW
+                      or (url_for('static', filename=CREST_RAW.lstrip('/')) if (url_for is defined) else CREST_RAW) %}
+{% set HREF_HOME    = href('main.home','/') %}
+{% set HREF_DONATE  = (stripe_payment_link
+                       if (stripe_payment_link is defined and stripe_payment_link)
+                       else href('main.donate','/donate')) %}
+
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+<!-- =====================================================================
+FundChamps Glass Header · Ultra SaaS v2.3
+• Brand‑first lock‑up • Scroll‑hide / reveal
+• Scroll‑spy active links • Live total pill sync
+====================================================================== -->
+{% set PLATFORM = PLATFORM_NAME | default('FundChamps') %}
+{% set TEAM = team | default({}) %}
+{% set TEAM_NAME = TEAM.team_name | default('Connect ATX Elite') %}
+{% set ACCENT_HEX = theme_hex | default('#facc15') %}
+{% set CREST_RAW = TEAM.logo_url or TEAM.logo or TEAM.favicon or '/static/brand/fallback-crest.svg' %}
+{% set CREST_SRC = ('://' in CREST_RAW) and CREST_RAW or (url_for('static', filename=CREST_RAW.lstrip('/')) if (url_for is defined) else CREST_RAW) %}
+{% set HREF_HOME = href('main.home','/') %}
+{% set HREF_DONATE = (stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link) else href('main.donate','/donate')) %}
+
+
+<a href="#main" class="skip-link">Skip to main content</a>
+<header id="site-header" class="fc-header" role="banner" data-accent="{{ ACCENT_HEX }}" style="--accent:{{ ACCENT_HEX }};">
+<div class="fc-header-inner">
+<!-- Brand / Crest -->
+<a href="{{ HREF_HOME }}" class="brand" aria-label="FundChamps home">
+<svg class="mark" viewBox="0 0 24 24" aria-hidden="true">
+<path d="M3 4h18v3c0 3.9-3.1 7-7 7H3V4Z" fill="currentColor"/>
+<path d="M9 17h6v2H9z" fill="currentColor"/>
+</svg>
+<span class="brand-stack">
+<span class="powered">POWERED&nbsp;BY</span>
+<span class="wordmark">Fund<span class="accent">Champs</span></span>
+<span class="team">for&nbsp;{{ TEAM_NAME }}</span>
+</span>
+<span class="pill pill-brand hide-sm">Platform</span>
+</a>
+
+
+<!-- Desktop nav -->
+<nav class="nav hide-md" aria-label="Primary">
+<a href="#tiers" data-link="tiers">Tiers</a>
+<a href="#impact" data-link="impact">Impact</a>
+<a href="#about" data-link="about">About</a>
+</nav>
+
+
+<!-- Actions -->
+<div class="act">
+<a href="#tiers" class="btn ghost hide-md">Sponsor&nbsp;a&nbsp;Champion</a>
+<a href="{{ HREF_DONATE }}" class="btn gold" id="hdr-donate">Donate&nbsp;with&nbsp;FundChamps</a>
+<span id="hdr-total-pill" class="pill hide-sm" aria-live="polite">$0</span>
+<button id="hdr-share" type="button" class="btn lite btn-sm" aria-label="Share this fundraiser" data-share='{{ {"title": "Support " ~ TEAM_NAME, "text": "Every dollar moves a kid forward — join us!", "url": (request.base_url if request is defined else "/") } | tojson | e }}'>Share</button>
+<!-- Mobile burger -->
+<button id="menu-toggle" type="button" class="btn lite btn-sm show-md" aria-label="Open menu" aria-expanded="false">
+<svg class="ico" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+<path class="ham" d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+<path class="x" d="M6 6l12 12M18 6l-12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="opacity:0"/>
+</svg>
+</button>
+</div>
+</div>
+</header>
+
+
+<template id="mobile-nav-tpl">
+<nav id="site-menu" role="dialog" aria-label="Mobile menu">
+<div class="sheet">
+<button class="close" aria-label="Close menu">✕</button>
+<a href="#tiers">Tiers</a>
+<a href="#impact">Impact</a>
+<a href="#about">About</a>
+<a href="{{ HREF_DONATE }}" class="btn gold w-max mt-auto">Donate&nbsp;with&nbsp;FundChamps</a>
+</div>
+</nav>
+</template>
+
+<style {{ nonce_attr() }}>
+:root{
+  --accent: {{ ACCENT_HEX }};
+  --shadow-lg:0 8px 28px rgba(0,0,0,.25);
+}
+/* ------------ Frosted Glass Header -------------*/
+.fc-header{position:sticky;top:0;z-index:60;background:rgba(10,10,15,.6);backdrop-filter:blur(16px) saturate(1.4);border-bottom:1px solid rgba(255,255,255,.08);transition:transform .4s ease-out;}
+.fc-header.hide{transform:translateY(-100%);} /* scroll-hide */
+.fc-header::after{/* subtle top sheen */content:"";position:absolute;inset:0;background:linear-gradient(120deg,rgba(255,255,255,.07) 0%,transparent 60%);opacity:.4;mix-blend-mode:soft-light;pointer-events:none;}
+.fc-header-inner{max-width:min(1200px,95vw);margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:.7rem 1rem;gap:1rem;}
+
+/* ------------ Brand ------------*/
+.brand{display:flex;align-items:center;gap:.55rem;color:#fff;text-decoration:none;}
+.crest{width:34px;height:34px;border-radius:50%;background-size:cover;background-position:center;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+.brand-text{line-height:1;display:flex;flex-direction:column;}
+.name{font:900 1.08rem/1 'Inter',sans-serif;letter-spacing:.01em;}
+.team{font:600 .78rem/1 'Inter',sans-serif;color:#e5e7eb;opacity:.72;}
+
+/* ------------ Desktop Nav ------------*/
+.nav a{margin:0 1rem;color:#d1d5db;font:800 .95rem/1 'Inter',sans-serif;position:relative;text-decoration:none;letter-spacing:.02em;}
+.nav a::after{content:"";position:absolute;left:0;bottom:-4px;width:0;height:2px;background:var(--accent);transition:width .25s var(--ease, cubic-bezier(.61,.13,.29,.95));}
+.nav a:hover,.nav a:focus-visible{color:#fff;}
+.nav a:hover::after,.nav a:focus-visible::after{width:100%;}
+
+/* ------------ Buttons ------------*/
+.btn{border:none;border-radius:999px;cursor:pointer;transition:all .17s cubic-bezier(.55,.13,.29,.96);font:900 .92rem/1 'Inter',sans-serif;white-space:nowrap;}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px;}
+.btn.gold{background:linear-gradient(180deg,#fffbe8 0%,var(--accent) 90%);color:#18181b;padding:.55em 1.6em;box-shadow:0 4px 14px rgba(250,204,21,.25);}  
+.btn.gold:hover{filter:brightness(1.07) drop-shadow(0 0 6px var(--accent));transform:translateY(-2px);}  
+.btn.ghost{background:rgba(255,255,255,.05);border:2px solid var(--accent);color:var(--accent);padding:.48em 1.4em;}
+.btn.ghost:hover{background:rgba(255,255,255,.12);}  
+.btn.lite{background:rgba(255,255,255,.08);color:#fff;padding:.45em .9em;}
+.btn-sm{font-size:.8rem;padding:.42em .9em;}
+
+/* ------------ Pill ------------*/
+.pill{background:rgba(255,255,255,.12);padding:.3em 1em;border-radius:999px;font:800 .85rem/1 'Inter',sans-serif;color:#fff;backdrop-filter:blur(8px) saturate(1.4);}
+
+/* ------------ Mobile Breakpoints ------------*/
+.show-md{display:none;}
+@media(max-width:1024px){.hide-md{display:none;}.show-md{display:inline-flex;}}
+@media(max-width:640px){.hide-sm{display:none;}}
+
+/* ------------ Mobile Sheet ------------*/
+#site-menu{position:fixed;inset:0;z-index:80;display:none;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);}
+#site-menu.open{display:block;animation:fade-in .25s ease-out;}
+#site-menu .sheet{position:absolute;right:0;top:0;height:100%;width:260px;background:#121218;display:flex;flex-direction:column;padding:1.3rem 1rem 1.6rem;gap:1.2rem;animation:slide-in .3s cubic-bezier(.61,.13,.29,.97);}  
+#site-menu a{color:#fff;font:900 1.05rem/1.3 'Inter',sans-serif;text-decoration:none;}
+#site-menu .close{align-self:flex-end;background:none;border:none;color:#fff;font-size:1.6rem;line-height:1;cursor:pointer;}
+@keyframes slide-in{from{transform:translateX(110%);}to{transform:translateX(0);}}
+@keyframes fade-in{from{opacity:0;}to{opacity:1;}}
+
+/* ------------ Skip-link ------------*/
+.skip-link{position:absolute;left:-999px;top:auto;width:1px;height:1px;overflow:hidden;}
+.skip-link:focus{left:0;top:0;padding:.6rem 1rem;background:#181818;color:#fff;z-index:120;}
+/* Logomark */
+.brand .mark{
+  flex:0 0 24px;
+  color:var(--accent);
+}
+
+/* Text stack */
+.brand-stack{display:flex;flex-direction:column;line-height:1}
+.powered{
+  font:700 .62rem/1 'Inter',sans-serif;
+  letter-spacing:.07em;
+  color:#d1d5db;
+}
+.wordmark{
+  font:900 1.05rem/1 'Inter',sans-serif;
+  letter-spacing:.01em;
+  background:linear-gradient(90deg,#fff 0%,var(--accent) 80%);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;text-fill-color:transparent;
+}
+.wordmark .accent{font-weight:1000;}
+.team{
+  font:600 .74rem/1 'Inter',sans-serif;
+  color:#e5e7eb;
+  opacity:.78;
+  margin-top:.07rem;
+}
+
+/* Trust pill */
+.brand .pill{
+  margin-left:.5rem;
+  padding:.25em .7em;
+  font:800 .58rem 'Inter',sans-serif;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+  background:linear-gradient(90deg,var(--accent) 0%,#fffbe6 120%);
+  color:#18181b;
+  border-radius:8px;
+  box-shadow:0 2px 6px rgba(250,204,21,.28);
+  white-space:nowrap;
+}
+@media (max-width:640px){ .brand .pill{display:none;} }
+
+</style>
+
+<script {{ nonce_attr() }} type="module">
+(()=>{
+  const header=document.getElementById('site-header');
+  let lastY=window.scrollY;let ticking=false;
+  /* ------ Scroll hide/reveal ------ */
+  const onScroll=()=>{
+    const y=window.scrollY;
+    if(!ticking){requestAnimationFrame(()=>{
+      header.classList.toggle('hide',y>lastY && y>80);
+      lastY=y;ticking=false;});ticking=true;}
+  };
+  addEventListener('scroll',onScroll,{passive:true});
+
+  /* ------ Mobile Menu ------ */
+  const toggle=document.getElementById('menu-toggle');
+  let menu;
+  const trapFocus=(e)=>{if(menu&&!menu.contains(e.target)) e.preventDefault();};
+  toggle?.addEventListener('click',()=>{
+    if(!menu){menu=document.getElementById('mobile-nav-tpl').content.firstElementChild.cloneNode(true);document.body.append(menu);menu.querySelector('.close').onclick=()=>toggle.click();}
+    const open=toggle.getAttribute('aria-expanded')==='true';
+    toggle.setAttribute('aria-expanded',!open);
+    menu.classList.toggle('open',!open);
+    document.body.style.overflow=!open?'hidden':'';
+    toggle.querySelector('.ham').style.opacity=open?1:0;
+    toggle.querySelector('.x').style.opacity=open?0:1;
+    if(!open){addEventListener('focus',trapFocus,true);menu.querySelector('a').focus();}
+    else{removeEventListener('focus',trapFocus,true);toggle.focus();}
+  });
+
+  /* ------ Share Button ------ */
+  const shareBtn=document.getElementById('hdr-share');
+  shareBtn?.addEventListener('click',async()=>{
+    const data=JSON.parse(shareBtn.dataset.share||'{}');
+    if(navigator.share){try{await navigator.share(data);}catch{}}
+    else{
+      await navigator.clipboard.writeText(data.url||location.href);
+      shareBtn.textContent='Copied!';setTimeout(()=>shareBtn.textContent='Share',1600);
+    }
+  });
+
+  /* ------ Live Total Pill Sync ------ */
+  const pill=document.getElementById('hdr-total-pill');
+  if(pill){const nf=new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+    const upd=v=>pill.textContent=nf.format(v);
+    upd(0);
+    addEventListener('fc:update',e=>{if(e.detail?.raised!=null) upd(e.detail.raised);});
+  }
+})();
+</script>

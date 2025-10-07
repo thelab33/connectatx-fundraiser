@@ -1,0 +1,118 @@
+<style>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# =============================================================================
+  partials/_core_helpers.html — Elite core helpers (CSP/SRI/version-aware)
+  - Backward compatible: nonce_attr, sri, asset, asset_abs, script_tag, link_css
+  - Shorthands: asset_css / asset_js
+  - Perf hints: preload, prefetch, preconnect, dns_prefetch, modulepreload
+  - Auto ?v=VER with broad fallbacks (ASSET_VER/ASSET_VERSION/VERSION/VER)
+============================================================================= #}
+
+{# ── Resolve a version string from common globals ── #}
+{% macro _resolve_ver(v=None) -%}
+  {%- if v is not none and v != '' -%}{{ v }}
+  {%- elif ASSET_VER is defined and ASSET_VER -%}{{ ASSET_VER }}
+  {%- elif ASSET_VERSION is defined and ASSET_VERSION -%}{{ ASSET_VERSION }}
+  {%- elif VERSION is defined and VERSION -%}{{ VERSION }}
+  {%- elif VER is defined and VER -%}{{ VER }}
+  {%- else -%}{{ '' }}{%- endif -%}
+{%- endmacro %}
+
+{# ── CSP nonce (explicit arg wins; else global NONCE if present) ── #}
+{% macro nonce_attr(nonce=None) -%}
+  {%- set n = (nonce if nonce is not none else (NONCE if NONCE is defined else '')) -%}
+  {%- if n %}nonce="{{ n }}"{% endif -%}
+{%- endmacro %}
+
+{# ── Subresource Integrity lookup (SRI map injected at runtime) ── #}
+{% macro sri(path) -%}
+  {{ (SRI.get(path) if (SRI is defined and SRI) else None) }}
+{%- endmacro %}
+
+{# ── Internal: render attrs (true => boolean attr; false/none => omit) ── #}
+{% macro _attrs(map) -%}
+  {%- if map -%}
+    {%- for k, v in (map.items() if map.items is defined else map) -%}
+      {%- if v is sameas(true) -%} {{- k -}}
+      {%- elif v not in (none, false) -%} {{- k -}}="{{ v }}"
+      {%- endif -%}
+    {%- endfor -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{# ── Static asset resolver (adds ?v=VER; respects external/absolute URLs) ── #}
+{% macro asset(path, v=None) -%}
+  {%- if not path -%}{{ '' }}
+  {%- elif path.startswith('http://') or path.startswith('https://') or path.startswith('//') -%}{{ path }}
+  {%- else -%}
+    {%- set ver = _resolve_ver(v) -%}
+    {%- if url_for is defined -%}
+      {{ url_for('static', filename=path.lstrip('/'), v=(ver if ver else None)) }}
+    {%- else -%}
+      /static/{{ path.lstrip('/') }}{%- if ver %}?v={{ ver }}{% endif -%}
+    {%- endif -%}
+  {%- endif -%}
+{%- endmacro %}
+
+{# ── Absolute asset (uses request.url_root if available) ── #}
+{% macro asset_abs(path, v=None) -%}
+  {%- set rel = asset(path, v) -%}
+  {%- if not rel -%}{{ '' }}
+  {%- elif rel.startswith('http://') or rel.startswith('https://') or rel.startswith('//') -%}{{ rel }}
+  {%- elif request is defined and request.url_root -%}{{ request.url_root ~ rel.lstrip('/') }}
+  {%- else -%}{{ rel }}{%- endif -%}
+{%- endmacro %}
+
+{# ── Script tag (CSP/SRI safe). If integrity present -> crossorigin=anonymous ── #}
+{% macro script_tag(src, module=false, defer=true, async=false, sri_key=None, nonce=None, attrs=None) -%}
+  {%- set integ = sri(sri_key) if sri_key else None -%}
+  <script nonce="{{ NONCE }}" {{ nonce_attr() }}{ { nonce_attr() } } {{ nonce_attr(nonce) }}{% if module %} type="module"{% endif %}{% if async %} async{% endif %}{% if defer %} defer{% endif %}
+          src="{{ src }}"{% if integ %} integrity="{{ integ }}" crossorigin="anonymous"{% endif %}{% if attrs %}{{ _attrs(attrs) }}{% endif %}></script>
+{%- endmacro %}
+
+{# ── Stylesheet link (optionally emits a preload first) ── #}
+{% macro link_css(href, sri_key=None, media=None, preload=false, attrs=None) -%}
+  {%- set integ = sri(sri_key) if sri_key else None -%}
+  {%- if preload -%}
+    <link rel="preload" as="style" href="{{ href }}"{% if integ %} integrity="{{ integ }}" crossorigin="anonymous"{% endif %}{% if media %} media="{{ media }}"{% endif %}{% if attrs %}{{ _attrs(attrs) }}{% endif %} />
+  {%- endif -%}
+  <link rel="stylesheet" href="{{ href }}"{% if integ %} integrity="{{ integ }}" crossorigin="anonymous"{% endif %}{% if media %} media="{{ media }}"{% endif %}{% if attrs %}{{ _attrs(attrs) }}{% endif %} />
+{%- endmacro %}
+
+{# ── DRY shorthands for static assets ── #}
+{% macro asset_js(path, module=true, defer=true, async=false, sri_key=None, nonce=None, attrs=None) -%}
+  {{- script_tag(asset(path), module, defer, async, (sri_key or path), nonce, attrs) -}}
+{%- endmacro %}
+
+{% macro asset_css(path, sri_key=None, media=None, preload=false, attrs=None) -%}
+  {{- link_css(asset(path), (sri_key or path), media, preload, attrs) -}}
+{%- endmacro %}
+
+{# ── Perf hints (CSP-safe) ── #}
+{% macro dns_prefetch(url) -%}
+  <link rel="dns-prefetch" href="{{ url }}" />
+{%- endmacro %}
+
+{% macro preconnect(url, crossorigin=true) -%}
+  <link rel="preconnect" href="{{ url }}"{% if crossorigin %} crossorigin{% endif %} />
+{%- endmacro %}
+
+{% macro prefetch(href, as_='document') -%}
+  <link rel="prefetch" href="{{ href }}" as="{{ as_ }}" />
+{%- endmacro %}
+
+{% macro preload(href, as_, type_=None, crossorigin=None, imagesizes=None, imagesrcset=None) -%}
+  <link rel="preload" href="{{ href }}" as="{{ as_ }}"{% if type_ %} type="{{ type_ }}"{% endif %}{% if crossorigin is not none %} crossorigin{{ '="anonymous"' if crossorigin==true }}{% endif %}{% if imagesizes %} imagesizes="{{ imagesizes }}"{% endif %}{% if imagesrcset %} imagesrcset="{{ imagesrcset }}"{% endif %} />
+{%- endmacro %}
+
+{% macro modulepreload(href) -%}
+  <link rel="modulepreload" href="{{ href }}" />
+{%- endmacro %}
+

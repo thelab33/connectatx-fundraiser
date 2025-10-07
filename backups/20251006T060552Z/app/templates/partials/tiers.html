@@ -1,0 +1,471 @@
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ===================== Sponsorship Tiers — Pro 5.0 (self-contained) ===================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
+
+{# Routes & helpers #}
+{% set _sf = (safe_url_for is defined) and safe_url_for %}
+{% set _has = (has_endpoint  is defined) and has_endpoint %}
+{% set HREF_DONATE = (
+  stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link) else
+  (_sf and _has and has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate'
+) %}
+
+{# Data model (fallbacks; override via view) #}
+{% set TIERS = TIERS if TIERS is defined else [
+  {"key":"Platinum","emoji":"🏆","amount":5000,"popular":false,"left":2,
+   "perks":["Logo on jerseys","VIP invites","Social features"],"badge":"VIP","cta":"Sponsor Platinum"},
+  {"key":"Gold","emoji":"🥇","amount":2500,"popular":true,"left":4,
+   "perks":["Warm-ups logo","Social features","Appreciation invites"],"badge":"Popular","cta":"Sponsor Gold"},
+  {"key":"Silver","emoji":"🥈","amount":1000,"popular":false,"left":8,
+   "perks":["Shout-outs","Thank-you certificate","Board listing"],"badge":None,"cta":"Sponsor Silver"},
+  {"key":"Bronze","emoji":"🥉","amount":500,"popular":false,"left":12,
+   "perks":["Public thank-you","Board listing"],"badge":None,"cta":"Sponsor Bronze"},
+  {"key":"Custom","emoji":"✨","amount":None,"popular":false,"left":None,
+   "perks":["Tailored benefits","Personalized impact"],"badge":None,"cta":"Build a Package"}
+] %}
+
+<section
+  id="tiers"
+  class="tiers"
+  role="region"
+  aria-labelledby="tiers-heading"
+  itemscope itemtype="https://schema.org/OfferCatalog"
+  style="--accent: {{ theme_hex|default('#facc15') }}">
+  <meta itemprop="name" content="Sponsorship Tiers">
+
+  <div class="tiers__shell">
+    <!-- Header -->
+    <header class="head">
+      <h2 id="tiers-heading" class="title">Sponsorship <span class="accent">Tiers</span></h2>
+      <p class="sub">Choose your level and fuel the season. Every tier includes recognition and a signed thank-you certificate.</p>
+      <!-- Filters -->
+      <div class="filters" role="group" aria-label="Tier filters">
+        <button type="button" class="chip ctrl is-active" data-filter="all" aria-pressed="true">All</button>
+        <button type="button" class="chip ctrl" data-filter="VIP">VIP</button>
+        <button type="button" class="chip ctrl" data-filter="Popular">Popular</button>
+        <button type="button" class="chip ctrl" data-filter="Open">Open Spots</button>
+      </div>
+    </header>
+
+    <!-- Grid -->
+    <div class="grid" role="list">
+      {% for t in TIERS %}
+      {% set __open = (t.left is none) or (t.left|int> 0) %}
+      <article
+        class="card{% if t.popular %} is-popular{% endif %}{% if t.badge %} has-ribbon{% endif %}{% if not __open %} is-soldout{% endif %}"
+        role="listitem"
+        aria-labelledby="tier-{{ loop.index }}-h"
+        data-tier="{{ t.key }}"
+        data-popular="{{ '1' if t.popular else '0' }}"
+        data-badge="{{ t.badge or '' }}"
+        data-open="{{ '1' if __open else '0' }}"
+        itemscope itemtype="https://schema.org/Offer">
+        {% if t.badge %}
+          <span class="ribbon" aria-hidden="true">{{ t.badge }}</span>
+          <meta itemprop="category" content="{{ t.badge }}">
+        {% elif t.popular %}
+          <meta itemprop="category" content="Popular">
+        {% endif %}
+
+        <div class="card__head">
+          <span class="emoji" aria-hidden="true">{{ t.emoji }}</span>
+          <h3 class="h" id="tier-{{ loop.index }}-h" itemprop="name">{{ t.key }}</h3>
+          <!-- Tooltip/Popover Compare Icon -->
+          <button class="compare-btn" tabindex="0" aria-label="Compare {{ t.key }} benefits" data-compare="{{ t.key }}">?</button>
+          <span class="badge"
+                {% if t.left is not none %}data-left="{{ t.left }}"{% endif %}
+                aria-label="{{ __open and ((t.left|string) ~ ' sponsorships available') or 'Sold out' }}">
+            {{ __open and ((t.left is not none) and (t.left ~ ' left') or 'Open') or 'Sold out' }}
+          </span>
+        </div>
+        <!-- Compare Popover -->
+        <div class="compare-popover" data-for="{{ t.key }}" hidden>
+          <strong>Why {{ t.key }}?</strong>
+          <ul>
+            {% for p in t.perks %}
+              <li>{{ p }}</li>
+            {% endfor %}
+            {% if t.key == "Platinum" %}<li>🔥 Top billing on all marketing & signage</li>{% endif %}
+            {% if t.key == "Gold" %}<li>💼 Premium recognition</li>{% endif %}
+            {% if t.key == "Silver" %}<li>🏅 Honored at season events</li>{% endif %}
+            {% if t.key == "Bronze" %}<li>🙌 Perfect for local supporters</li>{% endif %}
+          </ul>
+        </div>
+
+        <p class="price">
+          {% if t.amount %}
+            <span class="cur" aria-hidden="true">$</span>
+            <span class="amt" itemprop="price" content="{{ t.amount }}">{{ "{:,.0f}".format(t.amount) }}</span>
+            <meta itemprop="priceCurrency" content="USD">
+            <span class="sr-only">one-time</span>
+          {% else %}
+            <span class="amt custom" aria-hidden="true">Custom</span>
+            <meta itemprop="price" content="0"><meta itemprop="priceCurrency" content="USD">
+          {% endif %}
+        </p>
+
+        <meta itemprop="availability" content="{{ __open and 'https://schema.org/InStock' or 'https://schema.org/OutOfStock' }}">
+        {% if t.left is not none %}
+          <meta itemprop="inventoryLevel" content="{{ t.left }}">
+        {% endif %}
+
+        <ul class="perks">
+          {% for p in t.perks %}
+            <li itemprop="itemOffered" itemscope itemtype="https://schema.org/Service">
+              <span itemprop="name">{{ p }}</span>
+            </li>
+          {% endfor %}
+        </ul>
+
+        <!-- CTA -->
+        <a
+          class="btn {{ 'btn--gold sheen' if loop.index0 < 2 else 'btn--ghost' }}"
+          data-payment-link
+          data-tier="{{ t.key }}"
+          {% if t.amount %}data-amount="{{ t.amount }}"{% endif %}
+          href="{{ HREF_DONATE }}?tier={{ t.key }}{% if t.amount %}&amount={{ t.amount }}{% endif %}"
+          aria-label="{{ (__open and (t.cta or ('Sponsor ' ~ t.key))) or ('Join waitlist for ' ~ t.key) }}"
+          itemprop="url"
+          {% if not __open %}data-disabled="1" aria-disabled="true"{% endif %}
+          data-analytics="cta_click"
+          data-analytics-meta='{{ {"where":"tiers","tier":t.key,"popular":t.popular,"badge":t.badge}|tojson }}'>
+          {% if __open %}
+            {{ t.cta or ('Sponsor ' ~ t.key ~ ' →') }}
+          {% else %}
+            Join Waitlist
+          {% endif %}
+        </a>
+
+        <!-- Share Row -->
+        <div class="share-row">
+          <a class="share-btn" href="https://twitter.com/intent/tweet?text={{ t.key }}%20Sponsor!%20{{ share_url|default(request.url) }}" target="_blank" aria-label="Share {{ t.key }} on Twitter">🐦</a>
+          <a class="share-btn" href="https://www.linkedin.com/shareArticle?mini=true&url={{ share_url|default(request.url) }}" target="_blank" aria-label="Share on LinkedIn">💼</a>
+          <a class="share-btn" href="mailto:?subject={{ t.key }}%20Sponsorship&body=Support%20us%20at%20{{ share_url|default(request.url) }}" target="_blank" aria-label="Share via Email">✉️</a>
+        </div>
+
+        <!-- Urgency/Scarcity Badge -->
+        {% if t.left is not none and t.left|int < 3 and t.left|int> 0 %}
+          <span class="scarcity-badge">🔥 Almost Gone!</span>
+        {% endif %}
+
+        {% if t.popular %}
+          <small class="urgency">⭐ Most chosen by sponsors</small>
+        {% elif t.badge %}
+          <small class="urgency">⚡ High visibility, limited spots</small>
+        {% elif not __open %}
+          <small class="urgency">Sold out — incredible demand!</small>
+        {% endif %}
+
+        {% if t.left is not none %}
+        <div class="spots" role="meter"
+             aria-valuemin="0" aria-valuemax="{{ (t.left|int + 1) }}"
+             aria-valuenow="{{ t.left|int }}"
+             aria-label="{{ t.key }} remaining spots">
+          <span class="track" aria-hidden="true">
+            <span class="fill" style="--left: {{ t.left|int }}"></span>
+          </span>
+          <span class="sr-only">{{ t.left }} spots left</span>
+        </div>
+        {% endif %}
+      </article>
+      {% endfor %}
+    </div>
+
+    <!-- Footer CTA -->
+    <footer class="foot">
+      <p class="note">Looking for in-kind or multi-year support?</p>
+      <a class="btn btn--ghost" href="/sponsor"
+         data-analytics="cta_click"
+         data-analytics-meta='{"where":"tiers","which":"learn_more"}'>Learn about custom packages →</a>
+    </footer>
+  </div>
+</section>
+
+<style {{ nonce_attr() }}>
+/* ================= Tiers — Enterprise tokens & Flex Upgrades ================= */
+.tiers{ color:#eaf0fa; }
+.tiers .accent{ color: var(--accent) }
+.tiers__shell{ max-width:1200px; margin-inline:auto; padding:clamp(16px, 3vw, 28px) }
+.head{ display:grid; gap:.45rem; margin-bottom:clamp(14px, 2.2vw, 22px) }
+.title{ font-size:clamp(1.6rem,1.2rem + 2.2vw,2.2rem); font-weight:1000; margin:0 }
+.sub{ color:#b9c2d0; margin:0 }
+.filters{ display:flex; flex-wrap:wrap; gap:.5rem; margin-top:.3rem }
+.ctrl{
+  display:inline-flex; align-items:center; gap:.45rem;
+  padding:.4rem .7rem; border-radius:10px; border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06); color:#eaf0fa; font-weight:800;
+  cursor:pointer;
+}
+.ctrl.is-active, .ctrl[aria-pressed="true"]{
+  background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border-color:rgba(0,0,0,.25)
+}
+
+.grid{ display:grid; gap:clamp(12px, 2vw, 18px); grid-template-columns: repeat(12, 1fr) }
+@media (min-width: 980px){ .grid> .card{ grid-column: span 4 } }
+@media (max-width: 979.98px) and (min-width: 680px){
+  .grid{ grid-template-columns: repeat(8, 1fr) } .grid> .card{ grid-column: span 4 }
+}
+@media (max-width: 679.98px){
+  .grid{ grid-template-columns: repeat(4, 1fr) } .grid> .card{ grid-column: span 4 }
+}
+
+/* --- Card --- */
+.card{
+  display:flex; flex-direction:column; gap:.7rem;
+  border-radius:16px; padding:clamp(14px, 2vw, 18px);
+  background:linear-gradient(180deg, rgba(16,18,24,.92), rgba(16,18,24,.78));
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 18px 60px rgba(0,0,0,.45);
+  position:relative; isolation:isolate;
+  transition: transform .12s ease, box-shadow .2s ease;
+}
+.card:hover{ transform: translateY(-2px); box-shadow:0 22px 70px rgba(0,0,0,.5) }
+.card.is-soldout{ opacity:.82 }
+.card.is-popular::after{
+  content:""; position:absolute; inset:0; border-radius:16px; pointer-events:none;
+  background: linear-gradient(120deg, transparent 40%, rgba(255,255,255,.08) 50%, transparent 60%);
+  mask: linear-gradient(90deg, transparent, white 15% 85%, transparent);
+  animation: sheen 2.8s ease-in-out infinite;
+}
+@keyframes sheen{ 0% { transform: translateX(-40%) } 100% { transform: translateX(140%) } }
+
+.ribbon{
+  position:absolute; top:10px; right:-8px; z-index:2;
+  background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#111;
+  padding:.35rem .6rem; font-weight:1000; border:1px solid rgba(0,0,0,.25);
+  border-top-left-radius:8px; border-bottom-left-radius:8px;
+  box-shadow:0 8px 24px rgba(0,0,0,.35);
+}
+
+.card__head{ display:flex; align-items:center; justify-content:space-between; gap:.8rem; position:relative }
+.emoji{ font-size:1.3rem }
+.h{ font-size:1.15rem; font-weight:900; margin:0 }
+.badge{
+  display:inline-flex; align-items:center; height:28px; padding:0 .6rem;
+  border-radius:999px; font-weight:900; letter-spacing:.2px;
+  background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14);
+}
+
+.price{ margin:0; font-weight:1000; font-size:1.5rem }
+.price .cur{ opacity:.65; margin-right:.2rem }
+.price .custom{ opacity:.92; font-weight:1000 }
+
+.perks{ list-style:none; padding:0; margin:0; display:grid; gap:.4rem }
+.perks li{ display:flex; gap:.5rem }
+.perks li::before{ content:"✓"; opacity:.9; color:var(--accent) }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:.5rem;
+  border-radius:999px; font-weight:1000; text-decoration:none; padding:.7rem 1rem;
+  transition: transform .06s ease, background .2s ease, border-color .2s ease;
+  cursor:pointer;
+}
+.btn:active{ transform: translateY(1px) }
+.btn--gold{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border:1px solid rgba(0,0,0,.25) }
+.btn--ghost{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.14); color:#eaf0fa }
+.card.is-soldout .btn{ pointer-events:none; opacity:.7 }
+
+.urgency{ color:#fde68a }
+.scarcity-badge {
+  color: #f43f5e;
+  font-weight: bold;
+  margin-left: 10px;
+  font-size: .93em;
+  animation: pulse 1.4s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; } 50% { opacity: 0.5; }
+}
+.spots{ display:flex; align-items:center; gap:.5rem }
+.spots .track{
+  inline-size:100%; block-size:8px; border-radius:999px; overflow:hidden;
+  background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.14);
+}
+.spots .fill{
+  display:block; inline-size:clamp(12px, calc((var(--left,0) + 1) * 9%), 100%); block-size:100%;
+  background:linear-gradient(90deg,#fffbe6,var(--accent));
+}
+
+.foot{ display:grid; justify-items:center; gap:.6rem; margin-top:clamp(12px, 2vw, 20px) }
+.note{ color:#b9c2d0; margin:0 }
+
+/* --- Flex Upgrades (Popover, Compare, Share) --- */
+.compare-btn {
+  margin-left: 6px; background: none; border: none; color: var(--accent); font-weight: 900;
+  font-size: 1.1em; cursor: pointer; border-radius: 50%; padding: 0 .5em;
+  transition: background .15s;
+  position: relative;
+}
+.compare-btn:focus, .compare-btn:hover { background: rgba(250,204,21,0.2); }
+.compare-popover {
+  display: block;
+  position: absolute;
+  top: 38px; left: 0;
+  min-width: 200px;
+  background: #23272e;
+  color: #fff;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  z-index: 20;
+  padding: 1em 1.25em;
+  font-size: .97em;
+  border: 1px solid var(--accent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity .18s cubic-bezier(.4,1,.5,1);
+}
+.compare-btn:focus + .compare-popover,
+.compare-btn:hover + .compare-popover,
+.compare-popover:focus,
+.compare-popover:hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* --- Share Row --- */
+.share-row {
+  margin-top: 7px; display: flex; gap: 8px;
+}
+.share-btn {
+  color: var(--accent); font-size: 1.1em; background: none; border: none;
+  cursor: pointer; transition: color .18s;
+  text-decoration: none;
+}
+.share-btn:hover { color: #fde047; }
+
+/* Light mode */
+.light .tiers{ color:#0f172a }
+.light .sub{ color:#334155 }
+.light .ctrl{ border-color:rgba(0,0,0,.12); background:rgba(0,0,0,.04); color:#0f172a }
+.light .ctrl.is-active{ background:linear-gradient(180deg,#fffbe6,var(--accent)); color:#0b0f15; border-color:rgba(0,0,0,.25) }
+.light .card{ background:linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,255,255,.9)); border-color:rgba(0,0,0,.10); box-shadow:0 14px 38px rgba(0,0,0,.1) }
+.light .badge, .light .btn--ghost{ border-color:rgba(0,0,0,.12) }
+.compare-popover {
+  background: #fffbe6; color: #222; border-color: var(--accent);
+}
+</style>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const root = document.getElementById('tiers');
+  if (!root || window.__TIERS_V50__) return; window.__TIERS_V50__ = true;
+
+  const filterButtons = [...root.querySelectorAll('.ctrl')];
+  const cards = [...root.querySelectorAll('.card')];
+
+  // 1. Tier Filters (All, VIP, Popular, Open)
+  function applyFilter(kind) {
+    cards.forEach(card => {
+      const isVIP = /platinum|gold/i.test(card.dataset.tier || '');
+      const isPopular = card.dataset.popular === '1';
+      const isOpen = card.dataset.open === '1';
+      let show = true;
+      if (kind === 'VIP') show = isVIP;
+      else if (kind === 'Popular') show = isPopular;
+      else if (kind === 'Open') show = isOpen;
+      card.style.display = show ? '' : 'none';
+    });
+  }
+  filterButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterButtons.forEach(b => { b.classList.remove('is-active'); b.setAttribute('aria-pressed','false'); });
+      btn.classList.add('is-active'); btn.setAttribute('aria-pressed','true');
+      applyFilter(btn.dataset.filter || 'all');
+    }, { passive:true });
+  });
+
+  // 2. Enhance payment links (Stripe/PayPal monthly/one-time toggle)
+  try {
+    const monthly = document.getElementById('{{ IDP|default("fundraiser-hero") }}-monthly');
+    cards.forEach(card => {
+      const cta = card.querySelector('[data-payment-link]');
+      if (!cta) return;
+      cta.addEventListener('click', e => {
+        try {
+          const url = new URL(cta.href, location.origin);
+          if (monthly) url.searchParams.set('interval', monthly.checked ? 'month' : 'one_time');
+          url.searchParams.set('src','tiers');
+          url.searchParams.set('tier', card.dataset.tier || '');
+          cta.href = url.toString();
+        } catch {}
+      }, { passive:true });
+    });
+  } catch {}
+
+  // 3. Deep-link filter (support /#tiers?filter=VIP)
+  try {
+    const params = new URLSearchParams(location.hash.includes('?') ? location.hash.split('?')[1] : '');
+    const f = params.get('filter');
+    if (f) {
+      const match = filterButtons.find(b => (b.dataset.filter||'all').toLowerCase() === f.toLowerCase());
+      match?.click();
+    }
+  } catch {}
+
+  // 4. Share buttons (copy to clipboard, socials)
+  document.body.addEventListener('click', e => {
+    if (e.target.matches('.share-btn[data-url]')) {
+      e.preventDefault();
+      const url = e.target.getAttribute('data-url');
+      if (!url) return;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(() => {
+          e.target.textContent = 'Copied!';
+          setTimeout(() => e.target.textContent = 'Share', 1100);
+        });
+      } else {
+        // fallback
+        prompt('Copy link:', url);
+      }
+    }
+  });
+
+  // 5. Compare popover (flex: optional, mobile-safe)
+  document.body.addEventListener('focusin', e => {
+    if (e.target.classList.contains('compare-btn')) {
+      e.target.nextElementSibling?.classList.add('open');
+    }
+  });
+  document.body.addEventListener('focusout', e => {
+    if (e.target.classList.contains('compare-btn')) {
+      setTimeout(() => e.target.nextElementSibling?.classList.remove('open'), 120);
+    }
+  });
+  document.body.addEventListener('click', e => {
+    if (e.target.classList.contains('compare-btn')) {
+      e.target.nextElementSibling?.classList.toggle('open');
+    }
+  });
+
+  // 6. Animate scarcity badges (if present)
+  setTimeout(() => {
+    [...document.querySelectorAll('.scarcity-badge')].forEach(badge => {
+      badge.classList.add('active');
+    });
+  }, 250);
+
+  // 7. Analytics/dataLayer hooks (pro ready)
+  document.body.addEventListener('click', e => {
+    const cta = e.target.closest('[data-analytics]');
+    if (cta) {
+      window.dataLayer = window.dataLayer || [];
+      window.dataLayer.push({
+        event: cta.getAttribute('data-analytics'),
+        meta: cta.getAttribute('data-analytics-meta') || '',
+        timestamp: Date.now()
+      });
+    }
+  });
+
+})();
+</script>
+

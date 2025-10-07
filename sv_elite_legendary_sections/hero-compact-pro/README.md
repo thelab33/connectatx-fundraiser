@@ -1,6 +1,7 @@
 # Hero Compact-Pro v7.9 (CSP-safe Bundle)
 
 Turnkey, production-ready hero for fundraising pages:
+
 - Split partials (left story vs right rail)
 - Compact meter with live hydration from `/api/totals`
 - Quick amount chips (+25/+50/+100), QR, share, sticky donate
@@ -42,6 +43,7 @@ tests/
 ```
 
 No inline scripts/styles required. Works with strict CSP like:
+
 ```
 Content-Security-Policy:
   default-src 'self';
@@ -60,6 +62,7 @@ Content-Security-Policy:
 ```
 
 ### Jinja variables supported (with sensible defaults)
+
 - `theme_hex` (default `#facc15`)
 - `team` object (`team.name`, `team.hero_bg`, etc.)
 - `funds_raised`, `fundraising_goal`
@@ -73,6 +76,7 @@ Content-Security-Policy:
 ## 4) Backend endpoints (Flask examples)
 
 ### `/api/totals`
+
 Return up-to-date totals to hydrate the meter.
 
 ```python
@@ -88,6 +92,7 @@ def totals():
 ```
 
 ### `/donate` router (Stripe Checkout) — ensures quick-amount chips work even if you use Payment Links
+
 ```python
 from flask import Blueprint, request, redirect, url_for, current_app
 import stripe

@@ -1,748 +1,279 @@
-{# ===================== Footer (SV-Elite Pro+ 4.8 — silicon-valley polish)
-===================== #} {% set NONCE = NONCE if NONCE is defined else
-(csp_nonce() if csp_nonce is defined else '') %} {% macro nonce_attr() -%}{% if
-NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %} {# ---- Context ---- #} {%
-set _brand = (team.team_name if team and team.team_name else 'Connect ATX
-Elite') %} {% set _year = (now().year if now is defined else 2025) %} {% set
-is_501c3 = team.is_501c3 if team is defined and team is not none and
-team.is_501c3 is defined else false %} {% set contact_email = team.contact_email
-if team and team.contact_email else None %} {% set _sf = (safe_url_for is
-defined) and safe_url_for %} {% set _has = (has_endpoint is defined) and
-has_endpoint %} {% set donate_href = (_sf and _has and
-has_endpoint('main.donate') and safe_url_for('main.donate')) or '/donate' %} {%
-set tiers_href = '#tiers' %} {% set payment_link =
-footer_payment_link|default(stripe_payment_link|default(None)) %} {% set PEER =
-peer|default(_peer|default({})) %} {% set CAM =
-campaign|default(_campaign|default({})) %} {% set _peer_slug = (PEER.slug or
-PEER.display_name or PEER.name)|default('')|lower|replace('
-','-')|replace('--','-') %} {% set _camp_key = (CAM.slug or CAM.id)|default('')
-%} {% set _team_slug = (team.team_slug if team and team.team_slug else
-_brand|lower|replace(' ','-')) %} {% set _intent_meta = { "source": "footer",
-"tier": "Custom", "frequency": "once", "peer_slug": _peer_slug, "campaign":
-_camp_key, "team": _team_slug, "sponsor_url": (request.base_url if request is
-defined else "/") } %}
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+/* SaaS Pro Section Polish */
+.fcx-section, .fcx-section--hero, .fcx-section--tiers {
+  max-width: 1100px;
+  margin-inline: auto;
+  margin-bottom: 3rem;
+  padding-inline: clamp(14px, 5vw, 36px);
+}
+</style>
+{# ========================
+   Footer — Agency Elite v4
+   • White-label ready, A11y/Perf hardened
+   • Motion/Save-Data aware, no global ID sprawl
+   ======================== #}
+{% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
+{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
 
-<footer
-  id="site-footer"
-  class="fc-footer section section--tight"
-  role="contentinfo"
-  aria-label="Site footer"
->
-  <div class="sf-container flex flex-col gap-4 relative" data-where="footer">
-    <i class="ftr-glow" aria-hidden="true"></i>
+{# Config + safe fallbacks #}
+{% set BRAND          = team.team_name if team and team.team_name else 'Your Club/Org' %}
+{% set ACCENT         = team.theme_hex if team and team.theme_hex else '#facc15' %}
+{% set YEAR           = now().year if now is defined else 2025 %}
+{% set is_501c3       = team.is_501c3 if team is defined and team.is_501c3 is defined else false %}
+{% set contact_email  = team.contact_email if team and team.contact_email else None %}
+{% set social_links   = team.social_links if team and team.social_links else {} %}
+{% set hide_powered   = team.hide_powered if team and team.hide_powered else False %}
+{% set payment_link   = footer_payment_link|default(stripe_payment_link|default(None)) %}
+{% set privacy_href   = safe_url_for('main.privacy') if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.privacy') else '/privacy' %}
+{% set terms_href     = safe_url_for('main.terms')   if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.terms')   else '/terms' %}
+{% set donate_href    = payment_link or (safe_url_for('main.donate') if safe_url_for is defined and has_endpoint is defined and has_endpoint('main.donate') else '/donate') %}
+{% set tiers_href     = '#tiers' %}
+{% set stats          = stats if stats is defined else None %}
+{% set built_with = (
+    team.built_with_signature if team and team.built_with_signature is not none
+    else settings.built_with_signature if settings and settings.built_with_signature is defined
+    else "Built with snacks &amp; late nights."
+) %}
 
-    <!-- Top row -->
-    <div class="flex flex-col sm:flex-row items-center justify-between gap-3">
-      <div class="flex items-center gap-2 text-sm ftr-meta">
-        <span class="text-zinc-200">© {{ _year }} {{ _brand }}</span>
-        <span aria-hidden="true">•</span>
-        {% if is_501c3 %}
-        <span class="inline-flex items-center gap-1"
-          ><span class="sr-only">Status:</span
-          ><span class="text-emerald-300">501(c)(3)</span> verified</span
-        >
-        {% else %}
-        <span class="inline-flex items-center gap-1"
-          ><span class="text-zinc-300">Community program</span></span
-        >
-        {% endif %}
-      </div>
+<footer id="site-footer" class="fc-footer" role="contentinfo"
+        aria-label="Site footer" style="--accent: {{ ACCENT }}">
 
-      <!-- Footer nav -->
-      <nav class="ftr-nav" aria-label="Footer">
-        <ul class="flex items-center gap-4 text-sm m-0 p-0 list-none">
-          <li>
-            <a
-              href="#about"
-              class="ftr-link"
-              data-nav="#about"
-              data-analytics="footer:about"
-              >About</a
-            >
-          </li>
-          <li>
-            <a
-              href="#impact-v2"
-              class="ftr-link"
-              data-nav="#impact"
-              data-analytics="footer:impact"
-              >Impact</a
-            >
-          </li>
-          <li>
-            <a
-              href="#tiers"
-              class="ftr-link"
-              data-nav="#tiers"
-              data-analytics="footer:tiers"
-              >Sponsor</a
-            >
-          </li>
-          {% if contact_email %}
-          <li>
-            <a
-              href="mailto:{{ contact_email }}"
-              class="ftr-link"
-              data-analytics="footer:contact"
-              >Contact</a
-            >
-          </li>
+  <div class="ft__inner">
+
+    <!-- Halo / accent rail -->
+    <div class="ft__halo" aria-hidden="true"></div>
+
+    <!-- Top row: org + nav + ctas + socials -->
+    <div class="ft__top">
+      <div class="ft__org">
+        <div class="ft__legal">
+          <span>© {{ YEAR }} {{ BRAND }}</span>
+          <span class="sep" aria-hidden="true">•</span>
+          {% if is_501c3 %}
+            <span class="pill pill--verified" title="IRS 501(c)(3) verified">501(c)(3) verified</span>
+          {% else %}
+            <span class="pill">Community program</span>
           {% endif %}
-        </ul>
-      </nav>
+          <span class="sep" aria-hidden="true">•</span>
+          <a href="{{ privacy_href }}" class="ft__link">Privacy</a>
+          <a href="{{ terms_href }}" class="ft__link">Terms</a>
 
-      <!-- CTAs -->
-      <div class="flex items-center gap-2">
-        <a
-          id="ftr-donate"
-          href="{{ payment_link or donate_href }}"
-          class="sf-btn sf-btn-primary sf-btn-sm"
-          data-analytics="cta:footer:donate"
-          {%
-          if
-          not
-          payment_link
-          %}
-          data-open-donate-modal
-          data-intent-meta="{{ _intent_meta | tojson if tojson is defined else _intent_meta | string }}"
-          {%
-          endif
-          %}
-          >Donate</a
-        >
+          {% if stats and (stats.raised or stats.sponsors) %}
+            <span class="sep" aria-hidden="true">•</span>
+            <span class="ft__stats">
+              {% if stats.raised %}${{ '{:,.0f}'.format(stats.raised) }} raised{% endif %}
+              {% if stats.raised and stats.sponsors %} | {% endif %}
+              {% if stats.sponsors %}{{ stats.sponsors }} sponsors{% endif %}
+            </span>
+          {% endif %}
+        </div>
 
-        <a
-          href="{{ tiers_href }}"
-          class="sf-btn sf-btn-ghost sf-btn-sm"
-          data-analytics="cta:footer:sponsor"
-          >Sponsor</a
-        >
+        <nav class="ft__nav" aria-label="Footer navigation">
+          <a href="#about"  class="ft__link">About</a>
+          <a href="#impact" class="ft__link">Impact</a>
+          <a href="#tiers"  class="ft__link">Sponsor</a>
+          {% if contact_email %}
+            <a href="mailto:{{ contact_email }}?subject=Support%20{{ BRAND|urlencode }}" class="ft__link">Contact</a>
+          {% endif %}
+        </nav>
       </div>
+
+      <div class="ft__cta">
+        <a id="ftr-donate" href="{{ donate_href }}" class="btn btn--gold" data-cta="donate">Donate</a>
+        <a href="{{ tiers_href }}" class="btn btn--ghost">Sponsor</a>
+      </div>
+
+      {% if social_links %}
+      <div class="ft__social" aria-label="Social links">
+        {% for name, url in social_links.items() %}
+          <a href="{{ url }}" target="_blank" rel="noopener"
+             aria-label="Follow on {{ name|capitalize }}" class="ft__icon">
+            <i class="icon-{{ name|lower }}" aria-hidden="true"></i>
+          </a>
+        {% endfor %}
+      </div>
+      {% endif %}
     </div>
 
-    <!-- Trust / payments -->
-    <div
-      class="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs ftr-trust"
-    >
-      <div class="flex items-center gap-3 text-center sm:text-left">
+    <!-- Trust / Powered row -->
+    <div class="ft__trust">
+      <div class="ft__secure">
         <span aria-hidden="true">🔒</span>
-        <span
-          >Secure checkout via Stripe / PayPal. Cards: Visa · Mastercard ·
-          AmEx.</span
-        >
-
-        <a
-          class="stripe-seal"
-          href="https://stripe.com/docs/security/stripe"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="View Stripe security details (opens in a new tab)"
-          data-analytics="footer:stripe_seal"
-        >
-          <span class="seal-face seal-front" aria-hidden="true"
-            >Stripe&nbsp;Secure</span
-          >
-          <span class="seal-face seal-back" aria-hidden="true"
-            >PCI&nbsp;DSS&nbsp;✓</span
-          >
-        </a>
+        <span>Secure checkout via Stripe / PayPal. Cards: Visa · Mastercard · AmEx.</span>
+        <a href="https://stripe.com/docs/security/stripe" target="_blank" rel="noopener"
+           class="badge" aria-label="View Stripe security (opens in a new tab)">Stripe Secure</a>
       </div>
 
-      <div class="opacity-80">
-        <span class="mr-1">Powered by</span>
-        <a
-          href="https://fundchamps.org"
-          class="text-gold font-semibold ftr-link"
-          target="_blank"
-          rel="noopener"
-          >FundChamps</a
-        >
+      {% if not hide_powered %}
+      <div class="ft__powered">
+        <span>Powered by</span>
+        <a href="https://fundchamps.org" target="_blank" rel="noopener">FundChamps</a>
       </div>
+      {% endif %}
     </div>
-  </div>
 
-  <div class="text-xs text-zinc-600 italic mt-1 select-none" aria-hidden="true">
-    Built with snacks & late nights.
-  </div>
+    <!-- Newsletter slot (optional) -->
+    <div id="newsletter-slot" class="ft__newsletter" data-slot="newsletter" hidden></div>
 
-  <!-- Back to top (progress ring) -->
-  <button
-    id="backtop"
-    type="button"
-    class="ftr-top"
-    data-show="0"
-    aria-label="Back to top"
-    data-analytics="footer:backtotop"
-    title="Back to top"
-  >
-    ↑
-  </button>
+    {% if built_with %}
+      <p class="ft__builtwith">{{ built_with | safe }}</p>
+    {% endif %}
+  </div>
 </footer>
 
+<!-- Back to top -->
+<button id="backtop" type="button" class="ft__backtop" aria-label="Back to top" title="Back to top">↑</button>
+
+<!-- Floating mobile CTA -->
+<div id="footer-float-cta" class="ft__float">
+  <div class="ft__float__inner">
+    <a href="{{ donate_href }}" class="btn btn--gold" data-cta="donate">Donate</a>
+    <a href="{{ tiers_href }}"  class="btn btn--ghost">Sponsor</a>
+  </div>
+</div>
+
 <style {{ nonce_attr() }}>
-  /* Shell + theme */
-  .fc-footer {
-    --fc-gold: var(--accent, #facc15);
-    --fc-coal: #0b0c10;
-    background: var(--fc-coal);
-    color: #cbd5e1;
-    border-top: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  .fc-footer .sf-container {
-    position: relative;
-  }
-  .ftr-meta {
-    color: #9ca3af;
-  }
-  .ftr-trust {
-    color: #93a0b4;
-  }
+/* ===== Footer • Agency Elite v4 ===== */
+.fc-footer{
+  background: linear-gradient(180deg,#0e1116 0%,#0b0e13 100%);
+  border-top: 4px solid var(--accent);
+  color:#e8ebf3;
+  position:relative;
+}
+.ft__inner{max-width:88rem;margin-inline:auto;padding:1.25rem 1rem;position:relative}
+.ft__halo{position:absolute;left:20%;right:20%;top:-10px;height:28px;
+  background:radial-gradient(ellipse 60% 55% at 50% 60%, color-mix(in srgb,var(--accent) 75%, #fff0) 0%, transparent 92%);
+  opacity:.28; pointer-events:none}
 
-  /* Ambient glow */
-  .fc-footer .ftr-glow {
-    position: absolute;
-    inset: auto 0 -10% 0;
-    height: 140px;
-    z-index: 0;
-    background:
-      radial-gradient(
-        60% 100% at 50% 10%,
-        color-mix(in srgb, var(--fc-gold) 18%, transparent) 0%,
-        transparent 70%
-      ),
-      radial-gradient(
-        45% 70% at 75% 30%,
-        rgba(255, 255, 255, 0.08),
-        transparent 60%
-      ),
-      radial-gradient(
-        45% 70% at 25% 30%,
-        rgba(255, 255, 255, 0.06),
-        transparent 60%
-      );
-    filter: blur(24px);
-    pointer-events: none;
-  }
+.ft__top{display:grid;grid-template-columns:1fr auto auto;gap:1rem;align-items:center;margin-bottom:.5rem}
+@media (max-width:960px){.ft__top{grid-template-columns:1fr;gap:.75rem}}
+.ft__org{display:flex;flex-direction:column;gap:.35rem}
+.ft__legal{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center;font:800 .9rem/1.2 "Inter"}
+.ft__legal .sep{color:color-mix(in srgb,var(--accent) 88%, #fff2)}
+.pill{display:inline-flex;align-items:center;gap:.35rem;padding:.2rem .6rem;border-radius:999px;font:900 .7rem/1 "Inter";
+  background:rgba(250,204,21,.14); color:color-mix(in srgb,var(--accent) 92%, #111)}
+.pill--verified{background:rgba(34,197,94,.16); color:#a7f3d0}
 
-  /* Links */
-  .ftr-nav .ftr-link,
-  .ftr-trust .ftr-link {
-    color: rgba(255, 255, 255, 0.82);
-    text-decoration: none;
-    font-weight: 700;
-    position: relative;
-    transition:
-      color 0.2s ease,
-      background-size 0.2s ease;
-    background: linear-gradient(currentColor, currentColor) 0 100%/0 2px
-      no-repeat;
-  }
-  .ftr-nav .ftr-link:hover,
-  .ftr-nav .ftr-link:focus-visible,
-  .ftr-trust .ftr-link:hover,
-  .ftr-trust .ftr-link:focus-visible {
-    color: #fff;
-    background-size: 100% 2px;
-    outline: 0;
-  }
-  .ftr-nav [aria-current="page"] {
-    color: #fff;
-  }
+.ft__nav{display:flex;flex-wrap:wrap;gap:.6rem;margin-top:.15rem}
+.ft__link{color:#ffeaa6;font:800 .8rem/1 "Inter"; text-decoration:none}
+.ft__link:hover{color:var(--accent); text-decoration:underline}
 
-  /* Back-to-top with progress */
-  .fc-footer .ftr-top {
-    --pct: 0;
-    position: fixed;
-    right: clamp(12px, 2vw, 20px);
-    bottom: clamp(14px, 3.5vh, 24px);
-    width: 42px;
-    height: 42px;
-    display: grid;
-    place-items: center;
-    border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    background:
-      conic-gradient(
-          color-mix(in srgb, var(--fc-gold) 75%, #fff) calc(var(--pct) * 1turn),
-          transparent 0
-        )
-        border-box,
-      linear-gradient(
-          180deg,
-          rgba(255, 255, 255, 0.08),
-          rgba(255, 255, 255, 0.04)
-        )
-        padding-box;
-    color: #fff;
-    font-weight: 900;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-    transition:
-      transform 0.2s ease,
-      opacity 0.2s ease;
-    z-index: 60;
-  }
-  .fc-footer .ftr-top::after {
-    content: "";
-    position: absolute;
-    inset: 3px;
-    border-radius: inherit;
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0.04)
-    );
-  }
-  .fc-footer .ftr-top[data-show="0"] {
-    opacity: 0;
-    transform: translateY(4px);
-    pointer-events: none;
-  }
-  .fc-footer .ftr-top[data-show="1"] {
-    opacity: 1;
-    transform: none;
-  }
-  .fc-footer .ftr-top:hover {
-    transform: translateY(-1px);
-  }
-  .fc-footer .ftr-top:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--fc-gold) 60%, #fff 40%);
-    outline-offset: 3px;
-  }
+.ft__cta{display:flex;gap:.5rem;justify-content:flex-start}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:.72rem 1.4rem;font:900 .9rem/1 "Inter"}
+.btn--gold{background:linear-gradient(180deg,#fffde9 0%, var(--accent) 96%); color:#111; border:2px solid var(--accent);
+  text-transform:uppercase; letter-spacing:.02em; transition:transform .18s cubic-bezier(.2,.9,.35,1.2), box-shadow .18s}
+.btn--gold:hover{transform:translateY(-2px); box-shadow:0 14px 30px rgba(0,0,0,.28)}
+.btn--ghost{background:transparent;border:1px solid color-mix(in srgb,var(--accent) 55%, #fff2); color:#eef1f7}
+.btn--ghost:hover{background:color-mix(in srgb,var(--accent) 12%, transparent)}
 
-  /* Stripe seal flip (motion-safe) */
-  .stripe-seal {
-    --seal-br: 10px;
-    position: relative;
-    display: inline-grid;
-    place-items: center;
-    min-width: 118px;
-    height: 28px;
-    padding: 0 0.6rem;
-    perspective: 900px;
-    border-radius: var(--seal-br);
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    background: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.08),
-      rgba(255, 255, 255, 0.03)
-    );
-    color: #e5e7eb;
-    font-weight: 800;
-    letter-spacing: 0.2px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
-    text-decoration: none;
-    overflow: hidden;
-  }
-  .stripe-seal .seal-face {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
-    padding: 0 0.6rem;
-    border-radius: var(--seal-br);
-    backface-visibility: hidden;
-    transform-style: preserve-3d;
-    font-variant-numeric: tabular-nums;
-  }
-  .stripe-seal .seal-front {
-    transform: rotateY(0deg);
-  }
-  .stripe-seal .seal-back {
-    transform: rotateY(180deg);
-  }
-  .stripe-seal:hover .seal-front,
-  .stripe-seal:focus-visible .seal-front {
-    transform: rotateY(-180deg);
-  }
-  .stripe-seal:hover .seal-back,
-  .stripe-seal:focus-visible .seal-back {
-    transform: rotateY(0deg);
-  }
-  .stripe-seal:focus-visible {
-    outline: 2px solid color-mix(in srgb, var(--fc-gold) 55%, #fff 45%);
-    outline-offset: 3px;
-  }
+.ft__social{display:flex;gap:.6rem}
+.ft__icon{color:#ffeaa6;font-size:1.2rem}
+.ft__icon:hover{color:#fff}
 
-  @media (prefers-reduced-motion: reduce) {
-    .stripe-seal .seal-front,
-    .stripe-seal .seal-back {
-      transform: none !important;
-    }
-  }
-  @media (forced-colors: active) {
-    .stripe-seal {
-      border: 1px solid CanvasText;
-      color: CanvasText;
-    }
-    .ftr-nav .ftr-link,
-    .ftr-trust .ftr-link {
-      background: none;
-    }
-  }
-  @media print {
-    .fc-footer .ftr-top,
-    .stripe-seal {
-      display: none !important;
-    }
-  }
-  @supports not (color: color-mix(in srgb, black, white)) {
-    .fc-footer .ftr-top:focus-visible,
-    .stripe-seal:focus-visible {
-      outline-color: var(--fc-gold, #facc15);
-    }
-  }
+.ft__trust{display:flex;gap:.8rem;align-items:center;border-top:1px solid rgba(255,255,255,.06); padding-top:.65rem}
+@media (max-width:780px){.ft__trust{flex-direction:column;align-items:flex-start}}
+.ft__secure{display:flex;align-items:center;gap:.6rem;font:700 .86rem/1.2 "Inter";color:#cfd6e2}
+.ft__secure .badge{background:#0f141c;border:1px solid rgba(255,255,255,.12);color:var(--accent);
+  padding:.25rem .6rem;border-radius:999px;font:900 .72rem/1 "Inter"}
+.ft__powered{margin-left:auto;display:flex;align-items:center;gap:.4rem;color:#bfc7d6;font:800 .78rem/1 "Inter"}
+.ft__powered a{color:#ffeaa6;text-decoration:none}
+.ft__powered a:hover{color:var(--accent);text-decoration:underline}
 
-  .sr-only {
-    position: absolute !important;
-    width: 1px !important;
-    height: 1px !important;
-    padding: 0 !important;
-    margin: -1px !important;
-    overflow: hidden !important;
-    clip: rect(0, 0, 0, 0) !important;
-    white-space: nowrap !important;
-    border: 0 !important;
-  }
-</style>
-<style {{ nonce_attr() }}>
-  /* === Footer SV-Elite Pro+ Polish Pack (drop-in) ========================= */
+.ft__builtwith{text-align:right;color:#98a2b3;font:italic 700 .75rem/1.3 "Inter";opacity:.85;margin-top:.8rem}
 
-  /* Glassy bar + subtle top stroke */
-  #site-footer {
-    background: linear-gradient(
-      180deg,
-      rgba(10, 12, 15, 0.94),
-      rgba(10, 12, 15, 0.98)
-    );
-    backdrop-filter: blur(12px) saturate(120%);
-    -webkit-backdrop-filter: blur(12px) saturate(120%);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-  }
+/* Back to top */
+.ft__backtop{
+  position:fixed; right:1rem; bottom:1rem; z-index:50; width:52px; height:52px; border-radius:999px;
+  background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 80%, #fff) 60%, var(--accent));
+  color:#0b0b0c; font:900 1.4rem/1 "Inter";
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 12px 26px rgba(0,0,0,.35);
+  opacity:0; pointer-events:none; transition:opacity .2s ease;
+}
+.ft__backtop.is-visible{opacity:1; pointer-events:auto}
 
-  /* Tighten ambient glow a touch for depth */
-  #site-footer .ftr-glow {
-    background:
-      radial-gradient(
-        60% 90% at 50% 8%,
-        color-mix(in srgb, var(--fc-gold, #facc15) 22%, transparent) 0%,
-        transparent 70%
-      ),
-      radial-gradient(
-        40% 60% at 75% 28%,
-        rgba(255, 255, 255, 0.08),
-        transparent 55%
-      ),
-      radial-gradient(
-        40% 60% at 25% 28%,
-        rgba(255, 255, 255, 0.06),
-        transparent 55%
-      );
-    filter: blur(22px);
-  }
+/* Floating mobile CTA */
+.ft__float{position:fixed; inset-inline:0; bottom:0; display:flex; justify-content:center; z-index:40;
+  opacity:0; pointer-events:none; transition:opacity .2s ease}
+.ft__float__inner{margin-bottom:.9rem; display:flex; gap:.5rem; background:#0b0f16cc; backdrop-filter:blur(12px);
+  border:1px solid rgba(255,255,255,.08); border-radius:999px; padding:.4rem .5rem; box-shadow:0 14px 34px rgba(0,0,0,.38)}
+@media (min-width:768px){ .ft__float{display:none} }
+.ft__float.is-visible{opacity:1; pointer-events:auto}
 
-  /* Footer nav: micro underline + crisp current state */
-  .ftr-nav .ftr-link {
-    position: relative;
-    color: rgba(255, 255, 255, 0.78);
-    transition: color 0.2s ease;
-    background: none; /* override old gradient underline */
-  }
-  .ftr-nav .ftr-link::after {
-    content: "";
-    position: absolute;
-    left: 0;
-    bottom: -2px;
-    height: 2px;
-    width: 0;
-    background: currentColor;
-    transition: width 0.25s ease;
-  }
-  .ftr-nav .ftr-link:hover,
-  .ftr-nav .ftr-link:focus-visible {
-    color: #fff;
-  }
-  .ftr-nav .ftr-link:hover::after,
-  .ftr-nav .ftr-link:focus-visible::after,
-  .ftr-nav .ftr-link[aria-current="page"]::after {
-    width: 100%;
-  }
-  .ftr-nav .ftr-link[aria-current="page"] {
-    color: #fff;
-  }
-
-  /* Back-to-top: progress ring stays, add gentle bounce on appear */
-  #site-footer .ftr-top[data-show="1"] {
-    animation: ftr-bounce-in 0.35s cubic-bezier(0.36, 1.7, 0.45, 0.97);
-  }
-  @keyframes ftr-bounce-in {
-    0% {
-      transform: translateY(8px);
-      opacity: 0;
-    }
-    70% {
-      transform: translateY(-2px);
-      opacity: 1;
-    }
-    100% {
-      transform: translateY(0);
-    }
-  }
-
-  /* Stripe “hologram swipe” on hover (keeps your 3D flip) */
-  .stripe-seal {
-    background: linear-gradient(
-      120deg,
-      rgba(255, 255, 255, 0.1),
-      rgba(255, 255, 255, 0.02)
-    );
-    isolation: isolate;
-    overflow: hidden;
-  }
-  .stripe-seal::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      120deg,
-      transparent 30%,
-      rgba(255, 255, 255, 0.35) 50%,
-      transparent 70%
-    );
-    transform: translateX(-110%);
-    transition: transform 0.8s ease;
-    pointer-events: none;
-  }
-  .stripe-seal:hover::before,
-  .stripe-seal:focus-visible::before {
-    transform: translateX(110%);
-  }
-
-  /* “Powered by” link: precise hover emphasis */
-  .text-gold.ftr-link {
-    background: none;
-    transition:
-      color 0.18s ease,
-      text-shadow 0.18s ease;
-  }
-  .text-gold.ftr-link:hover,
-  .text-gold.ftr-link:focus-visible {
-    color: color-mix(in srgb, var(--fc-gold, #facc15) 92%, #fff 8%);
-    text-shadow: 0 0 20px
-      color-mix(in srgb, var(--fc-gold, #facc15) 40%, transparent);
-  }
-
-  /* Small-print tone & selectable */
-  #site-footer .sf-container .text-zinc-500 {
-    color: #9aa3b2;
-  }
-  #site-footer ::selection {
-    background: color-mix(in srgb, var(--fc-gold, #facc15) 28%, #000 72%);
-    color: #fff;
-  }
-
-  /* Reduced motion: disable bounce & swipe */
-  @media (prefers-reduced-motion: reduce) {
-    #site-footer .ftr-top[data-show="1"] {
-      animation: none;
-    }
-    .stripe-seal::before {
-      transition: none;
-    }
-  }
-
-  /* High contrast / forced colors safety */
-  @media (forced-colors: active) {
-    #site-footer {
-      background: Canvas;
-      color: CanvasText;
-      border-top: 1px solid CanvasText;
-    }
-    .ftr-nav .ftr-link::after {
-      background: CanvasText;
-    }
-    .text-gold.ftr-link {
-      color: LinkText;
-      text-shadow: none;
-    }
-    .stripe-seal::before {
-      display: none;
-    }
-  }
+/* Focus + motion safe */
+:where(.fc-footer a, .fc-footer button, .ft__float a):focus-visible{
+  outline:none; box-shadow:0 0 0 2px #000, 0 0 0 4px var(--accent)
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition:none !important; animation:none !important}
+}
 </style>
 
-<script {{ nonce_attr() }} type="module">
-  (() => {
-    "use strict";
-    if (window.__FC_FOOTER_WIRED__) return;
-    window.__FC_FOOTER_WIRED__ = true;
+<script {{ nonce_attr() }}>
+(() => {
+  const backTop = document.getElementById('backtop');
+  const floatCta = document.getElementById('footer-float-cta');
+  const footer   = document.getElementById('site-footer');
 
-    /* Back-to-top: attribute state + progress ring */
-    const btn = document.getElementById("backtop");
-    if (btn) {
-      const reduce = matchMedia?.("(prefers-reduced-motion: reduce)")?.matches;
-      const threshold = Math.max(280, Math.round(window.innerHeight * 0.6));
-      let raf = 0;
-      const onScroll = () => {
-        cancelAnimationFrame(raf);
-        raf = requestAnimationFrame(() => {
-          const y = window.scrollY || document.documentElement.scrollTop || 0;
-          const h = Math.max(
-            1,
-            document.documentElement.scrollHeight - window.innerHeight,
-          );
-          const pct = Math.max(0, Math.min(1, y / h));
-          btn.style.setProperty("--pct", String(pct));
-          btn.setAttribute("data-show", y > threshold ? "1" : "0");
-        });
-      };
-      addEventListener("scroll", onScroll, { passive: true });
-      onScroll();
-      btn.addEventListener(
-        "click",
-        () => {
-          try {
-            window.scrollTo({ top: 0, behavior: reduce ? "auto" : "smooth" });
-          } catch {
-            document.documentElement.scrollTop = 0;
-            document.body.scrollTop = 0;
-          }
-        },
-        { passive: true },
-      );
-    }
+  if (!footer || (footer.__wired)) return; footer.__wired = true;
 
-    /* In-page nav: smooth aria-current on visible sections */
-    try {
-      const links = Array.from(
-        document.querySelectorAll(".ftr-nav [data-nav]"),
-      );
-      const map = new Map(links.map((a) => [a.dataset.nav, a]));
-      const obs = new IntersectionObserver(
-        (ents) => {
-          ents.forEach((ent) => {
-            const a = map.get("#" + ent.target.id);
-            if (!a) return;
-            if (ent.isIntersecting) {
-              links.forEach((x) => x.removeAttribute("aria-current"));
-              a.setAttribute("aria-current", "page");
-            }
-          });
-        },
-        { rootMargin: "-40% 0px -55% 0px", threshold: 0.01 },
-      );
-      ["about", "impact", "tiers"].forEach((id) => {
-        const el = document.getElementById(id);
-        if (el) obs.observe(el);
-      });
-      addEventListener("pagehide", () => obs.disconnect(), { once: true });
-    } catch {}
+  const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  const saveData = navigator.connection?.saveData;
 
-    /* Donate: UTM + P2P carry; preconnect on intent; modal fallback */
-    (function wireDonate() {
-      const a = document.getElementById("ftr-donate");
-      if (!a) return;
+  // Helpers
+  const show = (el, on) => el && el.classList.toggle('is-visible', !!on);
 
-      // decorate URL
-      try {
-        const u = new URL(a.getAttribute("href") || "", location.origin);
-        let ctx = {};
-        try {
-          ctx =
-            (JSON.parse(localStorage.getItem("fc_ref_ctx") || "{}") || {})
-              .data || {};
-        } catch {}
-        const carry = (k, v) => {
-          if (v && !u.searchParams.get(k)) u.searchParams.set(k, v);
-        };
-        [
-          "ref",
-          "ref_id",
-          "peer",
-          "peer_id",
-          "peer_slug",
-          "campaign",
-          "campaign_id",
-        ].forEach((k) => carry(k, ctx[k]));
-        const cur = new URL(location.href);
-        [
-          "utm_source",
-          "utm_medium",
-          "utm_campaign",
-          "ref",
-          "peer_slug",
-          "campaign",
-        ].forEach((k) => {
-          const v = cur.searchParams.get(k);
-          if (v && !u.searchParams.get(k)) u.searchParams.set(k, v);
-        });
-        if (!u.searchParams.get("utm_source"))
-          u.searchParams.set("utm_source", "footer");
-        if (!u.searchParams.get("utm_medium"))
-          u.searchParams.set("utm_medium", "cta");
-        if (!u.searchParams.get("utm_campaign"))
-          u.searchParams.set("utm_campaign", "fundraiser");
-        a.href = u.pathname + (u.search || "") + (u.hash || "");
+  // Reveal Back-to-top after modest scroll; hide when footer in view
+  const toggleByScroll = () => {
+    const y = window.scrollY || document.documentElement.scrollTop;
+    show(backTop, y> 280);
+  };
 
-        // open Stripe/PayPal in new tab
-        if (
-          /^https?:\/\/(buy\.stripe\.com|checkout\.stripe\.com)/i.test(
-            a.href,
-          ) ||
-          /paypal\.com/i.test(a.href)
-        ) {
-          a.target = "_blank";
-          a.rel = "nofollow noopener noreferrer";
-        }
-      } catch {}
-
-      // performance: preconnect on intent
-      const preconnectOnce = (() => {
-        let done = false;
-        return () => {
-          if (done) return;
-          done = true;
-          [
-            ["preconnect", "https://checkout.stripe.com"],
-            ["preconnect", "https://js.stripe.com"],
-            ["preconnect", "https://www.paypal.com"],
-          ].forEach(([rel, href]) => {
-            try {
-              const l = document.createElement("link");
-              l.rel = rel;
-              l.href = href;
-              l.crossOrigin = "anonymous";
-              document.head.appendChild(l);
-            } catch {}
-          });
-        };
-      })();
-      a.addEventListener("pointerenter", preconnectOnce, { passive: true });
-      a.addEventListener("focus", preconnectOnce, { passive: true });
-
-      // modal fallback (no direct payment link)
-      if (a.hasAttribute("data-open-donate-modal")) {
-        document.addEventListener(
-          "click",
-          (e) => {
-            const t = e.target.closest?.("#ftr-donate");
-            if (!t) return;
-            if (typeof window.openDonationModal === "function") {
-              e.preventDefault();
-              try {
-                if (!localStorage.getItem("fc_tiers_price_mode"))
-                  localStorage.setItem("fc_tiers_price_mode", "monthly");
-              } catch {}
-              let meta = {};
-              try {
-                meta = JSON.parse(t.getAttribute("data-intent-meta") || "{}");
-              } catch {}
-              window.openDonationModal(meta);
-            }
-          },
-          { capture: true, passive: false },
-        );
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      // When footer is visible, hide floating CTA so it doesn't clash
+      if (e.target === footer && floatCta){
+        const hideCTA = e.isIntersecting && e.intersectionRatio> 0.01;
+        show(floatCta, !hideCTA && window.innerWidth < 768 && window.scrollY> 220);
       }
-    })();
-  })();
+    });
+  }, { rootMargin: "0px 0px -40% 0px", threshold: [0, .01, .1] });
+  io.observe(footer);
+
+  // Initial & scroll
+  toggleByScroll();
+  window.addEventListener('scroll', toggleByScroll, { passive: true });
+
+  // Back to top behavior
+  backTop?.addEventListener('click', () => {
+    if (prefersReduce || saveData) { window.scrollTo(0,0); return; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
+  // Floating CTA: only if donate button is not visible
+  const donateTargets = [
+    document.getElementById('ftr-donate'),
+    document.getElementById('hdr-donate'),
+    document.querySelector('[data-cta="donate"]')
+  ].filter(Boolean);
+
+  const vis = el => {
+    const r = el.getBoundingClientRect();
+    return r.top < window.innerHeight && r.bottom> 0;
+  };
+
+  const checkFloat = () => {
+    const anyDonateVisible = donateTargets.some(vis);
+    const y = window.scrollY || 0;
+    show(floatCta, !anyDonateVisible && y> 220 && window.innerWidth < 768);
+  };
+
+  window.addEventListener('scroll', checkFloat, { passive: true });
+  window.addEventListener('resize', checkFloat, { passive: true });
+  checkFloat();
+
+  // Public hook
+  document.dispatchEvent(new CustomEvent('fc:footer:ready'));
+})();
 </script>
+
