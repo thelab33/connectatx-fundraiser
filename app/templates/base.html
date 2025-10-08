@@ -1,15 +1,11 @@
 {# ============================================================================
-   FundChamps • SaaS Base Layout (v6)
-   - CSP-safe nonce, SEO/OG, JSON-LD, LCP hints
-   - Early theme boot, variable fonts, conditional CSS loader, speculation rules
-   - Lighter default CSS bundle; section CSS loaded on demand
+   FundChamps • SaaS Base Layout (v6, Agency Edition)
 ============================================================================ #}
 
-{# --- Security & nonce helper --- #}
 {% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else (csp_nonce() if csp_nonce is defined else '')) %}
 {% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
 
-{# --- Environment / branding --- #}
+{# --- Branding, SEO, Config --- #}
 {% set _ver        = (ASSET_VER or ASSET_VERSION or VERSION) if (ASSET_VER is defined or ASSET_VERSION is defined or VERSION is defined) else '' %}
 {% set _TEAM       = team if team is defined else (_team if _team is defined else {}) %}
 {% set _brand_hex  = _TEAM.theme_color or '#facc15' %}
@@ -30,13 +26,11 @@
 {% set _has_manifest = _manifest is not none %}
 {% set USE_SOCKETIO = (USE_SOCKETIO if USE_SOCKETIO is defined else false) %}
 
-{# Donate href fallback used by floating CTA #}
 {% set HREF_DONATE = HREF_DONATE if HREF_DONATE is defined and HREF_DONATE else (
     stripe_payment_link if (stripe_payment_link is defined and stripe_payment_link)
     else (url_for('main.donate') if (url_for is defined and has_endpoint is defined and has_endpoint('main.donate')) else '/donate')
   ) %}
 
-{# Compute static paths #}
 {% set _og_path   = (_og_img if '://' in _og_img else (url_for('static', filename=_og_img, v=_ver) if url_for is defined else '/static/' ~ _og_img)) %}
 {% set _hero_path = (_hero_img if '://' in _hero_img else (url_for('static', filename=_hero_img, v=_ver) if url_for is defined else '/static/' ~ _hero_img)) %}
 {% set _manifest_path = (_manifest if _has_manifest and '://' in _manifest else (url_for('static', filename=_manifest, v=_ver) if _has_manifest and url_for is defined else None)) %}
@@ -53,12 +47,10 @@
   <meta name="referrer" content="strict-origin-when-cross-origin"/>
   <meta name="robots" content="index,follow,max-image-preview:large"/>
 
-  {# --- CSRF & CSP --- #}
   {% if csrf_token is defined %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
   <meta name="csp-nonce" content="{{ NONCE }}"/>
   <script {{ nonce_attr() }}>window.__CSP_NONCE="{{ NONCE }}";</script>
 
-  {# --- Meta, SEO, OG --- #}
   <title>{% block title %}{{ _page_title }}{% endblock %}</title>
   <meta name="description" content="{{ _page_desc }}"/>
   {% if request is defined %}<link rel="canonical" href="{{ request.base_url }}"/>{% endif %}
@@ -73,14 +65,11 @@
   <meta name="twitter:image" content="{{ _og_path }}"/>
   <meta name="twitter:image:alt" content="{{ _brand_name }} fundraiser"/>
 
-  {# Favicons (best-effort) #}
   <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png', v=_ver) if url_for is defined else _og_path }}"/>
   <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png', v=_ver) if url_for is defined else _og_path }}"/>
 
-  {# --- LCP hero hint (best effort) --- #}
   <link rel="preload" as="image" href="{{ _hero_path }}" imagesizes="(max-width:980px) 100vw, 60vw" fetchpriority="high"/>
 
-  {# --- Manifest / PWA (guarded) --- #}
   {% if _manifest_path %}
     <link rel="manifest" href="{{ _manifest_path }}"/>
     <meta name="apple-mobile-web-app-capable" content="yes"/>
@@ -88,13 +77,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   {% endif %}
 
-  {# --- Network preconnects (perf) --- #}
   <link rel="preconnect" href="https://js.stripe.com" crossorigin>
   <link rel="dns-prefetch" href="https://js.stripe.com">
   <link rel="preconnect" href="https://www.paypal.com" crossorigin>
   <link rel="dns-prefetch" href="https://www.paypal.com">
 
-  {# --- Variable Font (local) + preload; safe fallbacks --- #}
   {% set _font_var = url_for('static', filename='fonts/Inter-roman.var.woff2', v=_ver) if url_for is defined else '/static/fonts/Inter-roman.var.woff2' %}
   <link rel="preload" as="font" type="font/woff2" href="{{ _font_var }}" crossorigin>
   <style {{ nonce_attr() }}>
@@ -120,46 +107,19 @@
       -webkit-font-smoothing:antialiased;
       -moz-osx-font-smoothing:grayscale;
     }
-    /* Shells + a bit of flex love */
     .fcx-section, .fcx-section--hero, .fcx-section--tiers{
       max-width: var(--fcx-shell-max); width:100%; margin-inline:auto; margin-bottom:3rem; padding-inline: var(--fcx-gutter);
       display:flex; flex-direction:column; gap:clamp(12px,2vw,20px);
-      content-visibility:auto; contain-intrinsic-size: 1px 600px; /* speed on long pages */
+      content-visibility:auto; contain-intrinsic-size: 1px 600px;
     }
     @media (prefers-reduced-motion: reduce){
       *{animation-duration:0.001ms!important; animation-iteration-count:1!important; transition-duration:0.001ms!important}
     }
   </style>
 
-  {# --- Core CSS (lean set; section CSS now loaded on demand) --- #}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/tailwind.min.css', v=_ver) if url_for is defined else '/static/css/tailwind.min.css' }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/fc-tokens.css', v=_ver) if url_for is defined else '/static/css/fc-tokens.css' }}"/>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/fc-widgets.css', v=_ver) if url_for is defined else '/static/css/fc-widgets.css' }}"/>
-  {# Removed: fc-tiers.scoped.css, fc-impact.scoped.css, fc-about.scoped.css, fc.final-polish.css
-     These load conditionally below if the DOM needs them. #}
-
-  {# --- JSON-LD (Organization + DonateAction) --- #}
-  <script type="application/ld+json" {{ nonce_attr() }}>
-  {
-    "@context":"https://schema.org",
-    "@graph":[
-      { "@type":"Organization", "name":"{{ _brand_name }}", "url":"{{ request.base_url if request is defined else '' }}",
-        "logo":"{{ url_for('static', filename=_og_img, v=_ver) if url_for is defined else '/static/' ~ _og_img }}" },
-      { "@type":"DonateAction","name":"Donate to {{ _brand_name }}",
-        "target":{"@type":"EntryPoint","urlTemplate":"{{ HREF_DONATE }}",
-          "actionPlatform":["http://schema.org/DesktopWebPlatform","http://schema.org/MobileWebPlatform"]},
-        "result":{"@type":"MonetaryAmount","currency":"USD"} }
-    ]
-  }
-  </script>
-
-  {# --- Speculation Rules (modern prefetch; respects Data Saver) --- #}
-  <script type="speculationrules" {{ nonce_attr() }}>
-  {
-    "prerender":[{"where":{"href_matches":"/*"},"eagerness":"moderate"}],
-    "prefetch":[{"where":{"href_matches":"/*"},"eagerness":"moderate"}]
-  }
-  </script>
 
   {% block extra_head %}{% endblock %}
   {% block extra_css %}{% endblock %}
@@ -170,10 +130,21 @@
   <a id="skip-to-content" href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 z-[1000]">Skip to content</a>
   <div id="site-header-sentinel" aria-hidden="true" class="h-0 w-full"></div>
 
-  {# --- Header + Announcement Bar (ticker/ribbon/qr slots) --- #}
+  {# --- Header + Announcement Bar (keep, usually needed) --- #}
   {% include "partials/header_and_announcement.html" ignore missing with context %}
-  {% include "partials/widgets/qr_modal.html" ignore missing with context %}
-  {% include "partials/widgets/command_palette.html" ignore missing with context %}
+
+  {# --- Widgets: Optional, feature-toggled --- #}
+  {% if show_qr_modal %}
+    {% include "partials/widgets/qr_modal.html" ignore missing with context %}
+  {% endif %}
+  {% if show_command_palette %}
+    {% include "partials/widgets/command_palette.html" ignore missing with context %}
+  {% endif %}
+  {% if show_newsletter %}
+    {% include "partials/newsletter.html" ignore missing %}
+  {% endif %}
+  {# Block for per-page widgets (optional) #}
+  {% block widgets %}{% endblock %}
 
   {# --- Main content --- #}
   <main id="main" role="main" class="relative">
@@ -181,102 +152,21 @@
     {% block content %}{% endblock %}
   </main>
 
-  {# --- Footer & modules --- #}
-  {% include "partials/footer.html"         ignore missing with context %}
-  {% include "partials/donation_modal.html" ignore missing %}
-  {% include "partials/newsletter.html"     ignore missing %}
+  {# --- Footer (always needed) --- #}
+  {% include "partials/footer.html" ignore missing with context %}
 
+  {% include "partials/donation_modal.html" ignore missing %}
+  
   {# --- Core JS bundles (deferred, nonced) --- #}
   <script src="{{ url_for('static', filename='js/bundle.min.js', v=_ver) if url_for is defined else '/static/js/bundle.min.js' }}" defer {{ nonce_attr() }}></script>
   {% if _is_donate %}
     <script src="{{ url_for('static', filename='js/donate.min.js', v=_ver) if url_for is defined else '/static/js/donate.min.js' }}" defer {{ nonce_attr() }}></script>
-    {# confetti only on donate page #}
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" defer {{ nonce_attr() }}></script>
   {% endif %}
   {% if USE_SOCKETIO %}
     <script src="/socket.io/socket.io.js" defer {{ nonce_attr() }}></script>
   {% endif %}
   <script src="{{ url_for('static', filename='js/fc-ui.js', v=_ver) if url_for is defined else '/static/js/fc-ui.js' }}" defer {{ nonce_attr() }}></script>
-
-  {# --- AutoEnhance config (perf + a11y + UX) --- #}
-  <script {{ nonce_attr() }}>
-    window.FC_ENHANCE_CFG = {
-      donateSelector: "[data-donate-cta], a[href*='/donate']",
-      sponsorSelector: "a[data-tier], a[href*='/sponsor']",
-      headerSelector: "#site-header",
-      sentinelSelector: "#site-header-sentinel",
-      floatingCtaSelector: "#floating-donate-cta",
-      stickyDonateMinWidth: 861,
-      enrichUTM: true,
-      addLazyToImages: true,
-      enforceNoopener: true,
-      hotkeys: true,
-      ariaAutofix: true,
-      reportToWindow: true
-    };
-  </script>
-  <script type="module"
-          src="{{ url_for('static', filename='js/fundchamps.autoEnhance.v1.mjs', v=_ver) if url_for is defined else '/static/js/fundchamps.autoEnhance.v1.mjs' }}"
-          defer {{ nonce_attr() }}></script>
-
-  {# --- FinalUX tenant toggle (class hooks + analytics bridge + safety) --- #}
-  <script {{ nonce_attr() }}>
-    window.FC_UX_CFG = {
-      features: {
-        classToggle: true,
-        analyticsBridge: true,
-        liveRegion: true,
-        preconnectStripe: true,
-        heroFallback: true,
-        enforceNoopener: true,
-        devAxeHotkey: {{ 'true' if (ENV is defined and ENV in ['dev','development','staging']) else 'false' }}
-      },
-      tenants: { "{{ _brand_slug }}": { features: {} } }
-    };
-  </script>
-  <script src="{{ url_for('static', filename='js/fc.final-ux.js', v=_ver) if url_for is defined else '/static/js/fc.final-ux.js' }}"
-          defer {{ nonce_attr() }}></script>
-
-  {# --- Floating Donate CTA --- #}
-  <div class="fc-float-cta" id="floating-donate-cta"
-       style="display:none; position:fixed; bottom:1.7rem; right:1.7rem; z-index:1999;">
-    <a class="fcx-btn fcx-btn-accent fc-pro-cta" href="{{ HREF_DONATE }}" target="_blank" rel="noopener"
-       data-cta="donate" aria-label="Donate now — floating">Donate Now →</a>
-  </div>
-
-  {# --- Early Theme Boot (no flash) + live meta theme-color --- #}
-  <script {{ nonce_attr() }}>
-    (function(){
-      try{
-        const root=document.documentElement, key='fc-theme';
-        const saved=localStorage.getItem(key);
-        const sysDark = matchMedia && matchMedia('(prefers-color-scheme: dark)').matches;
-        const mode = saved || (sysDark ? 'dark' : 'light');
-        root.dataset.theme = mode;
-        const meta = document.getElementById('meta-theme-color');
-        if(meta){ meta.content = mode==='dark' ? '#0b0b0c' : '#fafafa'; }
-        window.addEventListener('fc:theme', e=>{
-          const m = (e.detail && e.detail.mode) || root.dataset.theme || 'dark';
-          root.dataset.theme = m; localStorage.setItem(key, m);
-          if(meta){ meta.content = m==='dark' ? '#0b0b0c' : '#fafafa'; }
-        });
-      }catch(_){}
-    })();
-  </script>
-
-  {# --- Conditional CSS loader (only load what the DOM needs) --- #}
-  <script {{ nonce_attr() }}>
-    (function(){
-      const addCss=(href)=>{ const l=document.createElement('link'); l.rel='stylesheet'; l.href=href; document.head.appendChild(l); };
-      const v="{{ _ver }}";
-      const has=(sel)=>!!document.querySelector(sel);
-      const base = (p)=> ({{ 'true' if (url_for is defined) else 'false' }}) ? "{{ url_for('static', filename='__X__') }}".replace('__X__', p) + (v?('?v='+v):'') : ("/static/"+p);
-      // Tiers
-      if(has('#tiers')) addCss(base('css/fc-tiers.scoped.css'));
-      // Impact/About
-      if(has('#about-impact')){ addCss(base('css/fc-impact.scoped.css')); addCss(base('css/fc-about.scoped.css')); }
-    })();
-  </script>
 
   {% block extra_js %}{% endblock %}
 </body>

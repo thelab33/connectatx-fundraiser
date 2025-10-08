@@ -1,64 +1,28 @@
+{% import 'partials/macros.html' as fc with context %}
 {% extends "base.html" %}
-{% import 'partials/_fmt.html' as fmt %}
+{% import 'partials/macros.html' as fc with context %}
 {% from 'partials/_core_helpers.html' import nonce_attr %}
 
-{# =========================
-   Helpers (robust toggles & guards)
-   ========================= #}
-{% macro bool_from(val, default=true) -%}
-  {%- set v = (val|string)|lower -%}
-  {%- if v in ['0','false','off','no','disable','disabled','none','null',''] -%}false
-  {%- elif v in ['1','true','on','yes','enable','enabled'] -%}true
-  {%- else -%}{{ default }}
-  {%- endif -%}
-{%- endmacro %}
-
-{% macro has_route(name) -%}
-  {{ (has_endpoint(name) if (has_endpoint is defined) else false) }}
-{%- endmacro %}
-
-{% macro safe_href(fallback='#', endpoint_name='') -%}
-  {%- if endpoint_name and (has_endpoint is defined) and has_endpoint(endpoint_name) -%}
-    {{ safe_url_for(endpoint_name) if safe_url_for is defined else '#' }}
-  {%- else -%}{{ fallback }}{%- endif -%}
-{%- endmacro %}
-
-{% macro num(x, kind='int', default=0) -%}
-  {%- set s = (x if x is not none else default) -%}
-  {%- if kind == 'float' -%}{{ (s|string)|float }}
-  {%- else -%}{{ (s|string)|int }}
-  {%- endif -%}
-{%- endmacro %}
-
-{# =========================
-   Page-level config & toggles
-   ========================= #}
-{% set SHELL_MAX = (team.shell_max if team is defined and team.shell_max is defined else shell_max|default(None, true)) %}
+{# ==== PAGE CONFIG ==== #}
 {% set _q   = request.args if request is defined else {} %}
-
-{# Section toggles: context > query > defaults #}
-{% set SHOW_SCOREBOARD = bool_from(show_scoreboard if show_scoreboard is defined else _q.get('panel','1')) %}
-{% set SHOW_TIERS      = bool_from(show_tiers      if show_tiers      is defined else _q.get('tiers','1')) %}
-{% set SHOW_ABOUT      = bool_from(show_about      if show_about      is defined else _q.get('about','1')) %}
-{# New: unified Impact+About band; keep SHOW_IMPACT_ABOUT for backwards-compat if passed #}
-{% set SHOW_IMPACT_ABOUT = bool_from(show_impact_about if show_impact_about is defined else _q.get('impact_about','1')) %}
-
-{# Optional: inject KPI Rail (safe to disable if already inside about_section partial) #}
-{% set WITH_IMPACT_RAIL = bool_from(with_impact_rail if with_impact_rail is defined else _q.get('impact_rail','1')) %}
-
-{# Hero choice: allow-list keeps things tidy #}
+{% set SHELL_MAX = (team.shell_max if team is defined and team.shell_max is defined else shell_max|default(None, true)) %}
+{% set panel_val = show_scoreboard if show_scoreboard is defined else _q.get('panel','1') %}
+{% set SHOW_SCOREBOARD = panel_val not in ['0','false','off','no','disable','disabled','none','null',''] %}
+{% set tmp_SHOW_TIERS = show_tiers      if show_tiers      is defined else _q.get('tiers','1') %}
+{% set SHOW_TIERS = tmp_SHOW_TIERS not in ['0','false','off','no','disable','disabled','none','null',''] %}
+{% set tmp_SHOW_IMPACT_ABOUT = show_impact_about if show_impact_about is defined else _q.get('impact_about','1') %}
+{% set SHOW_IMPACT_ABOUT = tmp_SHOW_IMPACT_ABOUT not in ['0','false','off','no','disable','disabled','none','null',''] %}
+{% set SCOREBOARD_PLACE = SCOREBOARD_PLACE|default('prehero') %}
 {% set _hero_choice = (_q.get('hero','classic')|lower) %}
 {% set HERO_PARTIAL = hero_partial if hero_partial is defined
                       else ('partials/hero_cinematic.html' if _hero_choice == 'cinematic'
                             else 'partials/hero_classic.html') %}
 
-{# Fundraiser math (guarded) #}
 {% set GOAL       = (fundraising_goal if fundraising_goal else 50000)|int %}
 {% set RAISED     = (funds_raised if funds_raised else 0)|int %}
 {% set PCT        = (100.0 * RAISED / (GOAL if GOAL>0 else 1))|round(1) %}
 {% set PCT_CLAMP  = 0 if PCT < 0 else (100 if PCT>100 else PCT) %}
 
-{# Metrics for KPI rail / impact chips (safe fallbacks) #}
 {% set donors       = donors if donors is defined else 0 %}
 {% set athletes     = athletes if athletes is defined else (team.athletes if team is defined and team.athletes is defined else 0) %}
 {% set trips        = trips if trips is defined else 0 %}
@@ -72,215 +36,101 @@
 {% block h1 %}{% endblock %}
 
 {% block content %}
-
-  {# ===== Announcement Bar (replaces Sponsor Leaderboard band) ===== #}
-  {% if SHOW_SCOREBOARD %}
-    {% include "partials/announcement_bar.html" ignore missing with context %}
-  {% endif %}
-
   <div class="fcx-main" id="home" data-route="home" data-pct="{{ PCT_CLAMP }}">
 
-    {# ============== HERO (Classic or Cinematic) ============== #}
-    <section id="hero" class="band band--hero" role="region" aria-labelledby="hero-title">
+    <!-- ===== HERO SECTION ===== -->
+    <section id="hero" class="band band--hero" aria-labelledby="hero-title" data-hero>
       <h2 id="hero-title" class="sr-only">Fundraiser Highlight</h2>
       <div class="shell shell--hero" data-animate="fade-up">
         {% include HERO_PARTIAL ignore missing with context %}
       </div>
     </section>
 
-    {# ================= TIERS ================= #}
-    {% if SHOW_TIERS %}
-    <section id="tiers" class="band band--tiers" role="region" aria-labelledby="tiers-title">
-      <h2 id="tiers-title" class="sr-only">Sponsorship Tiers</h2>
-      <div class="shell shell--tiers" data-animate="fade-up" data-animate-delay="60">
-        {% include "partials/tiers.html" ignore missing with context %}
-      </div>
-    </section>
-    {% endif %}
-
-    {# ============= UNIFIED IMPACT + ABOUT (One-Pager) ============= #}
-    {% if SHOW_IMPACT_ABOUT or SHOW_ABOUT %}
-    <section id="about-impact" class="band band--about" role="region" aria-labelledby="about-impact-title">
-      <h2 id="about-impact-title" class="sr-only">Impact and About</h2>
-      <div class="shell shell--tight" data-animate="fade-up" data-animate-delay="120">
-
-        {# --- KPI Rail (guarded; disable via WITH_IMPACT_RAIL=false) --- #}
-        {% if WITH_IMPACT_RAIL %}
-        <div class="impact-rail" data-raised="{{ metrics.raised or 0 }}" data-goal="{{ metrics.goal or 0 }}">
-          <div class="impact-rail__kpis" role="group" aria-label="Key Impact Stats">
-            <div class="ikpi"><span class="ikpi-v" data-kpi="raised">${{ '{:,.0f}'.format(metrics.raised or 0) }}</span><span class="ikpi-l">Raised</span></div>
-            <div class="ikpi"><span class="ikpi-v" data-kpi="goal">${{ '{:,.0f}'.format(metrics.goal or 0) }}</span><span class="ikpi-l">Goal</span></div>
-            {% if metrics.donors is not none %}
-              <div class="ikpi"><span class="ikpi-v" data-kpi="donors">{{ metrics.donors }}</span><span class="ikpi-l">Donors</span></div>
-            {% endif %}
-            {% if metrics.kids is not none %}
-              <div class="ikpi"><span class="ikpi-v" data-kpi="kids">{{ metrics.kids }}</span><span class="ikpi-l">Athletes</span></div>
-            {% endif %}
-            {% if metrics.trips is not none %}
-              <div class="ikpi"><span class="ikpi-v" data-kpi="trips">{{ metrics.trips }}</span><span class="ikpi-l">Trips</span></div>
-            {% endif %}
-            {% if metrics.tutor_hours is not none %}
-              <div class="ikpi"><span class="ikpi-v" data-kpi="tutor_hours">{{ metrics.tutor_hours }}</span><span class="ikpi-l">Tutor Hrs</span></div>
-            {% endif %}
-            <div class="impact-rail__cta">
-              <a class="ir-btn" href="{{ safe_href('/impact', 'main.impact') }}">Full Impact →</a>
-            </div>
-          </div>
-          <div class="impact-rail__buckets" role="list" aria-label="Impact categories">
-            <div class="ir-bucket" role="listitem"><span class="ir-bucket-ic">✈️</span><span class="ir-bucket-l">Travel</span></div>
-            <div class="ir-bucket" role="listitem"><span class="ir-bucket-ic">🏀</span><span class="ir-bucket-l">Gear</span></div>
-            <div class="ir-bucket" role="listitem"><span class="ir-bucket-ic">📚</span><span class="ir-bucket-l">Tutoring</span></div>
-          </div>
+    <!-- ===== IMPACT & SCOREBOARD DASHBOARD ===== -->
+    <div class="rail-combo-panel flex flex-col md:flex-row md:gap-6 items-stretch
+                max-w-5xl mx-auto -mt-16 md:-mt-24 z-20 relative px-3">
+      {% if SHOW_IMPACT_ABOUT %}
+        <div class="impact-rail flex-1 bg-zinc-900/95 rounded-2xl shadow-lg p-4 mb-3 md:mb-0">
+          {% include "partials/impact_lockers_premium.html" ignore missing with context %}
         </div>
-        {% endif %}
+      {% endif %}
+      {% if SHOW_SCOREBOARD %}
+        <div class="scoreboard-rail flex-1 bg-zinc-900/95 rounded-2xl shadow-lg p-4">
+          {% include "partials/_scoreboard_panel.html" ignore missing with context %}
+        </div>
+      {% endif %}
+    </div>
 
-        {# --- Story/Impact combined card --- #}
-        {% include "partials/about_section.html" ignore missing with context %}
+    <!-- ===== QUICK ACTIONS ===== -->
+    <div class="quick-actions flex flex-wrap justify-center gap-3 mt-4 mb-2 px-2 max-w-4xl mx-auto">
+      {{ fc.cta_btn("Donate Now", "site", classes="fcx-btn fcx-btn-accent") }}
+      <a href="#tiers" class="fcx-btn fcx-btn-outline">Become a Sponsor</a>
+      {{ fc.share_btn("Share", "main", classes="fcx-btn fcx-btn-dark") }}
+    </div>
 
-      </div>
-    </section>
+    <!-- ===== SPONSORSHIP TIERS ===== -->
+    {% if SHOW_TIERS %}
+      <section id="tiers" class="band band--tiers" aria-labelledby="tiers-title">
+        <h2 id="tiers-title" class="sr-only">Sponsorship Tiers</h2>
+        <div class="shell shell--tiers" data-animate="fade-up" data-animate-delay="60">
+          {% include "partials/tiers.html" ignore missing with context %}
+        </div>
+      </section>
     {% endif %}
-
   </div>
+
+  <!-- ======= SAAS UPSELL / FLEX ======= -->
+  {% if show_org_dashboard %}{% include "partials/saas_org_dashboard_widget.html" ignore missing with context %}{% endif %}
+  {% if show_custom_branding %}{% include "partials/saas_branding_bar.html" ignore missing with context %}{% endif %}
+  {% if show_mobile_app_prompt %}{% include "partials/saas_mobile_app_prompt.html" ignore missing with context %}{% endif %}
+  {% if show_api_integrations %}{% include "partials/saas_api_integrations_widget.html" ignore missing with context %}{% endif %}
+  {% if show_ai_analytics %}{% include "partials/saas_ai_analytics_widget.html" ignore missing with context %}{% endif %}
+
 {% endblock %}
 
-{# -------------------------------------------
-  Page Rhythm (full-bleed bands; no h-scroll)
-  ------------------------------------------- #}
 <style {{ nonce_attr() }}>
 :root{
   {% if SHELL_MAX %}--fcx-shell-max: {{ SHELL_MAX }};{% endif %}
   --fcx-gutter: clamp(14px, 5vw, 36px);
-  --band-gap: clamp(20px, 3.5vw, 44px);
-  --band-gap-tight: clamp(16px, 3vw, 36px);
-  --band-vpad: clamp(24px, 5.2vw, 64px);
-  --band-vpad-tight: clamp(20px, 4.6vw, 52px);
+  --band-gap: clamp(16px, 2vw, 32px);
+  --band-vpad: clamp(20px, 4vw, 54px);
   --hero-bg: radial-gradient(120% 80% at 50% -18%, rgba(8,9,13,.85) 0, rgba(6,7,10,.92) 60%, transparent 100%);
   --tiers-bg: linear-gradient(180deg, rgba(15,17,24,.6), rgba(12,14,20,.7));
-  --about-bg: linear-gradient(180deg, rgba(8,10,16,.6), rgba(6,8,12,.75));
 }
-
-html{ overflow-x: clip; }
-
-.sr-only{ position:absolute !important; clip:rect(1px,1px,1px,1px); clip-path:inset(50%); width:1px; height:1px; overflow:hidden; white-space:nowrap; border:0; padding:0; }
-.fcx-main{ width:100%; }
-
-/* Full-bleed bands */
-.band{
-  position: relative;
-  left: 50%;
-  right: 50%;
-  margin-left: -50vw;
-  margin-right: -50vw;
-  width: 100vw;
-  margin-bottom: var(--band-gap);
+html { overflow-x: clip; }
+.sr-only { position:absolute !important; clip:rect(1px,1px,1px,1px); clip-path:inset(50%); width:1px; height:1px; overflow:hidden; white-space:nowrap; border:0; padding:0; }
+.fcx-main { width:100%; }
+.band { position: relative; left: 50%; right: 50%; margin-left: -50vw; margin-right: -50vw; width: 100vw; margin-bottom: var(--band-gap);}
+.band--hero  { background: var(--hero-bg);}
+.band--tiers { background: var(--tiers-bg);}
+.shell { max-width: var(--fcx-shell-max, none); width: 100%; margin-inline: auto; padding-inline: var(--fcx-gutter); padding-block: var(--band-vpad);}
+.shell--hero  { padding-block: max(18px, var(--band-vpad)); }
+.shell--tiers { padding-block: max(16px, var(--band-vpad)); }
+.rail-combo-panel { margin-bottom: 0.5em; }
+@media (max-width: 700px) {
+  .rail-combo-panel { flex-direction: column; gap: 0.5em; margin-top: -2em; }
 }
-.band--hero  { background: var(--hero-bg); }
-.band--tiers { background: var(--tiers-bg); }
-.band--about { background: var(--about-bg); }
-
-/* Contained shells honoring the global cap */
-.shell{
-  max-width: var(--fcx-shell-max, none);
-  width: 100%;
-  margin-inline: auto;
-  padding-inline: var(--fcx-gutter);
-  padding-block: var(--band-vpad);
-}
-.shell--tight { padding-block: var(--band-vpad-tight); }
-.shell--hero  { padding-block: max(22px, var(--band-vpad)); }
-.shell--tiers { padding-block: max(20px, var(--band-vpad)); }
-
-/* Section headings */
-.sec-head{
-  display:flex; gap:12px; align-items:center; justify-content:space-between; flex-wrap:wrap;
-  margin-bottom: clamp(10px, 2.2vw, 18px);
-}
-.sec-title{ font: 900 clamp(1.2rem, 1.4rem + .7vw, 1.6rem)/1.1 system-ui; color: CanvasText; }
-.sec-actions .fcx-link{ font-weight:800; text-underline-offset:2px }
-
-/* Impact Rail (KPI Bar + Buckets) */
-#about-impact .impact-rail{ max-width:1100px; margin:0 auto clamp(10px,2vw,18px); }
-#about-impact .impact-rail__kpis{
-  display:flex; gap:.5rem; align-items:center; flex-wrap:wrap;
-  background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12);
-  padding:.6rem .7rem; border-radius:14px;
-}
-#about-impact .ikpi{
-  display:flex; align-items:center; gap:.35rem; padding:.35rem .6rem;
-  border-radius:999px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-}
-#about-impact .ikpi-v{ font-weight:1000; font-variant-numeric: tabular-nums; }
-#about-impact .ikpi-l{ opacity:.85 }
-#about-impact .impact-rail__cta{ margin-left:auto }
-#about-impact .ir-btn{
-  display:inline-flex; align-items:center; gap:.35rem; text-decoration:none; font-weight:1000; color:#111;
-  background:linear-gradient(180deg,#fffbe6,var(--accent)); border:1px solid rgba(0,0,0,.25);
-  padding:.48rem .8rem; border-radius:999px;
-}
-#about-impact .impact-rail__buckets{
-  display:flex; gap:.5rem; flex-wrap:wrap; margin-top:.6rem;
-}
-#about-impact .ir-bucket{
-  display:inline-flex; align-items:center; gap:.4rem; padding:.5rem .9rem;
-  border-radius:12px; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12);
-  font-weight:900;
-}
-#about-impact .ir-bucket-ic{ font-size:1.1rem }
-.light #about-impact .impact-rail__kpis,
-.light #about-impact .impact-rail__buckets,
-.light #about-impact .ikpi,
-.light #about-impact .ir-bucket{ border-color: rgba(0,0,0,.12); background: rgba(0,0,0,.04); }
-
-/* Animate-in hooks */
-@media (prefers-reduced-motion: no-preference){
-  [data-animate]{ opacity:0; transform: translateY(12px); transition: opacity .35s ease, transform .35s ease; }
-  [data-animate].is-in{ opacity:1; transform:none; }
-  [data-animate][data-animate-delay="60"]  { transition-delay:.06s }
-  [data-animate][data-animate-delay="90"]  { transition-delay:.09s }
-  [data-animate][data-animate-delay="120"] { transition-delay:.12s }
-}
-
-/* Honor data-saver */
-@media (prefers-reduced-data: reduce){
-  [data-animate]{ opacity:1 !important; transform:none !important; transition:none !important; }
-}
-
-/* Anchor offset for sticky headers */
-:target{ scroll-margin-top: 76px; }
-@media (max-width:860px){ :target{ scroll-margin-top: 64px } }
+.quick-actions .fcx-btn { min-width: 140px; font-size: 1.07em; font-weight: 600;}
+.quick-actions { gap: 0.7em; }
 </style>
 
 <script {{ nonce_attr() }}>
-/* Fade-in observer (respects reduced-motion/data) + robust fallback */
+(() => {
+  const header = document.getElementById('site-header');
+  if (!header || !('ResizeObserver' in window)) return;
+  const root = document.documentElement;
+  const setH = () => root.style.setProperty('--fc-header-h', `${header.getBoundingClientRect().height}px`);
+  new ResizeObserver(setH).observe(header); setH();
+})();
 (() => {
   const rm = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const rd = window.matchMedia && window.matchMedia('(prefers-reduced-data: reduce)').matches;
   const els = document.querySelectorAll('[data-animate]');
-  if (rm || rd || !('IntersectionObserver' in window)) {
-    els.forEach(el => el.classList.add('is-in'));
-    return;
-  }
+  if (rm || rd || !('IntersectionObserver' in window)) { els.forEach(el => el.classList.add('is-in')); return; }
   const io = new IntersectionObserver((entries) => {
-    for (const e of entries) {
-      if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
-    }
+    for (const e of entries) if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
   }, { rootMargin: '0px 0px -10% 0px', threshold: .1 });
   els.forEach(el => io.observe(el));
-})();
-
-/* Optional: format KPI $ values if server passes raw numbers */
-(() => {
-  const rail = document.querySelector('#about-impact .impact-rail');
-  if(!rail) return;
-  const raisedEl = rail.querySelector('[data-kpi="raised"]');
-  const goalEl   = rail.querySelector('[data-kpi="goal"]');
-  const n = (x) => Number(x||0);
-  const fmt = (v) => { try { return v.toLocaleString(undefined,{maximumFractionDigits:0}); } catch { return v; } };
-  const raised = n(rail.getAttribute('data-raised'));
-  const goal   = n(rail.getAttribute('data-goal'));
-  if(raisedEl && /^\$?0$/.test(raisedEl.textContent.trim())) raisedEl.textContent = '$' + fmt(raised);
-  if(goalEl   && /^\$?0$/.test(goalEl.textContent.trim()))   goalEl.textContent   = '$' + fmt(goal);
 })();
 </script>
 

@@ -1,4 +1,4 @@
-{# ---------- Nonce (define only if not imported) ---------- #}
+{# ========== Nonce Macro (safe guard) ========== #}
 {% if nonce_attr is not defined %}
   {% set NONCE = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
   {% macro nonce_attr() -%}nonce="{{ NONCE }}"{%- endmacro %}
@@ -14,8 +14,7 @@
 }
 </style>
 
-{# =================== Sponsor Leaderboard — Agency Elite v6 (Slim) =================== #}
-{# --------- Configurable/White-label --------- #}
+{# ========== Sponsor Leaderboard — Agency Elite v6 (Slim) ========== #}
 {% set _seed      = (shoutouts if shoutouts is defined and shoutouts else []) %}
 {% set _team_id   = (team.team_id if team and team.team_id else 'global') %}
 {% set _brand     = (team.theme_color if team and team.theme_color else '#facc15') %}
@@ -46,7 +45,7 @@
   <div class="lb__viewport" role="presentation">
     <div class="lb__rail lb__marquee" id="ticker-rail" role="list" aria-busy="true">
 
-      {# — Optional demo seeds (safe to remove) — #}
+      {# ========== Demo Data (Replace or extend with live server data) ========== #}
       <span role="listitem" class="pill" tabindex="-1" data-tier="Platinum" data-sponsor="Nike" data-msg="Just do it — Support the team!" aria-label="✨ Nike: Just do it — Support the team!">
         ✨ <span class="txt"><span class="who">Nike</span><span class="msg">Just do it — Support the team!</span></span>
       </span>
@@ -60,7 +59,7 @@
         🥉 <span class="txt"><span class="who">Local Brewery</span><span class="msg">Cheers to champions — beer for the win!</span></span>
       </span>
 
-      {# — Your server-provided seeds (objects with who,msg,tier) — #}
+      {# ========== Real shoutouts (from API/DB/server) ========== #}
       {% for s in _seed %}
       <span role="listitem" class="pill" tabindex="-1"
             {% if s.tier %}data-tier="{{ s.tier }}"{% endif %}
@@ -93,77 +92,187 @@
 </section>
 
 <style {{ nonce_attr() }}>
-/* Leaderboard — Agency Elite v6 (Slim) */
-.lb--slim{
-  --lb-h: 44px; --gap: .5rem; --pill-px: .7rem; --pill-py: .32rem; --fs: .84rem;
-  --rail-speed: 30s;
-  --bg:#0b0e15; --bg-rail:#0b0e15;
-  --pill:#1a1f2a; --pill-muted:#242a36;
-  --ink:#e9eef7; --muted:#ccd4df; --gold: var(--accent, #facc15);
-  --ring: color-mix(in srgb, var(--gold) 42%, transparent);
-  --radius: 999px; --shadow: 0 6px 24px rgba(0,0,0,.28);
-}
-.lb{ position:relative; padding:0; background:var(--bg); border-radius:.875rem; box-shadow:var(--shadow); overflow:hidden; }
-.lb__viewport{
-  position:relative; display:flex; align-items:center; justify-content:center;
-  height:var(--lb-h); padding:0 .5rem;
-  background:linear-gradient(180deg,#111418,#0c0f15);
-  border:1px solid rgba(255,255,255,.06);
-}
-.lb__viewport::before,.lb__viewport::after{
-  content:""; position:absolute; inset:0 auto 0 0; width:42px; pointer-events:none; z-index:2;
-  background:linear-gradient(90deg,#0c0f1500 0%, #0c0f15 100%);
-}
-.lb__viewport::after{ inset:auto 0 auto auto; transform:scaleX(-1); }
-@supports (-webkit-mask-image: linear-gradient(#000,#000)) or (mask-image: linear-gradient(#000,#000)){
-  .lb__viewport::before,.lb__viewport::after{display:none}
-  .lb__viewport{ -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
-                  mask-image:linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%); }
-}
-.lb__rail{ display:flex; align-items:center; gap:var(--gap); white-space:nowrap; will-change:transform; animation:fc-ticker var(--rail-speed) linear infinite; }
-.lb:hover .lb__rail,.lb:focus-within .lb__rail{ animation-play-state:paused; }
+/* ================================
+   FundChamps Leaderboard v7 (Elite)
+   - Slim, SaaS-grade, retina-polished
+   - VIP glow, mobile-first, WCAG-a11y
+   ================================ */
 
-.pill{
-  display:inline-flex; align-items:center; background:var(--pill); color:var(--ink);
-  padding:var(--pill-py) var(--pill-px); border-radius:var(--radius); font-weight:800; font-size:var(--fs); line-height:1;
-  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 0 0 1px rgba(0,0,0,.42);
-  transition: transform .18s ease, box-shadow .18s ease;
+.lb--slim {
+  --lb-h: 44px; --gap: .52rem; --pill-px: .74rem; --pill-py: .34rem; --fs: .88rem;
+  --rail-speed: 28s;
+  --bg: #0b0e15;
+  --pill: #181c24;
+  --pill-muted: #232733;
+  --ink: #f4f6fa;
+  --muted: #b7bfd2;
+  --gold: var(--accent, #facc15);
+  --ring: color-mix(in srgb, var(--gold) 40%, transparent);
+  --radius: 999px;
+  --shadow: 0 7px 28px rgba(0,0,0,.29);
 }
-.pill:hover{ transform:translateY(-1px); }
-.pill .txt{ display:flex; flex-direction:column; margin-left:.45rem; }
-.pill .who{ color:var(--gold); font-weight:900; }
-.pill .msg{ color:var(--muted); font-weight:600; font-size:.78em; }
-.pill.placeholder{ background:var(--pill-muted); }
-.pill.headline{ font-weight:1000; color: color-mix(in srgb, var(--gold) 92%, #fff); letter-spacing:.01em; }
 
-.lb__controls{ display:inline-flex; align-items:center; gap:.25rem; margin-left:.25rem; }
-.ctrl{ background:var(--pill); color:var(--ink); border-radius:999px; padding:.28rem .6rem; font-size:.8rem; font-weight:900; line-height:1; border:1px solid rgba(255,255,255,.06); }
-.ctrl:hover{ background: color-mix(in srgb, var(--gold) 88%, #000); color:#0c0d10; }
+.lb {
+  position: relative;
+  padding: 0;
+  background: var(--bg);
+  border-radius: .88rem;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
 
-.brand-chip{ display:inline-flex; align-items:center; gap:.35rem; background:rgba(0,0,0,.72); color:var(--gold); padding:.26rem .55rem; border-radius:999px; font-size:.72rem; box-shadow:0 2px 6px rgba(0,0,0,.18); }
+.lb__viewport {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--lb-h);
+  padding: 0 .5rem;
+  background: linear-gradient(180deg, #151922, #0c0f15 90%);
+  border: 1px solid rgba(255,255,255,.06);
+}
 
-/* VIP Accents */
-.pill[data-tier="Platinum"]{ background: radial-gradient(120% 140% at 30% 10%, #cce7ff22 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #b3e5fc40, 0 0 0 2px #b3e5fc26; }
-.pill[data-tier="Gold"]    { background: radial-gradient(120% 140% at 30% 10%, #ffefc426 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--gold) 55%, #000), 0 0 0 2px color-mix(in srgb, var(--gold) 28%, transparent); }
-.pill[data-tier="Silver"]  { background: radial-gradient(120% 140% at 30% 10%, #d9d9d926 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #c0c0c033, 0 0 0 2px #c0c0c020; }
-.pill[data-tier="Bronze"]  { background: radial-gradient(120% 140% at 30% 10%, #cd7f3226 0, #1a1f2a 42%); box-shadow: inset 0 0 0 1px #cd7f3238, 0 0 0 2px #cd7f3220; }
+.lb__viewport::before,
+.lb__viewport::after {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 44px;
+  pointer-events: none;
+  z-index: 2;
+  background: linear-gradient(90deg, #0c0f1500 0%, #0c0f15 100%);
+}
+.lb__viewport::after { inset: auto 0 auto auto; transform: scaleX(-1); }
+@supports (-webkit-mask-image: linear-gradient(#000,#000)), (mask-image: linear-gradient(#000,#000)) {
+  .lb__viewport::before, .lb__viewport::after { display: none }
+  .lb__viewport {
+    -webkit-mask-image: linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
+    mask-image: linear-gradient(90deg,transparent 0,#000 42px,#000 calc(100% - 42px),transparent 100%);
+  }
+}
 
-/* Responsive */
+/* ====== Pill Styles ====== */
+.lb__rail {
+  display: flex;
+  align-items: center;
+  gap: var(--gap);
+  white-space: nowrap;
+  will-change: transform;
+  animation: fc-ticker var(--rail-speed) linear infinite;
+}
+.lb:hover .lb__rail,
+.lb:focus-within .lb__rail { animation-play-state: paused; }
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  background: var(--pill);
+  color: var(--ink);
+  padding: var(--pill-py) var(--pill-px);
+  border-radius: var(--radius);
+  font-weight: 800;
+  font-size: var(--fs);
+  line-height: 1;
+  box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 0 0 1px rgba(0,0,0,.35);
+  transition: transform .16s, box-shadow .15s;
+  position: relative;
+}
+.pill:hover { transform: translateY(-1.5px) scale(1.03); }
+.pill .txt { display: flex; flex-direction: column; margin-left: .45rem; }
+.pill .who { color: var(--gold); font-weight: 900; }
+.pill .msg { color: var(--muted); font-weight: 600; font-size: .79em; }
+.pill.placeholder { background: var(--pill-muted); color: var(--muted); }
+.pill.headline {
+  font-weight: 1000;
+  color: color-mix(in srgb, var(--gold) 92%, #fff);
+  letter-spacing: .01em;
+  background: transparent;
+}
+
+.lb__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: .24rem;
+  margin-left: .28rem;
+}
+.ctrl {
+  background: var(--pill);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: .25rem .59rem;
+  font-size: .8rem;
+  font-weight: 900;
+  border: 1px solid rgba(255,255,255,.07);
+  transition: background .16s, color .16s;
+}
+.ctrl:hover {
+  background: color-mix(in srgb, var(--gold) 88%, #101010);
+  color: #191919;
+}
+.brand-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: .36rem;
+  background: rgba(0,0,0,.7);
+  color: var(--gold);
+  padding: .26rem .56rem;
+  border-radius: 999px;
+  font-size: .73rem;
+  box-shadow: 0 2px 6px rgba(0,0,0,.16);
+}
+
+/* ==== VIP Accents & Effects ==== */
+.pill[data-tier="Platinum"] {
+  background: radial-gradient(120% 140% at 32% 12%, #e5f7ff33 0, #1a1f2a 48%);
+  box-shadow: 0 0 0 2.5px #c6e2fa45, 0 0 14px 0 #cbe6ff44;
+  border: 1.4px solid #b3e5fc52;
+  animation: pill-glow 1.5s infinite alternate cubic-bezier(.6,.5,.4,1.2);
+}
+.pill[data-tier="Gold"] {
+  background: radial-gradient(120% 140% at 32% 12%, #fffbe7 0, #1a1f2a 44%);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--gold) 56%, #fff), 0 0 13px 0 color-mix(in srgb, var(--gold) 19%, #fff);
+  border: 1.4px solid color-mix(in srgb, var(--gold) 45%, transparent);
+  animation: pill-glow 1.7s infinite alternate cubic-bezier(.6,.4,.4,1.1);
+}
+.pill[data-tier="Silver"] {
+  background: radial-gradient(120% 140% at 30% 10%, #ededf522 0, #1a1f2a 44%);
+  border: 1.2px solid #d2d6e3a0;
+}
+.pill[data-tier="Bronze"] {
+  background: radial-gradient(120% 140% at 32% 12%, #ffe3c1 0, #1a1f2a 44%);
+  border: 1.1px solid #cd7f327c;
+}
+@keyframes pill-glow {
+  from { box-shadow: 0 0 0 1.5px #fff0, 0 0 11px 0 #fff0; }
+  to   { box-shadow: 0 0 0 2.5px #ffe 0, 0 0 19px 0 var(--gold); }
+}
+
+/* Responsive & Prefers */
 @media (max-width: 780px){
-  .lb--slim{ --lb-h: 46px; --fs: .86rem; --pill-px:.68rem; --pill-py:.34rem; --gap:.5rem; --rail-speed:34s; }
-  .brand-chip{ display:none; }
+  .lb--slim { --lb-h: 46px; --fs: .88rem; --pill-px: .65rem; --pill-py: .32rem; --gap: .48rem; --rail-speed: 33s; }
+  .brand-chip { display: none; }
+}
+@media (max-width: 520px){
+  .lb--slim { --lb-h: 54px; --fs: .97rem; --pill-px: .46rem; }
+}
+@media (prefers-reduced-motion: reduce){
+  .lb__rail, .pill[data-tier="Platinum"], .pill[data-tier="Gold"] {
+    animation: none !important;
+    box-shadow: none !important;
+  }
+}
+@media (prefers-contrast: more){
+  .lb__viewport { border-color: #fff7; }
+  .pill { box-shadow: 0 0 0 2px #ffffff42, 0 1px 0 #000 inset; }
 }
 
-/* Prefs */
-@media (prefers-reduced-motion: reduce){ .lb__rail{ animation:none !important; transform:none !important; } }
-@media (prefers-contrast: more){ .lb__viewport{ border-color:#ffffff26 } .pill{ box-shadow:0 0 0 1px #ffffff26, 0 1px 0 #000 inset; } }
-
-/* Marquee */
-@keyframes fc-ticker{ from{ transform:translateX(100%)} to{ transform:translateX(-100%)} }
+/* Marquee Motion */
+@keyframes fc-ticker { from { transform: translateX(100%) } to { transform: translateX(-100%) } }
 </style>
 
 <script {{ nonce_attr() }}>
 (() => {
+  // =========== FundChamps Leaderboard Controller v7 ==========
   const ROOT = document.getElementById('sponsor-leaderboard');
   if (!ROOT || ROOT.__wired) return; ROOT.__wired = true;
 
@@ -174,27 +283,45 @@
   const srVip  = ROOT.querySelector('#sr-vip');
   if (!rail) return;
 
+  // ----- Config
   const cfg = {
     teamKey: ROOT.dataset.teamKey || 'global',
     api: ROOT.dataset.api || '/api/shoutouts',
-    ttl: +ROOT.dataset.ttlSeconds || 86400,
+    ttl: +ROOT.dataset.ttlSeconds || 86400,             // 1 day default
     max: +ROOT.dataset.maxStore || 64,
-    dedupeWindow: +ROOT.dataset.dedupeWindowSeconds || 900,
+    dedupeWindow: +ROOT.dataset.dedupeWindowSeconds || 900, // 15min
     defaultSpeed: ROOT.dataset.defaultSpeed || 'normal',
     autoscroll: ROOT.dataset.autoscroll !== '0',
   };
-
   const LS_KEY = `fc:shouts:${cfg.teamKey}`;
   const now = () => Date.now();
 
-  // Store
-  const readStore = () => { try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; } };
-  const writeStore = (arr) => { try { localStorage.setItem(LS_KEY, JSON.stringify(arr.slice(-cfg.max))); } catch {} };
+  // ----- Local Storage Layer
+  function readStore() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch { return []; }
+  }
+  function writeStore(arr) {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(arr.slice(-cfg.max))); } catch {}
+  }
 
-  const fmtName = (who) => (who || 'Anonymous Sponsor');
-  const tierEmoji = (tier) => ({ Platinum:'✨', Gold:'🏅', Silver:'🎉', Bronze:'🥉' }[tier] || '🎉');
+  // ----- Pill Render Logic
+  const tierEmoji = tier => ({ Platinum:'✨', Gold:'🏅', Silver:'🎉', Bronze:'🥉' }[tier] || '🎉');
+  const fmtName = who => who || 'Anonymous Sponsor';
   const keyFor = (who, msg) => `${(who||'').trim().toLowerCase()}|${(msg||'').trim().toLowerCase()}`;
 
+  // *** FLEX POINT: Want avatars/logos? Add `avatar_url` and uncomment below! ***
+  // const pillNode = ({tier, who, msg, avatar_url}) => {
+  //   const span = document.createElement('span');
+  //   span.className = 'pill';
+  //   if (tier) span.dataset.tier = tier;
+  //   span.setAttribute('role','listitem');
+  //   span.tabIndex = -1;
+  //   span.innerHTML = `
+  //     ${avatar_url ? `<img src="${avatar_url}" class="pill-avatar" alt="" aria-hidden="true" loading="lazy" />` : tierEmoji(tier)}
+  //     <span class="txt"><span class="who">${fmtName(who)}</span><span class="msg">${msg||''}</span></span>`;
+  //   return span;
+  // };
+  // ** Default (no avatar): **
   const pillNode = ({tier, who, msg}) => {
     const span = document.createElement('span');
     span.className = 'pill';
@@ -205,83 +332,87 @@
     return span;
   };
 
-  const insertPill = (item, {toFront=false}={}) => {
+  function insertPill(item, {toFront=false} = {}) {
     const node = pillNode(item);
     if (toFront) rail.insertBefore(node, rail.firstChild);
     else rail.appendChild(node);
 
-    // ARIA announce for VIPs
+    // a11y: ARIA announce for Platinum/Gold
     if (item.tier && /platinum|gold/i.test(item.tier)) {
       srVip.textContent = `${fmtName(item.who)} joined as ${item.tier}!`;
       setTimeout(() => srVip.textContent = '', 1500);
     }
-  };
+  }
 
-  const hydrateFromStore = () => {
+  // ----- Hydrate from local store (on load)
+  function hydrateFromStore() {
     const items = readStore().filter(i => (i.expires || 0)> now());
     if (!items.length) return;
     rail.querySelector('#shoutouts-empty')?.remove();
-    rail.setAttribute('aria-busy','false');
+    rail.setAttribute('aria-busy', 'false');
     items.forEach(i => insertPill(i));
     document.dispatchEvent(new CustomEvent('fc:shoutouts:updated'));
-  };
+  }
 
-  const addShout = ({who, msg, tier, ts}) => {
+  // ----- Add shout (dedupes, persists, triggers UI)
+  function addShout({who, msg, tier, ts}) {
     const store = readStore().filter(i => (i.expires || 0)> now());
     const k = keyFor(who, msg);
-    if (store.some(i => i.key === k && Math.abs((ts||now()) - (i.ts||0)) < cfg.dedupeWindow*1000)) return false;
-
-    const item = { key:k, who, msg, tier, ts: ts || now(), expires: now() + cfg.ttl*1000 };
+    if (store.some(i => i.key === k && Math.abs((ts || now()) - (i.ts || 0)) < cfg.dedupeWindow * 1000))
+      return false; // dedupe window
+    const item = { key: k, who, msg, tier, ts: ts || now(), expires: now() + cfg.ttl * 1000 };
     store.push(item);
     writeStore(store);
-    insertPill(item, {toFront:true});
+    insertPill(item, {toFront: true});
     document.dispatchEvent(new CustomEvent('fc:shoutouts:updated'));
     return true;
-  };
+  }
 
-  const poll = async () => {
+  // ----- Fetch from API (polls every 60s, always gentle)
+  async function poll() {
     try {
       const url = new URL(cfg.api, location.href);
       url.searchParams.set('team_key', cfg.teamKey);
-      const res = await fetch(url, {headers:{'accept':'application/json'}});
+      const res = await fetch(url, { headers: { 'accept': 'application/json' } });
       if (!res.ok) throw new Error('bad status');
-      const data = await res.json(); // [{who,msg,tier,ts}, ...]
+      const data = await res.json();
       (Array.isArray(data) ? data : []).forEach(d => addShout(d));
       offlinePill.style.display = 'none';
     } catch {
       offlinePill.style.display = 'inline-flex';
     }
-  };
+  }
 
-  // Controls
-  const setPaused = (paused) => {
+  // ----- Controls
+  function setPaused(paused) {
     rail.style.animationPlayState = paused ? 'paused' : 'running';
     pauseB.setAttribute('aria-pressed', String(paused));
     pauseB.textContent = paused ? '▶' : '⏸';
-  };
+  }
   pauseB?.addEventListener('click', () => setPaused(rail.style.animationPlayState !== 'paused'));
 
-  const speeds = { slow:'42s', normal:'30s', fast:'20s' };
-  const nextSpeed = (s) => ({slow:'normal', normal:'fast', fast:'slow'}[s] || 'normal');
-  const applySpeed = (s) => {
+  // Speed cycling
+  const speeds = { slow: '42s', normal: '30s', fast: '20s' };
+  function nextSpeed(s) { return ({ slow: 'normal', normal: 'fast', fast: 'slow' }[s] || 'normal'); }
+  function applySpeed(s) {
     rail.style.animationDuration = speeds[s] || speeds.normal;
     speedB.dataset.speed = s;
     speedB.setAttribute('aria-label', `Speed: ${s[0].toUpperCase()+s.slice(1)}`);
-  };
+  }
   speedB?.addEventListener('click', () => applySpeed(nextSpeed(speedB.dataset.speed || cfg.defaultSpeed)));
 
-  // Reduced motion
+  // Animation respect: Reduced motion
   const prefersReduce = matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   if (prefersReduce || !cfg.autoscroll) rail.style.animation = 'none';
 
-  // Wire pledge events from tiers
+  // Wire in-app pledge events
   document.addEventListener('fc:sponsor:pledge', (e) => {
     const d = e.detail || {};
     const tier = d.tier || ((d.amount||0)>=10000 ? 'Platinum' : (d.amount||0)>=5000 ? 'Gold' : (d.amount||0)>=1500 ? 'Silver' : 'Bronze');
     const who  = d.brand || d.name || 'New Sponsor';
     const msg  = d.monthly ? 'Joined as a monthly sponsor!' : 'Backed the season!';
     addShout({ who, msg, tier });
-  }, { passive:true });
+  }, { passive: true });
 
   // “Be the first” CTA → donate
   ROOT.querySelector('#shoutouts-empty-cta')?.addEventListener('click', () => {
@@ -289,16 +420,16 @@
     document.querySelector('[data-cta="donate"]')?.click();
   });
 
-  // Online/offline state
-  const onNet = () => offlinePill.style.display = navigator.onLine ? 'none' : 'inline-flex';
+  // Online/offline a11y state
+  function onNet() { offlinePill.style.display = navigator.onLine ? 'none' : 'inline-flex'; }
   window.addEventListener('online',  () => { onNet(); poll(); });
   window.addEventListener('offline', onNet);
   onNet();
 
-  // Initial
+  // Init: hydrate, poll, set controls, launch ticker
   hydrateFromStore();
   poll();
-  setInterval(poll, 60000); // gentle polling
+  setInterval(poll, 60000); // live, not spammy
   setPaused(false);
   applySpeed(cfg.defaultSpeed || 'normal');
 })();

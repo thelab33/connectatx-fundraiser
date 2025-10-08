@@ -2,7 +2,7 @@
 defined else '') %}  {% set __nonce = ( csp_nonce if csp_nonce is defined else (NONCE if NONCE
   is defined else '') ) %}
 
-  <style {{ nonce_attr() }}nonce="{{ __nonce }}">
+  <style {{ nonce_attr() }}>
     :root {
       /* --- Brand Core --- */
       --fc-brand: {{ (team.theme_color if team and team.theme_color else '#facc15') }};
@@ -150,7 +150,7 @@ defined else '') %}  {% set __nonce = ( csp_nonce if csp_nonce is defined else (
       border-radius:9999px;padding:.4rem .75rem;font-weight:700
     }
   </style>
-<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
+<style { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } } { { nonce_attr() } }>
 /* SaaS Pro Section Polish */
 .fcx-section, .fcx-section--hero, .fcx-section--tiers {
   max-width: 1100px;

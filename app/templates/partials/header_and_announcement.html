@@ -1,463 +1,613 @@
-{# ======================================================
-   FundChamps Enterprise Header v8
-   SaaS/Agency-Grade Header Component
-   CSP-safe, A11y-complete, and motion-polished
-====================================================== #}
+{# =========================
+   Header — MVP v1.7 (Robust • A11y/Perf/Safety)
+   - Self-contained fallbacks (no undefined vars)
+   - Safe URL building even if url_for/request are absent
+   - Progress math clamped 0–100
+   - Logos: platform + team with sane defaults
+   ========================= #}
 
-{% set NONCE = NONCE if NONCE is defined else (csp_nonce() if csp_nonce is defined else '') %}
-{% macro nonce_attr() -%}{% if NONCE %}nonce="{{ NONCE }}"{% endif %}{%- endmacro %}
+{# ---- Nonce (only reads existing; no macro required here) ---- #}
+{% set NONCE    = NONCE if NONCE is defined else (csp_nonce if csp_nonce is defined else '') %}
 
-{# ---- Inputs & smart defaults ---- #}
-{% set TEAM = team if team is defined else {} %}
-{% set TEAM_NAME = TEAM.name or TEAM.team_name or 'Connect ATX Elite' %}
-{% set PLATFORM_NAME = PLATFORM_NAME or 'FundChamps' %}
-{% set PLATFORM_URL = PLATFORM_URL or '/' %}
-{% set ACCENT = ACCENT or (theme_hex if theme_hex is defined else '#facc15') %}
-{% set TEAM_LOGO = TEAM.logo or '/static/images/fundchamps-logo.svg' %}
-{% set HREF_DONATE = HREF_DONATE or '/donate' %}
-{% set HREF_TIERS = HREF_TIERS or '#tiers' %}
-{% set HREF_IMPACT = HREF_IMPACT or '#impact' %}
-{% set HREF_SPONSOR = HREF_SPONSOR or '/become-sponsor' %}
-{% set HREF_ABOUT = HREF_ABOUT or '#about' %}
-{% set HREF_CONTACT = HREF_CONTACT or '/contact' %}
-{% set USER = USER if USER is defined else None %}
-{% set URL_LOGIN = URL_LOGIN or '/login' %}
-{% set URL_LOGOUT = URL_LOGOUT or '/logout' %}
-{% set URL_DASHBOARD = URL_DASHBOARD or '/dashboard' %}
-{% set GOAL = (fundraising_goal or 50000)|int %}
-{% set RAISED = (funds_raised or 0)|int %}
-{% set PCT = ((RAISED / (GOAL if GOAL>0 else 1)) * 100)|round(1) %}
-{% set PCT_CLAMP = 0 if PCT < 0 else (100 if PCT > 100 else PCT) %}
+{# ---- IDs & core context ---- #}
+{% set _hdr_id  = header_id if header_id is defined and header_id else 'site-header' %}
+{% set _team    = team if team is defined and team else None %}
 
-<header id="site-header"
-  class="fc-header"
-  role="banner"
-  aria-label="{{ PLATFORM_NAME }} site header"
-  style="--accent: {{ ACCENT }};">
-  
-  <!-- Skip Links -->
-  <nav class="sr-only">
-    <a href="#main">Skip to content</a>
-    <a href="{{ HREF_DONATE }}">Skip to donate</a>
-    <a href="#primary-nav">Skip to navigation</a>
+{# ---- Platform identity (safe defaults) ---- #}
+{% set platform_name  = (platform_name if platform_name is defined and platform_name)|string or 'FundChamps' %}
+{% set platform_url   = (platform_url  if platform_url  is defined and platform_url)|string  or '/' %}
+
+{# Build a platform logo URL with or without url_for #}
+{% set _p_logo_path   = 'images/fundchamps-logo.svg' %}
+{% set platform_logo_svg = (url_for('static', filename=_p_logo_path) if url_for is defined
+                            else '/static/' ~ _p_logo_path) %}
+
+{# ---- Team identity (safe defaults) ---- #}
+{% set team_name   = (_team.team_name if _team and _team.team_name is defined and _team.team_name)|string or 'Connect ATX Elite' %}
+{% set brand_color = (_team.theme_color if _team and _team.theme_color is defined and _team.theme_color)|string or '#facc15' %}
+
+{# Team logo (accepts absolute or static-relative) ---- #}
+{% set _raw_team_logo = (_team.logo if _team and _team.logo is defined and _team.logo)|string or 'images/logo.webp' %}
+{% set logoSrc = (_raw_team_logo if _raw_team_logo.startswith('http')
+                  else ((url_for('static', filename=_raw_team_logo.lstrip('/')) if url_for is defined
+                         else '/static/' ~ _raw_team_logo.lstrip('/')))) %}
+
+{# ---- Donate link & Stripe preconnect ---- #}
+{% set HREF_DONATE = HREF_DONATE|default('/donate', true) %}
+{% set stripe_payment_link = (stripe_payment_link|default('', true)) %}
+{% if stripe_payment_link %}
+<link rel="preconnect" href="https://js.stripe.com" crossorigin>
+{% endif %}
+
+{# ---- Progress math (never raises; clamps 0..100) ---- #}
+{% set _fr  = (funds_raised|default(0, true))|float %}
+{% set _fg0 = (fundraising_goal|default(10000, true))|float %}
+{% set _fg  = 1.0 if _fg0 <= 0 else _fg0 %}
+{% set _raw = (_fr / _fg * 100.0) %}
+{% set pct  = (0.0 if _raw < 0 else (100.0 if _raw> 100 else _raw)) %}
+{% set pct_i = pct|round(0) %}
+
+{# ===========================
+   FundChamps Premium Header
+   ===========================
+   - Ultra-responsive, mobile-first
+   - A11y, progressive enhancement
+   - Real metrics, action CTAs
+   - White label, team-brand safe
+   - Minimal, “agency product” polish
+#}
+<header id="{{ HDR_ID or _hdr_id }}"
+        class="fc-header"
+        role="banner"
+        data-accent="{{ brand_color or ACCENT }}"
+        style="--accent: {{ brand_color or ACCENT }};"
+        aria-label="{{ PLATFORM_NAME or platform_name }} header"
+        data-header
+        data-sticky>
+
+  <!-- ♿ Accessibility: Skip Links -->
+  <nav class="sr-only" aria-label="Skip links">
+    <a class="sr-skip" href="#main">Skip to content</a>
+    <a class="sr-skip" href="{{ HREF_DONATE }}">Skip to donate</a>
+    <a class="sr-skip" href="#primary-nav">Skip to navigation</a>
   </nav>
 
-  <!-- Announcement Bar -->
+  <!-- ⚡ Announcement Bar -->
   {% if ANNOUNCE_TEXT %}
-  <div class="fc-announce" data-announcement data-id="{{ ANNOUNCE_ID or 'default' }}">
-    <span>{{ ANNOUNCE_TEXT|safe }}</span>
-    {% if ANNOUNCE_CTA_URL %}
-      <a href="{{ ANNOUNCE_CTA_URL }}" class="cta">{{ ANNOUNCE_CTA_LABEL or 'Learn more' }}</a>
-    {% endif %}
-    <button type="button" aria-label="Dismiss" data-dismiss-announcement>×</button>
+  <div class="fc-announce" id="announce" role="region" aria-live="polite" data-announcement data-id="{{ ANNOUNCE_ID or 'default' }}">
+    <div class="fc-announce__inner">
+      <span class="fc-announce__msg">{{ ANNOUNCE_TEXT|safe }}</span>
+      {% if ANNOUNCE_CTA_URL and ANNOUNCE_CTA_LABEL %}
+        <a class="fc-announce__cta" href="{{ ANNOUNCE_CTA_URL }}" data-analytics="announce:cta">{{ ANNOUNCE_CTA_LABEL }}</a>
+      {% endif %}
+      <button class="fc-announce__close" type="button" aria-label="Dismiss announcement" data-dismiss-announcement>×</button>
+    </div>
   </div>
   {% endif %}
 
-  <!-- Header Core -->
-  <div class="fcx-h-inner">
+  <!-- 🌟 Core Header Grid -->
+  <div class="hdr-grid" role="region" aria-label="Header controls">
 
-    <!-- Left: Brand -->
-    <div class="fcx-brand-block">
-      <a href="{{ PLATFORM_URL }}" class="fcx-brand">
-        <img src="{{ TEAM_LOGO }}" alt="{{ TEAM_NAME }} logo" width="38" height="38" loading="eager">
-        <span class="label">
-          <span class="title">{{ PLATFORM_NAME }}</span>
-          <span class="strap">Back youth. Build future.</span>
+    <!-- 1️⃣ Brand Crest -->
+    <a href="{{ PLATFORM_URL or platform_url }}"
+       class="crest"
+       aria-label="{{ PLATFORM_NAME or platform_name }} home"
+       data-analytics="nav:brand">
+      <img src="{{ TEAM_LOGO or platform_logo_svg }}"
+           alt="{{ PLATFORM_NAME or platform_name }} logo"
+           class="crest-logo"
+           width="124" height="38"
+           decoding="async" loading="eager" fetchpriority="high" />
+      <span class="crest-meta">
+        {% if _SHOW_PWR %}<small class="powered">POWERED&nbsp;BY</small>{% endif %}
+        <span class="word" aria-hidden="true">
+          <span class="w1">{{ _WORD1 or "Fund" }}</span><span class="w2">{{ _WORD2 or "Champs" }}</span>
         </span>
-      </a>
-    </div>
+        <span class="strap">{{ _TAGLINE or "Back youth. Build future." }}</span>
+      </span>
+    </a>
 
-    <!-- Center: Navigation & Actions -->
-    <div class="fcx-h-center">
-      <nav id="primary-nav" class="fcx-nav" aria-label="Primary navigation">
-        <ul>
-          <li><a href="{{ HREF_TIERS }}">Tiers</a></li>
-          <li><a href="{{ HREF_IMPACT }}">Impact</a></li>
-          <li><a href="{{ HREF_SPONSOR }}">Sponsors</a></li>
-          <li class="hide-sm"><a href="{{ HREF_ABOUT }}">About</a></li>
-          <li class="hide-sm"><a href="{{ HREF_CONTACT }}">Contact</a></li>
-        </ul>
-      </nav>
-
-      <!-- CTA Row -->
-      <div class="fcx-actions">
-        <a href="{{ HREF_DONATE }}" class="cta-main">💛 Sponsor A Champion</a>
-        <button id="hdr-share" class="chip" data-share='{{ {"title":"Support "~TEAM_NAME,"text":"Every dollar moves a kid forward — join "~TEAM_NAME,"url":(request.base_url if request is defined else "/")}|tojson|e }}'>Share</button>
-        <button id="theme-toggle" class="chip" data-theme-toggle>Theme</button>
-      </div>
-
+    <!-- 2️⃣ Main Action Hub -->
+    <div class="fcx-hub" role="group" aria-label="Donation and sharing">
       <!-- Kinetic Tagline -->
-      <p class="kinetic"><span>Fuel the Season.</span><span class="accent">Fund the Future.</span></p>
+      <p class="kinetic-tag" id="hdr-kinetic" aria-roledescription="tagline">
+        <span class="word">Fuel the Season.</span>
+        <span class="word word--move">Fund the Future.</span>
+      </p>
 
-      <!-- Progress Meter -->
-      <div class="fcx-progress">
-        <meter id="hdr-progress" value="{{ PCT_CLAMP }}" min="0" max="100">{{ PCT_CLAMP }}%</meter>
-        <output id="hdr-percent">{{ PCT_CLAMP }}%</output>
+      <!-- Animated Progress Bar -->
+      <div class="fcx-progress" role="group" aria-label="Fundraising progress" aria-live="polite">
+        <meter id="hdr-progress" value="{{ pct|round(1) }}" min="0" max="100">{{ pct_i }}%</meter>
+        <output class="pct" id="hdr-percent" for="hdr-progress" aria-hidden="true">{{ pct_i }}%</output>
+        <span id="hdr-total-pill" class="pill" aria-live="polite">
+          {{ ('$' ~ ('{:,.0f}'.format(_fr))) if _fr else '$0' }}
+        </span>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="fcx-actions">
+        <a {% if stripe_payment_link or STRIPE_LINK %}
+             href="{{ stripe_payment_link or STRIPE_LINK }}" target="_blank" rel="noopener"
+           {% else %}
+             href="{{ HREF_DONATE }}"
+           {% endif %}
+           class="btn btn-donate pulse focus-ring"
+           id="hdr-donate-main"
+           data-cta="donate"
+           data-analytics="cta:donate:header">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+            <path d="M12 21s-6-4.35-8-7.5C1.6 10 4 6 8 6c2 0 3 1 4 1s2-1 4-1c4 0 6.4 4 4 7.5C18 16.65 12 21 12 21z" fill="#000"/>
+          </svg>
+          <span class="label">💛 Sponsor A Champion</span>
+        </a>
+
+        <button id="hdr-share"
+                class="btn btn-lite btn-sm focus-ring"
+                type="button"
+                data-share='{{ {
+                  "title":"Support "~team_name,
+                  "text":"Every dollar moves a kid forward — join us!",
+                  "url": (request.base_url if request is defined else "/")
+                }|tojson|e }}'
+                aria-label="Share this fundraiser"
+                data-analytics="nav:share">
+          Share
+        </button>
+
+        <button id="theme-toggle"
+                class="btn btn-lite btn-sm focus-ring"
+                type="button"
+                data-theme-toggle
+                aria-label="Toggle theme"
+                data-analytics="nav:theme">
+          🌓
+        </button>
       </div>
     </div>
 
-    <!-- Right: Team & Auth -->
-    <div class="fcx-h-right">
-      <div class="team-pill">
-        <img src="{{ TEAM_LOGO }}" alt="{{ TEAM_NAME }} logo" width="32" height="32">
-        <div><strong>{{ TEAM_NAME }}</strong><span>on FundChamps</span></div>
-      </div>
-
-      {% if USER and USER.is_authenticated %}
-        <a href="{{ URL_DASHBOARD }}" class="avatar"><img src="{{ USER.avatar_url or '/static/images/avatar-default.png' }}" width="28" height="28" alt=""></a>
-      {% else %}
-        <a href="{{ URL_LOGIN }}" class="chip">Sign In</a>
-      {% endif %}
-
-      <button id="menu-toggle" class="menu-toggle" aria-expanded="false" aria-controls="menu-panel">☰</button>
+    <!-- 3️⃣ Team Chip -->
+    <div class="team-pill fcx-glass">
+      <img src="{{ TEAM_LOGO or logoSrc }}" alt="{{ TEAM_NAME or team_name }} logo" width="32" height="32" decoding="async" loading="eager">
+      <span class="tp-text">
+        <span class="tp-title">{{ TEAM_NAME or team_name }}</span>
+        <span class="tp-sub">FundChamps</span>
+      </span>
     </div>
+
+    <!-- 4️⃣ Mobile Burger -->
+    <button id="menu-toggle" class="burger focus-ring" aria-label="Open menu" aria-expanded="false" aria-controls="site-menu">
+      <span class="burger-line"></span>
+    </button>
   </div>
 
-  <!-- Menu Panel -->
-  <nav id="menu-panel" class="menu-panel" hidden>
-    <a href="{{ HREF_TIERS }}">Tiers</a>
-    <a href="{{ HREF_IMPACT }}">Impact</a>
-    <a href="{{ HREF_SPONSOR }}">Sponsors</a>
-    <a href="{{ HREF_ABOUT }}">About</a>
-    <a href="{{ HREF_CONTACT }}">Contact</a>
-    <button id="menu-theme">Toggle Theme</button>
-    <button id="menu-share">Share</button>
-    {% if USER and USER.is_authenticated %}
-      <a href="{{ URL_DASHBOARD }}">Dashboard</a>
-      <a href="{{ URL_LOGOUT }}">Sign out</a>
-    {% else %}
-      <a href="{{ URL_LOGIN }}">Sign In</a>
-    {% endif %}
-  </nav>
+  <!-- 🔽 Mobile Drawer -->
+  <template id="mobile-nav-tpl">
+    <nav id="site-menu" class="mobile-sheet hidden" role="dialog" aria-modal="true" aria-label="Mobile menu">
+      <button class="close" aria-label="Close">✕</button>
+      <a href="{{ HREF_TIERS }}">Tiers</a>
+      <a href="{{ HREF_IMPACT }}">Impact</a>
+      <a href="{{ HREF_ABOUT }}">About</a>
+      <a href="{{ HREF_CONTACT }}">Contact</a>
+      <a href="{{ HREF_DONATE }}" class="btn btn-donate mt-auto">Donate</a>
+    </nav>
+  </template>
 
-  <!-- Ribbon -->
-  <div class="hdr-ribbon"><span id="hdr-ribbon-fill" style="width: {{ PCT_CLAMP }}%;"></span></div>
+  <!-- 🪄 Confetti + Progress Animation -->
+  <script { { nonce_attr() } }>
+  document.addEventListener('DOMContentLoaded', () => {
+    const bar = document.querySelector('#hdr-progress');
+    const pct = parseFloat(bar?.value || 0);
+    const fill = document.querySelector('#hdr-percent');
+    if (bar && fill) {
+      fill.textContent = pct.toFixed(0) + '%';
+      bar.style.transition = 'all .9s ease';
+      bar.value = pct;
+      if (pct>= 100) {
+        import('https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js')
+        .then(({ default: confetti }) => confetti({ particleCount: 180, spread: 75, origin: { y: 0.8 } }));
+      }
+    }
+  });
+  </script>
 
-  <!-- Mobile Dock -->
-  <nav id="fcx-mobile-nav" class="fcx-mobile-nav" hidden>
-    <a href="{{ HREF_DONATE }}" class="prominent">Donate</a>
-    <a href="{{ HREF_TIERS }}">Tiers</a>
-    <button id="mobile-share">Share</button>
-  </nav>
-
-  <div id="hdr-announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
 </header>
 
-{# ===================================================== #
-   Enhanced Enterprise Header Styles v9
-   Sleeker layout, glass gradient, and motion polish
-# ===================================================== #}
 <style {{ nonce_attr() }}>
-/* --- Core System Tokens --- */
+/* =============================
+   FundChamps Elite Header v7
+   - Agency SaaS polish: Dark-first, glass, mobile, a11y
+   - Three-lane grid: Crest | Hub | Team
+   - All tokens overrideable
+   ============================= */
+
+/* ---- Theme tokens ---- */
 :root {
-  --bg: #0B0F1A;
-  --fg: #E5E7EB;
-  --accent: {{ ACCENT }};
-  --muted: rgba(229,231,235,0.65);
-  --glass: rgba(255,255,255,0.06);
-  --ring: rgba(255,255,255,0.15);
-  --glow: 0 0 12px color-mix(in oklab, var(--accent) 50%, transparent);
+  --accent: {{ ACCENT_HEX|default('#facc15') }};
+  --bg-header: rgba(16,16,20,.91);
+  --bg-glass: rgba(24,25,31,.97);
+  --border: rgba(255,255,255,.08);
+  --text: #e8eaf0;
+  --muted: #9fa4b2;
+  --donate: var(--accent, #facc15);
+}
+[data-theme="light"] {
+  --bg-header: rgba(252,252,253,.97);
+  --bg-glass: rgba(242,245,251,.98);
+  --border: rgba(0,0,0,.09);
+  --text: #181a22;
+  --muted: #616574;
 }
 
-/* --- Base header styles --- */
+/* ---- Header ---- */
 .fc-header {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  background: linear-gradient(180deg, rgba(10,10,15,0.92) 0%, rgba(10,10,15,0.85) 100%);
-  backdrop-filter: blur(14px) saturate(140%);
-  border-bottom: 1px solid color-mix(in oklab, var(--fg) 8%, transparent);
-  box-shadow: inset 0 -2px 0 var(--accent);
-  transition: all 0.35s cubic-bezier(.25,.8,.25,1);
-  will-change: transform, background;
+  position: sticky; top: 0; z-index: 80;
+  background: var(--bg-header);
+  border-bottom: 1.5px solid var(--border);
+  backdrop-filter: blur(13px) saturate(1.09);
+  box-shadow: 0 8px 32px rgba(0,0,0,.29), 0 1px 0 rgba(255,255,255,.04) inset;
+  transition: background .33s, box-shadow .18s;
 }
-.fc-header.is-compact {
-  transform: translateY(-2px) scale(0.987);
-  background: rgba(12,12,12,0.9);
-  box-shadow: 0 4px 18px rgba(0,0,0,0.35);
-}
-
-/* --- Layout --- */
-.fcx-h-inner {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0.75rem 2rem;
-  gap: 1.25rem;
-}
-
-/* --- Brand --- */
-.fcx-brand {
-  display: flex; align-items: center; gap: 0.85rem;
-  text-decoration: none; color: inherit;
-  transition: opacity .2s ease;
-}
-.fcx-brand:hover { opacity: 0.9; }
-.fcx-brand img { filter: drop-shadow(0 1px 3px rgba(0,0,0,0.3)); }
-.fcx-brand .title {
-  font-weight: 900;
-  font-size: 1.25rem;
-  letter-spacing: -0.02em;
-}
-.fcx-brand .strap {
-  color: var(--muted);
-  font-size: 0.85rem;
-  margin-top: -0.15rem;
-}
-
-/* --- Nav --- */
-.fcx-nav ul {
-  display: flex;
-  list-style: none;
-  gap: 1.5rem;
-  padding: 0;
-  margin: 0;
-  justify-content: center;
-}
-.fcx-nav a {
-  position: relative;
-  font-weight: 700;
-  padding: 0.45rem 0.75rem;
-  border-radius: 0.6rem;
-  text-decoration: none;
-  color: inherit;
-  transition: color .25s, background .25s;
-}
-.fcx-nav a::after {
+.fc-header::after {
+  /* Animated gold underline */
   content: "";
-  position: absolute;
-  left: 50%; bottom: 0;
-  width: 0%; height: 2px;
-  background: var(--accent);
-  border-radius: 1px;
-  transition: width .3s ease, left .3s ease;
+  position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+  background: linear-gradient(90deg, var(--accent), #fff7 52%, var(--accent));
+  background-size: 200% 100%; animation: hdrBar 8s linear infinite;
 }
-.fcx-nav a:hover {
-  color: var(--accent);
-  background: color-mix(in oklab, var(--accent) 6%, var(--glass));
-}
-.fcx-nav a:hover::after {
-  width: 80%;
-  left: 10%;
+@keyframes hdrBar { to { background-position: -200% 0; } }
+
+/* ---- Grid Layout ---- */
+.hdr-grid {
+  display: grid; grid-template-columns: auto 1fr auto;
+  align-items: center; gap: 1.25rem;
+  max-width: 1240px; margin: 0 auto; padding: 0.85rem 1.22rem;
+  min-height: 60px;
 }
 
-/* --- CTA (Primary Button) --- */
-.cta-main {
-  background: linear-gradient(90deg, #fde047 0%, #facc15 100%);
-  color: #111;
-  font-weight: 900;
-  border-radius: 1rem;
-  padding: 0.65rem 1.6rem;
-  font-size: 1.05rem;
-  letter-spacing: -0.01em;
-  box-shadow: var(--glow);
-  transition: transform 0.25s ease, filter 0.25s ease, box-shadow 0.35s ease;
+/* ---- Crest ---- */
+.crest {
+  display: flex; align-items: center; gap: .8rem; min-width: 0; text-decoration: none;
 }
-.cta-main:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-  box-shadow: 0 0 18px rgba(250,200,21,0.4);
+.crest-logo {
+  height: 38px; width: auto; max-width: 120px; object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,.12));
 }
-.cta-main:active { transform: scale(0.98); }
-
-/* --- Chips (Utility Buttons) --- */
-.chip {
-  background: var(--glass);
-  border: 1px solid var(--ring);
-  padding: 0.5rem 1rem;
-  border-radius: 0.75rem;
-  font-weight: 700;
-  color: inherit;
-  transition: background 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+.crest-meta {
+  display: flex; flex-direction: column; min-width: 0; line-height: 1.1;
 }
-.chip:hover {
-  background: color-mix(in oklab, var(--accent) 8%, var(--glass));
-  color: var(--accent);
-  border-color: color-mix(in oklab, var(--accent) 30%, var(--ring));
+.powered {
+  font: 700 .7rem/1 "Inter",system-ui; color: color-mix(in srgb, var(--accent) 66%, #fff);
+  letter-spacing: .06em; text-transform: uppercase;
+}
+.word {
+  font: 900 1.12rem/1.12 "Poppins",system-ui;
+  text-transform: uppercase; letter-spacing: .01em;
+}
+.word .w1 { color: var(--text); }
+.word .w2 { color: color-mix(in srgb, var(--accent) 90%, #fff); }
+.strap {
+  margin-top: .13rem; font: 700 .75rem/1.08 "Inter",system-ui;
+  color: color-mix(in srgb, var(--text) 60%, #b9bac4); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis;
 }
 
-/* --- Progress Bar --- */
+/* ---- Center Hub: Progress, CTA, Tag ---- */
+.fcx-hub, .hub {
+  display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  min-width: clamp(230px, 44vw, 540px); width: 100%;
+}
+.kinetic-tag {
+  font: 900 .95rem/1.19 "Poppins",system-ui; color: var(--accent);
+  display: flex; gap: .5em; justify-content: center; align-items: baseline;
+  text-transform: uppercase; letter-spacing: .03em; margin: 0;
+}
+.kinetic-tag .word--move { color: var(--text); opacity: .86; }
 .fcx-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.3rem;
+  display: flex; align-items: center; gap: .58rem; width: 100%;
+  margin-bottom: 0;
 }
 .fcx-progress meter {
-  width: 120px;
-  height: 8px;
-  border-radius: 6px;
-  background: var(--glass);
+  flex: 1 1 0; height: 6px; border-radius: 999px; background: #23252a;
+  box-shadow: 0 1px 0 #fff3 inset;
   accent-color: var(--accent);
-  overflow: hidden;
-  transition: all 0.6s ease;
 }
-.fcx-progress meter::-webkit-meter-bar {
-  background: var(--glass);
-  border-radius: 6px;
+.fcx-progress .pct {
+  font: 900 .78rem/1 "Inter"; color: var(--accent);
 }
-.fcx-progress meter::-webkit-meter-optimum-value {
-  background: linear-gradient(90deg, var(--accent), #fff3);
-  border-radius: 6px;
-  transition: width 1s cubic-bezier(.23,1,.32,1);
+.fcx-progress .pill {
+  margin-left: .35rem;
+  background: var(--accent); color: #111; border-radius: 999px; font: 700 .79rem/1.09 "Inter";
+  padding: .18rem .68rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
 }
 
-/* --- Ribbon (Dynamic Accent Line) --- */
-.hdr-ribbon {
-  block-size: 4px;
-  background: rgba(255,255,255,0.08);
-  overflow: hidden;
+.fcx-actions, .cta {
+  display: flex; align-items: center; gap: .47rem; flex-wrap: wrap; justify-content: center;
 }
-.hdr-ribbon > span {
-  display: block;
-  height: 100%;
-  background: linear-gradient(90deg,var(--accent),#fff3);
-  transition: width 1s cubic-bezier(.23,1,.32,1);
-  will-change: width;
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .42em;
+  padding: .55rem 1.16rem; border-radius: 999px;
+  font: 900 .82rem/1.05 "Inter"; letter-spacing: .03em;
+  background: var(--bg-glass); color: var(--text);
+  border: 1.3px solid var(--border); box-shadow: 0 0 0 1px rgba(0,0,0,.13) inset;
+  transition: transform .16s, box-shadow .13s, background .18s, color .14s;
+  text-transform: uppercase;
+}
+.btn-sm { padding: .41rem .8rem; font-size: .78rem; }
+.btn-lite {
+  background: #24262d; color: var(--muted); border-color: #23262b;
+}
+[data-theme="light"] .btn-lite {
+  background: #f8fafc; color: #7c7e8b; border-color: #e8ecf3;
+}
+.btn-donate {
+  position: relative; border: 2px solid var(--donate);
+  background: linear-gradient(180deg, #fffbe7 0%, var(--donate) 99%);
+  color: #18150a; box-shadow: 0 1px 0 #fff8 inset, 0 5px 22px rgba(0,0,0,.11);
+  font-weight: 1000;
+}
+.btn-donate::before {
+  content: "⚡"; margin-right: .42em; font-size: 1.1em; filter: grayscale(0.12) brightness(1.08);
+}
+.btn-donate.pulse { animation: pulseGlow 2.1s infinite; }
+@keyframes pulseGlow { 0%,100%{ filter:none; } 50%{ filter: drop-shadow(0 0 9px #fff9); } }
+.btn:hover, .btn:focus-visible {
+  transform: translateY(-2px); outline: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,.13), 0 0 0 2px var(--accent);
 }
 
-/* --- Tagline --- */
-.kinetic {
-  font-weight: 900;
-  font-size: 1.2rem;
-  margin-top: 0.25rem;
-  letter-spacing: -0.015em;
-  text-wrap: balance;
+/* ---- Team Crest ---- */
+.team-link {
+  display: flex; align-items: center; gap: .7rem; text-decoration: none;
+  transition: transform .13s;
 }
-.kinetic .accent {
-  color: var(--accent);
-  position: relative;
+.team-link:hover { transform: translateY(-1.5px); }
+.team-logo {
+  height: 38px; width: 38px; border-radius: .48rem; object-fit: cover;
+  box-shadow: 0 2px 8px rgba(0,0,0,.17);
 }
-.kinetic .accent::after {
-  content: "";
-  position: absolute;
-  left: 0; bottom: 0;
-  width: 100%; height: 3px;
-  background: linear-gradient(90deg,var(--accent),transparent);
-  opacity: 0.4;
-  transition: opacity 0.3s;
+.team-chip {
+  max-width: 8.5rem; font: 700 .88rem/1.08 "Inter"; color: var(--text); opacity: .9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
-.kinetic:hover .accent::after { opacity: 0.8; }
 
-/* --- Glass Hover Pulse --- */
-@keyframes pulse {
-  0%,100% { box-shadow: none; }
-  50% { box-shadow: var(--glow); }
+/* ---- Burger (Mobile) ---- */
+.burger {
+  display: none; width: 40px; aspect-ratio: 1; border-radius: .6rem;
+  border: 1.5px solid var(--border); background: var(--bg-glass); color: var(--text);
+  align-items: center; justify-content: center; padding: 0;
 }
-.pulse { animation: pulse 1s ease; }
+.burger-line, .burger-line::before, .burger-line::after {
+  content: ""; display: block; width: 18px; height: 2px; background: currentColor; border-radius: 2px;
+}
+.burger-line { position: relative; }
+.burger-line::before { position: absolute; left: 0; top: -6px; }
+.burger-line::after { position: absolute; left: 0; top: 6px; }
 
-/* --- Responsive --- */
-@media (max-width: 960px) {
-  .fcx-h-inner {
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto;
-    padding: 0.7rem 1.2rem;
-    row-gap: 0.6rem;
-  }
-  .fcx-nav ul {
-    justify-content: flex-start;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-  .fcx-nav ul::-webkit-scrollbar { display: none; }
-  .hide-sm { display: none !important; }
-  .cta-main { font-size: 1rem; padding: 0.6rem 1.2rem; }
+/* ---- Slide-in Sheet ---- */
+.mobile-sheet.hidden { display: none; }
+.mobile-sheet {
+  position: fixed; inset: 0; z-index: 99;
+  display: flex; flex-direction: column; gap: 1rem;
+  background: rgba(0,0,0,.68); backdrop-filter: blur(13px) saturate(1.13);
+  padding: 1.2rem;
+}
+.mobile-sheet .close {
+  align-self: flex-end; font-size: 1.45rem; font-weight: 800; color: var(--text);
+  background: none; border: none; cursor: pointer;
+}
+.mobile-sheet a {
+  color: var(--text); text-decoration: none; font: 800 1rem/1.2 "Inter";
+}
+.mobile-sheet a:hover { color: var(--accent); }
+.mobile-sheet .btn-donate { margin-top: 1.5rem; align-self: flex-start; }
+
+/* ---- Quick-donate Pill ---- */
+.quick-donate {
+  position: fixed; right: 1.1rem; bottom: 1.1rem; z-index: 99;
+  background: color-mix(in srgb, var(--accent) 96%, #fff 7%);
+  color: #151313;
+  font: 1000 .93rem/1 "Inter";
+  padding: .61rem 1.13rem; border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.17);
+  transition: transform .16s, filter .17s;
+}
+.quick-donate:hover { transform: translateY(-2px); filter: brightness(1.04); }
+
+/* ---- A11y/Focus ---- */
+:where(a,button,.btn,.burger):focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--accent);
+}
+.fc-header img, .fc-header svg { max-height: 44px; max-width: 210px; object-fit: contain; }
+
+/* ---- Responsive ---- */
+@media (max-width: 980px) {
+  .hdr-grid { grid-template-columns: 1fr auto; }
+  .crest-meta, .team-chip { display: none; }
+  .burger { display: flex; }
+  .team-link { order: 3; justify-self: start; }
+}
+@media (max-width: 670px) {
+  .fc-header { padding-inline: 0; }
+  .hdr-grid { padding: .55rem .5rem; }
+  .fcx-hub { min-width: 0; }
+  .btn, .btn-donate { font-size: .83rem; }
+}
+@media (max-width: 460px) {
+  .btn-donate { font-size: .79rem; padding: .56rem 1.21rem; }
+  .hdr-grid { gap: .7rem; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
 }
 </style>
 
-{# ===================================================== #
-   Script — modular enterprise header controller
-# ===================================================== #}
+
 <script {{ nonce_attr() }}>
 (() => {
-  'use strict';
+  // =========== FundChamps Elite Header v7 JS ===========
+  if (window.__fcHeaderElite) return; window.__fcHeaderElite = true;
 
-  const $  = (sel, root = document) => root.querySelector(sel);
-  const on = (el, ev, fn, opts) => el?.addEventListener(ev, fn, opts);
-  const header = $('#site-header'); if (!header) return;
-
-  const els = {
-    progress: $('#hdr-progress', header),
-    ribbon: $('#hdr-ribbon-fill', header),
-    pct: $('#hdr-percent', header),
-    mobDock: $('#fcx-mobile-nav', header),
-    menuBtn: $('#menu-toggle', header),
-    panel: $('#menu-panel', header),
-    announcer: $('#hdr-announcer', header),
-    share: $('#hdr-share', header),
-    mobShare: $('#mobile-share', header),
-    donate: $('.cta-main', header),
-    themeBtn: $('[data-theme-toggle]', header)
+  // --- Core helpers ---
+  const $  = (sel, el = document) => el.querySelector(sel);
+  const $$ = (sel, el = document) => Array.from(el.querySelectorAll(sel));
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const fmtPct = n => `${Math.round(n)}%`;
+  const fmtMoney = n => {
+    const v = Number(n) || 0;
+    try { return v.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }); }
+    catch { return '$' + Math.round(v).toLocaleString(); }
   };
 
-  /* Compact Header */
-  const hero = document.querySelector('[data-hero]');
-  const toggleCompact = (active) => {
-    header.classList.toggle('is-compact', active);
-    if (els.mobDock) els.mobDock.hidden = !active;
-  };
-  if ('IntersectionObserver' in window && hero) {
-    new IntersectionObserver(([e]) => toggleCompact(!e.isIntersecting), {threshold:0.15}).observe(hero);
-  } else on(window, 'scroll', () => toggleCompact(scrollY>24), {passive:true});
+  // --- Theme / Motion preferences ---
+  try {
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const saveData = navigator.connection?.saveData;
+    if (reduced || saveData) document.documentElement.classList.add('fc-reduced');
+  } catch {}
 
-  /* Progress Animation */
-  const pulse = (el) => { if (!el) return; el.classList.remove('pulse'); void el.offsetWidth; el.classList.add('pulse'); };
-  const updateProgress = (pct=0) => {
-    pct = Math.max(0,Math.min(100,pct));
-    els.progress.value = pct; els.pct.textContent = `${pct|0}%`;
-    els.ribbon.style.width = `${pct}%`; pulse(els.ribbon);
-  };
-  updateProgress(Number(els.progress.value||0));
+  // --- DOM references ---
+  const hdrId     = '{{ _hdr_id|default("site-header") }}';
+  const hdr       = document.getElementById(hdrId); if (!hdr) return;
+  const meter     = $('#hdr-meter', hdr);
+  const fill      = meter?.querySelector('.fill');
+  const pctTxt    = meter?.querySelector('.pct');
+  const totalPill = $('#hdr-total-pill', hdr);
+  const burger    = $('#menu-toggle', hdr);
+  const tpl       = document.getElementById('mobile-nav-tpl');
+  let   sheet     = null;
+  const shareBtn  = $('#hdr-share', hdr);
+  const themeBtn  = $('#theme-toggle', hdr);
+  const teamLogo  = $('.team-link .team-logo', hdr);
 
-  /* Announcement Persistence */
-  const announce = header.querySelector('[data-announcement]');
-  if (announce) {
-    const key = `fc:announce:${announce.dataset.id||'default'}`;
-    try { if (localStorage.getItem(key)) announce.remove(); } catch {}
-    on(announce.querySelector('[data-dismiss-announcement]'), 'click', () => {
-      try { localStorage.setItem(key,'1'); } catch {}; announce.remove();
+  // --- Header compact/shrink on scroll ---
+  let compact = false, ticking = false;
+  const SHRINK_AT = 60, UNSHRINK_AT = 18;
+  const handleScroll = () => {
+    const y = window.scrollY || document.documentElement.scrollTop || 0;
+    if (y> SHRINK_AT && !compact) { hdr.classList.add('is-compact'); compact = true; }
+    else if (y < UNSHRINK_AT && compact) { hdr.classList.remove('is-compact'); compact = false; }
+    ticking = false;
+  };
+  window.addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(handleScroll); } }, { passive: true });
+  handleScroll();
+
+  // --- Mobile slide-in menu ---
+  const openMenu = () => {
+    if (!tpl) return;
+    if (!sheet) {
+      sheet = tpl.content.firstElementChild.cloneNode(true);
+      document.body.appendChild(sheet);
+      $('.close', sheet)?.addEventListener('click', closeMenu);
+      sheet.addEventListener('click', e => { if (e.target === sheet) closeMenu(); });
+      document.addEventListener('keydown', escHandler);
+    }
+    sheet.classList.remove('hidden');
+    burger?.setAttribute('aria-expanded', 'true');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => $('.close', sheet)?.focus(), 40); // a11y focus
+  };
+  const closeMenu = () => {
+    sheet?.classList.add('hidden');
+    burger?.setAttribute('aria-expanded', 'false');
+    document.body.style.overflow = '';
+  };
+  const escHandler = e => { if (e.key === 'Escape') closeMenu(); };
+  burger?.addEventListener('click', openMenu);
+
+  // --- Theme switching (persistent, a11y, safe) ---
+  const THEME_KEY = 'fc:theme';
+  const applyTheme = mode => {
+    if (!mode) return;
+    document.documentElement.setAttribute('data-theme', mode);
+    try { localStorage.setItem(THEME_KEY, mode); } catch {}
+    themeBtn?.setAttribute('aria-pressed', mode === 'dark' ? 'false' : 'true');
+  };
+  // Load stored theme
+  try {
+    const stored = localStorage.getItem(THEME_KEY);
+    if (stored) applyTheme(stored);
+  } catch {}
+  themeBtn?.addEventListener('click', () => {
+    const root = document.documentElement;
+    const current = root.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const next = current === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+  });
+
+  // --- Share (Web Share API or clipboard fallback) ---
+  if (shareBtn) {
+    let payload = {};
+    try { payload = JSON.parse(shareBtn.dataset.share || '{}'); } catch {}
+    shareBtn.addEventListener('click', async () => {
+      try {
+        if (navigator.share) {
+          await navigator.share(payload);
+        } else if (payload.url || location.href) {
+          await navigator.clipboard?.writeText(payload.url || location.href);
+          shareBtn.dataset._label = shareBtn.textContent;
+          shareBtn.textContent = 'Link Copied!';
+          setTimeout(() => { shareBtn.textContent = shareBtn.dataset._label || 'Share'; }, 1400);
+        }
+      } catch {}
     });
   }
 
-  /* Theme Toggle */
-  (() => {
-    const root = document.documentElement, KEY='fc-theme';
-    const apply = (mode) => { root.dataset.theme=mode; try{localStorage.setItem(KEY,mode);}catch{} };
-    const stored = localStorage.getItem(KEY);
-    apply(stored || (matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
-    on(els.themeBtn,'click',()=>apply(root.dataset.theme==='dark'?'light':'dark'));
-    on($('#menu-theme',header),'click',()=>els.themeBtn.click());
-  })();
-
-  /* Menu Controls */
-  const openMenu=()=>{els.panel.hidden=false;els.menuBtn.setAttribute('aria-expanded','true');};
-  const closeMenu=()=>{els.panel.hidden=true;els.menuBtn.setAttribute('aria-expanded','false');};
-  on(els.menuBtn,'click',()=>els.panel.hidden?openMenu():closeMenu());
-  on(document,'keydown',(e)=>e.key==='Escape'&&closeMenu(),{passive:true});
-
-  /* Share */
-  const doShare=async(btn)=>{
-    const data=JSON.parse(btn.dataset.share||'{}');
-    try{if(navigator.share){await navigator.share(data);}else if(navigator.clipboard){await navigator.clipboard.writeText(data.url);btn.textContent='Copied!';setTimeout(()=>btn.textContent='Share',1200);}}
-    catch{}
+  // --- Meter and total pill (event-ready, API-updatable) ---
+  const setMeter = (raised, goal) => {
+    const g = Math.max(1, Number(goal) || 1), r = Math.max(0, Number(raised) || 0);
+    const pct = clamp((r / g) * 100, 0, 100);
+    if (fill)   fill.style.width = pct.toFixed(1) + '%';
+    if (pctTxt) pctTxt.textContent = fmtPct(pct);
+    if (meter)  meter.setAttribute('aria-valuenow', pct.toFixed(1));
+    // Animate logo on update
+    if (teamLogo) {
+      teamLogo.classList.add('pulse');
+      setTimeout(() => teamLogo.classList.remove('pulse'), 950);
+    }
   };
-  on(els.share,'click',()=>doShare(els.share));
-  on(els.mobShare,'click',()=>doShare(els.share));
-  on($('#menu-share',header),'click',(e)=>doShare(e.currentTarget));
+  const setTotal = (total) => {
+    if (!totalPill) return;
+    const val = Math.max(0, Number(total) || 0);
+    totalPill.textContent = fmtMoney(val);
+    totalPill.dataset.val = String(val);
+    totalPill.animate?.(
+      [{ transform:'scale(1)' }, { transform:'scale(1.09)' }, { transform:'scale(1)' }],
+      { duration: 240, easing: 'cubic-bezier(.2,.9,.35,1.1)' }
+    );
+  };
 
-  /* Auto UTM Decorator */
-  on(els.donate,'pointerdown',()=>{
-    if(els.donate.__done)return;
-    try{
-      const u=new URL(els.donate.href,location.href);
-      [['utm_source','site'],['utm_medium','header'],['utm_campaign','fundraiser']]
-      .forEach(([k,v])=>{if(!u.searchParams.has(k))u.searchParams.set(k,v);});
-      els.donate.href=u.toString();els.donate.__done=true;
-    }catch{}
-  },{once:true,passive:true});
+  // --- Listen for live API updates ---
+  window.addEventListener('fc:meter:update', e => {
+    const d = e.detail || {};
+    if ('raised' in d || 'goal' in d) setMeter(d.raised, d.goal);
+    if ('total' in d) setTotal(d.total);
+  }, { passive: true });
+
+  // --- Expose header API globally for future extensibility ---
+  window.fcHeader = {
+    setMeter, setTotal, openMenu, closeMenu, setTheme: applyTheme
+  };
+
+})();
+</script>
+
+<script {{ nonce_attr() }}>
+(() => {
+  const ticker = document.getElementById('hdr-ticker');
+  if (!ticker) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    ticker.classList.remove('scrolling');
+    return;
+  }
+  // Only scroll if content is wider than ticker
+  const needsScroll = () => ticker.scrollWidth> ticker.clientWidth + 42;
+  const setScroll = () => {
+    ticker.classList.toggle('scrolling', needsScroll());
+  };
+  new ResizeObserver(setScroll).observe(ticker);
+  setScroll();
 })();
 </script>
 

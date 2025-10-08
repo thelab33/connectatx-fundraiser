@@ -495,7 +495,7 @@
     scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
   }
   .grid::after{ content:""; flex:0 0 6px; } /* end padding */
-  .grid > .card{
+  .grid> .card{
     flex: 0 0 86%; min-width: 86%;
     scroll-snap-align: start; scroll-margin: 12px;
   }
@@ -604,7 +604,7 @@
 /* ====== Mobile specifics (app-store rail & safe-area) ====== */
 @media (max-width: 680px){
   .grid{ display:flex; gap:12px; overflow-x:auto; padding:6px 6px 12px; scroll-snap-type:x mandatory; -webkit-overflow-scrolling:touch }
-  .grid > .card{ flex:0 0 86%; min-width:86%; scroll-snap-align:start; scroll-margin:12px }
+  .grid> .card{ flex:0 0 86%; min-width:86%; scroll-snap-align:start; scroll-margin:12px }
   .card{ padding:14px; border-radius:14px; box-shadow:0 14px 40px rgba(0,0,0,.44) }
   .card::after{ opacity:.6; filter:blur(6px) }
   .btn{ width:100%; min-height:44px }

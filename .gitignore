@@ -29,3 +29,9 @@ Thumbs.db
 *.p12
 /app/static/css/output.css
 /app/static/css/tailwind.min.css
+venv/
+__pycache__/
+*.pyc
+venv/
+__pycache__/
+*.pyc
